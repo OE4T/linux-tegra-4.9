@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2019, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -276,6 +276,7 @@ struct tegra194_xusb_padctl_context {
 	u32 usb2_port_cap;
 	u32 ss_port_cap;
 	u32 ss_port_cfg;
+	u32 vbus_oc_map;
 };
 
 struct tegra194_xusb_padctl {
@@ -800,13 +801,6 @@ static int tegra194_utmi_phy_power_on(struct phy *phy)
 	reg |= RPD_CTRL(priv->calib.rpd_ctrl);
 	padctl_writel(padctl, reg, XUSB_PADCTL_USB2_OTG_PADX_CTL1(index));
 
-	/* enable VBUS OC support only on non-OTG port */
-	if (port->port_cap != USB_OTG_CAP) {
-		mutex_lock(&padctl->lock);
-		tegra194_enable_vbus_oc(phy);
-		mutex_unlock(&padctl->lock);
-	}
-
 	return 0;
 }
 
@@ -1075,16 +1069,6 @@ static int tegra194_utmi_phy_init(struct phy *phy)
 	reg |= ID_OVERRIDE_FLOATING;
 	padctl_writel(padctl, reg, USB2_VBUS_ID(port->vbus_id));
 
-	if (!IS_ERR(port->supply) && port->port_cap == USB_HOST_CAP &&
-		!regulator_is_enabled(port->supply) &&
-		(!padctl->oc_pinctrl || port->oc_pin < 0)) {
-		rc = regulator_enable(port->supply);
-		if (rc) {
-			dev_err(padctl->dev, "enable port %d vbus failed %d\n",
-				index, rc);
-		}
-	}
-
 	if (port->port_cap == USB_OTG_CAP) {
 		padctl->usb2_otg_port_base_1 = index + 1;
 	}
@@ -1111,15 +1095,6 @@ static int tegra194_utmi_phy_exit(struct phy *phy)
 	}
 
 	mutex_lock(&padctl->lock);
-
-	if (!IS_ERR(port->supply) && regulator_is_enabled(port->supply) &&
-		port->port_cap == USB_HOST_CAP) {
-		rc = regulator_disable(port->supply);
-		if (rc) {
-			dev_err(padctl->dev, "disable port %d vbus failed %d\n",
-				index, rc);
-		}
-	}
 
 	if (index == padctl->usb2_otg_port_base_1 - 1)
 		padctl->usb2_otg_port_base_1 = 0;
@@ -1857,12 +1832,16 @@ static void tegra194_xusb_padctl_save(struct tegra_xusb_padctl *padctl)
 			padctl_readl(padctl, XUSB_PADCTL_SS_PORT_CAP);
 	priv->context.ss_port_cfg =
 			padctl_readl(padctl, XUSB_PADCTL_SS_PORT_CFG);
+	priv->context.vbus_oc_map =
+			padctl_readl(padctl, XUSB_PADCTL_VBUS_OC_MAP);
 }
 
 static void tegra194_xusb_padctl_restore(struct tegra_xusb_padctl *padctl)
 {
-	int i;
 	struct tegra194_xusb_padctl *priv = to_tegra194_xusb_padctl(padctl);
+	struct tegra_xusb_usb2_port *port;
+	u32 i;
+	int rc = 0;
 
 	padctl_writel(padctl, priv->context.usb2_pad_mux,
 			XUSB_PADCTL_USB2_PAD_MUX);
@@ -1875,6 +1854,24 @@ static void tegra194_xusb_padctl_restore(struct tegra_xusb_padctl *padctl)
 	for (i = 0; i < XUSB_MAX_OTG_PORT_NUM; i++)
 		padctl_writel(padctl,
 			priv->context.vbus_id[i], USB2_VBUS_ID(i));
+
+	/* ensure to enable the vbus oc, if needed */
+	for (i = 0; i < padctl->soc->ports.usb2.count; i++) {
+		port = tegra_xusb_find_usb2_port(padctl, i);
+		if (port == NULL)
+			continue;
+
+		mutex_lock(&padctl->lock);
+		if ((padctl->oc_pinctrl != NULL) && port->oc_pin >= 0
+		&& !!(priv->context.vbus_oc_map & VBUS_ENABLE(port->oc_pin))) {
+			rc = tegra_xusb_select_vbus_en_state(padctl,
+							port->oc_pin, true);
+			if (rc == 0)
+				tegra194_enable_vbus_oc(padctl->usb2->lanes[i]);
+		}
+		mutex_unlock(&padctl->lock);
+	}
+
 }
 
 static int tegra194_xusb_padctl_suspend_noirq(struct tegra_xusb_padctl *padctl)

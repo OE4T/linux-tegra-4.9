@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2018, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2019, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -1183,8 +1183,10 @@ static int tegra_xusb_setup_oc(struct tegra_xusb_padctl *padctl)
 			 * for OTG port, the default state is
 			 * device mode and VBUS off.
 			 */
-			err = tegra_xusb_select_vbus_en_state(
-				padctl, usb2_port->oc_pin, !isotg);
+			if (isotg) {
+				err = tegra_xusb_select_vbus_en_state(
+					padctl, usb2_port->oc_pin, false);
+			}
 
 			if (err < 0)
 				return err;

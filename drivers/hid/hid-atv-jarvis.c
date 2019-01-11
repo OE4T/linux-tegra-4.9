@@ -3,7 +3,7 @@
  *  providing keys and microphone audio functionality
  *
  * Copyright (C) 2014 Google, Inc.
- * Copyright (c) 2015-2018, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2015-2019, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -418,11 +418,12 @@ static int atvr_mic_ctrl(struct hid_device *hdev, bool enable)
 	report[3] = enable ? 0x01 : 0x00;
 	hid_info(hdev, "%s remote mic\n", enable ? "enable" : "disable");
 
-	/* for pepper, send the message to userspace so that
+	/* for BLE devices (Pepper, Friday), send the message to userspace so that
 	** gattservice can be used to send message to pepper.
 	** this is to prevent concurrent mic ctrl msgs */
 
-	if (hdev->product == USB_DEVICE_ID_NVIDIA_PEPPER) {
+	if (hdev->product == USB_DEVICE_ID_NVIDIA_PEPPER ||
+			hdev->product == USB_DEVICE_ID_NVIDIA_FRIDAY) {
 		report[0] = 0x03;
 		report[4] = 0x01;
 		return hid_report_raw_event(hdev, 0, &report[0],
@@ -1550,7 +1551,8 @@ static int atvr_snd_initialize(struct hid_device *hdev,
 		}
 	}
 
-	if (hdev->product == USB_DEVICE_ID_NVIDIA_PEPPER)
+	if (hdev->product == USB_DEVICE_ID_NVIDIA_PEPPER ||
+			hdev->product == USB_DEVICE_ID_NVIDIA_FRIDAY)
 		atvr_snd->pcm_hw = atvr_pcm_hardware_pepper;
 	else
 		atvr_snd->pcm_hw = atvr_pcm_hardware;
@@ -1618,7 +1620,8 @@ static int atvr_jarvis_break_events(struct hid_device *hdev,
 	if (hdev->product == USB_DEVICE_ID_NVIDIA_THUNDERSTRIKE)
 		button_report_size = TS_HOSTCMD_REPORT_SIZE;
 
-	if (hdev->product == USB_DEVICE_ID_NVIDIA_PEPPER &&
+	if ((hdev->product == USB_DEVICE_ID_NVIDIA_PEPPER ||
+				hdev->product == USB_DEVICE_ID_NVIDIA_FRIDAY) &&
 	    report->id == PEP_BUTTON_REPORT_ID) {
 		int timeout;
 
@@ -1895,7 +1898,8 @@ static int atvr_probe(struct hid_device *hdev, const struct hid_device_id *id)
 
 	mutex_unlock(&snd_cards_lock);
 
-	if (hdev->product == USB_DEVICE_ID_NVIDIA_PEPPER) {
+	if (hdev->product == USB_DEVICE_ID_NVIDIA_PEPPER ||
+			hdev->product == USB_DEVICE_ID_NVIDIA_FRIDAY) {
 		shdr_dev->hid_miss_war_timeout = -1;
 		mutex_init(&shdr_dev->hid_miss_war_lock);
 		INIT_DELAYED_WORK(&shdr_dev->hid_miss_war_work,
@@ -1943,7 +1947,8 @@ static void atvr_remove(struct hid_device *hdev)
 		shdr_dev->snsr_fns->remove(shdr_dev->st);
 	/* TODO: ret check */
 
-	if (hdev->product == USB_DEVICE_ID_NVIDIA_PEPPER) {
+	if (hdev->product == USB_DEVICE_ID_NVIDIA_PEPPER ||
+			hdev->product == USB_DEVICE_ID_NVIDIA_FRIDAY) {
 		cancel_delayed_work_sync(&shdr_dev->hid_miss_war_work);
 		device_remove_file(&hdev->dev, &dev_attr_timeout);
 	}
@@ -2018,6 +2023,8 @@ static const struct hid_device_id atvr_devices[] = {
 			      USB_DEVICE_ID_NVIDIA_JARVIS)},
 	{HID_BLUETOOTH_DEVICE(USB_VENDOR_ID_NVIDIA,
 			      USB_DEVICE_ID_NVIDIA_PEPPER)},
+	{HID_BLUETOOTH_DEVICE(USB_VENDOR_ID_NVIDIA,
+			      USB_DEVICE_ID_NVIDIA_FRIDAY)},
 	{HID_BLUETOOTH_DEVICE(USB_VENDOR_ID_NVIDIA,
 			      USB_DEVICE_ID_NVIDIA_THUNDERSTRIKE)},
 	{HID_USB_DEVICE(USB_VENDOR_ID_NVIDIA,

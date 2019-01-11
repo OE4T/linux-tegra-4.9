@@ -139,6 +139,7 @@
 					dsi {
 						status = "okay";
 						nvidia,dsi-csi-loopback;
+						nvidia,active-panel = <&panel_s_wuxga_8_0>;
 						panel-s-wuxga-8-0 {
 							status = "okay";
 						};

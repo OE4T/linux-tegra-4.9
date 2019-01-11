@@ -347,6 +347,16 @@ static void tegra_udrm_master_drop(struct drm_device *dev,
 }
 
 static struct drm_driver tegra_udrm_driver = {
+	/* To avoid tripping on DRM mastership, user space EGL driver opens
+	 * render node (instead of primary node) and calls drmGetVersion
+	 * to identify tegra-udrm driver.
+	 *
+	 * UMD (libdrm_nvdc) should handle which drm APIs to support on
+	 * render node. There are are no known applications which will get
+	 * affected due to enumeration of render node, it is only used by
+	 * user space graphics drivers to get version name.
+	 */
+	.driver_features   = DRIVER_RENDER,
 	.open              = tegra_udrm_open,
 	.preclose          = tegra_udrm_preclose,
 	.ioctls            = tegra_udrm_ioctls,

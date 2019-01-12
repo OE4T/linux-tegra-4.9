@@ -312,6 +312,92 @@ struct qcmdset macronix_cmd_info_table[OPERATION_MAX_LIMIT] = {
 	},
 };
 
+
+struct qcmdset macronix_porg_cmd_info_table[OPERATION_MAX_LIMIT] = {
+	/*  NORMAL_READ */
+	{ {.op_code = 0x03, .is_ddr = FALSE, .bus_width = X1, .post_txn = 2},
+		{.address = 0, .is_ddr = FALSE, .len = 3,
+			.bus_width = X1, .dummy_cycles = 0},
+		{.is_ddr = FALSE, .bus_width = X1}
+	},
+	/*  FAST_READ */
+	{ {.op_code = 0x0b, .is_ddr = FALSE, .bus_width = X1, .post_txn = 2},
+		{.address = 0, .is_ddr = FALSE, .len = 3,
+			.bus_width = X1, .dummy_cycles = 8},
+		{.is_ddr = FALSE, .bus_width = X1}
+	},
+	/* DUAL_OUT_READ */
+	{ {.op_code = 0x3b, .is_ddr = FALSE, .bus_width = X1, .post_txn = 2},
+		{.address = 0, .is_ddr = FALSE, .len = 3,
+			.bus_width = X1, .dummy_cycles = 8},
+		{.is_ddr = FALSE, .bus_width = X2}
+	},
+	/*  INVALID QUAD_OUT_READ */
+	{
+	},
+	/* DUAL_IO_READ */ //confirm the dummy cycle
+	{ {.op_code = 0xBB, .is_ddr = FALSE, .bus_width = X1, .post_txn = 2},
+		{.address = 0, .is_ddr = FALSE, .len = 3,
+			.bus_width = X2, .dummy_cycles = 4},
+		{.is_ddr = FALSE, .bus_width = X2}
+	},
+	/* INVALID QUAD_IO_READ */
+	{
+	},
+	/*INVALID DDR_FAST_READ */
+	{
+	},
+	/*INVALID DDR_DUAL_IO_READ */
+	{
+	},
+	/*INVALID DDR_QUAD_IO_READ  Spansion - 56 Micron - 64 Dummy Cycles */
+	{
+	},
+	/* PAGE_PROGRAM */
+	{ {.op_code = 0x2, .is_ddr = FALSE, .bus_width = X1, .post_txn = 2},
+		{.address = 0, .is_ddr = FALSE, .len = 3,
+			.bus_width = X1, .dummy_cycles = 0},
+		{.is_ddr = FALSE, .bus_width = X1}
+	},
+	/*INVALID QUAD_PAGE_PROGRAM */
+	{
+	},
+	/*INVALID QPI_PAGE_PROGRAM */
+	{
+	},
+	/* READ ID*/
+	{ {.op_code = 0x9f, .is_ddr = FALSE, .bus_width = X1, .post_txn = 2},
+		{.address = 0, .is_ddr = FALSE, .len = 3,
+			.bus_width = X1, .dummy_cycles = 0},
+		{.is_ddr = FALSE, .bus_width = X1}
+	},
+	/* ERASE SECT */
+	{ {.op_code = 0x20, .is_ddr = FALSE, .bus_width = X1, .post_txn = 1},
+		{.address = 0, .is_ddr = FALSE, .len = 3,
+			.bus_width = X1, .dummy_cycles = 0},
+		{.is_ddr = FALSE, .bus_width = X1}
+	},
+	/*  bulk erase */
+	{ {.op_code = 0xd8, .is_ddr = FALSE, .bus_width = X1, .post_txn = 0},
+		{.address = 0, .is_ddr = FALSE, .len = 0,
+			.bus_width = X1, .dummy_cycles = 0},
+		{.is_ddr = FALSE, .bus_width = X1}
+	},
+	/* STATUS READ */
+	{ {.op_code = 0x05, .is_ddr = FALSE, .bus_width = X1, .post_txn = 1},
+		{.address = 0, .is_ddr = FALSE, .len = 0,
+			.bus_width = X1, .dummy_cycles = 0},
+		{.is_ddr = FALSE, .bus_width = X1}
+	},
+	/*INVALID READ_ANY_REG */
+	{
+	},
+	/*INVALID WRITE_ANY_REG */
+	{
+	},
+};
+
+
 /* Flash opcodes. */
 #define	OPCODE_CHIP_ERASE	0xc7	/* Erase whole flash chip */
 #define	OPCODE_SE		0xdc	/* Sector erase (usually 256KiB) */
@@ -424,6 +510,9 @@ static const struct spi_device_id qspi_ids[] = {
 	},
 	{	"MX25U51279G",
 		INFO(0xC2953A, 0, 64 * 1024, 1024, 0, 0, 0, 0, 256, 0)
+	},
+	{	"MX25U3235F",
+		INFO(0xC22536, 0, 4 * 1024, 1024, 0, 0, 0, 0, 256, 0)
 	},
 	{ },
 };

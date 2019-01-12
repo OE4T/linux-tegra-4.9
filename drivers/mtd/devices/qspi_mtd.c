@@ -82,6 +82,7 @@
 
 #define JEDEC_ID_S25FX512S	0x010220
 #define JEDEC_ID_MX25U51279G	0xC2953A
+#define JEDEC_ID_MX25U3235F	0xC22536
 
 static int qspi_write_en(struct qspi *flash,
 		uint8_t is_enable, uint8_t is_sleep);
@@ -1093,16 +1094,22 @@ static int erase_sector(struct qspi *flash, u32 offset,
 				&flash->cmd_info_table[ERASE_SECT]);
 
 	/* Set up command buffer. */
-	cmd_addr_buf[0] = erase_opcode;
-	cmd_addr_buf[1] = (offset >> 24) & 0xFF;
-	cmd_addr_buf[2] = (offset >> 16) & 0xFF;
-	cmd_addr_buf[3] = (offset >> 8) & 0xFF;
-	cmd_addr_buf[4] = offset & 0xFF;
+	cmd_addr_buf[0] = erase_opcode = flash->cmd_table.qcmd.op_code;
+	if (flash->cmd_table.qaddr.len == 3) {
+		cmd_addr_buf[1] = (offset >> 16) & 0xFF;
+		cmd_addr_buf[2] = (offset >> 8) & 0xFF;
+		cmd_addr_buf[3] = offset & 0xFF;
+	} else {
+		cmd_addr_buf[1] = (offset >> 24) & 0xFF;
+		cmd_addr_buf[2] = (offset >> 16) & 0xFF;
+		cmd_addr_buf[3] = (offset >> 8) & 0xFF;
+		cmd_addr_buf[4] = offset & 0xFF;
+	}
 
 	spi_message_init(&m);
 	memset(t, 0, sizeof(t));
 
-	t[0].len = (COMMAND_WIDTH + ADDRESS_WIDTH);
+	t[0].len = (COMMAND_WIDTH + flash->cmd_table.qaddr.len);
 	t[0].bits_per_word = BITS8_PER_WORD;
 	t[0].tx_buf = cmd_addr_buf;
 
@@ -1327,10 +1334,16 @@ static int qspi_read(struct mtd_info *mtd, loff_t from, size_t len,
 			flash->cmd_table.qcmd.post_txn - 1;
 	}
 	cmd_addr_buf[0] = flash->cmd_table.qcmd.op_code;
-	cmd_addr_buf[1] = (from >> 24) & 0xFF;
-	cmd_addr_buf[2] = (from >> 16) & 0xFF;
-	cmd_addr_buf[3] = (from >> 8) & 0xFF;
-	cmd_addr_buf[4] = from & 0xFF;
+	if (flash->cmd_table.qaddr.len == 3) {
+		cmd_addr_buf[1] = (from >> 16) & 0xFF;
+		cmd_addr_buf[2] = (from >> 8) & 0xFF;
+		cmd_addr_buf[3] = from & 0xFF;
+	} else {
+		cmd_addr_buf[1] = (from >> 24) & 0xFF;
+		cmd_addr_buf[2] = (from >> 16) & 0xFF;
+		cmd_addr_buf[3] = (from >> 8) & 0xFF;
+		cmd_addr_buf[4] = from & 0xFF;
+	}
 
 	if (merge_cmd_addr) {
 
@@ -1407,7 +1420,8 @@ static int qspi_read(struct mtd_info *mtd, loff_t from, size_t len,
 		spi_message_add_tail(&t[2], &m);
 	}
 
-	if (flash->flash_info->jedec_id == JEDEC_ID_MX25U51279G) {
+	if (flash->flash_info->jedec_id == JEDEC_ID_MX25U51279G ||
+		flash->flash_info->jedec_id == JEDEC_ID_MX25U3235F) {
 		max_dummy_cyle_set(flash,
 				flash->cmd_table.qcmd.op_code,
 				flash->cmd_table.qaddr.dummy_cycles);
@@ -1483,11 +1497,16 @@ static int qspi_write(struct mtd_info *mtd, loff_t to, size_t len,
 #endif
 
 	cmd_addr_buf[0] = opcode = flash->cmd_table.qcmd.op_code;
-	cmd_addr_buf[1] = (offset >> 24) & 0xFF;
-	cmd_addr_buf[2] = (offset >> 16) & 0xFF;
-	cmd_addr_buf[3] = (offset >> 8) & 0xFF;
-	cmd_addr_buf[4] = offset & 0xFF;
-
+	if (flash->cmd_table.qaddr.len != 4) {
+		cmd_addr_buf[1] = (offset >> 16) & 0xFF;
+		cmd_addr_buf[2] = (offset >> 8) & 0xFF;
+		cmd_addr_buf[3] = offset & 0xFF;
+	} else {
+		cmd_addr_buf[1] = (offset >> 24) & 0xFF;
+		cmd_addr_buf[2] = (offset >> 16) & 0xFF;
+		cmd_addr_buf[3] = (offset >> 8) & 0xFF;
+		cmd_addr_buf[4] = offset & 0xFF;
+	}
 	page_offset = offset & (flash->page_size - 1);
 
 	/* do all the bytes fit onto one page? */
@@ -1632,10 +1651,16 @@ clear_qmode:
 			/* write the next page to flash */
 			cmd_addr_buf[0] = opcode =
 				flash->cmd_table.qcmd.op_code;
-			cmd_addr_buf[1] = (offset >> 24) & 0xFF;
-			cmd_addr_buf[2] = (offset >> 16) & 0xFF;
-			cmd_addr_buf[3] = (offset >> 8) & 0xFF;
-			cmd_addr_buf[4] = offset & 0xFF;
+			if (flash->cmd_table.qaddr.len == 3) {
+				cmd_addr_buf[1] = (offset >> 16) & 0xFF;
+				cmd_addr_buf[2] = (offset >> 8) & 0xFF;
+				cmd_addr_buf[3] = offset & 0xFF;
+			} else {
+				cmd_addr_buf[1] = (offset >> 24) & 0xFF;
+				cmd_addr_buf[2] = (offset >> 16) & 0xFF;
+				cmd_addr_buf[3] = (offset >> 8) & 0xFF;
+				cmd_addr_buf[4] = offset & 0xFF;
+			}
 
 			t[0].tx_buf = cmd_addr_buf;
 			t[0].len = flash->cmd_table.qaddr.len + 1;
@@ -1741,6 +1766,11 @@ static int qspi_init(struct qspi *flash)
 	struct flash_info *info =  (void *)id->driver_data;
 
 	dev_dbg(&spi->dev, "%s ENTRY\n", __func__);
+
+	if (info->jedec_id == JEDEC_ID_MX25U3235F) {
+		max_qpi_set(flash, FALSE);
+		return 0;
+	}
 	/*
 	 * FIXME: Unlock the flash if locked. It is WAR to unlock the flash
 	 *	  as locked bit is setting unexpectedly
@@ -1838,10 +1868,13 @@ static int qspi_probe(struct spi_device *spi)
 	if (!flash)
 		return -ENOMEM;
 
+
 	if (info->jedec_id == JEDEC_ID_MX25U51279G)
 		flash->cmd_info_table = macronix_cmd_info_table;
 	else if (info->jedec_id == JEDEC_ID_S25FX512S)
 		flash->cmd_info_table = spansion_cmd_info_table;
+	else if (info->jedec_id == JEDEC_ID_MX25U3235F)
+		flash->cmd_info_table = macronix_porg_cmd_info_table;
 	else {
 		dev_err(&spi->dev, "error: %s: unsupported flash\n", __func__);
 		return -EINVAL;
@@ -1936,6 +1969,7 @@ static int qspi_probe(struct spi_device *spi)
 			data ? data->nr_parts : 0);
 	if (ret < 0)
 		goto err_remove_qspi_attrs;
+
 	return ret;
 
 err_remove_qspi_attrs:

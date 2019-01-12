@@ -2600,6 +2600,9 @@ static const struct hid_device_id sony_devices[] = {
 	/* Nyko Core Controller for PS3 */
 	{ HID_USB_DEVICE(USB_VENDOR_ID_SINO_LITE, USB_DEVICE_ID_SINO_LITE_CONTROLLER),
 		.driver_data = SIXAXIS_CONTROLLER_USB | SINO_LITE_CONTROLLER },
+	/* Genesis PV65 seems to be DS3 clone with different VID/PID */
+	{ HID_USB_DEVICE(USB_VENDOR_ID_SHANWAN, USB_DEVICE_ID_SHANWAN_GENESIS_PV65),
+		.driver_data = SIXAXIS_CONTROLLER_USB },
 	{ }
 };
 MODULE_DEVICE_TABLE(hid, sony_devices);

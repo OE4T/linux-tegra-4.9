@@ -37,7 +37,7 @@
 							   TEGRA_DC_OUT_PIN_V_SYNC TEGRA_DC_OUT_PIN_POL_LOW
 							   TEGRA_DC_OUT_PIN_PIXEL_CLOCK TEGRA_DC_OUT_PIN_POL_LOW
 							   TEGRA_DC_OUT_PIN_DATA_ENABLE TEGRA_DC_OUT_PIN_POL_HIGH>;
-					nvidia,out-parent-clk = "pll_d";
+					nvidia,out-parent-clk = "pll_d_out0";
 				};
 				dp-lt-settings {
 					lt-setting@0 {

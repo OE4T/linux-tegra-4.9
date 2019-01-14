@@ -16,6 +16,10 @@
 	eeprom-manager {
 		data-size = <0x100>;
 		bus@0 {
+                         i2c-bus = <&i2c1>;
+                         word-address-1-byte-slave-addresses = <0x50>;
+		};
+		bus@1 {
 			i2c-bus = <&i2c3>;
 			word-address-1-byte-slave-addresses = <0x50 0x57>;
 		};

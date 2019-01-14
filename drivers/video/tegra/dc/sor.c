@@ -1,7 +1,7 @@
 /*
  * sor.c: Functions implementing tegra dc sor interface.
  *
- * Copyright (c) 2011-2018, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2019, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -264,8 +264,11 @@ void tegra_sor_config_dp_clk_t21x(struct tegra_dc_sor_data *sor)
 	if (tegra_platform_is_silicon())
 		tegra_clk_cfg_ex(sor->sor_clk, TEGRA_CLK_SOR_CLK_SEL, 1);
 #else
+	if (sor->ctrl_num == 0)
+	/* For DP on sor0, set pll_dp as parent of sor clock */
+		clk_set_parent(sor->sor_clk, dp->parent_clk);
+	else
 	/* For DP on sor1, set sor1 pad output clk to be the parent */
-	if (sor->ctrl_num == 1)
 		clk_set_parent(sor->sor_clk, sor->pad_clk);
 #endif
 

@@ -2151,12 +2151,12 @@ static int tegra210_adsp_pcm_trigger(struct snd_pcm_substream *substream,
 		/*
 		 * Start playback/capture trigger handled here
 		 * Stop capture trigger handled here
-		 * Stop playback handled in fe_widget_event()
+		 * Stop playback for path disconnection handled
+		 * in fe_widget_event()
 		 */
-		if ((substream->stream == SNDRV_PCM_STREAM_PLAYBACK) && (cmd == SNDRV_PCM_TRIGGER_STOP)) {
+		if ((substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
+					&& (cmd == SNDRV_PCM_TRIGGER_STOP))
 			prtd->fe_apm->fe_playback_triggered = 0;
-			return 0;
-		}
 
 		ret = tegra210_adsp_hv_pcm_trigger(adsp,
 					prtd->fe_apm->reg, /* apm_out_in */
@@ -3258,6 +3258,7 @@ static int tegra210_adsp_fe_widget_event(struct snd_soc_dapm_widget *w,
 	uint32_t source;
 	struct snd_pcm_runtime *runtime;
 	struct tegra210_adsp_pcm_rtd *prtd = NULL;
+	unsigned long flags;
 
 	/* Handle only HV environment ADSP FE events */
 	if (!of_device_is_compatible(node, "nvidia,tegra210-adsp-audio-hv"))
@@ -3288,91 +3289,53 @@ static int tegra210_adsp_fe_widget_event(struct snd_soc_dapm_widget *w,
 	}
 
 	/*
-	 * PRE_PMU: Send Start playback/capture IVC to Audio Server and
-	 * active state message to ADSP
-	 *
 	 * POST_PMD: Send Stop playback/capture IVC to Audio Server and
 	 * inactive state message to ADSP. Flush messages will be sent to
 	 * ADSP during pcm_close().
 	 */
-	if (event == SND_SOC_DAPM_PRE_PMU) {
-		dev_info(adsp->dev, "connect event on APM %d, ADSP-FE %d\n",
-				(i + 1) - APM_IN_START, w->reg);
-
-		/*
-		 * For trigger playback, pcm_trigger calls will handle ivc and adsp messages
-		 *
-		 * When ADSP FE is in triggered state, path disconnect and connect is done,
-		 * widget event will send IVC and ADSP messages
-		 */
-		if (!apm->fe_playback_triggered) {
-			ret = 0;
-			goto err_put;
-		}
-
-		ret = tegra210_adsp_hv_pcm_trigger(adsp,
-					apm->reg,                  /* apm_out_in */
-					SNDRV_PCM_STREAM_PLAYBACK, /* playback */
-					SNDRV_PCM_TRIGGER_START);  /* PCM START */
-		if (ret < 0) {
-			pr_err("%s: error during hv_pcm_trigger\n", __func__);
-			goto err_put;
-		}
-
-		ret = tegra210_adsp_send_state_msg(apm, nvfx_state_active,
-			TEGRA210_ADSP_MSG_FLAG_SEND | TEGRA210_ADSP_MSG_FLAG_NEED_ACK);
-		if (ret < 0) {
-			dev_err(adsp->dev, "Failed to set state active");
-			goto err_put;
-		}
-
-	} else if (event == SND_SOC_DAPM_POST_PMD) {
-		unsigned long flags;
-
-		dev_info(adsp->dev, "disconnect event on APM %d, ADSP-FE %d\n",
-				(i + 1) - APM_IN_START, w->reg);
-
-		ret = tegra210_adsp_send_state_msg(apm, nvfx_state_inactive,
-			TEGRA210_ADSP_MSG_FLAG_SEND | TEGRA210_ADSP_MSG_FLAG_NEED_ACK);
-		if (ret < 0) {
-			dev_err(adsp->dev, "Failed to set state inactive.");
-			goto err_put;
-		}
-
-		ret = tegra210_adsp_hv_pcm_trigger(adsp,
-					apm->reg,                  /* apm_out_in */
-					SNDRV_PCM_STREAM_PLAYBACK, /* playback */
-					SNDRV_PCM_TRIGGER_STOP);   /* PCM STOP */
-		if (ret < 0) {
-			pr_err("%s: error during hv_pcm_trigger\n", __func__);
-			goto err_put;
-		}
-
-		spin_lock_irqsave(&apm->lock, flags);
-		prtd = apm->private_data;
-
-		if (!prtd) {
-			dev_dbg(adsp->dev, "PCM close caused this widget event\n");
-			spin_unlock_irqrestore(&apm->lock, flags);
-			goto err_put;
-		}
-
-		runtime = prtd->substream->runtime;
-		runtime->status->state = SNDRV_PCM_STATE_DISCONNECTED;
-		if (!(prtd->substream->f_flags & O_NONBLOCK)) {
-			if (IS_MMAP_ACCESS(runtime->access))
-				wake_up(&runtime->sleep);
-			else
-				wake_up(&runtime->tsleep);
-		}
-
-		spin_unlock_irqrestore(&apm->lock, flags);
-
-	} else {
-		pr_err("%s: error. unknown event: %d\n", __func__, event);
-		ret = -1;
+	if (!apm->fe_playback_triggered) {
+		ret = 0;
 		goto err_put;
 	}
+	dev_info(adsp->dev, "disconnect event on APM %d, ADSP-FE %d\n",
+			(i + 1) - APM_IN_START, w->reg);
+
+	ret = tegra210_adsp_send_state_msg(apm, nvfx_state_inactive,
+		TEGRA210_ADSP_MSG_FLAG_SEND | TEGRA210_ADSP_MSG_FLAG_NEED_ACK);
+	if (ret < 0) {
+		dev_err(adsp->dev, "Failed to set state inactive.");
+		goto err_put;
+	}
+
+	ret = tegra210_adsp_hv_pcm_trigger(adsp,
+				apm->reg,                  /* apm_out_in */
+				SNDRV_PCM_STREAM_PLAYBACK, /* playback */
+				SNDRV_PCM_TRIGGER_STOP);   /* PCM STOP */
+	if (ret < 0) {
+		pr_err("%s: error during hv_pcm_trigger\n", __func__);
+		goto err_put;
+	}
+
+	spin_lock_irqsave(&apm->lock, flags);
+	prtd = apm->private_data;
+
+	if (!prtd) {
+		dev_dbg(adsp->dev, "PCM close caused this widget event\n");
+		spin_unlock_irqrestore(&apm->lock, flags);
+		goto err_put;
+	}
+
+	runtime = prtd->substream->runtime;
+	runtime->status->state = SNDRV_PCM_STATE_DISCONNECTED;
+	if (!(prtd->substream->f_flags & O_NONBLOCK)) {
+		if (IS_MMAP_ACCESS(runtime->access))
+			wake_up(&runtime->sleep);
+		else
+			wake_up(&runtime->tsleep);
+	}
+
+	spin_unlock_irqrestore(&apm->lock, flags);
+	apm->fe_playback_triggered = 0;
 err_put:
 	pm_runtime_put(adsp->dev);
 	return ret;
@@ -3947,7 +3910,7 @@ static ADSP_MUX_ENUM_CTRL_DECL(plugin20, TEGRA210_ADSP_PLUGIN20);
 #define ADSP_FE_WIDGETS(sname, ename, reg)					\
 	SND_SOC_DAPM_AIF_IN_E(sname " RX", NULL, 0, reg,		\
 		TEGRA210_ADSP_WIDGET_EN_SHIFT, 0, tegra210_adsp_fe_widget_event, \
-			SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMD),	\
+			SND_SOC_DAPM_POST_PMD),	\
 	SND_SOC_DAPM_AIF_OUT_E(sname " TX", NULL, 0, reg,		\
 		TEGRA210_ADSP_WIDGET_EN_SHIFT, 0, NULL, \
 			SND_SOC_DAPM_PRE_PMU | SND_SOC_DAPM_POST_PMD),	\

@@ -461,6 +461,7 @@ static int tegra210_i2s_get_format(struct snd_kcontrol *kcontrol,
 		ucontrol->value.integer.value[0] = i2s->sample_rate_via_control;
 	else if (strstr(kcontrol->id.name, "Channels"))
 		ucontrol->value.integer.value[0] = i2s->channels_via_control;
+#if defined(CONFIG_ANDROID)
 	else if (strstr(kcontrol->id.name, "RX stereo to mono"))
 		ucontrol->value.integer.value[0] =
 					i2s->stereo_to_mono[I2S_RX_PATH];
@@ -474,6 +475,21 @@ static int tegra210_i2s_get_format(struct snd_kcontrol *kcontrol,
 		ucontrol->value.integer.value[0] =
 					i2s->mono_to_stereo[I2S_TX_PATH];
 	else if (strstr(kcontrol->id.name, "Rx fifo threshold"))
+		ucontrol->value.integer.value[0] = i2s->rx_fifo_th;
+#endif
+	else if (strstr(kcontrol->id.name, "Capture stereo to mono"))
+		ucontrol->value.integer.value[0] =
+					i2s->stereo_to_mono[I2S_TX_PATH];
+	else if (strstr(kcontrol->id.name, "Capture mono to stereo"))
+		ucontrol->value.integer.value[0] =
+					i2s->mono_to_stereo[I2S_TX_PATH];
+	else if (strstr(kcontrol->id.name, "Playback stereo to mono"))
+		ucontrol->value.integer.value[0] =
+					i2s->stereo_to_mono[I2S_RX_PATH];
+	else if (strstr(kcontrol->id.name, "Playback mono to stereo"))
+		ucontrol->value.integer.value[0] =
+					i2s->mono_to_stereo[I2S_RX_PATH];
+	else if (strstr(kcontrol->id.name, "Playback FIFO threshold"))
 		ucontrol->value.integer.value[0] = i2s->rx_fifo_th;
 
 	return 0;
@@ -495,6 +511,7 @@ static int tegra210_i2s_put_format(struct snd_kcontrol *kcontrol,
 		i2s->sample_rate_via_control = value;
 	else if (strstr(kcontrol->id.name, "Channels"))
 		i2s->channels_via_control = value;
+#if defined(CONFIG_ANDROID)
 	else if (strstr(kcontrol->id.name, "RX stereo to mono"))
 		i2s->stereo_to_mono[I2S_RX_PATH] = value;
 	else if (strstr(kcontrol->id.name, "RX mono to stereo"))
@@ -504,6 +521,21 @@ static int tegra210_i2s_put_format(struct snd_kcontrol *kcontrol,
 	else if (strstr(kcontrol->id.name, "TX mono to stereo"))
 		i2s->mono_to_stereo[I2S_TX_PATH] = value;
 	else if (strstr(kcontrol->id.name, "Rx fifo threshold")) {
+		if (value >= 0 && value < TEGRA210_I2S_RX_FIFO_DEPTH)
+			i2s->rx_fifo_th = value;
+		else
+			return -EINVAL;
+	}
+#endif
+	else if (strstr(kcontrol->id.name, "Capture stereo to mono"))
+		i2s->stereo_to_mono[I2S_TX_PATH] = value;
+	else if (strstr(kcontrol->id.name, "Capture mono to stereo"))
+		i2s->mono_to_stereo[I2S_TX_PATH] = value;
+	else if (strstr(kcontrol->id.name, "Playback stereo to mono"))
+		i2s->stereo_to_mono[I2S_RX_PATH] = value;
+	else if (strstr(kcontrol->id.name, "Playback mono to stereo"))
+		i2s->mono_to_stereo[I2S_RX_PATH] = value;
+	else if (strstr(kcontrol->id.name, "Playback FIFO threshold")) {
 		if (value >= 0 && value < TEGRA210_I2S_RX_FIFO_DEPTH)
 			i2s->rx_fifo_th = value;
 		else
@@ -894,6 +926,13 @@ static const struct snd_kcontrol_new tegra210_i2s_controls[] = {
 		tegra210_i2s_get_format, tegra210_i2s_put_format),
 	SOC_SINGLE_EXT("Channels", 0, 0, 16, 0,
 		tegra210_i2s_get_format, tegra210_i2s_put_format),
+#if defined(CONFIG_ANDROID)
+	/*
+	 * FIXME: The following 'RX/TX stereo to mono', 'RX/TX mono to
+	 * stereo' and 'Rx fifo threshold' controls have been deprecated
+	 * and should no longer be used. Instead the below 'Capture' and
+	 * 'Playback' versions should be used.
+	 */
 	SOC_ENUM_EXT("RX stereo to mono conv", tegra210_i2s_stereo_conv_enum,
 		tegra210_i2s_get_format, tegra210_i2s_put_format),
 	SOC_ENUM_EXT("RX mono to stereo conv", tegra210_i2s_mono_conv_enum,
@@ -905,6 +944,23 @@ static const struct snd_kcontrol_new tegra210_i2s_controls[] = {
 	NV_SOC_SINGLE_RANGE_EXT("Rx fifo threshold", 0,
 		TEGRA210_I2S_RX_FIFO_DEPTH - 1, tegra210_i2s_get_format,
 		tegra210_i2s_put_format),
+#endif
+	SOC_ENUM_EXT("Capture stereo to mono conv",
+		     tegra210_i2s_stereo_conv_enum, tegra210_i2s_get_format,
+		     tegra210_i2s_put_format),
+	SOC_ENUM_EXT("Capture mono to stereo conv",
+		     tegra210_i2s_mono_conv_enum, tegra210_i2s_get_format,
+		     tegra210_i2s_put_format),
+	SOC_ENUM_EXT("Playback stereo to mono conv",
+		     tegra210_i2s_stereo_conv_enum, tegra210_i2s_get_format,
+		     tegra210_i2s_put_format),
+	SOC_ENUM_EXT("Playback mono to stereo conv",
+		     tegra210_i2s_mono_conv_enum, tegra210_i2s_get_format,
+		     tegra210_i2s_put_format),
+	NV_SOC_SINGLE_RANGE_EXT("Playback FIFO threshold", 0,
+				TEGRA210_I2S_RX_FIFO_DEPTH - 1,
+				tegra210_i2s_get_format,
+				tegra210_i2s_put_format),
 };
 
 static const struct snd_soc_dapm_widget tegra210_i2s_widgets[] = {

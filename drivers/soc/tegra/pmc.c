@@ -120,6 +120,8 @@
 
 #define PMC_PWR_DET_VAL			0xe4
 
+#define KERNEL_PANIC_FLAG		(1 << 24)
+
 #define PMC_SCRATCH41			0x140
 
 #define PMC_WAKE2_MASK			0x160
@@ -456,6 +458,7 @@ enum pmc_regs {
 	TEGRA_PMC_BR_COMMAND_BASE,
 	TEGRA_PMC_SCRATCH0,
 	TEGRA_PMC_SCRATCH1,
+	TEGRA_PMC_SCRATCH37,
 	TEGRA_PMC_SCRATCH41,
 	TEGRA_PMC_SCRATCH43,
 	TEGRA_PMC_SCRATCH54,
@@ -1019,6 +1022,23 @@ static int tegra_pmc_restart_notify(struct notifier_block *this,
 static struct notifier_block tegra_pmc_restart_handler = {
 	.notifier_call = tegra_pmc_restart_notify,
 	.priority = 128,
+};
+
+static int tegra_pmc_panic_handler(struct notifier_block *this,
+				    unsigned long action, void *data)
+{
+	u32 pmc_reg_val;
+
+	pmc_reg_val = tegra_pmc_reg_readl(TEGRA_PMC_SCRATCH37);
+	tegra_pmc_reg_writel((pmc_reg_val | KERNEL_PANIC_FLAG), TEGRA_PMC_SCRATCH37);
+
+	return NOTIFY_DONE;
+}
+
+
+struct notifier_block tegra_pmc_panic_notifier = {
+	.notifier_call = tegra_pmc_panic_handler,
+	.priority      = INT_MAX-1,
 };
 
 #ifndef CONFIG_TEGRA_POWERGATE
@@ -3895,6 +3915,15 @@ static int tegra_pmc_probe(struct platform_device *pdev)
 	if (!pmc->soc->skip_arm_pm_restart && arm_pm_restart)
 		psci_handle_reboot_cmd = tegra_pmc_program_reboot_reason;
 
+	/* For writing to kernel panic flag for cboot on t21x chips */
+	if (tegra_hidrev_get_chipid(tegra_read_chipid()) == TEGRA210) {
+		err = atomic_notifier_chain_register(&panic_notifier_list,
+			&tegra_pmc_panic_notifier);
+		if (err != 0) {
+			pr_err("ERROR: Failed to register PMC panic notifier: %d", err);
+		}
+	}
+
 	return 0;
 }
 
@@ -4104,6 +4133,7 @@ static const unsigned long tegra210_register_map[TEGRA_PMC_MAX_REG] = {
 	[TEGRA_PMC_BR_COMMAND_BASE]	=  0x908,
 	[TEGRA_PMC_SCRATCH0]		=  0x50,
 	[TEGRA_PMC_SCRATCH1]		=  0x54,
+	[TEGRA_PMC_SCRATCH37]		=  0x130,
 	[TEGRA_PMC_SCRATCH41]		=  0x140,
 	[TEGRA_PMC_SCRATCH43]		=  0x22c,
 	[TEGRA_PMC_SCRATCH54]		=  0x258,

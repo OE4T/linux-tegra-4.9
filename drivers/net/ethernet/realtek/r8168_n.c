@@ -23618,6 +23618,68 @@ rtl8168_release_board(struct pci_dev *pdev,
         free_netdev(dev);
 }
 
+static int r8168_get_mac_address_from_dtb(struct rtl8168_private *tp,
+					  const char *node_name,
+					  const char *property_name,
+					  u8 *mac_addr)
+{
+	struct device_node *np = of_find_node_by_path(node_name);
+	const char *mac_str = NULL;
+	int values[MAC_ADDR_LEN] = {0};
+	u8 mac_temp[MAC_ADDR_LEN] = {0};
+	int i, ret = 0;
+
+	if (!np)
+		return -EADDRNOTAVAIL;
+
+	/* If the property is present but contains an invalid value,
+	 * then something is wrong. Log the error in that case.
+	 */
+	if (of_property_read_string(np, property_name, &mac_str)) {
+		ret = -EADDRNOTAVAIL;
+		goto err_out;
+	}
+
+	/* The DTB property is a string of the form xx:xx:xx:xx:xx:xx
+	 * Convert to an array of bytes.
+	 */
+	if (sscanf(mac_str, "%x:%x:%x:%x:%x:%x", &values[0], &values[1],
+		   &values[2], &values[3], &values[4], &values[5]) != 6) {
+		ret = -EINVAL;
+		goto err_out;
+	}
+
+	for (i = 0; i < MAC_ADDR_LEN; ++i)
+		mac_temp[i] = (unsigned char)values[i];
+
+	if (!is_valid_ether_addr(mac_temp)) {
+		ret = -EINVAL;
+		goto err_out;
+	}
+
+	memcpy(mac_addr, mac_temp, MAC_ADDR_LEN);
+
+	of_node_put(np);
+
+	return ret;
+
+err_out:
+	netif_err(tp, probe, tp->dev, "bad mac address at %s/%s: %s.\n",
+		  node_name, property_name,
+		  mac_str ? mac_str : "missing");
+
+	of_node_put(np);
+
+	return ret;
+}
+
+/* MAC address search order is:
+ *
+ * 1. OTP
+ * 2. Device Tree
+ * 3. Random
+ */
+
 static int
 rtl8168_get_mac_address(struct net_device *dev)
 {
@@ -23625,6 +23687,7 @@ rtl8168_get_mac_address(struct net_device *dev)
         void __iomem *ioaddr = tp->mmio_addr;
         int i;
         u8 mac_addr[MAC_ADDR_LEN];
+	int ret = -EADDRNOTAVAIL;
 
         for (i = 0; i < MAC_ADDR_LEN; i++)
                 mac_addr[i] = RTL_R8(MAC0 + i);
@@ -23679,13 +23742,25 @@ rtl8168_get_mac_address(struct net_device *dev)
         }
 
         if (!is_valid_ether_addr(mac_addr)) {
-                netif_err(tp, probe, dev, "Invalid ether addr %pM\n",
-                          mac_addr);
-                eth_hw_addr_random(dev);
-                ether_addr_copy(mac_addr, dev->dev_addr);
-                netif_info(tp, probe, dev, "Random ether addr %pM\n",
-                           mac_addr);
-                tp->random_mac = 1;
+		netif_info(tp, probe, dev,
+			  "Invalid ethernet address %pM, trying device tree node\n",
+			  mac_addr);
+		/* Try device tree node first before assigning random address */
+		ret = r8168_get_mac_address_from_dtb(tp, "/chosen",
+						     "nvidia,ethernet-mac",
+						     mac_addr);
+
+		if (ret < 0) {
+			eth_hw_addr_random(dev);
+			ether_addr_copy(mac_addr, dev->dev_addr);
+			netif_info(tp, probe, dev,
+				   "Assigning random ethernet address %pM\n",
+				   mac_addr);
+			tp->random_mac = 1;
+		} else
+			netif_info(tp, probe, dev,
+				   "Found valid ethernet address %pM from device tree\n",
+				   mac_addr);
         }
 
         rtl8168_rar_set(tp, mac_addr);

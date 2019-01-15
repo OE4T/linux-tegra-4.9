@@ -27,12 +27,12 @@
 			channel@0 {
 				reg = <0x0>;
 				ti,rail-name = "VDD_SYS_GPU";
-				ti,shunt-resistor-mohm = <5>;
+				ti,shunt-resistor-mohm = <10>;
 			};
 			channel@1 {
 				reg = <0x1>;
 				ti,rail-name = "VDD_SYS_SOC";
-				ti,shunt-resistor-mohm = <5>;
+				ti,shunt-resistor-mohm = <10>;
 			};
 		};
 		ina3221x_41: ina3221x@41 {
@@ -46,17 +46,17 @@
 			channel@0 {
 				reg = <0x0>;
 				ti,rail-name = "VDD_IN";
-				ti,shunt-resistor-mohm = <1>;
+				ti,shunt-resistor-mohm = <20>;
 			};
 			channel@1 {
 				reg = <0x1>;
 				ti,rail-name = "VDD_SYS_CPU";
-				ti,shunt-resistor-mohm = <5>;
+				ti,shunt-resistor-mohm = <10>;
 			};
 			channel@2 {
 				reg = <0x2>;
 				ti,rail-name = "VDD_SYS_SRAM";
-				ti,shunt-resistor-mohm = <5>;
+				ti,shunt-resistor-mohm = <10>;
 			};
 		};
 	};

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2015 - 2018, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2015-2019, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -284,12 +284,10 @@ static int bwmgr_update_clk(void)
 			iso_bw_nvdis, iso_bw_vi);
 	debug_info.total_bw_aftr_eff = bw;
 	debug_info.iso_bw_aftr_eff = iso_bw_min;
-	iso_bw_min = clk_round_rate(bwmgr.emc_clk, iso_bw_min);
 	floor = min(floor, bwmgr.emc_max_rate);
 	bw = max(bw, floor);
 	bw = min(bw, min(iso_cap, max(non_iso_cap, iso_bw_min)));
 	debug_info.calc_freq = bw;
-	bw = clk_round_rate(bwmgr.emc_clk, bw);
 	debug_info.req_freq = bw;
 
 	ret = clk_set_rate(bwmgr.emc_clk, bw);

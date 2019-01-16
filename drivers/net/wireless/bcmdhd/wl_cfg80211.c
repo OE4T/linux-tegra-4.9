@@ -2935,10 +2935,6 @@ scan_out:
 	if (timer_pending(&cfg->scan_timeout))
 		del_timer_sync(&cfg->scan_timeout);
 	spin_lock_irqsave(&cfg->cfgdrv_lock, flags);
-#ifdef CONFIG_BCMDHD_CUSTOM_SYSFS_TEGRA
-	TEGRA_SCAN_DONE(cfg->scan_request, true)
-	skip_cfg80211_scan_done: ;
-#endif
 	cfg->scan_request = NULL;
 	spin_unlock_irqrestore(&cfg->cfgdrv_lock, flags);
 

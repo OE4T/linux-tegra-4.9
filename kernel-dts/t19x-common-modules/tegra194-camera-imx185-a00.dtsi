@@ -293,6 +293,7 @@
 					exposure_factor = "1000000";
 					min_exp_time = "30"; /* us */
 					max_exp_time = "660000"; /* us */
+					step_exp_time = "1";
 					default_exp_time = "16667";/* us */
 					embedded_metadata_height = "1";
 				};
@@ -333,6 +334,7 @@
 					exposure_factor = "1000000";
 					min_exp_time = "30"; /* us */
 					max_exp_time = "660000"; /* us */
+					step_exp_time = "1";
 					default_exp_time = "16667";/* us */
 					embedded_metadata_height = "1";
 				};
@@ -372,6 +374,7 @@
 					exposure_factor = "1000000";
 					min_exp_time = "2433"; /* us */
 					max_exp_time = "660000"; /* us */
+					step_exp_time = "1";
 					default_exp_time = "33334";/* us */
 					embedded_metadata_height = "1";
 

@@ -415,6 +415,9 @@ static int imx390_s_stream(struct v4l2_subdev *sd, int enable)
 	dev_dbg(&client->dev, "%s++ enable %d\n", __func__, enable);
 
 	if (!enable) {
+		/* disable serdes streaming */
+		max9296_stop_streaming(priv->dser_dev, &client->dev);
+
 		err =  imx390_write_table(priv,
 			mode_table[IMX390_MODE_STOP_STREAM]);
 
@@ -424,17 +427,26 @@ static int imx390_s_stream(struct v4l2_subdev *sd, int enable)
 		return 0;
 	}
 
-	max9295_setup_streaming(priv->ser_dev);
-	max9296_setup_streaming(priv->dser_dev, &client->dev);
+	/* enable serdes streaming */
+	err = max9295_setup_streaming(priv->ser_dev);
+	if (err)
+		goto exit;
+	err = max9296_setup_streaming(priv->dser_dev, &client->dev);
+	if (err)
+		goto exit;
+	err = max9296_start_streaming(priv->dser_dev, &client->dev);
+	if (err)
+		goto exit;
 
 	err = imx390_write_table(priv, mode_table[s_data->mode]);
 	if (err)
 		goto exit;
 
 	if (s_data->override_enable) {
-		/* write list of override regs for the asking gain, */
-		/* frame rate and exposure time    */
-
+		/*
+		 * write list of override regs for the asking gain,
+		 * frame rate and exposure time.
+		 */
 		control.id = TEGRA_CAMERA_CID_GAIN;
 
 		err = v4l2_g_ctrl(&priv->ctrl_handler, &control);

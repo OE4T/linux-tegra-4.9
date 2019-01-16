@@ -51,6 +51,7 @@
 #define MAX9296_PHY1_CLK_ADDR 0x320
 #define MAX9296_CTRL0_ADDR 0x10
 
+/* data defines */
 #define MAX9296_CSI_MODE_4X2 0x1
 #define MAX9296_CSI_MODE_2X4 0x4
 #define MAX9296_LANE_MAP1_4X2 0x44
@@ -75,6 +76,8 @@
 #define MAX9296_PIPE_Y 1
 #define MAX9296_PIPE_Z 2
 #define MAX9296_PIPE_U 3
+#define MAX9296_PIPE_INVALID 0xF
+
 
 #define MAX9296_CSI_CTRL_0 0
 #define MAX9296_CSI_CTRL_1 1
@@ -82,6 +85,9 @@
 #define MAX9296_CSI_CTRL_3 3
 
 #define MAX9296_INVAL_ST_ID 0xFF
+
+/* Use reset value as per spec, confirm with vendor */
+#define MAX9296_RESET_ST_ID 0x00
 
 struct max9296_source_ctx {
 	struct gmsl_link_ctx *g_ctx;
@@ -554,6 +560,7 @@ static int max9296_setup_pipeline(struct device *dev,
 		};
 
 		g_stream = &g_ctx->streams[i];
+		g_stream->des_pipe = MAX9296_PIPE_INVALID;
 
 		if (g_stream->st_data_type == GMSL_CSI_DT_RAW_12) {
 			map_list = map_pipe_raw12;
@@ -588,20 +595,74 @@ static int max9296_setup_pipeline(struct device *dev,
 						map_list[j].val);
 		}
 
-		/* Enable stream id select input */
+		/* Set stream id select input */
 		if (g_stream->st_id_sel == GMSL_ST_ID_UNUSED) {
 			dev_err(dev, "%s: Invalid stream st_id_sel\n",
 				__func__);
 			return -EINVAL;
 		}
-		max9296_write_reg(dev,
-			(MAX9296_PIPE_X_ST_SEL_ADDR + pipe_id),
-			g_stream->st_id_sel);
+
+		g_stream->des_pipe = MAX9296_PIPE_X_ST_SEL_ADDR + pipe_id;
 
 		/* Update pipe internals */
 		priv->pipe[pipe_id].st_count++;
 		priv->pipe[pipe_id].st_id_sel = g_stream->st_id_sel;
 	}
+
+	return 0;
+}
+
+int max9296_start_streaming(struct device *dev, struct device *s_dev)
+{
+	struct max9296 *priv = dev_get_drvdata(dev);
+	struct gmsl_link_ctx *g_ctx;
+	struct gmsl_stream *g_stream;
+	int err = 0;
+	int i = 0;
+
+	err = max9296_get_sdev_idx(dev, s_dev, &i);
+	if (err)
+		return err;
+
+	mutex_lock(&priv->lock);
+	g_ctx = priv->sources[i].g_ctx;
+
+	for (i = 0; i < g_ctx->num_streams; i++) {
+		g_stream = &g_ctx->streams[i];
+
+		if (g_stream->des_pipe != MAX9296_PIPE_INVALID)
+			max9296_write_reg(dev, g_stream->des_pipe,
+						g_stream->st_id_sel);
+	}
+	mutex_unlock(&priv->lock);
+
+	return 0;
+}
+
+int max9296_stop_streaming(struct device *dev, struct device *s_dev)
+{
+	struct max9296 *priv = dev_get_drvdata(dev);
+	struct gmsl_link_ctx *g_ctx;
+	struct gmsl_stream *g_stream;
+	int err = 0;
+	int i = 0;
+
+	err = max9296_get_sdev_idx(dev, s_dev, &i);
+	if (err)
+		return err;
+
+	mutex_lock(&priv->lock);
+	g_ctx = priv->sources[i].g_ctx;
+
+	for (i = 0; i < g_ctx->num_streams; i++) {
+		g_stream = &g_ctx->streams[i];
+
+		if (g_stream->des_pipe != MAX9296_PIPE_INVALID)
+			max9296_write_reg(dev, g_stream->des_pipe,
+						MAX9296_RESET_ST_ID);
+	}
+
+	mutex_unlock(&priv->lock);
 
 	return 0;
 }

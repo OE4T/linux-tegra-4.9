@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2018, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2018-2019, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -44,6 +44,7 @@
 struct gmsl_stream {
 	__u32 st_id_sel;
 	__u32 st_data_type;
+	__u32 des_pipe;
 };
 
 struct gmsl_link_ctx {

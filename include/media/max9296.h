@@ -31,6 +31,10 @@ int max9296_sdev_unregister(struct device *dev, struct device *s_dev);
 
 int max9296_setup_streaming(struct device *dev, struct device *s_dev);
 
+int max9296_start_streaming(struct device *dev, struct device *s_dev);
+
+int max9296_stop_streaming(struct device *dev, struct device *s_dev);
+
 int max9296_power_on(struct device *dev);
 
 void max9296_power_off(struct device *dev);

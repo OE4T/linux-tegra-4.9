@@ -334,7 +334,8 @@ int max9295_setup_control(struct device *dev)
 
 	if (i == ARRAY_SIZE(addr_offset)) {
 		dev_err(dev, "%s: invalid ser slave\n", __func__);
-		return -EINVAL;
+		err = -EINVAL;
+		goto error;
 	}
 
 	for (i = 0; i < ARRAY_SIZE(i2c_ovrd); i += 2) {

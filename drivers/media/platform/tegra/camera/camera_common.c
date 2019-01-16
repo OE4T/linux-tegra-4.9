@@ -87,15 +87,20 @@ static const struct camera_common_colorfmt camera_common_color_fmts[] = {
 	},
 };
 
-static const char *camera_common_csi_io_pads[] = {
-	"csia",
-	"csib",
-	"csic",
-	"csid",
-	"csie",
-	"csif",
-	"csig",
-	"csih",
+struct camera_common_csi_io_pad_ctx {
+	const char *name;
+	atomic_t ref;
+};
+
+static struct camera_common_csi_io_pad_ctx camera_common_csi_io_pads[] = {
+	{"csia", ATOMIC_INIT(0)},
+	{"csib", ATOMIC_INIT(0)},
+	{"csic", ATOMIC_INIT(0)},
+	{"csid", ATOMIC_INIT(0)},
+	{"csie", ATOMIC_INIT(0)},
+	{"csif", ATOMIC_INIT(0)},
+	{"csig", ATOMIC_INIT(0)},
+	{"csih", ATOMIC_INIT(0)},
 };
 
 static bool camera_common_verify_code(
@@ -798,8 +803,10 @@ void camera_common_dpd_disable(struct camera_common_data *s_data)
 	/* disable CSI IOs DPD mode to turn on camera */
 	for (i = 0; i < numports; i++) {
 		io_idx = s_data->csi_port + i;
-		tegra_pmc_io_pad_low_power_disable(
-				camera_common_csi_io_pads[io_idx]);
+		if (atomic_inc_return(
+			&camera_common_csi_io_pads[io_idx].ref) == 1)
+			tegra_pmc_io_pad_low_power_disable(
+				camera_common_csi_io_pads[io_idx].name);
 		dev_dbg(s_data->dev,
 			 "%s: csi %d\n", __func__, io_idx);
 	}
@@ -815,8 +822,10 @@ void camera_common_dpd_enable(struct camera_common_data *s_data)
 	/* disable CSI IOs DPD mode to turn on camera */
 	for (i = 0; i < numports; i++) {
 		io_idx = s_data->csi_port + i;
-		tegra_pmc_io_pad_low_power_enable(
-				camera_common_csi_io_pads[io_idx]);
+		if (atomic_dec_return(
+			&camera_common_csi_io_pads[io_idx].ref) == 0)
+			tegra_pmc_io_pad_low_power_enable(
+				camera_common_csi_io_pads[io_idx].name);
 		dev_dbg(s_data->dev,
 			 "%s: csi %d\n", __func__, io_idx);
 	}

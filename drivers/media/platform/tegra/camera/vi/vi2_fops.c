@@ -378,7 +378,8 @@ static int tegra_channel_capture_frame_single_thread(
 	/* Init registers related to each frames */
 	for (index = 0; index < valid_ports; index++) {
 		/* Program buffer address by using surface 0 */
-		csi_write(chan, index, TEGRA_VI_CSI_SURFACE0_OFFSET_MSB, 0x0);
+		csi_write(chan, index, TEGRA_VI_CSI_SURFACE0_OFFSET_MSB,
+			((u64)buf->addr + chan->buffer_offset[index]) >> 32);
 		csi_write(chan, index, TEGRA_VI_CSI_SURFACE0_OFFSET_LSB,
 			(buf->addr + chan->buffer_offset[index]));
 		csi_write(chan, index,
@@ -390,7 +391,9 @@ static int tegra_channel_capture_frame_single_thread(
 			 * with offset sizeimage from Y plane
 			 */
 			csi_write(chan,
-				index, TEGRA_VI_CSI_SURFACE1_OFFSET_MSB, 0x0);
+				index, TEGRA_VI_CSI_SURFACE1_OFFSET_MSB,
+				((u64)buf->addr + chan->format.sizeimage / 2 +
+				chan->buffer_offset[index]) >> 32);
 			csi_write(chan, index,
 				TEGRA_VI_CSI_SURFACE1_OFFSET_LSB,
 				(buf->addr + chan->format.sizeimage / 2 +
@@ -491,7 +494,8 @@ static int tegra_channel_capture_frame_multi_thread(
 	/* Init registers related to each frames */
 	for (index = 0; index < valid_ports; index++) {
 		/* Program buffer address by using surface 0 */
-		csi_write(chan, index, TEGRA_VI_CSI_SURFACE0_OFFSET_MSB, 0x0);
+		csi_write(chan, index, TEGRA_VI_CSI_SURFACE0_OFFSET_MSB,
+			((u64)buf->addr + chan->buffer_offset[index]) >> 32);
 		csi_write(chan, index, TEGRA_VI_CSI_SURFACE0_OFFSET_LSB,
 			(buf->addr + chan->buffer_offset[index]));
 		csi_write(chan, index,
@@ -503,7 +507,9 @@ static int tegra_channel_capture_frame_multi_thread(
 			 * with offset sizeimage from Y plane
 			 */
 			csi_write(chan,
-				index, TEGRA_VI_CSI_SURFACE1_OFFSET_MSB, 0x0);
+				index, TEGRA_VI_CSI_SURFACE1_OFFSET_MSB,
+				((u64)buf->addr + chan->format.sizeimage / 2 +
+				chan->buffer_offset[index]) >> 32);
 			csi_write(chan, index,
 				TEGRA_VI_CSI_SURFACE1_OFFSET_LSB,
 				(buf->addr + chan->format.sizeimage / 2 +
@@ -721,7 +727,8 @@ static void tegra_channel_capture_done(struct tegra_channel *chan)
 
 	for (index = 0; index < chan->valid_ports; index++) {
 		/* Program buffer address by using surface 0 */
-		csi_write(chan, index, TEGRA_VI_CSI_SURFACE0_OFFSET_MSB, 0x0);
+		csi_write(chan, index, TEGRA_VI_CSI_SURFACE0_OFFSET_MSB,
+			((u64)buf->addr + chan->buffer_offset[index]) >> 32);
 		csi_write(chan, index, TEGRA_VI_CSI_SURFACE0_OFFSET_LSB,
 			(buf->addr + chan->buffer_offset[index]));
 		csi_write(chan, index,
@@ -733,7 +740,9 @@ static void tegra_channel_capture_done(struct tegra_channel *chan)
 			 * with offset sizeimage from Y plane
 			 */
 			csi_write(chan, index,
-				TEGRA_VI_CSI_SURFACE1_OFFSET_MSB, 0x0);
+				TEGRA_VI_CSI_SURFACE1_OFFSET_MSB,
+				((u64)buf->addr + chan->format.sizeimage / 2 +
+				chan->buffer_offset[index]) >> 32);
 			csi_write(chan, index,
 				TEGRA_VI_CSI_SURFACE1_OFFSET_LSB,
 				(buf->addr + chan->format.sizeimage / 2 +

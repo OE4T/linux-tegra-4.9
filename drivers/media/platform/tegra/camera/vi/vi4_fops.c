@@ -265,7 +265,8 @@ static void tegra_channel_surface_setup(
 			ATOMP_SURFACE_OFFSET1, buf->addr + offset +
 			chan->format.sizeimage / 2);
 		vi4_channel_write(chan, vnc_id,
-			ATOMP_SURFACE_OFFSET1_H, 0x0);
+			ATOMP_SURFACE_OFFSET1_H, ((u64)buf->addr + offset +
+			chan->format.sizeimage / 2) >> 32);
 		vi4_channel_write(chan, vnc_id,
 			ATOMP_SURFACE_STRIDE1,
 			chan->format.bytesperline * chan->interlace_bplfactor);

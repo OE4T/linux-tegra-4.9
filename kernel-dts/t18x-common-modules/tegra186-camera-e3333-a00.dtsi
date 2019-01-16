@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-201t9, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2019, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -306,7 +306,9 @@
 
 						active_w = "2592";
 						active_h = "1944";
-						pixel_t = "bayer_bggr";
+						mode_type = "bayer";
+						pixel_phase = "bggr";
+						csi_pixel_bit_depth = "10";
 						readout_orientation = "90";
 						line_length = "2688";
 						inherent_gain = "1";
@@ -330,6 +332,7 @@
 						max_exp_time = "550385";/* us */
 						step_exp_time = "1";
 						default_exp_time = "33334";/* us */
+						embedded_metadata_height = "0";
 					};
 
 					mode1 { //OV5693_MODE_2592X1458
@@ -343,7 +346,9 @@
 
 						active_w = "2592";
 						active_h = "1458";
-						pixel_t = "bayer_bggr";
+						mode_type = "bayer";
+						pixel_phase = "bggr";
+						csi_pixel_bit_depth = "10";
 						readout_orientation = "90";
 						line_length = "2688";
 						inherent_gain = "1";
@@ -367,6 +372,7 @@
 						max_exp_time = "550385";/* us */
 						step_exp_time = "1";
 						default_exp_time = "33334";/* us */
+						embedded_metadata_height = "0";
 					};
 
 					mode2 { //OV5693_MODE_1280X720
@@ -380,7 +386,9 @@
 
 						active_w = "1280";
 						active_h = "720";
-						pixel_t = "bayer_bggr";
+						mode_type = "bayer";
+						pixel_phase = "bggr";
+						csi_pixel_bit_depth = "10";
 						readout_orientation = "90";
 						line_length = "1752";
 						inherent_gain = "1";
@@ -404,6 +412,7 @@
 						max_exp_time = "358733";/* us */
 						step_exp_time = "1";
 						default_exp_time = "8334";/* us */
+						embedded_metadata_height = "0";
 					};
 
 					ports {
@@ -522,7 +531,9 @@
 
 						active_w = "2592";
 						active_h = "1944";
-						pixel_t = "bayer_bggr";
+						mode_type = "bayer";
+						pixel_phase = "bggr";
+						csi_pixel_bit_depth = "10";
 						readout_orientation = "90";
 						line_length = "2688";
 						inherent_gain = "1";
@@ -546,6 +557,7 @@
 						max_exp_time = "550385";/* us */
 						step_exp_time = "1";
 						default_exp_time = "33334";/* us */
+						embedded_metadata_height = "0";
 					};
 
 					mode1 { //OV5693_MODE_2592X1458
@@ -559,7 +571,9 @@
 
 						active_w = "2592";
 						active_h = "1458";
-						pixel_t = "bayer_bggr";
+						mode_type = "bayer";
+						pixel_phase = "bggr";
+						csi_pixel_bit_depth = "10";
 						readout_orientation = "90";
 						line_length = "2688";
 						inherent_gain = "1";
@@ -583,6 +597,7 @@
 						max_exp_time = "550385";/* us */
 						step_exp_time = "1";
 						default_exp_time = "33334";/* us */
+						embedded_metadata_height = "0";
 					};
 
 					mode2 { //OV5693_MODE_1280X720
@@ -596,7 +611,9 @@
 
 						active_w = "1280";
 						active_h = "720";
-						pixel_t = "bayer_bggr";
+						mode_type = "bayer";
+						pixel_phase = "bggr";
+						csi_pixel_bit_depth = "10";
 						readout_orientation = "90";
 						line_length = "1752";
 						inherent_gain = "1";
@@ -620,6 +637,7 @@
 						max_exp_time = "358733";/* us */
 						step_exp_time = "1";
 						default_exp_time = "8334";/* us */
+						embedded_metadata_height = "0";
 					};
 
 					ports {
@@ -738,7 +756,9 @@
 
 						active_w = "2592";
 						active_h = "1944";
-						pixel_t = "bayer_bggr";
+						mode_type = "bayer";
+						pixel_phase = "bggr";
+						csi_pixel_bit_depth = "10";
 						readout_orientation = "90";
 						line_length = "2688";
 						inherent_gain = "1";
@@ -762,6 +782,7 @@
 						max_exp_time = "550385";/* us */
 						step_exp_time = "1";
 						default_exp_time = "33334";/* us */
+						embedded_metadata_height = "0";
 					};
 
 					mode1 { //OV5693_MODE_2592X1458
@@ -775,7 +796,9 @@
 
 						active_w = "2592";
 						active_h = "1458";
-						pixel_t = "bayer_bggr";
+						mode_type = "bayer";
+						pixel_phase = "bggr";
+						csi_pixel_bit_depth = "10";
 						readout_orientation = "90";
 						line_length = "2688";
 						inherent_gain = "1";
@@ -799,6 +822,7 @@
 						max_exp_time = "550385";/* us */
 						step_exp_time = "1";
 						default_exp_time = "33334";/* us */
+						embedded_metadata_height = "0";
 					};
 
 					mode2 { //OV5693_MODE_1280X720
@@ -812,7 +836,9 @@
 
 						active_w = "1280";
 						active_h = "720";
-						pixel_t = "bayer_bggr";
+						mode_type = "bayer";
+						pixel_phase = "bggr";
+						csi_pixel_bit_depth = "10";
 						readout_orientation = "90";
 						line_length = "1752";
 						inherent_gain = "1";
@@ -836,6 +862,7 @@
 						max_exp_time = "358733";/* us */
 						step_exp_time = "1";
 						default_exp_time = "8334";/* us */
+						embedded_metadata_height = "0";
 					};
 
 					ports {
@@ -954,7 +981,9 @@
 
 						active_w = "2592";
 						active_h = "1944";
-						pixel_t = "bayer_bggr";
+						mode_type = "bayer";
+						pixel_phase = "bggr";
+						csi_pixel_bit_depth = "10";
 						readout_orientation = "90";
 						line_length = "2688";
 						inherent_gain = "1";
@@ -978,6 +1007,7 @@
 						max_exp_time = "550385";/* us */
 						step_exp_time = "1";
 						default_exp_time = "33334";/* us */
+						embedded_metadata_height = "0";
 					};
 
 					mode1 { //OV5693_MODE_2592X1458
@@ -991,7 +1021,9 @@
 
 						active_w = "2592";
 						active_h = "1458";
-						pixel_t = "bayer_bggr";
+						mode_type = "bayer";
+						pixel_phase = "bggr";
+						csi_pixel_bit_depth = "10";
 						readout_orientation = "90";
 						line_length = "2688";
 						inherent_gain = "1";
@@ -1015,6 +1047,7 @@
 						max_exp_time = "550385";/* us */
 						step_exp_time = "1";
 						default_exp_time = "33334";/* us */
+						embedded_metadata_height = "0";
 					};
 
 					mode2 { //OV5693_MODE_1280X720
@@ -1028,7 +1061,9 @@
 
 						active_w = "1280";
 						active_h = "720";
-						pixel_t = "bayer_bggr";
+						mode_type = "bayer";
+						pixel_phase = "bggr";
+						csi_pixel_bit_depth = "10";
 						readout_orientation = "90";
 						line_length = "1752";
 						inherent_gain = "1";
@@ -1052,6 +1087,7 @@
 						max_exp_time = "358733";/* us */
 						step_exp_time = "1";
 						default_exp_time = "8334";/* us */
+						embedded_metadata_height = "0";
 					};
 
 					ports {
@@ -1170,7 +1206,9 @@
 
 						active_w = "2592";
 						active_h = "1944";
-						pixel_t = "bayer_bggr";
+						mode_type = "bayer";
+						pixel_phase = "bggr";
+						csi_pixel_bit_depth = "10";
 						readout_orientation = "90";
 						line_length = "2688";
 						inherent_gain = "1";
@@ -1194,6 +1232,7 @@
 						max_exp_time = "550385";/* us */
 						step_exp_time = "1";
 						default_exp_time = "33334";/* us */
+						embedded_metadata_height = "0";
 					};
 
 					mode1 { //OV5693_MODE_2592X1458
@@ -1207,7 +1246,9 @@
 
 						active_w = "2592";
 						active_h = "1458";
-						pixel_t = "bayer_bggr";
+						mode_type = "bayer";
+						pixel_phase = "bggr";
+						csi_pixel_bit_depth = "10";
 						readout_orientation = "90";
 						line_length = "2688";
 						inherent_gain = "1";
@@ -1231,6 +1272,7 @@
 						max_exp_time = "550385";/* us */
 						step_exp_time = "1";
 						default_exp_time = "33334";/* us */
+						embedded_metadata_height = "0";
 					};
 
 					mode2 { //OV5693_MODE_1280X720
@@ -1244,7 +1286,9 @@
 
 						active_w = "1280";
 						active_h = "720";
-						pixel_t = "bayer_bggr";
+						mode_type = "bayer";
+						pixel_phase = "bggr";
+						csi_pixel_bit_depth = "10";
 						readout_orientation = "90";
 						line_length = "1752";
 						inherent_gain = "1";
@@ -1268,6 +1312,7 @@
 						max_exp_time = "358733";/* us */
 						step_exp_time = "1";
 						default_exp_time = "8334";/* us */
+						embedded_metadata_height = "0";
 					};
 
 					ports {
@@ -1386,7 +1431,9 @@
 
 						active_w = "2592";
 						active_h = "1944";
-						pixel_t = "bayer_bggr";
+						mode_type = "bayer";
+						pixel_phase = "bggr";
+						csi_pixel_bit_depth = "10";
 						readout_orientation = "90";
 						line_length = "2688";
 						inherent_gain = "1";
@@ -1410,6 +1457,7 @@
 						max_exp_time = "550385";/* us */
 						step_exp_time = "1";
 						default_exp_time = "33334";/* us */
+						embedded_metadata_height = "0";
 					};
 
 					mode1 { //OV5693_MODE_2592X1458
@@ -1423,7 +1471,9 @@
 
 						active_w = "2592";
 						active_h = "1458";
-						pixel_t = "bayer_bggr";
+						mode_type = "bayer";
+						pixel_phase = "bggr";
+						csi_pixel_bit_depth = "10";
 						readout_orientation = "90";
 						line_length = "2688";
 						inherent_gain = "1";
@@ -1447,6 +1497,7 @@
 						max_exp_time = "550385";/* us */
 						step_exp_time = "1";
 						default_exp_time = "33334";/* us */
+						embedded_metadata_height = "0";
 					};
 
 					mode2 { //OV5693_MODE_1280X720
@@ -1460,7 +1511,9 @@
 
 						active_w = "1280";
 						active_h = "720";
-						pixel_t = "bayer_bggr";
+						mode_type = "bayer";
+						pixel_phase = "bggr";
+						csi_pixel_bit_depth = "10";
 						readout_orientation = "90";
 						line_length = "1752";
 						inherent_gain = "1";
@@ -1484,6 +1537,7 @@
 						max_exp_time = "358733";/* us */
 						step_exp_time = "1";
 						default_exp_time = "8334";/* us */
+						embedded_metadata_height = "0";
 					};
 
 					ports {

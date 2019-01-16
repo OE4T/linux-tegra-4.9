@@ -44,6 +44,10 @@
 #include <tegra210-soc/mods-simple-bus.dtsi>
 
 / {
+        nvidia,boardids = "3448";
+        nvidia,proc-boardid = "3448";
+        nvidia,pmu-boardid = "3448";
+
 	host1x {
 		/* tegradc.0 */
 		dc@54200000 {

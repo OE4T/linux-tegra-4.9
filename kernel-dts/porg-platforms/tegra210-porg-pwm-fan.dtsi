@@ -18,14 +18,14 @@
 		secret = <47>;
 		active_steps = <10>;
 		active_rpm = <0 1000 2000 3000 4000 5000 6000 7000 10000 11000>;
-		active_rru = <10240 512 256 256 256 256 256 256 256 256>;
-		active_rrd = <10240 512 256 256 256 256 256 256 256 256>;
+		active_rru = <40 2 1 1 1 1 1 1 1 1>;
+		active_rrd = <40 2 1 1 1 1 1 1 1 1>;
 		state_cap_lookup = <2 2 2 2 3 3 3 4 4 4>;
-		pwm_period = <65536>;
+		pwm_period = <45334>;
 		pwm_id = <3>;
 		step_time = <100>; /* mesecs */
 		state_cap = <7>;
-		active_pwm_max = <65536>;
+		active_pwm_max = <255>;
 		tach_gpio =  <&gpio TEGRA_GPIO(Z, 2) GPIO_ACTIVE_LOW>; /* TEGRA_GPIO_PZ2 */
 		pwm_gpio = <&gpio TEGRA_GPIO(E, 7) GPIO_ACTIVE_LOW>; /* TEGRA_GPIO_PE7 */
 		pwm_polarity = <PWM_POLARITY_NORMAL>;
@@ -35,8 +35,8 @@
 	pwm-fan {
 		compatible = "pwm-fan";
 		status = "okay";
-		pwms = <&tegra_pwm 3 65536>;
+		pwms = <&tegra_pwm 3 45334>;
 		shared_data = <&pwm_fan_shared_data>;
-		active_pwm = <0 16640 28160 40960 51200 61440 62720 64000 64512 65535>;
+		active_pwm = <0 80 120 160 255 255 255 255 255 255>;
 	};
 };

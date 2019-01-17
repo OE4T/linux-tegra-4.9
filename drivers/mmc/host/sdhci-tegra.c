@@ -2697,7 +2697,6 @@ static struct platform_driver sdhci_tegra_driver = {
 		.name	= "sdhci-tegra",
 		.of_match_table	= sdhci_tegra_dt_match,
 		.pm	= &sdhci_pltfm_pmops,
-		.probe_type = PROBE_PREFER_ASYNCHRONOUS,
 	},
 	.probe		= sdhci_tegra_probe,
 	.remove		= sdhci_pltfm_unregister,

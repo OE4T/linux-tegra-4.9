@@ -24,7 +24,6 @@
 #include "porg-platforms/tegra210-porg-p3448-emc-a00.dtsi"
 #include "porg-platforms/tegra210-porg-pcie.dtsi"
 #include "porg-platforms/tegra210-porg-prods.dtsi"
-#include "porg-platforms/tegra210-porg-power-dvfs-p3448-0000-a00.dtsi"
 
 / {
 	model = "jetson-nano";
@@ -54,25 +53,6 @@
 		fw_path = "/system/vendor/firmware/fw_bcmdhd.bin";
 		nv_path = "/system/vendor/firmware/nvram_darcy_a00.txt";
 		tuned_nv_path = "/system/vendor/firmware/nvram_darcy_a00.txt";
-	};
-
-	thermal-zones {
-		AO-therm {
-			polling-delay = <1000>;
-			status = "okay";
-		};
-
-		Tboard_tegra {
-			status = "disabled";
-		};
-
-		Tdiode_tegra {
-			status = "disabled";
-		};
-	};
-
-	tegra-aotag {
-		status = "okay";
 	};
 
 	watchdog@60005100 {

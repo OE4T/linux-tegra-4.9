@@ -189,6 +189,8 @@
 		mmc-hs200-1_8v;
 		nvidia,cd-wakeup-capable;
 		nvidia,update-pinctrl-settings;
+		nvidia,pmc-wakeup = <&tegra_pmc PMC_WAKE_TYPE_GPIO 35
+			PMC_TRIGGER_TYPE_NONE>;
 		no-sdio;
 		no-mmc;
 		status = "okay";

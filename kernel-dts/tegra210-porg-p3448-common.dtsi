@@ -487,10 +487,8 @@
 	chosen {
 		nvidia,bootloader-xusb-enable;
 		nvidia,bootloader-vbus-enable=<0x1>;
-		fastboot-instructions = "Press X/Y to move highlight\nPress Button A to select\nConnect SHIELD Controller using USB cable. Use USB port near HDMI port for the controller and USB port away for PC connection\n";
 		nvidia,fastboot_without_usb;
 		nvidia,gpu-disable-power-saving;
-		firmware-blob-partition = "RP4";
 		board-has-eeprom;
 
 		verified-boot {

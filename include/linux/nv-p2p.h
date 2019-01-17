@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2018-2019, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -40,7 +40,6 @@
 #include <linux/highmem.h>
 #include <linux/mutex.h>
 #include <linux/spinlock.h>
-#include <nvgpu/linux/lock.h>
 
 #define	NVIDIA_P2P_UNINITIALIZED 0x0
 #define	NVIDIA_P2P_PINNED 0x1
@@ -64,7 +63,7 @@ struct nvidia_p2p_page_table {
 
 	struct mm_struct *mm;
 	struct mmu_notifier mn;
-	struct nvgpu_mutex lock;
+	struct mutex lock;
 	void (*free_callback)(void *data);
 	void *data;
 };

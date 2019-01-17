@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2018-2019, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -101,7 +101,7 @@ int nvidia_p2p_get_pages(u64 vaddr, u64 size,
 	(*page_table)->free_callback = free_callback;
 	(*page_table)->data = data;
 	(*page_table)->vaddr = vaddr;
-	nvgpu_mutex_init(&(*page_table)->lock);
+	mutex_init(&(*page_table)->lock);
 	(*page_table)->mapped = NVIDIA_P2P_PINNED;
 
 	ret = mmu_notifier_register(&(*page_table)->mn, (*page_table)->mm);
@@ -143,7 +143,7 @@ int nvidia_p2p_free_page_table(struct nvidia_p2p_page_table *page_table)
 		return 0;
 	}
 
-	nvgpu_mutex_acquire(&page_table->lock);
+	mutex_lock(&page_table->lock);
 
 	if (page_table->mapped & NVIDIA_P2P_MAPPED) {
 		WARN(1, "Attempting to free unmapped pages");
@@ -161,7 +161,7 @@ int nvidia_p2p_free_page_table(struct nvidia_p2p_page_table *page_table)
 		page_table->mapped &= (u32)~NVIDIA_P2P_PINNED;
 	}
 
-	nvgpu_mutex_release(&page_table->lock);
+	mutex_unlock(&page_table->lock);
 
 	return 0;
 }
@@ -183,18 +183,18 @@ int nvidia_p2p_map_pages(struct device *dev,
 		return -EINVAL;
 	}
 
-	nvgpu_mutex_acquire(&page_table->lock);
+	mutex_lock(&page_table->lock);
 
 	pages = page_table->pages;
 	nr_pages = page_table->entries;
 	if (nr_pages <= 0) {
-		nvgpu_mutex_release(&page_table->lock);
+		mutex_unlock(&page_table->lock);
 		return -EINVAL;
 	}
 
 	*dma_mapping = kzalloc(sizeof(**dma_mapping), GFP_KERNEL);
 	if (!*dma_mapping) {
-		nvgpu_mutex_release(&page_table->lock);
+		mutex_unlock(&page_table->lock);
 		return -ENOMEM;
 	}
 	sgt = kzalloc(sizeof(*sgt), GFP_KERNEL);
@@ -235,7 +235,7 @@ int nvidia_p2p_map_pages(struct device *dev,
 		(*dma_mapping)->hw_len[i] = sg_dma_len(sg);
 	}
 	(*dma_mapping)->page_table->mapped |= NVIDIA_P2P_MAPPED;
-	nvgpu_mutex_release(&page_table->lock);
+	mutex_unlock(&page_table->lock);
 
 	return 0;
 free_hw_address:
@@ -250,7 +250,7 @@ free_sgt:
 free_dma_mapping:
 	kfree(*dma_mapping);
 	*dma_mapping = NULL;
-	nvgpu_mutex_release(&page_table->lock);
+	mutex_unlock(&page_table->lock);
 
 	return ret;
 }
@@ -269,7 +269,7 @@ int nvidia_p2p_unmap_pages(struct nvidia_p2p_dma_mapping *dma_mapping)
 		return -EFAULT;
 	}
 
-	nvgpu_mutex_acquire(&page_table->lock);
+	mutex_lock(&page_table->lock);
 	if (page_table->mapped & NVIDIA_P2P_MAPPED) {
 		kfree(dma_mapping->hw_len);
 		kfree(dma_mapping->hw_address);
@@ -283,7 +283,7 @@ int nvidia_p2p_unmap_pages(struct nvidia_p2p_dma_mapping *dma_mapping)
 		kfree(dma_mapping);
 		page_table->mapped &= (u32)~NVIDIA_P2P_MAPPED;
 	}
-	nvgpu_mutex_release(&page_table->lock);
+	mutex_unlock(&page_table->lock);
 
 	return 0;
 }

@@ -3,7 +3,7 @@
  *
  * Author: Mike Lavender, mike@steroidmicros.com
  * Copyright (c) 2005, Intec Automation Inc.
- * Copyright (c) 2013-2018, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2013-2019, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -1997,8 +1997,15 @@ static int qspi_suspend(struct device *dev)
 	uint8_t regval;
 
 	struct qspi	*flash = dev_get_drvdata(dev);
+	struct spi_device *spi = flash->spi;
+	const struct spi_device_id	*id = spi_get_device_id(spi);
+	struct flash_info *info =  (void *)id->driver_data;
 
 	dev_dbg(dev, "%s ENTRY\n", __func__);
+
+	/* configuration registers are not supported by macronix */
+	if (info->jedec_id == JEDEC_ID_MX25U3235F)
+		return 0;
 
 	ret = qspi_read_any_reg(flash, RWAR_CR1V, &regval);
 	if (ret) {
@@ -2024,8 +2031,15 @@ static int qspi_resume(struct device *dev)
 {
 	int ret;
 	struct qspi	*flash = dev_get_drvdata(dev);
+	struct spi_device *spi = flash->spi;
+	const struct spi_device_id	*id = spi_get_device_id(spi);
+	struct flash_info *info =  (void *)id->driver_data;
 
 	dev_dbg(dev, "%s ENTRY\n", __func__);
+
+	/* configuration registers are not supported by macronix */
+	if (info->jedec_id == JEDEC_ID_MX25U3235F)
+		return 0;
 
 	ret = qspi_init(flash);
 

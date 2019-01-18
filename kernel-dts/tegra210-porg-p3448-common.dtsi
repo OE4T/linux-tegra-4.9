@@ -192,6 +192,7 @@
 			PMC_TRIGGER_TYPE_NONE>;
 		no-sdio;
 		no-mmc;
+		disable-wp;
 		status = "okay";
 	};
 

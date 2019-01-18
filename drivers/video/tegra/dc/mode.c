@@ -3,7 +3,7 @@
  *
  * Copyright (C) 2010 Google, Inc.
  *
- * Copyright (c) 2010-2018, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2010-2019, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -846,12 +846,16 @@ int tegra_dc_set_fb_mode(struct tegra_dc *dc,
 
 	memset(&mode, 0, sizeof(mode));
 #if defined(CONFIG_FB_MODE_PIXCLOCK_HZ)
-	if (fbmode->pixclock_hz)
+	if (fbmode->pixclock_hz) {
 		mode.pclk = fbmode->pixclock_hz;
-	else
+		mode.pclk_hz_used = true;
+	} else {
 		mode.pclk = PICOS2KHZ(fbmode->pixclock) * 1000;
+		mode.pclk_hz_used = false;
+	}
 #else
 	mode.pclk = PICOS2KHZ(fbmode->pixclock) * 1000;
+	mode.pclk_hz_used = false;
 #endif
 
 	mode.h_sync_width = fbmode->hsync_len;

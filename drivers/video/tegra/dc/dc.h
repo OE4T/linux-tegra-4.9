@@ -6,7 +6,7 @@
  * Author:
  *	Erik Gilling <konkers@google.com>
  *
- * Copyright (c) 2010-2018, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2010-2019, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -464,6 +464,7 @@ struct tegra_dc_mode {
 	u32	flags;
 	u8	avi_m;
 	u32	vmode;
+	bool	pclk_hz_used;
 };
 
 struct tegra_dc_mode_metadata {

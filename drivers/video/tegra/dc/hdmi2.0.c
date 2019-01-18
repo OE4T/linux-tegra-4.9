@@ -1,7 +1,7 @@
 /*
  * hdmi2.0.c: hdmi2.0 driver.
  *
- * Copyright (c) 2014-2018, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2014-2019, NVIDIA CORPORATION, All rights reserved.
  * Author: Animesh Kishore <ankishore@nvidia.com>
  *
  * This software is licensed under the terms of the GNU General Public
@@ -3063,9 +3063,8 @@ static long tegra_dc_hdmi_setup_clk_nvdisplay(struct tegra_dc *dc,
 		return -EINVAL;
 	}
 
-#if !defined(CONFIG_FB_MODE_PIXCLOCK_HZ)
-	dc->mode.pclk = tegra_hdmi_get_pclk(&dc->mode);
-#endif
+	if (!dc->mode.pclk_hz_used)
+		dc->mode.pclk = tegra_hdmi_get_pclk(&dc->mode);
 
 	/* Set rate on PARENT */
 	if (!dc->initialized) {
@@ -3110,9 +3109,8 @@ static long tegra_dc_hdmi_setup_clk_t21x(struct tegra_dc *dc, struct clk *clk)
 
 	parent_clk = clk_get(NULL, "pll_d2_out0");
 
-#if !defined(CONFIG_FB_MODE_PIXCLOCK_HZ)
-	dc->mode.pclk = tegra_hdmi_get_pclk(&dc->mode);
-#endif
+	if (!dc->mode.pclk_hz_used)
+		dc->mode.pclk = tegra_hdmi_get_pclk(&dc->mode);
 
 	if (IS_ERR_OR_NULL(parent_clk)) {
 		dev_err(&dc->ndev->dev, "hdmi: parent clk get failed\n");

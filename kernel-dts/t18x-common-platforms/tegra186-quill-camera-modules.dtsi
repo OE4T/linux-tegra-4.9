@@ -59,36 +59,42 @@
 				vi_port0: port@0 {
 					status = "disabled";
 					vi_in0: endpoint {
+						vc-id = <0>;
 						status = "disabled";
 					};
 				};
 				vi_port1: port@1 {
 					status = "disabled";
 					vi_in1: endpoint {
+						vc-id = <0>;
 						status = "disabled";
 					};
 				};
 				vi_port2: port@2 {
 					status = "disabled";
 					vi_in2: endpoint {
+						vc-id = <0>;
 						status = "disabled";
 					};
 				};
 				vi_port3: port@3 {
 					status = "disabled";
 					vi_in3: endpoint {
+						vc-id = <0>;
 						status = "disabled";
 					};
 				};
 				vi_port4: port@4 {
 					status = "disabled";
 					vi_in4: endpoint {
+						vc-id = <0>;
 						status = "disabled";
 					};
 				};
 				vi_port5: port@5 {
 					status = "disabled";
 					vi_in5: endpoint {
+						vc-id = <0>;
 						status = "disabled";
 					};
 				};

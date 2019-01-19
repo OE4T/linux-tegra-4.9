@@ -522,8 +522,8 @@
 		};
 
 		pwm-regulator@1 {
-			regulator-min-microvolt = <710000>;
-			regulator-max-microvolt = <1320000>;
+			regulator-min-microvolt = <708000>;
+			regulator-max-microvolt = <1323400>;
 		};
 	};
 	soctherm@0x700E2000 {

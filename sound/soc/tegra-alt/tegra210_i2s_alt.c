@@ -542,7 +542,7 @@ static int tegra210_i2s_hw_params(struct snd_pcm_substream *substream,
 {
 	struct device *dev = dai->dev;
 	struct tegra210_i2s *i2s = snd_soc_dai_get_drvdata(dai);
-	unsigned int mask, val, reg, frame_format;
+	unsigned int mask, val, reg, frame_format, rx_mask, tx_mask;
 	int ret, sample_size, channels, srate, i2sclock, bitcnt, max_th;
 	struct tegra210_xbar_cif_conf cif_conf;
 
@@ -598,16 +598,21 @@ static int tegra210_i2s_hw_params(struct snd_pcm_substream *substream,
 	if (i2s->sample_rate_via_control)
 		srate = i2s->sample_rate_via_control;
 
-	if (i2s->channels_via_control)
+	if (i2s->channels_via_control) {
 		channels = i2s->channels_via_control;
+		rx_mask = tx_mask = (1 << channels) - 1;
+	} else {
+		rx_mask = i2s->rx_mask;
+		tx_mask = i2s->tx_mask;
+	}
 
 	regmap_read(i2s->regmap, TEGRA210_I2S_CTRL, &val);
 
 	frame_format = val & TEGRA210_I2S_CTRL_FRAME_FORMAT_MASK;
 
 	if (frame_format == TEGRA210_I2S_CTRL_FRAME_FORMAT_FSYNC_MODE) {
-		i2s->soc_data->set_slot_ctrl(i2s->regmap, channels,
-			i2s->tx_mask, i2s->rx_mask);
+		i2s->soc_data->set_slot_ctrl(i2s->regmap, channels, tx_mask,
+					     rx_mask);
 		cif_conf.audio_channels = channels;
 		cif_conf.client_channels = channels;
 	} else {

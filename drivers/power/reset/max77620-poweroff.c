@@ -1,7 +1,7 @@
 /*
  * Power off driver for Maxim MAX77620 device.
  *
- * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2019, NVIDIA CORPORATION.  All rights reserved.
  *
  * Author: Chaitanya Bandi <bandik@nvidia.com>
  *
@@ -49,6 +49,8 @@ struct max77620_poweroff {
 	struct notifier_block reset_nb;
 	int gpio_state[MAX77620_MAX_GPIO];
 	int ngpio_states;
+	int gpio_shutdown_state[MAX77620_MAX_GPIO];
+	int ngpio_shutdown_states;
 	bool use_power_off;
 	bool use_power_reset;
 	bool need_rtc_power_on;
@@ -125,6 +127,25 @@ static void _max77620_prepare_system_power_off(
 	}
 }
 
+static void _max77620_prepare_system_shutdown_power_off(
+		struct max77620_poweroff *max77620_poweroff)
+{
+	int i;
+	int gpio;
+	int val;
+
+	if (!max77620_poweroff->ngpio_shutdown_states)
+		return;
+
+	dev_info(max77620_poweroff->dev, "Preparing power-off from PMIC\n");
+
+	for (i = 0; i < max77620_poweroff->ngpio_shutdown_states; ++i) {
+		gpio = GPIO_STATE_TO_GPIO(max77620_poweroff->gpio_shutdown_state[i]);
+		val = GPIO_STATE_TO_VAL(max77620_poweroff->gpio_shutdown_state[i]);
+		max77620_turn_off_gpio(max77620_poweroff, gpio, val);
+	}
+}
+
 static void max77620_prepare_system_power_off(
 		struct max77620_poweroff *max77620_poff)
 {
@@ -170,6 +191,7 @@ static void max77620_pm_power_off(void *drv_data)
 			MAX77620_REG_IRQTOP, ret);
 
 	_max77620_prepare_system_power_off(max77620_poweroff);
+	_max77620_prepare_system_shutdown_power_off(max77620_poweroff);
 
 	if (get_soc_specific_power_off())
 		return;
@@ -309,7 +331,7 @@ static int max77620_poweroff_probe(struct platform_device *pdev)
 
 	count = of_property_count_u32_elems(np, prop_name);
 	if (count == -EINVAL)
-		goto gpio_done;
+		goto gpio_reset_done;
 
 	if (count % 2) {
 		dev_warn(&pdev->dev, "Not able to parse reset-gpio-states\n");
@@ -327,8 +349,34 @@ static int max77620_poweroff_probe(struct platform_device *pdev)
 					GPIO_VAL_TO_STATE(gpio, val);
 	}
 
+gpio_reset_done:
+	if (of_property_read_bool(np, "maxim,power-shutdown-gpio-states"))
+		prop_name = "maxim,power-shutdown-gpio-states";
+	else
+		prop_name = "power-shutdown-gpio-states";
+
+	count = of_property_count_u32_elems(np, prop_name);
+	if (count == -EINVAL)
+		goto gpio_done;
+
+	if (count % 2) {
+		dev_warn(&pdev->dev, "Not able to parse shutdown-gpio-states\n");
+		goto gpio_done;
+	}
+	max77620_poweroff->ngpio_shutdown_states = count / 2;
+	for (count = 0; count < max77620_poweroff->ngpio_shutdown_states; ++count) {
+		u32 gpio = 0;
+		u32 val = 0;
+		int index = count * 2;
+
+		of_property_read_u32_index(np, prop_name, index, &gpio);
+		of_property_read_u32_index(np, prop_name, index + 1, &val);
+		max77620_poweroff->gpio_shutdown_state[count] =
+					GPIO_VAL_TO_STATE(gpio, val);
+	}
+
 gpio_done:
-	max77620_poweroff->max77620 = max77620;	
+	max77620_poweroff->max77620 = max77620;
 	max77620_poweroff->rmap = max77620->rmap;
 	max77620_poweroff->dev = &pdev->dev;
 	max77620_poweroff->use_power_off = use_power_off;

@@ -1,5 +1,5 @@
-/*
- * Copyright (c) 2018, NVIDIA CORPORATION.  All rights reserved.
+ /*
+ * Copyright (c) 2018-2019, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,15 +23,17 @@
 	i2c@7000d000 {
 		max77620: max77620@3c {
 			maxim,enable-rtc2-alarm-wakeup;
+			maxim,power-shutdown-gpio-states = <1 0>;
 			low-battery-monitor {
 				maxim,low-battery-shutdown-enable;
 			};
 
 			max77620_default: pinmux@0 {
 				pin_gpio1 {
-					maxim,active-fps-source = <MAX77620_FPS_SRC_NONE>;
-					maxim,fps-power-up-period = <0>;
-					maxim,fps-power-down-period = <7>;
+					pins = "gpio1";
+					function = "gpio";
+					/delete-property/ drive-push-pull;
+					drive-open-drain = <1>;
 				};
 
 				pin_gpio2 {
@@ -45,6 +47,13 @@
 					maxim,fps-power-up-period = <4>;
 					maxim,fps-power-down-period = <3>;
 				};
+			};
+
+			spmic-default-output-high {
+				gpio-hog;
+				output-high;
+				gpios = <1 0>;
+				line-name = "spmic-default-output-high";
 			};
 
 			regulators {

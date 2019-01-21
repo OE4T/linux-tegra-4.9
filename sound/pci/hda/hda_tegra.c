@@ -721,7 +721,7 @@ static int hda_tegra_create_sysfs(struct hda_tegra *hda)
 		pcm_dev->dev_id = (apcm->codec->core.vendor_id) & 0xffff;
 		if (tegra_hda_get_switch_name(pcm_dev->dev_id,
 			pcm_dev->switch_name) < 0) {
-			dev_info(hda->dev, "error in getting switch name"
+			dev_dbg(hda->dev, "error in getting switch name"
 				" for hda_pcm_id(%d)\n", apcm->info->device);
 			kobject_put(pcm_dev->kobj);
 			pcm_dev->kobj = NULL;

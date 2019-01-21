@@ -1,7 +1,7 @@
 /*
  * GPIO driver for NVIDIA Tegra186
  *
- * Copyright (c) 2015-2018, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2019, NVIDIA CORPORATION.  All rights reserved.
  *
  * Author: Suresh Mangipudi <smangipudi@nvidia.com>
  *
@@ -787,7 +787,6 @@ static void tegra_gpio_set(struct gpio_chip *chip, unsigned offset, int value)
 	u32 val = (value) ? 0x1 : 0x0;
 
 	tegra_gpio_writel(tgi, val, offset, GPIO_OUT_VAL_REG);
-	tegra_gpio_writel(tgi, 0, offset, GPIO_OUT_CTRL_REG);
 }
 
 static int tegra_gpio_get(struct gpio_chip *chip, unsigned offset)
@@ -837,6 +836,7 @@ static int tegra_gpio_direction_output(struct gpio_chip *chip, unsigned offset,
 	int ret;
 
 	tegra_gpio_set(chip, offset, value);
+	tegra_gpio_writel(tgi, 0, offset, GPIO_OUT_CTRL_REG);
 	set_gpio_direction_mode(chip, offset, 1);
 	tegra_gpio_enable(tgi, offset);
 	ret = pinctrl_gpio_direction_output(chip->base + offset);

@@ -207,5 +207,22 @@
 				};
 			};
 		};
+
+		fragment@4 {
+			ids = ">=3448-0002-100";
+			override@0 {
+				target = <&sdhci3>;
+				_overlay_ {
+					status = "okay";
+				};
+			};
+
+			override@1 {
+				target = <&sdhci0>;
+				_overlay_ {
+					status = "disabled";
+				};
+                	};
+		};
 	};
 };

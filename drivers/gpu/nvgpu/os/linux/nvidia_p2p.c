@@ -21,7 +21,7 @@
  */
 
 #include <linux/slab.h>
-#include <nvgpu/linux/nvidia_p2p.h>
+#include <linux/nv-p2p.h>
 
 static void nvidia_p2p_mn_release(struct mmu_notifier *mn,
 	struct mm_struct *mm)

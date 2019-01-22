@@ -53,5 +53,36 @@
 				};
 			};
 		};
+
+		fragment@2 {
+			ids = "<3448-0000-200";
+			override@0 {
+				target = <&tegra_i2s1>;
+				_overlay_ {
+					regulator-supplies = "vdd-1v8-audio-hv", "vdd-1v8-audio-hv-bias";
+					vdd-1v8-audio-hv-supply = <&max77620_sd3>;
+					vdd-1v8-audio-hv-bias-supply = <&max77620_sd3>;
+					fsync-width = <15>;
+					status = "okay";
+				};
+			};
+
+			override@1 {
+				target = <&tegra_i2s4>;
+				_overlay_ {
+					status = "disabled";
+				};
+			};
+
+			override@2 {
+				target = <&sound_card>;
+				_overlay_ {
+					nvidia,dai-link-1 {
+						cpu-dai = <&tegra_i2s1>;
+						cpu-dai-name = "I2S1";
+					};
+				};
+			};
+		};
 	};
 };

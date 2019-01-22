@@ -233,11 +233,7 @@
 
 		ahub {
 			i2s@702d1000 {
-				regulator-supplies = "vdd-1v8-audio-hv", "vdd-1v8-audio-hv-bias";
-				vdd-1v8-audio-hv-supply = <&max77620_sd3>;
-				vdd-1v8-audio-hv-bias-supply = <&max77620_sd3>;
-				fsync-width = <15>;
-				status = "okay";
+				status = "disabled";
 			};
 
 			i2s@702d1100 {
@@ -252,7 +248,10 @@
 			};
 
 			i2s@702d1300 {
-				status = "disabled";
+				regulator-supplies = "vddio-uart";
+				vddio-uart-supply = <&max77620_sd3>;
+				fsync-width = <15>;
+				status = "okay";
 			};
 
 			i2s@702d1400 {
@@ -313,11 +312,11 @@
 
 		nvidia,xbar = <&tegra_axbar>;
 
-		i2s1_dai_link: nvidia,dai-link-1 {
+		i2s_dai_link1: nvidia,dai-link-1 {
 			link-name = "spdif-dit-0";
-			cpu-dai = <&tegra_i2s1>;
+			cpu-dai = <&tegra_i2s4>;
 			codec-dai = <&spdif_dit0>;
-			cpu-dai-name = "I2S1";
+			cpu-dai-name = "I2S4";
 			codec-dai-name = "dit-hifi";
 			format = "i2s";
 			bitclock-slave;

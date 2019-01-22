@@ -286,7 +286,7 @@
 				};
 			};
 			overrides@10 {
-				target = <&i2s1_dai_link>;
+				target = <&i2s_dai_link1>;
 				_overlay_ {
 					link-name = "rt565x-playback";
 					codec-dai-name = "rt5659-aif1";

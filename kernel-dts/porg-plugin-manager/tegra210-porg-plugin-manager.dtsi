@@ -43,5 +43,15 @@
 				};
 			};
 		};
+
+		fragment@1 {
+			ids = ">=3448-0000-101";
+			override@0 {
+				target = <&max77620_sd0>;
+				_overlay_ {
+					regulator-min-microvolt = <600000>;
+				};
+			};
+		};
 	};
 };

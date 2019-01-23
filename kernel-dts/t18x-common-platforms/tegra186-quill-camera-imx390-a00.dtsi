@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2018-2019, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -42,9 +42,9 @@
 				i2c-mux,deselect-on-exit;
 				#address-cells = <1>;
 				#size-cells = <0>;
-				dser: max9296@6a {
+				dser: max9296@48 {
 					compatible = "nvidia,max9296";
-					reg = <0x6a>;
+					reg = <0x48>;
 					csi-mode = "2x4";
 					max-src = <2>;
 					reset-gpios = <&tegra_main_gpio CAM0_RST_L GPIO_ACTIVE_HIGH>;

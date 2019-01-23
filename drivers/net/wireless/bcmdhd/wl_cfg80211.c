@@ -10100,6 +10100,7 @@ wl_cfg80211_verify_bss(struct bcm_cfg80211 *cfg, struct net_device *ndev)
 	do {
 		bss = CFG80211_GET_BSS(wiphy, NULL, curbssid,
 			ssid->SSID, ssid->SSID_len);
+		cfg->wdev->ssid_len = ssid->SSID_len;
 		if (bss || (count > 5)) {
 			break;
 		}

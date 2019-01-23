@@ -1,7 +1,7 @@
 /*
  * CY8C4014 LED chip driver
  *
- * Copyright (C) 2014-2018 NVIDIA Corporation. All rights reserved.
+ * Copyright (C) 2014-2019 NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -65,21 +65,23 @@
 #define P1961_LED_STATE_SOLID		0x03
 #define P1961_LED_STATE_OFF		0x04
 
-#define P1961_CMD_GOTO_BOOT			0x01
-#define P1961_CMD_GOTO_APP			0x3B
+#define P1961_CMD_GOTO_BOOT		0x01
+#define P1961_CMD_GOTO_APP		0x3B
 
 /* boot device mode address */
-#define P1961_BOOT_DEV_ADDR			0x08
+#define P1961_BOOT_DEV_ADDR		0x08
 
-#define MAX_COMMAND_SIZE			512
-#define BASE_CMD_SIZE				0x07
-#define CMD_START					0x01
+#define MAX_COMMAND_SIZE		512
+#define BASE_CMD_SIZE			0x07
+#define CMD_START			0x01
 #define CMD_ENTER_BOOTLOADER		0x38
-#define CMD_EXIT_BOOTLOADER			0x3B
-#define CMD_STOP					0x17
-#define COMMAND_DATA_SIZE			0x01
-#define RESET						0x00
+#define CMD_EXIT_BOOTLOADER		0x3B
+#define CMD_STOP			0x17
+#define COMMAND_DATA_SIZE		0x01
+#define RESET				0x00
 #define COMMAND_SIZE (BASE_CMD_SIZE + COMMAND_DATA_SIZE)
+
+#define DEVICE_NAME			"cy8c-led-boot"
 
 enum modes {
 	MODE_BLINK = 0,
@@ -901,7 +903,6 @@ static int cy8c_led_probe(struct i2c_client *client,
 	struct regmap_config rconfig;
 	int ret, reg;
 	struct dentry *d;
-	char dname[16] = "cy8c-led-boot";
 
 	if (!i2c_check_functionality(adapter, I2C_FUNC_SMBUS_BYTE_DATA)) {
 		dev_err(&client->dev, "i2c functionality check fail.\n");
@@ -940,7 +941,7 @@ static int cy8c_led_probe(struct i2c_client *client,
 	/* boot device client */
 	data->adap = i2c_get_adapter(client->adapter->nr);
 	memset(&data->brd_boot, 0, sizeof(data->brd_boot));
-	strncpy(data->brd_boot.type, dname, sizeof(data->brd_boot.type));
+	strncpy(data->brd_boot.type, DEVICE_NAME, sizeof(data->brd_boot.type));
 	data->brd_boot.addr = P1961_BOOT_DEV_ADDR;
 	data->client_boot = i2c_new_device(data->adap, &data->brd_boot);
 
@@ -1024,13 +1025,13 @@ static int cy8c_led_probe(struct i2c_client *client,
 		goto err5;
 	}
 
-	data->miscdev.name = dname;
+	data->miscdev.name = DEVICE_NAME;
 	data->miscdev.fops = &led_boot_fileops;
 	data->miscdev.minor = MISC_DYNAMIC_MINOR;
 	ret = misc_register(&data->miscdev);
 	if (ret) {
 		dev_err(&client->dev, "%s unable to register misc device %s\n",
-			__func__, dname);
+			__func__, DEVICE_NAME);
 		goto err6;
 	}
 

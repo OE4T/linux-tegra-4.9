@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2019, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -286,7 +286,7 @@
 				e3331_cam0: imx318_a@10 {
 					status = "disable";
 				};
-				max9296_dser: max9296@6a {
+				max9296_dser: max9296@48 {
 					status = "disabled";
 				};
 				max9295_prim: max9295_prim@62 {

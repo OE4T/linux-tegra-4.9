@@ -630,4 +630,8 @@
 	nvpmodel {
 		status = "okay";
 	};
+
+	r8168 {
+		isolate-gpio = <&gpio TEGRA_GPIO(X, 3) 0>;
+	};
 };

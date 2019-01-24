@@ -24,6 +24,7 @@
 #include "porg-platforms/tegra210-porg-p3448-emc-a00.dtsi"
 #include "porg-platforms/tegra210-porg-pcie.dtsi"
 #include "porg-platforms/tegra210-porg-prods.dtsi"
+#include "porg-platforms/tegra210-porg-super-module-e2614.dtsi"
 
 / {
 	model = "jetson-nano";

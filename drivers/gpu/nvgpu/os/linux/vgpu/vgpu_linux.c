@@ -58,16 +58,7 @@ struct vgpu_priv_data *vgpu_get_priv_data(struct gk20a *g)
 
 static void vgpu_remove_support(struct gk20a *g)
 {
-	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
-
 	vgpu_remove_support_common(g);
-
-	/* free mappings to registers, etc*/
-
-	if (l->bar1) {
-		iounmap(l->bar1);
-		l->bar1 = NULL;
-	}
 }
 
 static void vgpu_init_vars(struct gk20a *g, struct gk20a_platform *platform)

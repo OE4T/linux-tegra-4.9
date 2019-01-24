@@ -97,15 +97,13 @@ void snd_hdac_stream_start(struct hdac_stream *azx_dev, bool fresh_start)
 
 	/* enable SIE */
 	snd_hdac_chip_updatel(bus, INTCTL, 0, 1 << azx_dev->index);
-
-	/* stripe control programming for multi SOR */
+	/* set stripe control */
 	stripe_ctl = snd_hdac_get_stream_stripe_ctl(bus, azx_dev->substream);
-	stripe_ctl = (stripe_ctl << 16) & SD_CTL_STRIPE;
-	azx_dev->stripe_ctl = stripe_ctl;
-
+	snd_hdac_stream_updateb(azx_dev, SD_CTL_3B, SD_CTL_STRIPE_MASK,
+				stripe_ctl);
 	/* set DMA start and interrupt mask */
-	snd_hdac_stream_updatel(azx_dev, SD_CTL,
-			0, SD_CTL_DMA_START | SD_INT_MASK | stripe_ctl);
+	snd_hdac_stream_updateb(azx_dev, SD_CTL,
+				0, SD_CTL_DMA_START | SD_INT_MASK);
 	azx_dev->running = true;
 }
 EXPORT_SYMBOL_GPL(snd_hdac_stream_start);
@@ -116,11 +114,10 @@ EXPORT_SYMBOL_GPL(snd_hdac_stream_start);
  */
 void snd_hdac_stream_clear(struct hdac_stream *azx_dev)
 {
-	int stripe_ctl = azx_dev->stripe_ctl;
-
-	snd_hdac_stream_updatel(azx_dev, SD_CTL,
-			SD_CTL_DMA_START | SD_INT_MASK | stripe_ctl,
-			(SD_INT_MASK << 24));
+	snd_hdac_stream_updateb(azx_dev, SD_CTL,
+				SD_CTL_DMA_START | SD_INT_MASK, 0);
+	snd_hdac_stream_writeb(azx_dev, SD_STS, SD_INT_MASK); /* to be sure */
+	snd_hdac_stream_updateb(azx_dev, SD_CTL_3B, SD_CTL_STRIPE_MASK, 0);
 	azx_dev->running = false;
 }
 EXPORT_SYMBOL_GPL(snd_hdac_stream_clear);

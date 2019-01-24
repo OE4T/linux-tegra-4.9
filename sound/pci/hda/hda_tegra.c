@@ -338,9 +338,11 @@ static int hda_tegra_runtime_suspend(struct device *dev)
 	struct snd_card *card = dev_get_drvdata(dev);
 	struct azx *chip = card->private_data;
 	struct hda_tegra *hda = container_of(chip, struct hda_tegra, chip);
+	struct hdac_bus *bus = azx_bus(chip);
 
 	if (hda->init_done) {
 		azx_stop_chip(chip);
+		synchronize_irq(bus->irq);
 		azx_enter_link_reset(chip);
 	}
 

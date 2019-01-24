@@ -29,6 +29,7 @@
 		tach_gpio =  <&gpio TEGRA_GPIO(Z, 2) GPIO_ACTIVE_LOW>; /* TEGRA_GPIO_PZ2 */
 		pwm_gpio = <&gpio TEGRA_GPIO(E, 7) GPIO_ACTIVE_LOW>; /* TEGRA_GPIO_PE7 */
 		pwm_polarity = <PWM_POLARITY_NORMAL>;
+		suspend_state = <0>;
 		tach_period = <1000>;
 	};
 

@@ -15,19 +15,19 @@
 
 / {
 	gpio@6000d000 {
-		e2614_audio: e2614-rt5658-audio {
+		e2614_audio_pins: e2614-rt5658-audio {
 			gpio-hog;
 			function;
 			gpios = <
-				TEGRA_GPIO(B, 0) 0
-				TEGRA_GPIO(B, 1) 0
-				TEGRA_GPIO(B, 2) 0
-				TEGRA_GPIO(B, 3) 0
+				TEGRA_GPIO(J, 4) 0
+				TEGRA_GPIO(J, 5) 0
+				TEGRA_GPIO(J, 6) 0
+				TEGRA_GPIO(J, 7) 0
 				TEGRA_GPIO(BB, 0) 0
 				TEGRA_GPIO(S, 5) 0
 				>;
-			label = "I2S0_LRCLK", "I2S0_SDIN", "I2S0_SDOUT",
-				"I2S0_CLK", "AUDIO_MCLK", "AUD_RST";
+			label = "I2S4_LRCLK", "I2S4_SDIN", "I2S4_SDOUT",
+				"I2S4_CLK", "AUDIO_MCLK", "AUD_RST";
 			status = "disabled";
 		};
 	};
@@ -299,7 +299,7 @@
                                 };
                         };
 			override@12 {
-				target = <&e2614_audio>;
+				target = <&e2614_audio_pins>;
 				_overlay_ {
 					status = "okay";
 				};
@@ -341,5 +341,25 @@
 				};
 			};
 		};
+
+		fragment-e2614-pins@3 {
+			ids = "<3448-0000-200";
+			overrides@0 {
+				target = <&e2614_audio_pins>;
+				_overlay_ {
+					gpios = <
+						TEGRA_GPIO(B, 0) 0
+						TEGRA_GPIO(B, 1) 0
+						TEGRA_GPIO(B, 2) 0
+						TEGRA_GPIO(B, 3) 0
+						TEGRA_GPIO(BB, 0) 0
+						TEGRA_GPIO(S, 5) 0
+						>;
+					label = "I2S1_LRCLK", "I2S1_SDIN", "I2S1_SDOUT",
+						"I2S1_CLK", "AUDIO_MCLK", "AUD_RST";
+				};
+			};
+		};
+
 	};
 };

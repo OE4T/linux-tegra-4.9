@@ -1,7 +1,7 @@
 /*
  * GP106 GPU GR
  *
- * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2019, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -189,36 +189,39 @@ int gr_gp106_set_ctxsw_preemption_mode(struct gk20a *g,
 		nvgpu_log_info(g, "gfxp context attrib_cb_size=%d",
 				attrib_cb_size);
 
-		err = gr_gp10b_alloc_buffer(vm,
+		/* Only allocate buffers the first time through */
+		if (!nvgpu_mem_is_valid(&gr_ctx->preempt_ctxsw_buffer)) {
+			err = gr_gp10b_alloc_buffer(vm,
 					g->gr.ctx_vars.preempt_image_size,
 					&gr_ctx->preempt_ctxsw_buffer);
-		if (err) {
-			nvgpu_err(g, "cannot allocate preempt buffer");
-			goto fail;
-		}
+			if (err) {
+				nvgpu_err(g, "cannot allocate preempt buffer");
+				goto fail;
+			}
 
-		err = gr_gp10b_alloc_buffer(vm,
+			err = gr_gp10b_alloc_buffer(vm,
 					spill_size,
 					&gr_ctx->spill_ctxsw_buffer);
-		if (err) {
-			nvgpu_err(g, "cannot allocate spill buffer");
-			goto fail_free_preempt;
-		}
+			if (err) {
+				nvgpu_err(g, "cannot allocate spill buffer");
+				goto fail_free_preempt;
+			}
 
-		err = gr_gp10b_alloc_buffer(vm,
+			err = gr_gp10b_alloc_buffer(vm,
 					attrib_cb_size,
 					&gr_ctx->betacb_ctxsw_buffer);
-		if (err) {
-			nvgpu_err(g, "cannot allocate beta buffer");
-			goto fail_free_spill;
-		}
+			if (err) {
+				nvgpu_err(g, "cannot allocate beta buffer");
+				goto fail_free_spill;
+			}
 
-		err = gr_gp10b_alloc_buffer(vm,
+			err = gr_gp10b_alloc_buffer(vm,
 					pagepool_size,
 					&gr_ctx->pagepool_ctxsw_buffer);
-		if (err) {
-			nvgpu_err(g, "cannot allocate page pool");
-			goto fail_free_betacb;
+			if (err) {
+				nvgpu_err(g, "cannot allocate page pool");
+				goto fail_free_betacb;
+			}
 		}
 
 		gr_ctx->graphics_preempt_mode = graphics_preempt_mode;

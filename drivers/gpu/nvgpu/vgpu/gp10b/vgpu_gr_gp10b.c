@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2019, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -140,47 +140,52 @@ int vgpu_gr_gp10b_set_ctxsw_preemption_mode(struct gk20a *g,
 		nvgpu_log_info(g, "gfxp context attrib cb size=%d",
 			attrib_cb_size);
 
-		err = gr_gp10b_alloc_buffer(vm,
+		/* Only allocate buffers the first time through */
+		if (!nvgpu_mem_is_valid(&gr_ctx->preempt_ctxsw_buffer)) {
+			err = gr_gp10b_alloc_buffer(vm,
 					g->gr.ctx_vars.preempt_image_size,
 					&gr_ctx->preempt_ctxsw_buffer);
-		if (err) {
-			err = -ENOMEM;
-			goto fail;
+			if (err) {
+				err = -ENOMEM;
+				goto fail;
+			}
+
+			err = gr_gp10b_alloc_buffer(vm,
+					spill_size,
+					&gr_ctx->spill_ctxsw_buffer);
+			if (err) {
+				err = -ENOMEM;
+				goto fail;
+			}
+			err = gr_gp10b_alloc_buffer(vm,
+					pagepool_size,
+					&gr_ctx->pagepool_ctxsw_buffer);
+			if (err) {
+				err = -ENOMEM;
+				goto fail;
+			}
+			err = gr_gp10b_alloc_buffer(vm,
+					attrib_cb_size,
+					&gr_ctx->betacb_ctxsw_buffer);
+			if (err) {
+				err = -ENOMEM;
+				goto fail;
+			}
 		}
+
 		desc = &gr_ctx->preempt_ctxsw_buffer;
 		p->gpu_va[TEGRA_VGPU_GR_BIND_CTXSW_BUFFER_MAIN] = desc->gpu_va;
 		p->size[TEGRA_VGPU_GR_BIND_CTXSW_BUFFER_MAIN] = desc->size;
 
-		err = gr_gp10b_alloc_buffer(vm,
-					spill_size,
-					&gr_ctx->spill_ctxsw_buffer);
-		if (err) {
-			err = -ENOMEM;
-			goto fail;
-		}
 		desc = &gr_ctx->spill_ctxsw_buffer;
 		p->gpu_va[TEGRA_VGPU_GR_BIND_CTXSW_BUFFER_SPILL] = desc->gpu_va;
 		p->size[TEGRA_VGPU_GR_BIND_CTXSW_BUFFER_SPILL] = desc->size;
 
-		err = gr_gp10b_alloc_buffer(vm,
-					pagepool_size,
-					&gr_ctx->pagepool_ctxsw_buffer);
-		if (err) {
-			err = -ENOMEM;
-			goto fail;
-		}
 		desc = &gr_ctx->pagepool_ctxsw_buffer;
 		p->gpu_va[TEGRA_VGPU_GR_BIND_CTXSW_BUFFER_PAGEPOOL] =
 			desc->gpu_va;
 		p->size[TEGRA_VGPU_GR_BIND_CTXSW_BUFFER_PAGEPOOL] = desc->size;
 
-		err = gr_gp10b_alloc_buffer(vm,
-					attrib_cb_size,
-					&gr_ctx->betacb_ctxsw_buffer);
-		if (err) {
-			err = -ENOMEM;
-			goto fail;
-		}
 		desc = &gr_ctx->betacb_ctxsw_buffer;
 		p->gpu_va[TEGRA_VGPU_GR_BIND_CTXSW_BUFFER_BETACB] =
 			desc->gpu_va;

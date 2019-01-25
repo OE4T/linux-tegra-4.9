@@ -34,18 +34,21 @@
 					function = "gpio";
 					/delete-property/ drive-push-pull;
 					drive-open-drain = <1>;
+					maxim,active-fps-source = <MAX77620_FPS_SRC_NONE>;
+					maxim,active-fps-power-up-slot = <0>;
+					maxim,active-fps-power-down-slot = <7>;
 				};
 
 				pin_gpio2 {
 					maxim,active-fps-source = <MAX77620_FPS_SRC_0>;
-					maxim,fps-power-up-period = <0>;
-					maxim,fps-power-down-period = <7>;
+					maxim,active-fps-power-up-slot = <0>;
+					maxim,active-fps-power-down-slot = <7>;
 				};
 
 				pin_gpio3 {
 					maxim,active-fps-source = <MAX77620_FPS_SRC_0>;
-					maxim,fps-power-up-period = <4>;
-					maxim,fps-power-down-period = <3>;
+					maxim,active-fps-power-up-slot = <4>;
+					maxim,active-fps-power-down-slot = <3>;
 				};
 			};
 
@@ -60,8 +63,8 @@
 				max77620_sd0: sd0 {
 					regulator-name = "vdd-core";
 					maxim,active-fps-source = <MAX77620_FPS_SRC_1>;
-					maxim,fps-power-up-period = <1>;
-					maxim,fps-power-down-period = <6>;
+					maxim,active-fps-power-up-slot = <1>;
+					maxim,active-fps-power-down-slot = <6>;
 					regulator-min-microvolt = <1000000>;
                                         regulator-max-microvolt = <1170000>;
 					regulator-enable-ramp-delay = <146>;
@@ -73,8 +76,8 @@
 				max77620_sd1: sd1 {
 					regulator-name = "vdd-ddr-1v1";
 					maxim,active-fps-source = <MAX77620_FPS_SRC_0>;
-					maxim,fps-power-up-period = <5>;
-					maxim,fps-power-down-period = <2>;
+					maxim,active-fps-power-up-slot = <5>;
+					maxim,active-fps-power-down-slot = <2>;
 					regulator-min-microvolt = <1150000>;
 					regulator-max-microvolt = <1150000>;
 					regulator-enable-ramp-delay = <130>;
@@ -86,8 +89,8 @@
 				max77620_sd2: sd2 {
 					regulator-name = "vdd-pre-reg-1v35";
 					maxim,active-fps-source = <MAX77620_FPS_SRC_1>;
-					maxim,fps-power-up-period = <2>;
-					maxim,fps-power-down-period = <5>;
+					maxim,active-fps-power-up-slot = <2>;
+					maxim,active-fps-power-down-slot = <5>;
 					regulator-min-microvolt = <1350000>;
 					regulator-max-microvolt = <1350000>;
 					regulator-enable-ramp-delay = <176>;
@@ -99,8 +102,8 @@
 				max77620_sd3: sd3 {
 					regulator-name = "vdd-1v8";
 					maxim,active-fps-source = <MAX77620_FPS_SRC_0>;
-					maxim,fps-power-up-period = <3>;
-					maxim,fps-power-down-period = <4>;
+					maxim,active-fps-power-up-slot = <3>;
+					maxim,active-fps-power-down-slot = <4>;
 					regulator-min-microvolt = <1800000>;
 					regulator-max-microvolt = <1800000>;
 					regulator-enable-ramp-delay = <242>;
@@ -112,8 +115,8 @@
 				max77620_ldo0: ldo0 {
 					regulator-name = "avdd-sys-1v2";
 					maxim,active-fps-source = <MAX77620_FPS_SRC_NONE>;
-					maxim,fps-power-up-period = <0>;
-					maxim,fps-power-down-period = <7>;
+					maxim,active-fps-power-up-slot = <0>;
+					maxim,active-fps-power-down-slot = <7>;
 					regulator-min-microvolt = <1200000>;
 					regulator-max-microvolt = <1200000>;
 					regulator-enable-ramp-delay = <26>;
@@ -125,8 +128,8 @@
 				max77620_ldo1: ldo1 {
 					regulator-name = "vdd-pex-1v0";
 					maxim,active-fps-source = <MAX77620_FPS_SRC_NONE>;
-					maxim,fps-power-up-period = <0>;
-					maxim,fps-power-down-period = <7>;
+					maxim,active-fps-power-up-slot = <0>;
+					maxim,active-fps-power-down-slot = <7>;
 					regulator-min-microvolt = <1050000>;
 					regulator-max-microvolt = <1050000>;
 					regulator-enable-ramp-delay = <22>;
@@ -138,8 +141,8 @@
 				max77620_ldo2: ldo2 {
 					regulator-name = "vddio-sdmmc-ap";
 					maxim,active-fps-source = <MAX77620_FPS_SRC_NONE>;
-					maxim,fps-power-up-period = <0>;
-					maxim,fps-power-down-period = <7>;
+					maxim,active-fps-power-up-slot = <0>;
+					maxim,active-fps-power-down-slot = <7>;
 					regulator-min-microvolt = <1800000>;
 					regulator-max-microvolt = <3300000>;
 					regulator-enable-ramp-delay = <62>;
@@ -151,8 +154,8 @@
 				max77620_ldo3: ldo3 { /* ldo3 not used in t210 porg */
 					regulator-name = "vdd-ldo3";
 					maxim,active-fps-source = <MAX77620_FPS_SRC_NONE>;
-					maxim,fps-power-up-period = <0>;
-					maxim,fps-power-down-period = <7>;
+					maxim,active-fps-power-up-slot = <0>;
+					maxim,active-fps-power-down-slot = <7>;
 					regulator-enable-ramp-delay = <50>;
 					regulator-disable-ramp-delay = <1110>;
 					regulator-ramp-delay = <100000>;
@@ -163,8 +166,8 @@
 				max77620_ldo4: ldo4 {
 					regulator-name = "vdd-rtc";
 					maxim,active-fps-source = <MAX77620_FPS_SRC_0>;
-					maxim,fps-power-up-period = <1>;
-					maxim,fps-power-down-period = <6>;
+					maxim,active-fps-power-up-slot = <1>;
+					maxim,active-fps-power-down-slot = <6>;
 					regulator-min-microvolt = <850000>;
 					regulator-max-microvolt = <1100000>;
 					regulator-enable-ramp-delay = <22>;
@@ -177,8 +180,8 @@
 				max77620_ldo5: ldo5 { /* ldo5 not used in t210 porg */
 					regulator-name = "vdd-ldo5";
 					maxim,active-fps-source = <MAX77620_FPS_SRC_NONE>;
-					maxim,fps-power-up-period = <0>;
-					maxim,fps-power-down-period = <7>;
+					maxim,active-fps-power-up-slot = <0>;
+					maxim,active-fps-power-down-slot = <7>;
 					regulator-enable-ramp-delay = <62>;
 					regulator-disable-ramp-delay = <640>;
 					regulator-ramp-delay = <100000>;
@@ -189,8 +192,8 @@
 				max77620_ldo6: ldo6 { /* ldo6 not used in t210 porg */
 					regulator-name = "vdd-ldo6";
 					maxim,active-fps-source = <MAX77620_FPS_SRC_NONE>;
-					maxim,fps-power-up-period = <0>;
-					maxim,fps-power-down-period = <7>;
+					maxim,active-fps-power-up-slot = <0>;
+					maxim,active-fps-power-down-slot = <7>;
 					regulator-enable-ramp-delay = <36>;
 					regulator-disable-ramp-delay = <674>;
 					regulator-ramp-delay = <100000>;
@@ -201,8 +204,8 @@
 				max77620_ldo7: ldo7 {
 					regulator-name = "avdd-1v05-pll";
 					maxim,active-fps-source = <MAX77620_FPS_SRC_1>;
-					maxim,fps-power-up-period = <3>;
-					maxim,fps-power-down-period = <4>;
+					maxim,active-fps-power-up-slot = <3>;
+					maxim,active-fps-power-down-slot = <4>;
 					regulator-min-microvolt = <1050000>;
 					regulator-max-microvolt = <1050000>;
 					regulator-enable-ramp-delay = <24>;
@@ -214,8 +217,8 @@
 				max77620_ldo8: ldo8 {
 					regulator-name = "avdd-io-hdmi-dp";
 					maxim,active-fps-source = <MAX77620_FPS_SRC_1>;
-					maxim,fps-power-up-period = <6>;
-					maxim,fps-power-down-period = <1>;
+					maxim,active-fps-power-up-slot = <6>;
+					maxim,active-fps-power-down-slot = <1>;
 					regulator-min-microvolt = <1050000>;
 					regulator-max-microvolt = <1050000>;
 					regulator-enable-ramp-delay = <22>;

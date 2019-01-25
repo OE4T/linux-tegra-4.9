@@ -1425,14 +1425,14 @@ static void gk20a_channel_timeout_start(struct channel_gk20a *ch)
 		return;
 	}
 
-	nvgpu_raw_spinlock_acquire(&ch->timeout.lock);
+	nvgpu_spinlock_acquire(&ch->timeout.lock);
 
 	if (ch->timeout.running) {
-		nvgpu_raw_spinlock_release(&ch->timeout.lock);
+		nvgpu_spinlock_release(&ch->timeout.lock);
 		return;
 	}
 	__gk20a_channel_timeout_start(ch);
-	nvgpu_raw_spinlock_release(&ch->timeout.lock);
+	nvgpu_spinlock_release(&ch->timeout.lock);
 }
 
 /**
@@ -1450,10 +1450,10 @@ static bool gk20a_channel_timeout_stop(struct channel_gk20a *ch)
 {
 	bool was_running;
 
-	nvgpu_raw_spinlock_acquire(&ch->timeout.lock);
+	nvgpu_spinlock_acquire(&ch->timeout.lock);
 	was_running = ch->timeout.running;
 	ch->timeout.running = false;
-	nvgpu_raw_spinlock_release(&ch->timeout.lock);
+	nvgpu_spinlock_release(&ch->timeout.lock);
 	return was_running;
 }
 
@@ -1468,9 +1468,9 @@ static bool gk20a_channel_timeout_stop(struct channel_gk20a *ch)
  */
 static void gk20a_channel_timeout_continue(struct channel_gk20a *ch)
 {
-	nvgpu_raw_spinlock_acquire(&ch->timeout.lock);
+	nvgpu_spinlock_acquire(&ch->timeout.lock);
 	ch->timeout.running = true;
-	nvgpu_raw_spinlock_release(&ch->timeout.lock);
+	nvgpu_spinlock_release(&ch->timeout.lock);
 }
 
 /**
@@ -1485,11 +1485,11 @@ static void gk20a_channel_timeout_continue(struct channel_gk20a *ch)
  */
 static void gk20a_channel_timeout_rewind(struct channel_gk20a *ch)
 {
-	nvgpu_raw_spinlock_acquire(&ch->timeout.lock);
+	nvgpu_spinlock_acquire(&ch->timeout.lock);
 	if (ch->timeout.running) {
 		__gk20a_channel_timeout_start(ch);
 	}
-	nvgpu_raw_spinlock_release(&ch->timeout.lock);
+	nvgpu_spinlock_release(&ch->timeout.lock);
 }
 
 /**
@@ -1544,10 +1544,10 @@ static void gk20a_channel_timeout_handler(struct channel_gk20a *ch)
 	}
 
 	/* Get status but keep timer running */
-	nvgpu_raw_spinlock_acquire(&ch->timeout.lock);
+	nvgpu_spinlock_acquire(&ch->timeout.lock);
 	gp_get = ch->timeout.gp_get;
 	pb_get = ch->timeout.pb_get;
-	nvgpu_raw_spinlock_release(&ch->timeout.lock);
+	nvgpu_spinlock_release(&ch->timeout.lock);
 
 	new_gp_get = g->ops.fifo.userd_gp_get(ch->g, ch);
 	new_pb_get = g->ops.fifo.userd_pb_get(ch->g, ch);
@@ -1587,9 +1587,9 @@ static void gk20a_channel_timeout_check(struct channel_gk20a *ch)
 {
 	bool running;
 
-	nvgpu_raw_spinlock_acquire(&ch->timeout.lock);
+	nvgpu_spinlock_acquire(&ch->timeout.lock);
 	running = ch->timeout.running;
-	nvgpu_raw_spinlock_release(&ch->timeout.lock);
+	nvgpu_spinlock_release(&ch->timeout.lock);
 
 	if (running) {
 		gk20a_channel_timeout_handler(ch);
@@ -2243,7 +2243,7 @@ int gk20a_init_channel_support(struct gk20a *g, u32 chid)
 	nvgpu_spinlock_init(&c->ref_actions_lock);
 #endif
 	nvgpu_spinlock_init(&c->joblist.dynamic.lock);
-	nvgpu_raw_spinlock_init(&c->timeout.lock);
+	nvgpu_spinlock_init(&c->timeout.lock);
 
 	nvgpu_init_list_node(&c->joblist.dynamic.jobs);
 	nvgpu_init_list_node(&c->dbg_s_list);

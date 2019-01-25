@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2018-2019, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -166,7 +166,7 @@ struct channel_gk20a_joblist {
 
 struct channel_gk20a_timeout {
 	/* lock protects the running timer state */
-	struct nvgpu_raw_spinlock lock;
+	struct nvgpu_spinlock lock;
 	struct nvgpu_timeout timer;
 	bool running;
 	u32 gp_get;

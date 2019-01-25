@@ -59,6 +59,12 @@
 				line-name = "spmic-default-output-high";
 			};
 
+			fps {
+				fps1 {
+					maxim,shutdown-fps-time-period-us = <1280>;
+				};
+			};
+
 			regulators {
 				max77620_sd0: sd0 {
 					regulator-name = "vdd-core";

@@ -261,4 +261,27 @@
 		dma-noncontig;
 		status = "disabled";
 	};
+
+	aconnect@2a41000 {
+		/* Remove APE and APB2APE clocks from adsp node to
+		 * prevent guest owning ADSP peripheral from
+		 * toggling APE clocks. These clocks are owned and
+		 * controlled only by Audio Server
+		 */
+		adsp@2993000 {
+			clocks = <&bpmp_clks TEGRA194_CLK_ADSPNEON>,
+				<&bpmp_clks TEGRA194_CLK_ADSP>,
+				<&bpmp_clks TEGRA194_CLK_ACLK>;
+			clock-names = "adspneon", "adsp", "aclk";
+		};
+
+		/* Add ADSP reset information to AHUB node to allow
+		 * Audio Server ownership of ADSP reset. Required for
+		 * ADSP reset handling during guest reset.
+		 */
+		ahub {
+			resets = <&bpmp_resets TEGRA194_RESET_ADSP_ALL>;
+			reset-names = "adspall";
+		};
+	};
 };

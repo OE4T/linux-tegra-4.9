@@ -56,6 +56,9 @@
  */
 #define MAX77802_ALARM_ENABLE_VALUE	0x77
 
+#define MAX77620_ALARM2_WORK_INTERVAL	msecs_to_jiffies(2000)
+#define MAX77620_ALARM2_DELAY_SECOND	9
+
 enum {
 	RTC_SEC = 0,
 	RTC_MIN,
@@ -99,9 +102,14 @@ struct max77686_rtc_info {
 	const struct max77686_rtc_driver_data *drv_data;
 	struct regmap_irq_chip_data *rtc_irq_data;
 
+	struct delayed_work work;
+
 	int rtc_irq;
 	int virq;
 	int rtc_24hr_mode;
+	int rtc_alarm2_virq;
+	bool shutdown;
+	bool enable_rtc2alarm_wakeup;
 };
 
 enum MAX77686_RTC_OP {
@@ -672,6 +680,101 @@ static const struct rtc_class_ops max77686_rtc_ops = {
 	.alarm_irq_enable = max77686_rtc_alarm_irq_enable,
 };
 
+void irq_enable(struct irq_desc *desc);
+void irq_disable(struct irq_desc *desc);
+
+static int max77620_rtc_start_alarm2(struct max77686_rtc_info *info, u8 *time_data)
+{
+	int ret;
+	int i;
+
+	for (i = 0; i < RTC_NR_TIME; i++)
+		time_data[i] |= ALARM_ENABLE_MASK;
+
+	ret = _regmap_bulk_write(info,
+			info->drv_data->map[REG_ALARM2_SEC],
+			time_data, RTC_NR_TIME);
+
+	if (ret < 0) {
+		dev_err(info->dev, "Failed to write rtc alarm2 time(%d)\n", ret);
+		return ret;
+	}
+
+	ret = max77686_rtc_update(info, MAX77686_RTC_WRITE);
+	if (ret < 0) {
+		dev_err(info->dev, "Failed to update alarm2 reg(%d)\n", ret);
+	}
+
+	return ret;
+}
+
+static int max77620_rtc_stop_alarm2(struct max77686_rtc_info *info)
+{
+	int ret;
+	u8 data[RTC_NR_TIME];
+
+	memset(data, 0, sizeof(data));
+	ret = _regmap_bulk_write(info,
+			info->drv_data->map[REG_ALARM2_SEC],
+			data, ARRAY_SIZE(data));
+
+	if (ret < 0) {
+		dev_err(info->dev, "Failed to write rtc alarm2 time(%d)\n", ret);
+		return ret;
+	}
+
+	ret = max77686_rtc_update(info, MAX77686_RTC_WRITE);
+	if (ret < 0) {
+		dev_err(info->dev, "Failed to update alarm2 reg(%d)\n", ret);
+	}
+
+	return ret;
+}
+
+static void max77620_rtc_alarm2_work(struct work_struct *work)
+{
+	struct max77686_rtc_info *info;
+	struct rtc_wkalrm alrm;
+	u8 data[RTC_NR_TIME];
+	unsigned long curnt_time;
+	int ret;
+
+	info = container_of(work, struct max77686_rtc_info, work.work);
+	if (!info || info->shutdown)
+		return;
+
+	irq_enable(irq_to_desc(info->rtc_alarm2_virq));
+
+	ret = max77686_rtc_read_time(info->dev, &alrm.time);
+	if (ret < 0) {
+		dev_err(info->dev, "rtc read time failed:%d\n", ret);
+		goto sched_work;
+	}
+
+	rtc_tm_to_time(&alrm.time, &curnt_time);
+	curnt_time += MAX77620_ALARM2_DELAY_SECOND;
+	rtc_time_to_tm(curnt_time, &alrm.time);
+
+	ret = max77686_rtc_tm_to_data(&alrm.time, data, info);
+	if (ret < 0) {
+		dev_err(info->dev,
+				"Failed to convert time into register format\n");
+		goto sched_work;
+	}
+
+	dev_dbg(info->dev,
+			"data: %d 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x 0x%02x\n",
+			data[RTC_SEC], data[RTC_MIN], data[RTC_HOUR], data[RTC_WEEKDAY],
+			data[RTC_MONTH], data[RTC_YEAR], data[RTC_DATE]);
+
+	ret = max77620_rtc_start_alarm2(info, data);
+	if (ret < 0)
+		dev_err(info->dev, "rtc alarm2 start failed:%d\n", ret);
+
+sched_work:
+	schedule_delayed_work(&info->work, MAX77620_ALARM2_WORK_INTERVAL);
+}
+
 static int max77686_rtc_init_reg(struct max77686_rtc_info *info)
 {
 	u8 data[2];
@@ -698,6 +801,7 @@ static int max77686_rtc_init_reg(struct max77686_rtc_info *info)
 static const struct regmap_config max77686_rtc_regmap_config = {
 	.reg_bits = 8,
 	.val_bits = 8,
+	.max_register = MAX77686_ALARM2_DATE,
 };
 
 static int max77686_init_rtc_regmap(struct max77686_rtc_info *info)
@@ -784,6 +888,10 @@ static int max77686_rtc_probe(struct platform_device *pdev)
 	info->drv_data = (const struct max77686_rtc_driver_data *)
 		id->driver_data;
 
+	info->shutdown = false;
+	info->enable_rtc2alarm_wakeup = of_property_read_bool(
+					pdev->dev.parent->of_node, "maxim,enable-rtc2-alarm-wakeup");
+
 	ret = max77686_init_rtc_regmap(info);
 	if (ret < 0)
 		return ret;
@@ -824,6 +932,18 @@ static int max77686_rtc_probe(struct platform_device *pdev)
 		goto err_rtc;
 	}
 
+	if (info->enable_rtc2alarm_wakeup) {
+		info->rtc_alarm2_virq = regmap_irq_get_virq(info->rtc_irq_data,
+						 MAX77686_RTCIRQ_RTCA2);
+		if (info->rtc_alarm2_virq <= 0) {
+			dev_err(&pdev->dev, "Failed to request alarm2 IRQ for wake up\n");
+			info->enable_rtc2alarm_wakeup = false;
+		} else {
+			INIT_DELAYED_WORK(&info->work, max77620_rtc_alarm2_work);
+			schedule_delayed_work(&info->work, 0);
+		}
+	}
+
 	return 0;
 
 err_rtc:
@@ -834,9 +954,47 @@ err_rtc:
 	return ret;
 }
 
+static void max77686_rtc_shutdown(struct platform_device *pdev)
+{
+	struct max77686_rtc_info *info = platform_get_drvdata(pdev);
+	int ret;
+
+	if (!info)
+		goto mutex_exit;
+
+	mutex_lock(&info->lock);
+	info->shutdown = true;
+	mutex_unlock(&info->lock);
+
+	if (!info->enable_rtc2alarm_wakeup)
+		goto mutex_exit;
+
+	cancel_delayed_work_sync(&info->work);
+	ret = max77620_rtc_stop_alarm2(info);
+
+	if (ret < 0)
+		dev_err(info->dev, "rtc alarm2 stop failed:%d\n", ret);
+
+	irq_disable(irq_to_desc(info->rtc_alarm2_virq));
+
+mutex_exit:
+	mutex_destroy(&info->lock);
+}
+
 static int max77686_rtc_remove(struct platform_device *pdev)
 {
 	struct max77686_rtc_info *info = platform_get_drvdata(pdev);
+	int ret;
+
+	if (info->enable_rtc2alarm_wakeup) {
+		cancel_delayed_work_sync(&info->work);
+		ret = max77620_rtc_stop_alarm2(info);
+
+		if (ret < 0)
+			dev_err(info->dev, "rtc alarm2 stop failed:%d\n", ret);
+
+		free_irq(info->rtc_alarm2_virq, info);
+	}
 
 	free_irq(info->virq, info);
 	regmap_del_irq_chip(info->rtc_irq, info->rtc_irq_data);
@@ -849,22 +1007,33 @@ static int max77686_rtc_remove(struct platform_device *pdev)
 #ifdef CONFIG_PM_SLEEP
 static int max77686_rtc_suspend(struct device *dev)
 {
-	if (device_may_wakeup(dev)) {
-		struct max77686_rtc_info *info = dev_get_drvdata(dev);
+	struct max77686_rtc_info *info = dev_get_drvdata(dev);
+	int ret;
 
-		return enable_irq_wake(info->virq);
+	if (info->enable_rtc2alarm_wakeup) {
+		cancel_delayed_work_sync(&info->work);
+		ret = max77620_rtc_stop_alarm2(info);
+
+		if (ret < 0)
+			dev_err(info->dev, "rtc alarm2 stop failed:%d\n", ret);
+
 	}
+
+	if (device_may_wakeup(dev))
+		return enable_irq_wake(info->virq);
 
 	return 0;
 }
 
 static int max77686_rtc_resume(struct device *dev)
 {
-	if (device_may_wakeup(dev)) {
-		struct max77686_rtc_info *info = dev_get_drvdata(dev);
+	struct max77686_rtc_info *info = dev_get_drvdata(dev);
 
+	if (info->enable_rtc2alarm_wakeup)
+		schedule_delayed_work(&info->work, MAX77620_ALARM2_WORK_INTERVAL);
+
+	if (device_may_wakeup(dev))
 		return disable_irq_wake(info->virq);
-	}
 
 	return 0;
 }
@@ -887,6 +1056,7 @@ static struct platform_driver max77686_rtc_driver = {
 		.pm	= &max77686_rtc_pm_ops,
 	},
 	.probe		= max77686_rtc_probe,
+	.shutdown	= max77686_rtc_shutdown,
 	.remove		= max77686_rtc_remove,
 	.id_table	= rtc_id,
 };

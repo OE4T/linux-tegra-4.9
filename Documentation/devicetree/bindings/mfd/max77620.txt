@@ -102,6 +102,11 @@ Optional properties:
 					will not change device state when FPS
 					event get cleared.
 
+- maxim,enable-rtc2-alarm-wakeup: enable rtc alarm2 and rtc periodic second
+					timer interrupt, to wake up device if
+					rtc2 timer expired, wake up on alarm2
+					from sleep by EN1 input signal.
+
 Here supported time periods by device in microseconds are as follows:
 MAX77620 supports 40, 80, 160, 320, 640, 1280, 2560 and 5120 microseconds.
 MAX20024 supports 20, 40, 80, 160, 320, 640, 1280 and 2540 microseconds.

@@ -592,6 +592,8 @@ static int tlk_driver_probe(struct platform_device *pdev)
 			return ret;
 	} else if (PTR_ERR(clk) != -ENOENT) {
 		return PTR_ERR(clk);
+	} else {
+		pr_err("%s: nvdec clock not available\n", __func__);
 	}
 
 	rst = devm_reset_control_get(&pdev->dev, "nvdec");
@@ -601,6 +603,8 @@ static int tlk_driver_probe(struct platform_device *pdev)
 			return ret;
 	} else if (PTR_ERR(rst) != -ENOENT) {
 		return PTR_ERR(rst);
+	} else {
+		pr_err("%s: nvdec reset not available\n", __func__);
 	}
 
 	platform_set_drvdata(pdev, clk);

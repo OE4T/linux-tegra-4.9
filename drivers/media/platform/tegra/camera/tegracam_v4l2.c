@@ -43,6 +43,14 @@ static int v4l2sd_stream(struct v4l2_subdev *sd, int enable)
 			return err;
 		}
 
+		/* update control ranges based on mode settings*/
+		err = tegracam_init_ctrl_ranges_by_mode(
+			s_data->tegracam_ctrl_hdl, (u32) s_data->mode);
+		if (err) {
+			dev_err(&client->dev, "Error updating control ranges\n");
+			return err;
+		}
+
 		if (s_data->override_enable) {
 			err = tegracam_ctrl_set_overrides(
 					s_data->tegracam_ctrl_hdl);

@@ -55,6 +55,7 @@ struct tegra_udrm_file {
 	 * drm_file is called.
 	 */
 	struct eventfd_ctx *efd_ctx_drop_master;
+	struct eventfd_ctx *efd_ctx_set_master;
 
 	/* Holds list of dmabuf fd and corresponding unique id. Id is used
 	 * to return fake offset in dmabuf mmap ioctl. User space sends this
@@ -247,12 +248,49 @@ static int tegra_udrm_drop_master_notify_ioctl(struct drm_device *drm,
 
 	// Fail if already acquired a reference to the eventfd context.
 	if (fpriv->efd_ctx_drop_master)
-		return -EINVAL;
+		return -EBUSY;
 
 	fpriv->efd_ctx_drop_master = eventfd_ctx_fdget(args->eventfd);
 	if (IS_ERR(fpriv->efd_ctx_drop_master)) {
 		err = PTR_ERR(fpriv->efd_ctx_drop_master);
 		fpriv->efd_ctx_drop_master = NULL;
+		return err;
+	}
+
+	return 0;
+}
+
+static int tegra_udrm_set_master_notify_ioctl(struct drm_device *drm,
+		void *data, struct drm_file *file)
+{
+	struct tegra_udrm_file *fpriv = file->driver_priv;
+	struct drm_tegra_udrm_set_master_notify *args =
+		(struct drm_tegra_udrm_set_master_notify *)data;
+	int err;
+
+	if (args->clear != 0) {
+		/* Releases reference to the previously acquired eventfd
+		 * context.
+		 */
+		if (fpriv->efd_ctx_set_master) {
+			eventfd_ctx_put(fpriv->efd_ctx_set_master);
+			fpriv->efd_ctx_set_master = NULL;
+		}
+		return 0;
+	}
+
+	/* Fail if already acquired a reference to the eventfd context. For
+	 * simplicity driver keeps track of a single eventfd context. It's
+	 * unlikely that multiple threads would ever need to register
+	 * set_master notification.
+	 */
+	if (fpriv->efd_ctx_set_master != NULL)
+		return -EBUSY;
+
+	fpriv->efd_ctx_set_master = eventfd_ctx_fdget(args->eventfd);
+	if (IS_ERR(fpriv->efd_ctx_set_master)) {
+		err = PTR_ERR(fpriv->efd_ctx_set_master);
+		fpriv->efd_ctx_set_master = NULL;
 		return err;
 	}
 
@@ -332,6 +370,8 @@ static const struct drm_ioctl_desc tegra_udrm_ioctls[] = {
 		tegra_udrm_send_vblank_event_ioctl, 0),
 	DRM_IOCTL_DEF_DRV(TEGRA_UDRM_DROP_MASTER_NOTIFY,
 		tegra_udrm_drop_master_notify_ioctl, 0),
+	DRM_IOCTL_DEF_DRV(TEGRA_UDRM_SET_MASTER_NOTIFY,
+		tegra_udrm_set_master_notify_ioctl, 0),
 };
 
 static int tegra_udrm_open(struct drm_device *drm, struct drm_file *filp)
@@ -347,6 +387,18 @@ static int tegra_udrm_open(struct drm_device *drm, struct drm_file *filp)
 	fpriv->efd_ctx_close = NULL;
 	fpriv->efd_ctx_drop_master = NULL;
 	idr_init(&fpriv->idr);
+
+	return 0;
+}
+
+static int tegra_udrm_master_set(struct drm_device *dev,
+		struct drm_file *file_priv,
+		bool from_open)
+{
+	struct tegra_udrm_file *fpriv = file_priv->driver_priv;
+
+	if (fpriv->efd_ctx_set_master != NULL)
+		eventfd_signal(fpriv->efd_ctx_set_master, 1);
 
 	return 0;
 }
@@ -379,6 +431,7 @@ static struct drm_driver tegra_udrm_driver = {
 	.fops              = &tegra_udrm_fops,
 
 	.master_drop       = tegra_udrm_master_drop,
+	.master_set        = tegra_udrm_master_set,
 
 	.name   = DRIVER_NAME,
 	.desc   = DRIVER_DESC,

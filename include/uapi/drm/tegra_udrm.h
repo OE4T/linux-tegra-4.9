@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2018-2019, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -28,6 +28,7 @@ extern "C" {
 #define DRM_TEGRA_UDRM_CLOSE_NOTIFY             0x02
 #define DRM_TEGRA_UDRM_SEND_VBLANK_EVENT        0x03
 #define DRM_TEGRA_UDRM_DROP_MASTER_NOTIFY       0x04
+#define DRM_TEGRA_UDRM_SET_MASTER_NOTIFY        0x05
 
 struct drm_tegra_udrm_dmabuf_mmap {
 	int fd;
@@ -48,6 +49,11 @@ struct drm_tegra_udrm_send_vblank_event {
 };
 
 struct drm_tegra_udrm_drop_master_notify {
+	int eventfd;
+	int clear;
+};
+
+struct drm_tegra_udrm_set_master_notify {
 	int eventfd;
 	int clear;
 };
@@ -111,6 +117,9 @@ struct drm_tegra_udrm_drop_master_notify {
  */
 #define DRM_IOCTL_TEGRA_UDRM_DROP_MASTER_NOTIFY \
 	TEGRA_UDRM_IOCTL(IOW, DROP_MASTER_NOTIFY, drop_master_notify)
+
+#define DRM_IOCTL_TEGRA_UDRM_SET_MASTER_NOTIFY \
+	TEGRA_UDRM_IOCTL(IOW, SET_MASTER_NOTIFY, set_master_notify)
 
 #if defined(__cplusplus)
 }

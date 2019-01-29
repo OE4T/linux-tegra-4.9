@@ -3,7 +3,7 @@
  *
  * Author: Mike Lavender, mike@steroidmicros.com
  * Copyright (c) 2005, Intec Automation Inc.
- * Copyright (C) 2013-2018 NVIDIA Corporation. All rights reserved.
+ * Copyright (C) 2013-2019 NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -332,8 +332,11 @@ struct qcmdset macronix_porg_cmd_info_table[OPERATION_MAX_LIMIT] = {
 			.bus_width = X1, .dummy_cycles = 8},
 		{.is_ddr = FALSE, .bus_width = X2}
 	},
-	/*  INVALID QUAD_OUT_READ */
-	{
+	/* QUAD_OUT_READ */
+	{ {.op_code = 0x6b, .is_ddr = FALSE, .bus_width = X1, .post_txn = 2},
+		{.address = 0, .is_ddr = FALSE, .len = 3,
+			.bus_width = X1, .dummy_cycles = 8},
+		{.is_ddr = FALSE, .bus_width = X4}
 	},
 	/* DUAL_IO_READ */ //confirm the dummy cycle
 	{ {.op_code = 0xBB, .is_ddr = FALSE, .bus_width = X1, .post_txn = 2},
@@ -341,8 +344,11 @@ struct qcmdset macronix_porg_cmd_info_table[OPERATION_MAX_LIMIT] = {
 			.bus_width = X2, .dummy_cycles = 4},
 		{.is_ddr = FALSE, .bus_width = X2}
 	},
-	/* INVALID QUAD_IO_READ */
-	{
+	/* QUAD_IO_READ */
+	{ {.op_code = 0xEB, .is_ddr = FALSE, .bus_width = X1, .post_txn = 2},
+		{.address = 0, .is_ddr = FALSE, .len = 3,
+			.bus_width = X4, .dummy_cycles = 24},
+		{.is_ddr = FALSE, .bus_width = X4}
 	},
 	/*INVALID DDR_FAST_READ */
 	{
@@ -359,13 +365,16 @@ struct qcmdset macronix_porg_cmd_info_table[OPERATION_MAX_LIMIT] = {
 			.bus_width = X1, .dummy_cycles = 0},
 		{.is_ddr = FALSE, .bus_width = X1}
 	},
-	/*INVALID QUAD_PAGE_PROGRAM */
-	{
+	/* QUAD_PAGE_PROGRAM */
+	{ {.op_code = 0x38, .is_ddr = FALSE, .bus_width = X1, .post_txn = 2},
+		{.address = 0, .is_ddr = FALSE, .len = 3,
+			.bus_width = X1, .dummy_cycles = 0},
+		{.is_ddr = FALSE, .bus_width = X4}
 	},
 	/*INVALID QPI_PAGE_PROGRAM */
 	{
 	},
-	/* READ ID*/
+	/* READ ID */
 	{ {.op_code = 0x9f, .is_ddr = FALSE, .bus_width = X1, .post_txn = 2},
 		{.address = 0, .is_ddr = FALSE, .len = 3,
 			.bus_width = X1, .dummy_cycles = 0},

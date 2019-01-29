@@ -1,7 +1,7 @@
 /*
  * Maxim MAX77620 MFD Driver
  *
- * Copyright (C) 2016 NVIDIA CORPORATION. All rights reserved.
+ * Copyright (C) 2016-2019 NVIDIA CORPORATION. All rights reserved.
  *
  * Author:
  *	Laxman Dewangan <ldewangan@nvidia.com>
@@ -732,9 +732,9 @@ static int max77620_i2c_suspend(struct device *dev)
 
 	/* Disable WK_EN0 */
 	ret = regmap_update_bits(chip->rmap, MAX77620_REG_ONOFFCNFG2,
-				 MAX77620_ONOFFCNFG2_WK_EN0, 0);
+				 MAX77620_ONOFFCNFG2_WK_EN0 | MAX77620_ONOFFCNFG2_WK_ALARM2, 0);
 	if (ret < 0) {
-		dev_err(dev, "Failed to configure WK_EN in suspend: %d\n", ret);
+		dev_err(dev, "Failed to configure WK_EN/WK_ALARM2 in suspend: %d\n", ret);
 		return ret;
 	}
 
@@ -770,10 +770,10 @@ static int max77620_i2c_resume(struct device *dev)
 
 	/* Enable WK_EN0 */
 	ret = regmap_update_bits(chip->rmap, MAX77620_REG_ONOFFCNFG2,
-				 MAX77620_ONOFFCNFG2_WK_EN0,
-				 MAX77620_ONOFFCNFG2_WK_EN0);
+				 MAX77620_ONOFFCNFG2_WK_EN0 | MAX77620_ONOFFCNFG2_WK_ALARM2,
+				 MAX77620_ONOFFCNFG2_WK_EN0 | MAX77620_ONOFFCNFG2_WK_ALARM2);
 	if (ret < 0) {
-		dev_err(dev, "Failed to configure WK_EN0 n resume: %d\n", ret);
+		dev_err(dev, "Failed to configure WK_EN0/WK_ALARM2 in resume: %d\n", ret);
 		return ret;
 	}
 

@@ -1,7 +1,7 @@
 /*
  * Defining registers address and its bit definitions of MAX77620 and MAX20024
  *
- * Copyright (C) 2016 NVIDIA CORPORATION. All rights reserved.
+ * Copyright (C) 2016-2019 NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -252,6 +252,7 @@
 #define MAX77620_ONOFFCNFG2_WD_RST_WK		BIT(6)
 #define MAX77620_ONOFFCNFG2_SLP_LPM_MSK		BIT(5)
 #define MAX77620_ONOFFCNFG2_WK_ALARM1		BIT(2)
+#define MAX77620_ONOFFCNFG2_WK_ALARM2		BIT(1)
 #define MAX77620_ONOFFCNFG2_WK_EN0		BIT(0)
 
 #define MAX77620_GLBLM_MASK			BIT(0)

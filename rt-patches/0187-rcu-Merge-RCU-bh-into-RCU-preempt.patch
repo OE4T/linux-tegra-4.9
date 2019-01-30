@@ -1,4 +1,4 @@
-From 5379dfa5a7eb14ed061029306a60927bafb7f25e Mon Sep 17 00:00:00 2001
+From 6e7c599a5be38e4747feacf61d32f73a39c4438b Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Wed, 5 Oct 2011 11:59:38 -0700
 Subject: [PATCH 187/353] rcu: Merge RCU-bh into RCU-preempt
@@ -376,5 +376,5 @@ index 019b470..949714f 100644
  #endif /* #ifdef CONFIG_DEBUG_LOCK_ALLOC */
  
 -- 
-2.1.4
+2.7.4
 

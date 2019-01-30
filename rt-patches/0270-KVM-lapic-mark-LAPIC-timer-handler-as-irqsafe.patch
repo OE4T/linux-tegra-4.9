@@ -1,4 +1,4 @@
-From ce7ffebffecdc47d9a29fe848506198e7da1b92b Mon Sep 17 00:00:00 2001
+From d10590b5fc45a0bbbf4a09a32b83674ddd8a84a1 Mon Sep 17 00:00:00 2001
 From: Marcelo Tosatti <mtosatti@redhat.com>
 Date: Wed, 8 Apr 2015 20:33:25 -0300
 Subject: [PATCH 270/353] KVM: lapic: mark LAPIC timer handler as irqsafe
@@ -27,5 +27,5 @@ index 69a81a7..fdb8dca 100644
  	/*
  	 * APIC is created enabled. This will prevent kvm_lapic_set_base from
 -- 
-2.1.4
+2.7.4
 

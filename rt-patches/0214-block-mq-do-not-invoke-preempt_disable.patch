@@ -1,4 +1,4 @@
-From 28ed95c46c942e6270b70a34da8d59a6cf3a8cc9 Mon Sep 17 00:00:00 2001
+From 5057f036859a92a156c8d3a6dc9c32d2394d89e8 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Tue, 14 Jul 2015 14:26:34 +0200
 Subject: [PATCH 214/353] block/mq: do not invoke preempt_disable()
@@ -53,5 +53,5 @@ index d9c9b4d..29a25ab 100644
  
  	kblockd_schedule_work_on(blk_mq_hctx_next_cpu(hctx), &hctx->run_work);
 -- 
-2.1.4
+2.7.4
 

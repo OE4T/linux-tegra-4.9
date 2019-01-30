@@ -1,4 +1,4 @@
-From 8c5064b202866e2ff8ec82b32bf39c5e03b214af Mon Sep 17 00:00:00 2001
+From a3a48ab079c9d4a3bcfc2cd5c34a6c05ff37d864 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Mon, 12 Oct 2015 11:18:40 +0200
 Subject: [PATCH 258/353] arm64/xen: Make XEN depend on !RT
@@ -25,5 +25,5 @@ index a2048ae..430c9ed 100644
  	select PARAVIRT
  	help
 -- 
-2.1.4
+2.7.4
 

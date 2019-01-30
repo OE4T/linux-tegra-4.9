@@ -1,4 +1,4 @@
-From 6a7a535ceda1b52841f9ffe8557c6b7524a8f696 Mon Sep 17 00:00:00 2001
+From 2de5b2cc853f4cd416a11bc08ea3b34169709e23 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Wed, 22 Jun 2011 19:47:03 +0200
 Subject: [PATCH 227/353] sched: Distangle worker accounting from rqlock
@@ -279,5 +279,5 @@ index 29fa81f..42d1e39 100644
  
  #endif /* _KERNEL_WORKQUEUE_INTERNAL_H */
 -- 
-2.1.4
+2.7.4
 

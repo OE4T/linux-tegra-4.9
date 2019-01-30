@@ -1,4 +1,4 @@
-From d34cf307dd5e8e5d64431f5069c5fee81622a68c Mon Sep 17 00:00:00 2001
+From 2b60d6173218880501b0a0ef7c2f577095b3ef8b Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Wed, 20 Jan 2016 15:39:05 +0100
 Subject: [PATCH 237/353] net: provide a way to delegate processing a softirq
@@ -71,10 +71,10 @@ index b5f185b..d1c9bf1 100644
   */
  void raise_softirq_irqoff(unsigned int nr)
 diff --git a/net/core/dev.c b/net/core/dev.c
-index 1b44303..230e57c 100644
+index b38be50..e5bc5d8 100644
 --- a/net/core/dev.c
 +++ b/net/core/dev.c
-@@ -5353,7 +5353,7 @@ static __latent_entropy void net_rx_action(struct softirq_action *h)
+@@ -5349,7 +5349,7 @@ static __latent_entropy void net_rx_action(struct softirq_action *h)
  	list_splice_tail(&repoll, &list);
  	list_splice(&list, &sd->poll_list);
  	if (!list_empty(&sd->poll_list))
@@ -84,5 +84,5 @@ index 1b44303..230e57c 100644
  	net_rps_action_and_irq_enable(sd);
  }
 -- 
-2.1.4
+2.7.4
 

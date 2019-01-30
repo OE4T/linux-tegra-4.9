@@ -1,4 +1,4 @@
-From 0b4b0d084980f0fe661fa321b6c4a2f73c122089 Mon Sep 17 00:00:00 2001
+From 2ecd5cf5c50048e5295d06cae39d42ffe61baea7 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Wed, 31 Aug 2016 17:21:56 +0200
 Subject: [PATCH 240/353] net: add back the missing serialization in
@@ -94,5 +94,5 @@ index 3738778..5365350 100644
  
  static void tcp_v4_timewait_ack(struct sock *sk, struct sk_buff *skb)
 -- 
-2.1.4
+2.7.4
 

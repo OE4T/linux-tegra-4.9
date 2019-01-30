@@ -1,4 +1,4 @@
-From 692ca28f6c96305dc093724b764c472ac5d94a9d Mon Sep 17 00:00:00 2001
+From fd922761de5cb692be9f288a45146edffb474241 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Wed, 29 Jun 2011 14:58:57 +0200
 Subject: [PATCH 072/353] kconfig: Add PREEMPT_RT_FULL
@@ -64,5 +64,5 @@ index 6fdc97e..523e042 100755
  
  # Truncate to maximum length
 -- 
-2.1.4
+2.7.4
 

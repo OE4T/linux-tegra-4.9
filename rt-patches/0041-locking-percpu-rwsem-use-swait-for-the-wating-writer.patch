@@ -1,4 +1,4 @@
-From 3b6dea8d1c5b60c0d2986ef9c2ec4970435e21b0 Mon Sep 17 00:00:00 2001
+From 5fcf60f233c6aa5a871f35778024da8616713be5 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Mon, 21 Nov 2016 19:26:15 +0100
 Subject: [PATCH 041/353] locking/percpu-rwsem: use swait for the wating writer
@@ -76,5 +76,5 @@ index ce18259..2ad3a1e 100644
  EXPORT_SYMBOL_GPL(percpu_down_write);
  
 -- 
-2.1.4
+2.7.4
 

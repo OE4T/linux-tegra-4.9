@@ -1,4 +1,4 @@
-From dfd00345d87454606ab7a2e8ba1404d860fee98b Mon Sep 17 00:00:00 2001
+From 3e4bc2f27c1c0f337025d2bad0a47dd2f870534e Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Tue, 6 Jun 2017 14:20:37 +0200
 Subject: [PATCH 134/353] sched: Prevent task state corruption by spurious lock
@@ -80,5 +80,5 @@ index 6390d48..90779b4 100644
  
  int wake_up_state(struct task_struct *p, unsigned int state)
 -- 
-2.1.4
+2.7.4
 

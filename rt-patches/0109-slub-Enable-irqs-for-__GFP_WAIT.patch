@@ -1,4 +1,4 @@
-From 0755101142bb6bbd45769a64a3018185cfbc2877 Mon Sep 17 00:00:00 2001
+From 26e6f4c53325023fb0437c87f012ab74bf794d0b Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Wed, 9 Jan 2013 12:08:15 +0100
 Subject: [PATCH 109/353] slub: Enable irqs for __GFP_WAIT
@@ -49,5 +49,5 @@ index 6cd5c83..e7491c1 100644
  	if (!page)
  		return NULL;
 -- 
-2.1.4
+2.7.4
 

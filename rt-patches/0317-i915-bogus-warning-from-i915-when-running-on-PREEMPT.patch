@@ -1,4 +1,4 @@
-From 19902adef49ccfa5bfba4b73e8ba77b17ad98f92 Mon Sep 17 00:00:00 2001
+From d614247a9cab15a829df670ff923f66f326a7b37 Mon Sep 17 00:00:00 2001
 From: Clark Williams <williams@redhat.com>
 Date: Tue, 26 May 2015 10:43:43 -0500
 Subject: [PATCH 317/353] i915: bogus warning from i915 when running on
@@ -32,5 +32,5 @@ index c185625..6c9f9c8 100644
  	if (crtc == NULL)
  		return;
 -- 
-2.1.4
+2.7.4
 

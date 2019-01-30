@@ -1,4 +1,4 @@
-From 1835e0b666c84edd81ec43e001e14246ae96703c Mon Sep 17 00:00:00 2001
+From ca7221805502eaaa83c6ac3e7595ca2151f2b9bb Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Sat, 27 Feb 2016 10:22:23 +0100
 Subject: [PATCH 074/353] iommu/amd: Use WARN_ON_NORT in __attach_device()
@@ -48,5 +48,5 @@ index bba1b9f..e8801a8 100644
  	if (WARN_ON(!dev_data->domain))
  		return;
 -- 
-2.1.4
+2.7.4
 

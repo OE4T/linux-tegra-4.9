@@ -1,4 +1,4 @@
-From 9901b75c5fe4b6bc38de53677b58a826a3b609b2 Mon Sep 17 00:00:00 2001
+From bf4208b88175e9edaf9a35e5036433bed130f436 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Thu, 21 Jul 2011 21:05:33 +0200
 Subject: [PATCH 092/353] net/wireless: Use WARN_ON_NORT()
@@ -25,5 +25,5 @@ index 474655a..f2a33a4 100644
  	if (WARN_ON(status->band >= NUM_NL80211_BANDS))
  		goto drop;
 -- 
-2.1.4
+2.7.4
 

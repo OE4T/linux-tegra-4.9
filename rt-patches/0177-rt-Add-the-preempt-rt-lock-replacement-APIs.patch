@@ -1,4 +1,4 @@
-From 8d8c73ec0da58e96ecfb7be835bf006fb68cd0c8 Mon Sep 17 00:00:00 2001
+From ca99e13f920916d1520a39b23a1a03a5b8fd0f8f Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Sun, 26 Jul 2009 19:39:56 +0200
 Subject: [PATCH 177/353] rt: Add the preempt-rt lock replacement APIs
@@ -957,7 +957,7 @@ index 0000000..3e3d8c5
 +
 +#endif
 diff --git a/kernel/futex.c b/kernel/futex.c
-index ee718c3..12d03af 100644
+index 5b6a91b..8ab0ddd 100644
 --- a/kernel/futex.c
 +++ b/kernel/futex.c
 @@ -1399,6 +1399,7 @@ static int wake_futex_pi(u32 __user *uaddr, u32 uval, struct futex_pi_state *pi_
@@ -985,7 +985,7 @@ index ee718c3..12d03af 100644
  
  	return ret;
  }
-@@ -2717,7 +2718,7 @@ static int futex_lock_pi(u32 __user *uaddr, unsigned int flags,
+@@ -2709,7 +2710,7 @@ static int futex_lock_pi(u32 __user *uaddr, unsigned int flags,
  		goto no_block;
  	}
  
@@ -994,7 +994,7 @@ index ee718c3..12d03af 100644
  
  	/*
  	 * On PREEMPT_RT_FULL, when hb->lock becomes an rt_mutex, we must not
-@@ -3084,7 +3085,7 @@ static int futex_wait_requeue_pi(u32 __user *uaddr, unsigned int flags,
+@@ -3076,7 +3077,7 @@ static int futex_wait_requeue_pi(u32 __user *uaddr, unsigned int flags,
  	 * The waiter is allocated on our stack, manipulated by the requeue
  	 * code while we sleep on uaddr.
  	 */
@@ -2380,5 +2380,5 @@ index fffe6d0..7782270 100644
  	}
  }
 -- 
-2.1.4
+2.7.4
 

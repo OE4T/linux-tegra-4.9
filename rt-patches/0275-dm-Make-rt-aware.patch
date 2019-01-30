@@ -1,4 +1,4 @@
-From b049c71f7c5f0470a04cc493812ddc1d91ecc27e Mon Sep 17 00:00:00 2001
+From 0ec890cc6fb0f2336436b6d0da796bc00f32c3c1 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Mon, 14 Nov 2011 23:06:09 +0100
 Subject: [PATCH 275/353] dm: Make rt aware
@@ -28,5 +28,5 @@ index ba7c4c6..834ec32 100644
  }
  
 -- 
-2.1.4
+2.7.4
 

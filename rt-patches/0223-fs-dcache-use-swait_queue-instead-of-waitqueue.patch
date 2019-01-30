@@ -1,4 +1,4 @@
-From 429fbdc808e14f8fb5bef62a1012b80f06ed3ef3 Mon Sep 17 00:00:00 2001
+From c5ed7dcce2ace2ee26ab8a6498e81bc1d3d50725 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Wed, 14 Sep 2016 14:35:49 +0200
 Subject: [PATCH 223/353] fs/dcache: use swait_queue instead of waitqueue
@@ -237,5 +237,5 @@ index a26906f..6b7e6d3 100644
  	list_splice_init(&q->task_list, &tmp);
  	while (!list_empty(&tmp)) {
 -- 
-2.1.4
+2.7.4
 

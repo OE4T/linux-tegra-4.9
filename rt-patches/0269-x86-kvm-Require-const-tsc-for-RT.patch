@@ -1,4 +1,4 @@
-From 51014f85a841c6c4241bc5ae59a433638448ae86 Mon Sep 17 00:00:00 2001
+From e21773628dc1022aa0335b3a34d7a934c70f7f04 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Sun, 6 Nov 2011 12:26:18 +0100
 Subject: [PATCH 269/353] x86: kvm Require const tsc for RT
@@ -32,5 +32,5 @@ index 5013ef1..481f105 100644
  	if (r)
  		goto out_free_percpu;
 -- 
-2.1.4
+2.7.4
 

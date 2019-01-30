@@ -1,4 +1,4 @@
-From 68d2d0ce5f601697f15c2fceae631a63750380e8 Mon Sep 17 00:00:00 2001
+From 87c2e4483c02b8c555312c56be79567e7acdd8d7 Mon Sep 17 00:00:00 2001
 From: Sven-Thorsten Dietrich <sdietrich@novell.com>
 Date: Fri, 3 Jul 2009 08:30:35 -0500
 Subject: [PATCH 083/353] infiniband: Mellanox IB driver patch use _nort()
@@ -42,5 +42,5 @@ index 8f79cae..982e97f 100644
  	/*
  	 * make sure the in-flight joins have finished before we attempt
 -- 
-2.1.4
+2.7.4
 

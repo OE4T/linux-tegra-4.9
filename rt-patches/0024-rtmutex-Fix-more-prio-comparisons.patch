@@ -1,4 +1,4 @@
-From 21cafe5418c1f5d22792508d4d9e3d79cce6a94a Mon Sep 17 00:00:00 2001
+From 855cb1927ef2ee54c53935d7af9840278aafdbfc Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Thu, 23 Mar 2017 15:56:14 +0100
 Subject: [PATCH 024/353] rtmutex: Fix more prio comparisons
@@ -103,5 +103,5 @@ index e275b81..a8202c7 100644
  		return;
  	}
 -- 
-2.1.4
+2.7.4
 

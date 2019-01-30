@@ -1,4 +1,4 @@
-From cb451c7d8bccd6db60c344b9dd23cb6c4a25a432 Mon Sep 17 00:00:00 2001
+From a08de589fa2263a957463b15b65041db514f7d53 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Thu, 29 Jan 2015 17:19:44 +0100
 Subject: [PATCH 088/353] mm/workingset: Do not protect workingset_shadow_nodes
@@ -162,5 +162,5 @@ index 4c4f056..b97b1e8 100644
  	return ret;
  }
 -- 
-2.1.4
+2.7.4
 

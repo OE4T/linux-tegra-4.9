@@ -1,4 +1,4 @@
-From 3215b0d33c0a8096bc33f1683aeb87aa86e9adb4 Mon Sep 17 00:00:00 2001
+From ff6b6b517663d51eb92f3a52a840d01642fb49b1 Mon Sep 17 00:00:00 2001
 From: Steven Rostedt <rostedt@goodmis.org>
 Date: Fri, 27 Feb 2015 15:20:37 +0100
 Subject: [PATCH 206/353] x86/mce: use swait queue for mce wakeups
@@ -161,5 +161,5 @@ index d8febf3..e1288ec 100644
  		err = -ENOMEM;
  		goto err_out;
 -- 
-2.1.4
+2.7.4
 

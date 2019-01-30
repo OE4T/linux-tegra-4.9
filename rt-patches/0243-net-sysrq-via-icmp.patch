@@ -1,4 +1,4 @@
-From 4a6a35b90278b10a061f7bf72160f6d5fe536e4a Mon Sep 17 00:00:00 2001
+From 0f7a61a663abce021676185332805cefe68d2c31 Mon Sep 17 00:00:00 2001
 From: Carsten Emde <C.Emde@osadl.org>
 Date: Tue, 19 Jul 2011 13:51:17 +0100
 Subject: [PATCH 243/353] net: sysrq via icmp
@@ -128,5 +128,5 @@ index ce43dc7..ce68538 100644
  		.data		= &init_net.ipv4.sysctl_icmp_ignore_bogus_error_responses,
  		.maxlen		= sizeof(int),
 -- 
-2.1.4
+2.7.4
 

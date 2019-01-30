@@ -1,4 +1,4 @@
-From bc078cb68611275ad33342993c359fbebc92074c Mon Sep 17 00:00:00 2001
+From ad9e8b46966b3a1e73ea4b9a07ea41ba160be8f3 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Tue, 9 Feb 2016 18:17:18 +0100
 Subject: [PATCH 156/353] kernel: softirq: unlock with irqs on
@@ -29,5 +29,5 @@ index e7693cd..7bed42c 100644
  }
  
 -- 
-2.1.4
+2.7.4
 

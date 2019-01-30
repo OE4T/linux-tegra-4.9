@@ -1,4 +1,4 @@
-From 2671de115d8e85930cb0df80d09dc68ff3462fc5 Mon Sep 17 00:00:00 2001
+From fea01b4e311acfcd9c2a07d478ed7b81be71f84e Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Thu, 4 Feb 2016 14:08:06 +0100
 Subject: [PATCH 063/353] latencyhist: disable jump-labels
@@ -51,7 +51,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  1 file changed, 1 insertion(+)
 
 diff --git a/arch/Kconfig b/arch/Kconfig
-index 2fa953f..391ecd5 100644
+index 2fa953f..391ecd54 100644
 --- a/arch/Kconfig
 +++ b/arch/Kconfig
 @@ -55,6 +55,7 @@ config KPROBES
@@ -63,5 +63,5 @@ index 2fa953f..391ecd5 100644
           This option enables a transparent branch optimization that
  	 makes certain almost-always-true or almost-always-false branch
 -- 
-2.1.4
+2.7.4
 

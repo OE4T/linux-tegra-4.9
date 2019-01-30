@@ -1,4 +1,4 @@
-From f214c99911da5643c335919696c8077f9ee79c88 Mon Sep 17 00:00:00 2001
+From 23deea5049cafa348535b8edb39cdd3b3df77e3b Mon Sep 17 00:00:00 2001
 From: "Yadi.hu" <yadi.hu@windriver.com>
 Date: Wed, 10 Dec 2014 10:32:09 +0800
 Subject: [PATCH 255/353] ARM: enable irq in translation/section permission
@@ -66,10 +66,10 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  1 file changed, 6 insertions(+)
 
 diff --git a/arch/arm/mm/fault.c b/arch/arm/mm/fault.c
-index d6c9dee..4539678 100644
+index a9ef54d..50cb5ed 100644
 --- a/arch/arm/mm/fault.c
 +++ b/arch/arm/mm/fault.c
-@@ -436,6 +436,9 @@ do_translation_fault(unsigned long addr, unsigned int fsr,
+@@ -433,6 +433,9 @@ do_translation_fault(unsigned long addr, unsigned int fsr,
  	if (addr < TASK_SIZE)
  		return do_page_fault(addr, fsr, regs);
  
@@ -79,7 +79,7 @@ index d6c9dee..4539678 100644
  	if (user_mode(regs))
  		goto bad_area;
  
-@@ -503,6 +506,9 @@ do_translation_fault(unsigned long addr, unsigned int fsr,
+@@ -500,6 +503,9 @@ do_translation_fault(unsigned long addr, unsigned int fsr,
  static int
  do_sect_fault(unsigned long addr, unsigned int fsr, struct pt_regs *regs)
  {
@@ -90,5 +90,5 @@ index d6c9dee..4539678 100644
  	return 0;
  }
 -- 
-2.1.4
+2.7.4
 

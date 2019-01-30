@@ -1,4 +1,4 @@
-From 3cb2a13a10898f56aee851222600bc0f71f70365 Mon Sep 17 00:00:00 2001
+From 4c9b71d4093a333615400c6413f9425fcd2ac844 Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Mon, 20 Mar 2017 12:26:55 +0100
 Subject: [PATCH 004/353] lockdep: Fix per-cpu static objects
@@ -131,5 +131,5 @@ index a42fb6c..88b57ee 100644
  		}
  	}
 -- 
-2.1.4
+2.7.4
 

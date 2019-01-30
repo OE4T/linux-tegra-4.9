@@ -1,4 +1,4 @@
-From 7087b294ba42bd6d531bb6e9c62a809a60c8f892 Mon Sep 17 00:00:00 2001
+From 6ed0e9f555a00db03dd028fe395cd7178502191b Mon Sep 17 00:00:00 2001
 From: Steven Rostedt <rostedt@goodmis.org>
 Date: Tue, 4 Mar 2014 12:28:32 -0500
 Subject: [PATCH 218/353] cpu_chill: Add a UNINTERRUPTIBLE hrtimer_nanosleep
@@ -107,5 +107,5 @@ index e6d9118..4b54fe2 100644
  		current->flags &= ~PF_NOFREEZE;
  }
 -- 
-2.1.4
+2.7.4
 

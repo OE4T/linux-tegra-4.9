@@ -1,4 +1,4 @@
-From dc8b72f971bced0ff01e9bc753d145043cd35753 Mon Sep 17 00:00:00 2001
+From ecdfc2d7af884bc775c8f0da4b0262191f2100aa Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Wed, 9 Jan 2013 10:33:09 +0100
 Subject: [PATCH 106/353] mm: bounce: Use local_irq_save_nort
@@ -29,5 +29,5 @@ index 1cb5dd3..2f1ec8a 100644
  
  #else /* CONFIG_HIGHMEM */
 -- 
-2.1.4
+2.7.4
 

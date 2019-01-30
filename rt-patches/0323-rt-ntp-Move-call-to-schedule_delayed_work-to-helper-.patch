@@ -1,4 +1,4 @@
-From 0650ea0bea332fe6278a96d065866bc9bcb166ef Mon Sep 17 00:00:00 2001
+From aac90772fb6b5cd7af5ec399434706b77dfaa4c2 Mon Sep 17 00:00:00 2001
 From: Steven Rostedt <rostedt@goodmis.org>
 Date: Wed, 26 Jun 2013 15:28:11 -0400
 Subject: [PATCH 323/353] rt,ntp: Move call to schedule_delayed_work() to
@@ -75,5 +75,5 @@ index 6df8927..05b7391 100644
  #else
  void ntp_notify_cmos_timer(void) { }
 -- 
-2.1.4
+2.7.4
 

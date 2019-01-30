@@ -1,4 +1,4 @@
-From 87ef3141ebb79d18eb29af8fec0e0fb1925657ac Mon Sep 17 00:00:00 2001
+From 78bd388241847790cad88eaa630ec2b16f2d339d Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Wed, 22 Jun 2011 19:47:02 +0200
 Subject: [PATCH 047/353] block: Shorten interrupt disabled regions
@@ -98,5 +98,5 @@ index c13af61..ce60288 100644
  
  void blk_finish_plug(struct blk_plug *plug)
 -- 
-2.1.4
+2.7.4
 

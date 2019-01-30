@@ -1,4 +1,4 @@
-From 021cd26153600f433a02c5184d84c292f4dadb47 Mon Sep 17 00:00:00 2001
+From f426e03f109eb76328f071cf071b1ae0bce8e301 Mon Sep 17 00:00:00 2001
 From: Paul Gortmaker <paul.gortmaker@windriver.com>
 Date: Sun, 31 May 2015 14:44:42 -0400
 Subject: [PATCH 252/353] powerpc: ps3/device-init.c - adapt to completions
@@ -34,5 +34,5 @@ index e484624..2670cee 100644
  	if (kthread_should_stop())
  		res = -EINTR;
 -- 
-2.1.4
+2.7.4
 

@@ -1,4 +1,4 @@
-From 98d0a74fde9cf9a676997537a024ebadce7a17a1 Mon Sep 17 00:00:00 2001
+From 88e9afa975b133c9959d4d9f2e5b2c3d8ed9f661 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Tue, 28 Jun 2011 10:59:58 +0200
 Subject: [PATCH 060/353] net-flip-lock-dep-thingy.patch
@@ -111,5 +111,5 @@ index 0e82197..a42eb86 100644
  EXPORT_SYMBOL(lock_sock_nested);
  
 -- 
-2.1.4
+2.7.4
 

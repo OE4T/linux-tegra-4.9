@@ -1,4 +1,4 @@
-From 94a9e0132399c1e674d7bf2cf59f49063756251e Mon Sep 17 00:00:00 2001
+From 9ea968dde67f623635303009dc64ad3d58f7a99f Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Tue, 19 Mar 2013 14:44:30 +0100
 Subject: [PATCH 046/353] kernel/SRCU: provide a static initializer
@@ -128,5 +128,5 @@ index dc8eb63..e793d3a 100644
  #define DEFINE_STATIC_SRCU(name)	__DEFINE_SRCU(name, static)
  
 -- 
-2.1.4
+2.7.4
 

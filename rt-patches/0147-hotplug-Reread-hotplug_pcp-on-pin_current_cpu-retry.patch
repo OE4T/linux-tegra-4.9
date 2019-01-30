@@ -1,4 +1,4 @@
-From 53b11c0c80527329143097aab4e2dbddbb73d83f Mon Sep 17 00:00:00 2001
+From 044528c717f440252f2d4c8e4e505d8acef2596a Mon Sep 17 00:00:00 2001
 From: Yong Zhang <yong.zhang0@gmail.com>
 Date: Thu, 28 Jul 2011 11:16:00 +0800
 Subject: [PATCH 147/353] hotplug: Reread hotplug_pcp on pin_current_cpu()
@@ -37,5 +37,5 @@ index de4d685..ee08823 100644
  	    hp->unplug == current) {
  		hp->refcount++;
 -- 
-2.1.4
+2.7.4
 

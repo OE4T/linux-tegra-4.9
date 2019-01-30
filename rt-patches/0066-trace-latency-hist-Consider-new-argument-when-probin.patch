@@ -1,4 +1,4 @@
-From aa7611fbc02376b83370413940cc3d750f33d541 Mon Sep 17 00:00:00 2001
+From 3d4194f3d1b59844210c4876a72a409aab3c8d15 Mon Sep 17 00:00:00 2001
 From: Carsten Emde <C.Emde@osadl.org>
 Date: Tue, 5 Jan 2016 10:21:59 +0100
 Subject: [PATCH 066/353] trace/latency-hist: Consider new argument when
@@ -39,5 +39,5 @@ index b6c1d14..7f6ee70 100644
  	unsigned long flags;
  	int cpu = task_cpu(next);
 -- 
-2.1.4
+2.7.4
 

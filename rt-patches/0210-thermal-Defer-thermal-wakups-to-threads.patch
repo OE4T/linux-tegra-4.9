@@ -1,4 +1,4 @@
-From 36601b864051147c4f306d5e98b8bc7b33873a71 Mon Sep 17 00:00:00 2001
+From 414362dcff5190d5e3746f9090a0ddb9b1c7bd76 Mon Sep 17 00:00:00 2001
 From: Daniel Wagner <wagi@monom.org>
 Date: Tue, 17 Feb 2015 09:37:44 +0100
 Subject: [PATCH 210/353] thermal: Defer thermal wakups to threads
@@ -134,5 +134,5 @@ index 95f4c1b..0be9347 100644
  		cancel_delayed_work_sync(
  			&per_cpu(pkg_temp_thermal_threshold_work, i));
 -- 
-2.1.4
+2.7.4
 

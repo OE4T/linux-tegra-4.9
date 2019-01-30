@@ -1,4 +1,4 @@
-From 97c9326acc5cab6f19e21b7b1485279bf513b48c Mon Sep 17 00:00:00 2001
+From f315525595ca03dd082358f896e87326c98622ba Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Tue, 13 Sep 2011 16:42:35 +0200
 Subject: [PATCH 139/353] sched: Disable TTWU_QUEUE on RT
@@ -33,5 +33,5 @@ index d28c12e..24b2ede 100644
  /*
   * When doing wakeups, attempt to limit superfluous scans of the LLC domain.
 -- 
-2.1.4
+2.7.4
 

@@ -1,4 +1,4 @@
-From 114dbadd935a1dab8367858dd3793ee56c85fc74 Mon Sep 17 00:00:00 2001
+From 9452d0912b292b4eb55f8c1df757fc475377b3bc Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Fri, 21 Aug 2009 11:56:45 +0200
 Subject: [PATCH 120/353] timer: delay waking softirqs from the jiffy tick
@@ -76,5 +76,5 @@ index a0cb1a2..a416cee 100644
  }
  
 -- 
-2.1.4
+2.7.4
 

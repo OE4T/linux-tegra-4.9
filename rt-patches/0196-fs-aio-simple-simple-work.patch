@@ -1,4 +1,4 @@
-From 9922369b334e4f1e37e1173597d67c6079a94420 Mon Sep 17 00:00:00 2001
+From 2c76ee28f2956fe7d2926c094362f5b9db6f2a97 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Mon, 16 Feb 2015 18:49:10 +0100
 Subject: [PATCH 196/353] fs/aio: simple simple work
@@ -84,5 +84,5 @@ index ed68116..95ca936 100644
  {
  	unsigned i, new_nr;
 -- 
-2.1.4
+2.7.4
 

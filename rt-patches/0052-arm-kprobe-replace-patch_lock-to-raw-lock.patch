@@ -1,4 +1,4 @@
-From 46f847978979711f802600fa15c198dc843e6407 Mon Sep 17 00:00:00 2001
+From c843ddd08514b47b76255a6604abf13a5f0ac1a5 Mon Sep 17 00:00:00 2001
 From: Yang Shi <yang.shi@linaro.org>
 Date: Thu, 10 Nov 2016 16:17:55 -0800
 Subject: [PATCH 052/353] arm: kprobe: replace patch_lock to raw lock
@@ -71,5 +71,5 @@ index 69bda1a..1f665ac 100644
  		__release(&patch_lock);
  }
 -- 
-2.1.4
+2.7.4
 

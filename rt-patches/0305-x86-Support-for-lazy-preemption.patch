@@ -1,4 +1,4 @@
-From d20f49250eb291e542fe7d9baaa4022bd230b144 Mon Sep 17 00:00:00 2001
+From 4031635afdeecb12d5f3ddda0fcbc44f6ba60fb9 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Thu, 1 Nov 2012 11:03:47 +0100
 Subject: [PATCH 305/353] x86: Support for lazy preemption
@@ -235,5 +235,5 @@ index c62e015..0cc71257 100644
 +	DEFINE(_PREEMPT_ENABLED, PREEMPT_ENABLED);
  }
 -- 
-2.1.4
+2.7.4
 

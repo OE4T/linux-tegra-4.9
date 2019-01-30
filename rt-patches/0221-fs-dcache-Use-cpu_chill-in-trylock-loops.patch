@@ -1,4 +1,4 @@
-From 9322f5eab9248ef8b30b5d5ccf2199e43a482aa9 Mon Sep 17 00:00:00 2001
+From 594300deda3cd8c9a38abaf4d53372e490b71fba Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Wed, 7 Mar 2012 21:00:34 +0100
 Subject: [PATCH 221/353] fs: dcache: Use cpu_chill() in trylock loops
@@ -93,7 +93,7 @@ index 1fa3ca8..fc4bb74 100644
  		}
  		dentry->d_flags &= ~DCACHE_CANT_MOUNT;
 diff --git a/fs/namespace.c b/fs/namespace.c
-index 1b6d18b..95a7bc8 100644
+index c4ca100..86c9fc8 100644
 --- a/fs/namespace.c
 +++ b/fs/namespace.c
 @@ -14,6 +14,7 @@
@@ -114,5 +114,5 @@ index 1b6d18b..95a7bc8 100644
  	}
  	/*
 -- 
-2.1.4
+2.7.4
 

@@ -1,4 +1,4 @@
-From 9f8ec11f90106340c5e05d5694ef14a25f7db133 Mon Sep 17 00:00:00 2001
+From ff24e2ffcef89a838f218dd222f4267e87d6ef09 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Mon, 19 Jun 2017 09:55:47 +0200
 Subject: [PATCH 309/353] sched/migrate disable: handle updated task-mask
@@ -124,5 +124,5 @@ index ddf157c..d252c77 100644
  	preempt_enable();
  	preempt_lazy_enable();
 -- 
-2.1.4
+2.7.4
 

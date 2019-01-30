@@ -1,4 +1,4 @@
-From 93777d19d550d0ab91db081d1bcbe14b0b679253 Mon Sep 17 00:00:00 2001
+From 97ca1ab1ac41f474b70be9aa3d44a2734cb468ce Mon Sep 17 00:00:00 2001
 From: Steven Rostedt <srostedt@redhat.com>
 Date: Mon, 16 Jul 2012 08:07:43 +0000
 Subject: [PATCH 281/353] cpu/rt: Rework cpu down for PREEMPT_RT
@@ -530,5 +530,5 @@ index 224b95a..c8af959 100644
   * Change a given task's CPU affinity. Migrate the thread to a
   * proper CPU and schedule it away if the CPU it's executing on
 -- 
-2.1.4
+2.7.4
 

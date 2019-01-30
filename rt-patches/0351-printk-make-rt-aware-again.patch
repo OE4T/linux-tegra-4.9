@@ -1,4 +1,4 @@
-From 952ab0dec369fd327263878242668cb7880dc5d7 Mon Sep 17 00:00:00 2001
+From 03ef98da3cbf14a57881857e9c445f2b93231263 Mon Sep 17 00:00:00 2001
 From: Timo Alho <talho@nvidia.com>
 Date: Wed, 14 Feb 2018 23:05:10 +0200
 Subject: [PATCH 351/353] printk: make rt aware (again)
@@ -15,10 +15,10 @@ Signed-off-by: Timo Alho <talho@nvidia.com>
  1 file changed, 5 insertions(+), 1 deletion(-)
 
 diff --git a/kernel/printk/printk.c b/kernel/printk/printk.c
-index 854b4bd..dd6b987 100644
+index e92b3de..5458b40 100644
 --- a/kernel/printk/printk.c
 +++ b/kernel/printk/printk.c
-@@ -1681,6 +1681,7 @@ static void call_force_console_drivers(const char *force_text,
+@@ -1676,6 +1676,7 @@ static void call_force_console_drivers(const char *force_text,
  		if (con->flags & CON_FORCE_LEVEL)
  			con->write(con, force_text, force_len);
  	}
@@ -26,7 +26,7 @@ index 854b4bd..dd6b987 100644
  }
  
  /*
-@@ -1699,6 +1700,7 @@ static void call_console_drivers(int level,
+@@ -1694,6 +1695,7 @@ static void call_console_drivers(int level,
  	if (!console_drivers)
  		return;
  
@@ -34,7 +34,7 @@ index 854b4bd..dd6b987 100644
  	for_each_console(con) {
  		if (exclusive_console && con != exclusive_console)
  			continue;
-@@ -2446,10 +2448,10 @@ static void console_cont_flush(char *text, size_t size)
+@@ -2441,10 +2443,10 @@ static void console_cont_flush(char *text, size_t size)
  	len = cont_print_text(text, size);
  #ifdef CONFIG_PREEMPT_RT_FULL
  	raw_spin_unlock_irqrestore(&logbuf_lock, flags);
@@ -46,7 +46,7 @@ index 854b4bd..dd6b987 100644
  	call_console_drivers(cont.level, NULL, 0, text, len);
  
  	/* Add prefix in case console is with CON_FORCE_LEVEL */
-@@ -2467,6 +2469,7 @@ static void console_cont_flush(char *text, size_t size)
+@@ -2462,6 +2464,7 @@ static void console_cont_flush(char *text, size_t size)
  		call_force_console_drivers(text, len);
  	}
  
@@ -54,7 +54,7 @@ index 854b4bd..dd6b987 100644
  	start_critical_timings();
  	local_irq_restore(flags);
  #endif
-@@ -2605,6 +2608,7 @@ void console_unlock(void)
+@@ -2600,6 +2603,7 @@ void console_unlock(void)
  #ifdef CONFIG_PREEMPT_RT_FULL
  		raw_spin_unlock_irqrestore(&logbuf_lock, flags);
  		call_console_drivers(level, ext_text, ext_len, text, len);
@@ -63,5 +63,5 @@ index 854b4bd..dd6b987 100644
  		raw_spin_unlock(&logbuf_lock);
  
 -- 
-2.1.4
+2.7.4
 

@@ -1,4 +1,4 @@
-From 286bc2e6e75d205e0157d442a167af86069b09a7 Mon Sep 17 00:00:00 2001
+From 5ee616b484db64b6f95a807660d222877bb7e72a Mon Sep 17 00:00:00 2001
 From: Mike Galbraith <efault@gmx.de>
 Date: Sun, 3 Sep 2017 04:48:10 +0200
 Subject: [PATCH 341/353] kernel/hrtimer/hotplug: don't wake ktimersoftd while
@@ -70,5 +70,5 @@ index 2158fc5..5efa37d 100644
  	__hrtimer_peek_ahead_timers();
  	local_irq_enable();
 -- 
-2.1.4
+2.7.4
 

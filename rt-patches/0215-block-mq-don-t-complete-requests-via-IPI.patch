@@ -1,4 +1,4 @@
-From ae9839c5551af550354ad301b4c886034aa233fb Mon Sep 17 00:00:00 2001
+From 9431e7c700a4368935efb065389c4369e2f4d4e8 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Thu, 29 Jan 2015 15:10:08 +0100
 Subject: [PATCH 215/353] block/mq: don't complete requests via IPI
@@ -110,5 +110,5 @@ index 657689d..7b18f20 100644
  	};
  
 -- 
-2.1.4
+2.7.4
 

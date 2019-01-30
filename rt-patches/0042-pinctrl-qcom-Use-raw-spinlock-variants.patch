@@ -1,4 +1,4 @@
-From 3b815298f3bbdb7977bfb8fdd668a00fcb3b9e4b Mon Sep 17 00:00:00 2001
+From 25fec4bf2a1832e3fde482b1514b8ed5b6b98476 Mon Sep 17 00:00:00 2001
 From: Julia Cartwright <julia@ni.com>
 Date: Fri, 20 Jan 2017 10:13:47 -0600
 Subject: [PATCH 042/353] pinctrl: qcom: Use raw spinlock variants
@@ -254,5 +254,5 @@ index bedce34..faf0389 100644
  	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
  	pctrl->regs = devm_ioremap_resource(&pdev->dev, res);
 -- 
-2.1.4
+2.7.4
 

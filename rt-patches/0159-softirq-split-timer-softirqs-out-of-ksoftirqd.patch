@@ -1,4 +1,4 @@
-From 0f6a1415d208b36025f8bdd0040b4af49d4fd60e Mon Sep 17 00:00:00 2001
+From 1f1a5ca478561b978797bd10dd9b69322c36fac0 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Wed, 20 Jan 2016 16:34:17 +0100
 Subject: [PATCH 159/353] softirq: split timer softirqs out of ksoftirqd
@@ -209,5 +209,5 @@ index 62f01b76..be66205 100644
  }
  early_initcall(spawn_ksoftirqd);
 -- 
-2.1.4
+2.7.4
 

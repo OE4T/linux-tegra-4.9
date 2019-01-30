@@ -1,4 +1,4 @@
-From 9f26f2248bd1277be13807a800ced1e8bfd57b52 Mon Sep 17 00:00:00 2001
+From b9078cf8ee6e08e3fa1b45a73ec8fefeeb550847 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Wed, 2 Nov 2016 16:45:58 +0100
 Subject: [PATCH 040/353] rcu: update: make RCU_EXPEDITE_BOOT default
@@ -64,5 +64,5 @@ index 4f6db7e..019b470 100644
  		WRITE_ONCE(rcu_normal, 1);
  }
 -- 
-2.1.4
+2.7.4
 

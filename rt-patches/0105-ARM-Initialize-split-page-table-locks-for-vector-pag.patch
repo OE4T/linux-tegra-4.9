@@ -1,4 +1,4 @@
-From 88be0b51154494c752c72e35324c072598bda9ef Mon Sep 17 00:00:00 2001
+From 6c6e27c96cfd3d9d7e594dedecd6ed49c73da0ba Mon Sep 17 00:00:00 2001
 From: Frank Rowand <frank.rowand@am.sony.com>
 Date: Sat, 1 Oct 2011 18:58:13 -0700
 Subject: [PATCH 105/353] ARM: Initialize split page table locks for vector
@@ -71,5 +71,5 @@ index 38ad8b9..c8dcbd22 100644
  /*
   * The vectors page is always readable from user space for the
 -- 
-2.1.4
+2.7.4
 

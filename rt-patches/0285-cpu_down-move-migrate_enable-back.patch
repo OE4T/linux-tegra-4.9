@@ -1,4 +1,4 @@
-From 3152fe0ff69262b24a6d9daffd463c716907a3ac Mon Sep 17 00:00:00 2001
+From 3fb208fef6a56daa79928da563d0a9461c32238e Mon Sep 17 00:00:00 2001
 From: Tiejun Chen <tiejun.chen@windriver.com>
 Date: Thu, 7 Nov 2013 10:06:07 +0800
 Subject: [PATCH 285/353] cpu_down: move migrate_enable() back
@@ -53,5 +53,5 @@ index cd25dbb..bb5cde2 100644
  	if (!ret && hasdied)
  		cpu_notify_nofail(CPU_POST_DEAD, cpu);
 -- 
-2.1.4
+2.7.4
 

@@ -1,4 +1,4 @@
-From bdc12d62ed85743eef748aff7b04035cd81ac719 Mon Sep 17 00:00:00 2001
+From 9051e63539bbbd9c2d5a7ed43c3f510ab72c7051 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Mon, 13 Dec 2010 16:33:39 +0100
 Subject: [PATCH 205/353] x86: Convert mce timer to hrtimer
@@ -181,5 +181,5 @@ index 7e6163c..d8febf3 100644
  	}
  
 -- 
-2.1.4
+2.7.4
 

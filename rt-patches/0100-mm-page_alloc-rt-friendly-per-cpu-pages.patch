@@ -1,4 +1,4 @@
-From d159b9a4901e31f812334c905932745f95290254 Mon Sep 17 00:00:00 2001
+From 63b69dc557d3ac41cae9245f5aa30e91d3bc435f Mon Sep 17 00:00:00 2001
 From: Ingo Molnar <mingo@elte.hu>
 Date: Fri, 3 Jul 2009 08:29:37 -0500
 Subject: [PATCH 100/353] mm: page_alloc: rt-friendly per-cpu pages
@@ -204,5 +204,5 @@ index 26ba311..c717779 100644
  
  #ifdef CONFIG_MEMORY_HOTREMOVE
 -- 
-2.1.4
+2.7.4
 

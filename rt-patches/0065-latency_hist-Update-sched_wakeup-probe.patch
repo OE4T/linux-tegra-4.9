@@ -1,4 +1,4 @@
-From dcb718c92dc41d13dd6145a1513dfd83e230342f Mon Sep 17 00:00:00 2001
+From f0f834019604679a58fa176f7da2658a31db1f9c Mon Sep 17 00:00:00 2001
 From: Mathieu Desnoyers <mathieu.desnoyers@efficios.com>
 Date: Sun, 25 Oct 2015 18:06:05 -0400
 Subject: [PATCH 065/353] latency_hist: Update sched_wakeup probe
@@ -42,5 +42,5 @@ index 66a69eb..b6c1d14 100644
  	unsigned long flags;
  	struct task_struct *curr = current;
 -- 
-2.1.4
+2.7.4
 

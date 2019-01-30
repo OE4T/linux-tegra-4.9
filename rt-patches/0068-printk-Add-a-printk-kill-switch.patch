@@ -1,4 +1,4 @@
-From 5f5afc68ef7f741f7fb4003b01395cc821d19885 Mon Sep 17 00:00:00 2001
+From 1c5d2ae2475636d3e1f8205fff5e63037e165bf1 Mon Sep 17 00:00:00 2001
 From: Ingo Molnar <mingo@elte.hu>
 Date: Fri, 22 Jul 2011 17:58:40 +0200
 Subject: [PATCH 068/353] printk: Add a printk kill switch
@@ -30,7 +30,7 @@ index 6519474..334e278 100644
  
  #ifdef CONFIG_PRINTK_NMI
 diff --git a/kernel/printk/printk.c b/kernel/printk/printk.c
-index 1fc3304..81efd0d 100644
+index 4691546..e4a74bd 100644
 --- a/kernel/printk/printk.c
 +++ b/kernel/printk/printk.c
 @@ -356,6 +356,58 @@ __packed __aligned(4)
@@ -92,7 +92,7 @@ index 1fc3304..81efd0d 100644
  #ifdef CONFIG_PRINTK
  DECLARE_WAIT_QUEUE_HEAD(log_wait);
  /* the next printk record to read by syslog(READ) or /proc/kmsg */
-@@ -1824,6 +1876,13 @@ asmlinkage int vprintk_emit(int facility, int level,
+@@ -1819,6 +1871,13 @@ asmlinkage int vprintk_emit(int facility, int level,
  	/* cpu currently holding logbuf_lock in this function */
  	static unsigned int logbuf_cpu = UINT_MAX;
  
@@ -106,7 +106,7 @@ index 1fc3304..81efd0d 100644
  	if (level == LOGLEVEL_SCHED) {
  		level = LOGLEVEL_DEFAULT;
  		in_sched = true;
-@@ -2064,26 +2123,6 @@ DEFINE_PER_CPU(printk_func_t, printk_func);
+@@ -2059,26 +2118,6 @@ DEFINE_PER_CPU(printk_func_t, printk_func);
  
  #endif /* CONFIG_PRINTK */
  
@@ -168,5 +168,5 @@ index e5709b8..b3bdf40 100644
  			nmi_panic(regs, "Hard LOCKUP");
  
 -- 
-2.1.4
+2.7.4
 

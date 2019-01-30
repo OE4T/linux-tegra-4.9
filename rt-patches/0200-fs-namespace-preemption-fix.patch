@@ -1,4 +1,4 @@
-From 77467b6a87278f7357db3a2eb601261e97e768be Mon Sep 17 00:00:00 2001
+From 297cc276bef9a6dd6ef1743b5ab04925d98bd2ee Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Sun, 19 Jul 2009 08:44:27 -0500
 Subject: [PATCH 200/353] fs: namespace preemption fix
@@ -14,7 +14,7 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  1 file changed, 4 insertions(+), 1 deletion(-)
 
 diff --git a/fs/namespace.c b/fs/namespace.c
-index 77b46bf4..1b6d18b 100644
+index c2a51a8..c4ca100 100644
 --- a/fs/namespace.c
 +++ b/fs/namespace.c
 @@ -358,8 +358,11 @@ int __mnt_want_write(struct vfsmount *m)
@@ -31,5 +31,5 @@ index 77b46bf4..1b6d18b 100644
  	 * After the slowpath clears MNT_WRITE_HOLD, mnt_is_readonly will
  	 * be set to match its requirements. So we must not load that until
 -- 
-2.1.4
+2.7.4
 

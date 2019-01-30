@@ -1,4 +1,4 @@
-From b9c81a6ba345abe69cc539b09dbd9f73b97b0a65 Mon Sep 17 00:00:00 2001
+From cedd6cd6ab2b24864f425c99e70b89ebe07bd6f0 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Tue, 12 Jul 2011 15:38:34 +0200
 Subject: [PATCH 234/353] net: Use skbufhead with raw lock
@@ -52,7 +52,7 @@ index e90fe6b..2b37bde 100644
  		struct lock_class_key *class)
  {
 diff --git a/net/core/dev.c b/net/core/dev.c
-index f5b9c29..ee1b90f 100644
+index f6a81d0..cead623 100644
 --- a/net/core/dev.c
 +++ b/net/core/dev.c
 @@ -211,14 +211,14 @@ static inline struct hlist_head *dev_index_hash(struct net *net, int ifindex)
@@ -97,7 +97,7 @@ index f5b9c29..ee1b90f 100644
  }
  
  static void flush_all_backlogs(void)
-@@ -4950,7 +4953,9 @@ static int process_backlog(struct napi_struct *napi, int quota)
+@@ -4946,7 +4949,9 @@ static int process_backlog(struct napi_struct *napi, int quota)
  	while (again) {
  		struct sk_buff *skb;
  
@@ -107,7 +107,7 @@ index f5b9c29..ee1b90f 100644
  			rcu_read_lock();
  			__netif_receive_skb(skb);
  			rcu_read_unlock();
-@@ -4958,9 +4963,9 @@ static int process_backlog(struct napi_struct *napi, int quota)
+@@ -4954,9 +4959,9 @@ static int process_backlog(struct napi_struct *napi, int quota)
  			if (++work >= quota)
  				return work;
  
@@ -118,7 +118,7 @@ index f5b9c29..ee1b90f 100644
  		rps_lock(sd);
  		if (skb_queue_empty(&sd->input_pkt_queue)) {
  			/*
-@@ -5302,13 +5307,21 @@ static __latent_entropy void net_rx_action(struct softirq_action *h)
+@@ -5298,13 +5303,21 @@ static __latent_entropy void net_rx_action(struct softirq_action *h)
  	struct softnet_data *sd = this_cpu_ptr(&softnet_data);
  	unsigned long time_limit = jiffies + 2;
  	int budget = netdev_budget;
@@ -140,7 +140,7 @@ index f5b9c29..ee1b90f 100644
  	for (;;) {
  		struct napi_struct *n;
  
-@@ -8114,6 +8127,9 @@ static int dev_cpu_callback(struct notifier_block *nfb,
+@@ -8110,6 +8123,9 @@ static int dev_cpu_callback(struct notifier_block *nfb,
  		netif_rx_ni(skb);
  		input_queue_head_incr(oldsd);
  	}
@@ -150,7 +150,7 @@ index f5b9c29..ee1b90f 100644
  
  	return NOTIFY_OK;
  }
-@@ -8418,8 +8434,9 @@ static int __init net_dev_init(void)
+@@ -8414,8 +8430,9 @@ static int __init net_dev_init(void)
  
  		INIT_WORK(flush, flush_backlog);
  
@@ -163,5 +163,5 @@ index f5b9c29..ee1b90f 100644
  		sd->output_queue_tailp = &sd->output_queue;
  #ifdef CONFIG_RPS
 -- 
-2.1.4
+2.7.4
 

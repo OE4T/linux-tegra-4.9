@@ -1,4 +1,4 @@
-From 4e5b035935c8bb7b3b7e6862ff1f2be19c8f3b7d Mon Sep 17 00:00:00 2001
+From 066c460541c3918ede8414032b536c188e4dccc2 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Thu, 25 Oct 2012 10:32:35 +0100
 Subject: [PATCH 108/353] mm: Enable SLUB for RT
@@ -468,5 +468,5 @@ index 131dee8..6cd5c83 100644
  
  	for (i = 0; i < t.count; i++) {
 -- 
-2.1.4
+2.7.4
 

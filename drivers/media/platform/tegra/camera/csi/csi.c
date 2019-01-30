@@ -43,8 +43,6 @@
 
 #define DEFAULT_NUM_TPG_CHANNELS 6
 
-#define NUM_CSI_PORTS (NVCSI_PORT_H + 1)
-
 /*
  * deskew should be run when the sensor data rate is >= 1.5 gbps
  * data is sent on both rising/falling edges of clock, so /2
@@ -52,8 +50,6 @@
 #define CLK_HZ_FOR_DESKEW ((1500*1000*1000)/2)
 
 static struct tegra_csi_device *mc_csi;
-
-static atomic_t port_refcount[NUM_CSI_PORTS];
 
 struct tegra_csi_device *tegra_get_mc_csi(void)
 {
@@ -371,7 +367,6 @@ static int tegra_csi_s_stream(struct v4l2_subdev *subdev, int enable)
 	struct tegra_csi_device *csi;
 	struct tegra_csi_channel *chan = to_csi_chan(subdev);
 	struct tegra_channel *tegra_chan = v4l2_get_subdev_hostdata(subdev);
-	int csi_port = 0;
 	int i, ret = 0;
 
 	if (atomic_read(&chan->is_streaming) == enable)
@@ -393,21 +388,15 @@ static int tegra_csi_s_stream(struct v4l2_subdev *subdev, int enable)
 		return 0;
 	}
 	for (i = 0; i < tegra_chan->valid_ports; i++) {
-		csi_port = chan->ports[i].csi_port;
 		if (enable) {
-			if (atomic_inc_return(&port_refcount[csi_port])
-				== 1) {
 				ret = tegra_csi_start_streaming(chan, i);
 				if (ret)
 					goto start_fail;
 				if (!tegra_chan->bypass && !tegra_chan->pg_mode)
 					deskew_setup(chan,
 						tegra_chan->deskew_ctx);
-			}
-		} else {
-			if (atomic_dec_return(&port_refcount[csi_port]) == 0)
-				tegra_csi_stop_streaming(chan, i);
-		}
+		} else
+			tegra_csi_stop_streaming(chan, i);
 	}
 	atomic_set(&chan->is_streaming, enable);
 	return ret;
@@ -941,10 +930,6 @@ static int tegra_csi_channels_init(struct tegra_csi_device *csi)
 {
 	int ret;
 	struct tegra_csi_channel *it;
-	int i;
-
-	for (i = 0; i < NUM_CSI_PORTS; i++)
-		atomic_set(&port_refcount[i], 0);
 
 	list_for_each_entry(it, &csi->csi_chans, list) {
 		ret = tegra_csi_channel_init_one(it);

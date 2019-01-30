@@ -25,6 +25,10 @@
 
 #include "csi4_fops.h"
 
+#define NUM_CSI_PORTS (NVCSI_PORT_F + 1)
+
+static atomic_t port_refcount[NUM_CSI_PORTS];
+
 static void csi4_stream_write(struct tegra_csi_channel *chan,
 		unsigned int index, unsigned int addr, u32 val)
 {
@@ -499,9 +503,14 @@ static int csi4_tpg_start_streaming(struct tegra_csi_channel *chan,
 }
 static int csi4_hw_init(struct tegra_csi_device *csi)
 {
+	u32 i;
+
 	csi->iomem[0] = csi->iomem_base + TEGRA_CSI_STREAM_0_BASE;
 	csi->iomem[1] = csi->iomem_base + TEGRA_CSI_STREAM_2_BASE;
 	csi->iomem[2] = csi->iomem_base + TEGRA_CSI_STREAM_4_BASE;
+
+	for (i = 0; i < NUM_CSI_PORTS; i++)
+		atomic_set(&port_refcount[i], 0);
 
 	return 0;
 }
@@ -519,11 +528,14 @@ static int csi4_start_streaming(struct tegra_csi_channel *chan, int port_idx)
 		ret = csi4_tpg_start_streaming(chan, port_idx);
 	else {
 		csi_port = port->csi_port;
-		csi4_stream_init(chan, csi_port);
-		csi4_stream_config(chan, csi_port);
-		/* enable PHY */
-		csi4_phy_config(chan, csi_port, csi_lanes, true);
-		csi4_stream_write(chan, csi_port, PP_EN_CTRL, CFG_PP_EN);
+		if (atomic_inc_return(&port_refcount[csi_port]) == 1) {
+			csi4_stream_init(chan, csi_port);
+			csi4_stream_config(chan, csi_port);
+			/* enable PHY */
+			csi4_phy_config(chan, csi_port, csi_lanes, true);
+			csi4_stream_write(chan, csi_port, PP_EN_CTRL,
+						CFG_PP_EN);
+		}
 	}
 	return ret;
 }
@@ -542,10 +554,12 @@ static void csi4_stop_streaming(struct tegra_csi_channel *chan, int port_idx)
 		csi4_tpg_stop_streaming(chan, port_idx);
 	else {
 		csi_port = port->csi_port;
-		/* disable PHY */
-		csi4_phy_config(chan, csi_port, csi_lanes, false);
-		csi4_stream_check_status(chan, csi_port);
-		csi4_cil_check_status(chan, csi_port);
+		if (atomic_dec_return(&port_refcount[csi_port]) == 0) {
+			/* disable PHY */
+			csi4_phy_config(chan, csi_port, csi_lanes, false);
+			csi4_stream_check_status(chan, csi_port);
+			csi4_cil_check_status(chan, csi_port);
+		}
 	}
 }
 

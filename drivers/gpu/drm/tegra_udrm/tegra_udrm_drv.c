@@ -307,16 +307,31 @@ static const struct file_operations tegra_udrm_fops = {
 };
 
 static const struct drm_ioctl_desc tegra_udrm_ioctls[] = {
+	/*
+	 * UMD when enumerated with tegra-drm fd from a process for first
+	 * time e.g,
+	 *  fd = open("/dev/dri/card0");
+	 *  drmGetVersion(fd);
+	 *
+	 * The drmGetVersion call handling in UMD will create drm_nvdc
+	 * context and starts a thread to listen for close, set/drop master
+	 * notifications from driver. It uses tegra_udrm_close_notify_ioctl
+	 * and tegra_udrm_drop_master_notify_ioctl to register for
+	 * notifications from KMD. So if DRM_AUTH is set for those ioctls
+	 * they might fail if there is existing master, so don't set DRM_AUTH
+	 * on those ioctls. None of the below ioctls are modifying KMS state
+	 * so DRM_AUTH is not required anyway.
+	 */
 	DRM_IOCTL_DEF_DRV(TEGRA_UDRM_DMABUF_MMAP,
-		tegra_udrm_dmabuf_mmap_ioctl, DRM_AUTH),
+		tegra_udrm_dmabuf_mmap_ioctl, 0),
 	DRM_IOCTL_DEF_DRV(TEGRA_UDRM_DMABUF_DESTROY_MAPPINGS,
-		tegra_udrm_dmabuf_destroy_mappings_ioctl, DRM_AUTH),
+		tegra_udrm_dmabuf_destroy_mappings_ioctl, 0),
 	DRM_IOCTL_DEF_DRV(TEGRA_UDRM_CLOSE_NOTIFY,
-		tegra_udrm_close_notify_ioctl, DRM_AUTH),
+		tegra_udrm_close_notify_ioctl, 0),
 	DRM_IOCTL_DEF_DRV(TEGRA_UDRM_SEND_VBLANK_EVENT,
-		tegra_udrm_send_vblank_event_ioctl, DRM_AUTH),
+		tegra_udrm_send_vblank_event_ioctl, 0),
 	DRM_IOCTL_DEF_DRV(TEGRA_UDRM_DROP_MASTER_NOTIFY,
-		tegra_udrm_drop_master_notify_ioctl, DRM_AUTH),
+		tegra_udrm_drop_master_notify_ioctl, 0),
 };
 
 static int tegra_udrm_open(struct drm_device *drm, struct drm_file *filp)

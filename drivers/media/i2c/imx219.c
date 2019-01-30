@@ -35,7 +35,7 @@
 /* imx219 - sensor parameter limits */
 #define IMX219_MIN_GAIN				0x0000
 #define IMX219_MAX_GAIN				0x00e8
-#define IMX219_MIN_FRAME_LENGTH			0x09c3
+#define IMX219_MIN_FRAME_LENGTH			0x0100
 #define IMX219_MAX_FRAME_LENGTH			0xffff
 #define IMX219_MIN_COARSE_EXPOSURE		0x0001
 #define IMX219_MAX_COARSE_DIFF			0x0004

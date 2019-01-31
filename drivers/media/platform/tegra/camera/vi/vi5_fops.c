@@ -424,8 +424,7 @@ static void vi5_capture_dequeue(struct tegra_channel *chan,
 	vb->timestamp.tv_sec = ts.tv_sec;
 	vb->timestamp.tv_usec = ts.tv_nsec / NSEC_PER_USEC;
 #else
-	/* TODO: granular time code information */
-	vb->timecode.seconds = ts.tv_sec;
+	vb->vb2_buf.timestamp = descr->status.sof_timestamp;
 #endif
 
 	/* Read EOF from capture descriptor */

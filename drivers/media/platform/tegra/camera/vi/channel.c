@@ -328,8 +328,7 @@ void set_timestamp(struct tegra_channel_buffer *buf,
 	buf->buf.timestamp.tv_sec = ts->tv_sec;
 	buf->buf.timestamp.tv_usec = ts->tv_nsec / NSEC_PER_USEC;
 #else
-	/* TODO: granular time code information */
-	buf->buf.timecode.seconds = ts->tv_sec;
+	buf->buf.vb2_buf.timestamp = timespec_to_ns(ts);
 #endif
 }
 

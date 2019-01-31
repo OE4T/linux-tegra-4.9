@@ -1,7 +1,7 @@
 /*
  * QSPI driver for NVIDIA's Tegra210 QUAD SPI Controller.
  *
- * Copyright (c) 2013-2018, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013-2019, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -1257,9 +1257,9 @@ static void tegra_qspi_set_gr_registers(struct tegra_qspi_data *tqspi)
 	clk_mhz = tqspi->cur_speed / 1000000;
 
 	if (tqspi->is_ddr_mode)
-		sprintf(prod_name, "prod_c_DDR%d", clk_mhz);
+		sprintf(prod_name, "prod_c_ddr");
 	else
-		sprintf(prod_name, "prod_c_SDR%d", clk_mhz);
+		sprintf(prod_name, "prod_c_sdr");
 
 	err = tegra_prod_set_by_name(&tqspi->base, prod_name, tqspi->prod_list);
 	if (!err)

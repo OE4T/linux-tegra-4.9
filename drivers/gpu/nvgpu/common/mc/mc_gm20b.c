@@ -1,7 +1,7 @@
 /*
- * GK20A Master Control
+ * GM20B Master Control
  *
- * Copyright (c) 2014-2018, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2019, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -280,16 +280,24 @@ bool gm20b_mc_is_intr1_pending(struct gk20a *g,
 
 void gm20b_mc_log_pending_intrs(struct gk20a *g)
 {
-	u32 intr;
+	u32 mc_intr_0;
+	u32 mc_intr_1;
 
-	intr = g->ops.mc.intr_stall(g);
-	if (intr != 0U) {
-		nvgpu_info(g, "Pending stall intr0=0x%08x", intr);
+	mc_intr_0 = g->ops.mc.intr_stall(g);
+	if (mc_intr_0 != 0U) {
+		if ((mc_intr_0 & mc_intr_priv_ring_pending_f()) != 0U) {
+			/* clear priv ring interrupts */
+			g->ops.priv_ring.isr(g);
+		}
+		mc_intr_0 = g->ops.mc.intr_stall(g);
+		if (mc_intr_0 != 0U) {
+			nvgpu_info(g, "Pending stall intr0=0x%08x", mc_intr_0);
+		}
 	}
 
-	intr = g->ops.mc.intr_nonstall(g);
-	if (intr != 0U) {
-		nvgpu_info(g, "Pending nonstall intr1=0x%08x", intr);
+	mc_intr_1 = g->ops.mc.intr_nonstall(g);
+	if (mc_intr_1 != 0U) {
+		nvgpu_info(g, "Pending nonstall intr1=0x%08x", mc_intr_1);
 	}
 }
 

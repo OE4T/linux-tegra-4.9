@@ -649,13 +649,9 @@ int nvhost_nvdla_finalize_poweron(struct platform_device *pdev)
 		goto fail_to_alloc_trace;
 	}
 
-	nvdla_dev->is_gos_enabled = true;
-	ret = nvdla_send_gos_region(pdev);
-	if (ret) {
-		nvdla_dbg_err(pdev, "set gos region is failed\n");
-		nvdla_dev->is_gos_enabled = false;
-		/* ignore send gos region failure */
-	}
+	/* Disable GOS until it is fixed in Kernel 4.14 */
+	nvdla_dev->is_gos_enabled = false;
+	nvdla_dev->is_gos_fetched = true;
 
 	if (nvdla_dev->quirks & NVDLA_QUIRK_T194_A01_WAR) {
 		host1x_writel(pdev,

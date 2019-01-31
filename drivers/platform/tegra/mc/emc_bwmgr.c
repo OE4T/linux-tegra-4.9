@@ -118,6 +118,7 @@ static const char * const tegra_bwmgr_client_names[] = {
 	"ispb",
 	"camera",
 	"camera_non_iso",
+	"camrtc",
 	"isomgr",
 	"thermal",
 	"vic",

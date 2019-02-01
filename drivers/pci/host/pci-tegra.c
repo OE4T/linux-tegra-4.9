@@ -511,6 +511,8 @@ struct tegra_pcie_port {
 	struct dentry *port_debugfs;
 	struct phy **phy;
 	struct device_node *np;
+	int n_gpios;
+	int *gpios;
 };
 
 struct tegra_pcie_bus {
@@ -1742,6 +1744,17 @@ static int tegra_pcie_module_power_on(struct tegra_pcie *pcie)
 
 static int tegra_pcie_module_power_off(struct tegra_pcie *pcie);
 
+static void tegra_pcie_config_plat(struct tegra_pcie *pcie, bool set)
+{
+	struct tegra_pcie_port *port;
+	int count;
+
+	list_for_each_entry(port, &pcie->ports, list) {
+		for (count = 0; count < port->n_gpios; ++count)
+			gpiod_set_value(gpio_to_desc(port->gpios[count]), set);
+	}
+}
+
 static int tegra_pcie_restore_device(struct device *dev)
 {
 	int err = 0;
@@ -1751,6 +1764,7 @@ static int tegra_pcie_restore_device(struct device *dev)
 	if (!pcie)
 		return 0;
 
+	tegra_pcie_config_plat(pcie, 1);
 	pm_clk_resume(dev);
 	err = tegra_pcie_module_power_on(pcie);
 	if (err < 0)
@@ -1850,6 +1864,7 @@ static int tegra_pcie_save_device(struct device *dev)
 		dev_err(dev, "power off failed: %d\n", err);
 
 	pm_clk_suspend(dev);
+	tegra_pcie_config_plat(pcie, 0);
 
 	return err;
 }
@@ -3544,6 +3559,41 @@ static int tegra_pcie_parse_dt(struct tegra_pcie *pcie)
 				}
 			}
 		}
+
+		rp->n_gpios = of_gpio_named_count(port, "nvidia,plat-gpios");
+		if (rp->n_gpios > 0) {
+			int count, gpio;
+			enum of_gpio_flags flags;
+			unsigned long f;
+
+			rp->gpios = devm_kzalloc(pcie->dev,
+						 rp->n_gpios * sizeof(int),
+						 GFP_KERNEL);
+			if (!rp->gpios)
+				return -ENOMEM;
+
+			for (count = 0; count < rp->n_gpios; ++count) {
+				gpio = of_get_named_gpio_flags(port,
+							"nvidia,plat-gpios",
+							count, &flags);
+				if (!gpio_is_valid(gpio))
+					return gpio;
+
+				f = (flags & OF_GPIO_ACTIVE_LOW) ?
+				    (GPIOF_OUT_INIT_LOW | GPIOF_ACTIVE_LOW) :
+				    GPIOF_OUT_INIT_HIGH;
+
+				err = devm_gpio_request_one(pcie->dev, gpio, f,
+							    NULL);
+				if (err < 0) {
+					dev_err(pcie->dev, "gpio %d request failed\n",
+						gpio);
+					return err;
+				}
+				rp->gpios[count] = gpio;
+			}
+		}
+
 		list_add_tail(&rp->list, &pcie->ports);
 	}
 	err = tegra_pcie_get_xbar_config(pcie, lanes, &pcie->xbar_config);

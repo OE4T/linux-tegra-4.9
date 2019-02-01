@@ -51,6 +51,7 @@
 			phy-names = "pcie-0";
 #endif
 			nvidia,num-lanes = <1>;
+			nvidia,plat-gpios = <&gpio TEGRA_GPIO(X, 3) GPIO_ACTIVE_HIGH>;
 			status = "okay";
 		};
 	};

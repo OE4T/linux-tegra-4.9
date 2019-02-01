@@ -495,6 +495,8 @@
 		nvidia,aspm-l0s-entrance-latency = <0x3>;
 		nvidia,aspm-l1-entrance-latency = <0x5>;
 
+		nvidia,host1x = <&host1x>;
+
 		num-ib-windows = <2>;
 		num-ob-windows = <8>;
 

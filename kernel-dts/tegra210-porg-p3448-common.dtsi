@@ -616,10 +616,12 @@
 	clock@70110000 {
                 status = "okay";
                 vdd-cpu-supply = <&cpu_ovr_reg>;
+                nvidia,dfll-max-freq-khz = <1479000>;
 	};
 
 	dvfs {
                 vdd-cpu-supply = <&cpu_ovr_reg>;
+                nvidia,gpu-max-freq-khz = <921600>;
 	};
 
 	rtc {

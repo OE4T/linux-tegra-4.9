@@ -612,21 +612,21 @@ static void pcie_config_aspm_link(struct pcie_link_state *link, u32 state)
 			dwstream_l1ss |= PCI_L1SS_CTRL1_ASPM_L12S;
 		}
 	}
+	if (link->aspm_capable & ASPM_STATE_L1SS) {
+		pcie_config_aspm_l1ss_dev(parent, upstream_l1ss);
+		list_for_each_entry(child, &linkbus->devices, bus_list)
+			pcie_config_aspm_l1ss_dev(child, dwstream_l1ss);
+	}
 	/*
 	 * Spec 2.0 suggests all functions should be configured the
 	 * same setting for ASPM. Enabling ASPM L1 should be done in
 	 * upstream component first and then downstream, and vice
 	 * versa for disabling ASPM L1. Spec doesn't mention L0S.
 	 */
-	if (state & ASPM_STATE_L1) {
+	if (state & ASPM_STATE_L1)
 		pcie_config_aspm_dev(parent, upstream);
-		if (state & ASPM_STATE_L1SS)
-			pcie_config_aspm_l1ss_dev(parent, upstream_l1ss);
-	}
-	list_for_each_entry(child, &linkbus->devices, bus_list) {
+	list_for_each_entry(child, &linkbus->devices, bus_list)
 		pcie_config_aspm_dev(child, dwstream);
-		pcie_config_aspm_l1ss_dev(child, dwstream_l1ss);
-	}
 	if (!(state & ASPM_STATE_L1))
 		pcie_config_aspm_dev(parent, upstream);
 
@@ -924,7 +924,7 @@ static void __pci_disable_link_state(struct pci_dev *pdev, int state, bool sem)
 	if (state & PCIE_LINK_STATE_L0S)
 		link->aspm_disable |= ASPM_STATE_L0S;
 	if (state & PCIE_LINK_STATE_L1)
-		link->aspm_disable |= ASPM_STATE_L1;
+		link->aspm_disable |= ASPM_STATE_L1 | ASPM_STATE_L1SS;
 	pcie_config_aspm_link(link, policy_to_aspm_state(link));
 
 	if (state & PCIE_LINK_STATE_CLKPM) {

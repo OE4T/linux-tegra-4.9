@@ -175,6 +175,23 @@ struct fifo_packet {
 #define TIMER_STATE_DURING_DECODE    1
 #define TIMER_STATE_AFTER_DECODE     2
 
+#define MAX_DEBUG_REPORTS	5
+#define HID_GEN_DESK_DEBUG	(HID_UP_GENDESK | 0xFFFF)
+/* Time difference tolerance in ms */
+#define MAX_PACKET_DIFF_TOLERANCE 100
+/*
+ * Max time(in ms) below which packet delivery check is done.
+ * Once this time passes, time difference checks is ignored as only 2 bytes are
+ * used for getting time difference and it rounds off after 65 seconds.
+ */
+#define MAX_TIME_BETWEEN_PACKETS 65000
+
+struct hid_debug_data {
+	u8	id;
+	u8	seq_num;
+	ktime_t	time;
+};
+
 /* move hid device, sound card into per device data structure */
 struct shdr_device {
 	struct hid_device	*hdev;
@@ -187,6 +204,7 @@ struct shdr_device {
 	int hid_miss_war_timeout;
 	u32 last_ljsx, last_ljsy;	/* Last left joystick x, y */
 	u32 last_rjsx, last_rjsy;	/* Last right joystick x, y */
+	struct hid_debug_data	debug_info[MAX_DEBUG_REPORTS];
 };
 
 /* counter of how many continous silent timer callback in a row */
@@ -1701,6 +1719,70 @@ static int atvr_jarvis_break_events(struct hid_device *hdev,
 	return 1;
 }
 
+static void atvr_set_hid_debug_report_idx(struct shdr_device *shdr_dev, u8 id)
+{
+	int i = 0;
+
+	for (i = 0; i < MAX_DEBUG_REPORTS; i++) {
+		if (!shdr_dev->debug_info[i].id) {
+			pr_debug("%s: report id %d set at index %d", __func__
+								  , id, i);
+			shdr_dev->debug_info[i].id = id;
+			break;
+		} else if (shdr_dev->debug_info[i].id == id)
+			break;
+	}
+}
+
+static u8 atvr_get_debug_report_idx(struct shdr_device *shdr_dev, u8 id)
+{
+	int i = 0;
+
+	for (i = 0; i < MAX_DEBUG_REPORTS; i++) {
+		if (shdr_dev->debug_info[i].id) {
+			if (shdr_dev->debug_info[i].id == id) {
+				pr_debug("%s: report id %d index is %d", __func__
+								  , id, i);
+				return i;
+			}
+		} else
+			break;
+	}
+	return MAX_DEBUG_REPORTS;
+}
+
+static void atvr_process_debug_info(struct hid_debug_data *debug_info, u8 seq,
+				    u16 fw_time_diff, u8 id)
+{
+	/* Check Seq Number */
+	ktime_t current_time = ktime_get();
+	s64 time_diff;
+	u16 packet_delay;
+
+	time_diff = ktime_ms_delta(current_time,
+			debug_info->time);
+	packet_delay = abs(time_diff - fw_time_diff);
+
+	pr_debug("%s:report->id = 0x%x,seq %d fw_diff %d, drv_diff %d, latency %d",
+			__func__, id, seq, fw_time_diff,
+			(unsigned int)time_diff, packet_delay);
+
+	if ((u8)(debug_info->seq_num + 1) != seq)
+		pr_warn("%s: id:%d seq num missed Prev %d curr %d",
+				__func__, id,
+				debug_info->seq_num, seq);
+
+	/* Ignore first packet time diff */
+	if (debug_info->time.tv64 &&
+			time_diff < MAX_TIME_BETWEEN_PACKETS &&
+			packet_delay > MAX_PACKET_DIFF_TOLERANCE)
+		pr_warn("%s: id:%d Packet delay:%d ms at seq %d host diff :%lli ms fw diff %d",
+				__func__, id, packet_delay, seq,
+				time_diff, fw_time_diff);
+	debug_info->seq_num = seq;
+	debug_info->time = current_time;
+}
+
 static int atvr_raw_event(struct hid_device *hdev, struct hid_report *report,
 	u8 *data, int size)
 {
@@ -1708,9 +1790,25 @@ static int atvr_raw_event(struct hid_device *hdev, struct hid_report *report,
 	struct snd_card *shdr_card = shdr_dev->shdr_card;
 	struct snd_atvr *atvr_snd;
 	void *debug_info;
+	u8 idx = atvr_get_debug_report_idx(shdr_dev, report->id);
+	/*first byte is seq num and next 2 bytes time diff */
 
 	if (shdr_card == NULL)
 		return 0;
+
+	/* debug info is present and Min size check */
+	if (idx < MAX_DEBUG_REPORTS && size > 4) {
+		/*
+		 * out of last 3 bytes,
+		 * 1st byte is seq num
+		 * next 2 bytes is time diff
+		 */
+		u8 seq = data[size - 3];
+		u16 fw_time_diff = data[size - 2] | (data[size - 1] << 8);
+
+		atvr_process_debug_info(&shdr_dev->debug_info[idx], seq,
+					fw_time_diff, data[0]);
+	}
 
 	atvr_snd = shdr_card->private_data;
 
@@ -1853,7 +1951,7 @@ static void atvr_snsr_probe(struct work_struct *work)
 static int atvr_probe(struct hid_device *hdev, const struct hid_device_id *id)
 {
 	struct snd_atvr *atvr_snd;
-	int ret;
+	int ret, i;
 	struct shdr_device *shdr_dev;
 	struct snd_card *shdr_card;
 
@@ -1870,6 +1968,10 @@ static int atvr_probe(struct hid_device *hdev, const struct hid_device_id *id)
 		__func__, hdev->name, hdev->vendor, hdev->product, num_remotes);
 
 	pr_info("%s: Found target remote %s\n", __func__, hdev->name);
+	hid_set_drvdata(hdev, shdr_dev);
+	/* set seq num to 255 since first packet comes with seq number 0 */
+	for (i = 0; i < MAX_DEBUG_REPORTS; i++)
+		shdr_dev->debug_info[i].seq_num = 0xFF;
 
 	ret = hid_parse(hdev);
 	if (ret) {
@@ -1899,7 +2001,6 @@ static int atvr_probe(struct hid_device *hdev, const struct hid_device_id *id)
 	 */
 	shdr_dev->shdr_card = shdr_card;
 	shdr_dev->hdev = hdev;
-	hid_set_drvdata(hdev, shdr_dev);
 	atvr_snd = shdr_card->private_data;
 	atvr_snd->hdev = hdev;
 	snd_card_set_dev(shdr_card, &hdev->dev);
@@ -2010,6 +2111,7 @@ static int atvr_input_mapped(struct hid_device *hdev, struct hid_input *hi,
 	int b = field->logical_maximum;
 	int fuzz;
 	int flat;
+	struct shdr_device *shdr_dev = hid_get_drvdata(hdev);
 
 	if ((usage->type == EV_ABS) && (field->application == HID_GD_GAMEPAD
 			|| field->application == HID_GD_JOYSTICK)) {
@@ -2036,7 +2138,8 @@ static int atvr_input_mapped(struct hid_device *hdev, struct hid_input *hi,
 		input_abs_set_res(hi->input, usage->code,
 			hidinput_calc_abs_res(field, usage->code));
 		return -1;
-	}
+	} else if (usage->hid == HID_GEN_DESK_DEBUG)
+		atvr_set_hid_debug_report_idx(shdr_dev, field->report->id);
 	return 0;
 }
 
@@ -2049,8 +2152,12 @@ static const struct hid_device_id atvr_devices[] = {
 			      USB_DEVICE_ID_NVIDIA_FRIDAY)},
 	{HID_BLUETOOTH_DEVICE(USB_VENDOR_ID_NVIDIA,
 			      USB_DEVICE_ID_NVIDIA_THUNDERSTRIKE)},
+	{HID_BLUETOOTH_DEVICE(USB_VENDOR_ID_NVIDIA,
+			      USB_DEVICE_ID_NVIDIA_STORMCASTER)},
 	{HID_USB_DEVICE(USB_VENDOR_ID_NVIDIA,
 			      USB_DEVICE_ID_NVIDIA_THUNDERSTRIKE)},
+	{HID_USB_DEVICE(USB_VENDOR_ID_NVIDIA,
+			      USB_DEVICE_ID_NVIDIA_STORMCASTER)},
 	{ }
 };
 MODULE_DEVICE_TABLE(hid, atvr_devices);

@@ -2226,13 +2226,17 @@ static int sdhci_execute_tuning(struct mmc_host *mmc, u32 opcode)
 	}
 
 	/*
-	 * Set data timeout counter to 0 as the timeout value would be more
+	 * Set data timeout counter to 0x5 as the timeout value would be more
 	 * than sufficient to allow tuning block transfer and reset the data
 	 * FSM before issuing CMD reset in case of Buffer read ready interrupt
-	 * timeout
+	 * timeout. This applies to all platforms ex. T210 where data timeout counter
+	 * should be set to 0xE.
 	 */
 	if (!(host->quirks2 & SDHCI_QUIRK2_NON_STD_TUN_CARD_CLOCK))
-		sdhci_writeb(host, 0, SDHCI_TIMEOUT_CONTROL);
+		sdhci_writeb(host, 0x05, SDHCI_TIMEOUT_CONTROL);
+	else
+		sdhci_writeb(host, 0x0E, SDHCI_TIMEOUT_CONTROL);
+
 	ctrl = sdhci_readw(host, SDHCI_HOST_CONTROL2);
 	ctrl |= SDHCI_CTRL_EXEC_TUNING;
 	if (host->quirks2 & SDHCI_QUIRK2_TUNING_WORK_AROUND)

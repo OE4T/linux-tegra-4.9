@@ -53,6 +53,10 @@
 			nvidia,num-lanes = <1>;
 			nvidia,plat-gpios = <&gpio TEGRA_GPIO(X, 3) GPIO_ACTIVE_HIGH>;
 			status = "okay";
+
+			ethernet@0,0 {
+				reg = <0x000000 0 0 0 0>;
+			};
 		};
 	};
 };

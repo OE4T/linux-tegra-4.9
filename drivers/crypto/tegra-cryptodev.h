@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010-2017, NVIDIA Corporation. All Rights Reserved.
+ * Copyright (c) 2010-2019, NVIDIA Corporation. All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -72,6 +72,15 @@ enum tegra_rsa_op_mode {
 	RSA_SIGN,
 	RSA_VERIFY,
 	RSA_EXIT,
+};
+
+enum sha_algo {
+	SHA1,
+	SHA224,
+	SHA256,
+	SHA384,
+	SHA512,
+	CMAC_AES,
 };
 
 struct tegra_se_rng1_request {
@@ -267,7 +276,7 @@ struct tegra_sha_req {
 struct tegra_sha_req_shash {
 	char key[TEGRA_CRYPTO_MAX_KEY_SIZE];
 	unsigned int keylen;
-	unsigned char *algo;
+	enum sha_algo algo;
 	unsigned char *plaintext;
 	unsigned char *result;
 	unsigned int plaintext_sz;

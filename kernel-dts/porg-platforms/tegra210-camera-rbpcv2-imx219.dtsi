@@ -78,6 +78,8 @@
 
 				sensor_model = "imx219";
 
+				use_sensor_mode_id = "true";
+
 				/**
 				* ==== Modes ====
 				* A modeX node is required to support v4l2 driver

@@ -3998,6 +3998,7 @@ static int tegra_pcie_config_ep(struct tegra_pcie_dw *pcie,
 
 	ep->phys_base = res->start;
 	ep->addr_size = resource_size(res);
+	ep->page_size = SZ_64K;
 
 	ret = dw_pcie_ep_init(ep);
 	if (ret) {

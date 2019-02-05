@@ -93,10 +93,12 @@
 
 #define APPL_INTR_EN_L1_0_0				0x1C
 #define APPL_INTR_EN_L1_0_0_LINK_REQ_RST_NOT_INT_EN	BIT(1)
+#define APPL_INTR_EN_L1_0_0_RDLH_LINK_UP_INT_EN		BIT(3)
 #define APPL_INTR_EN_L1_0_0_HOT_RESET_DONE_INT_EN	BIT(30)
 
 #define APPL_INTR_STATUS_L1_0_0				0x20
 #define APPL_INTR_STATUS_L1_0_0_LINK_REQ_RST_NOT_CHGED	BIT(1)
+#define APPL_INTR_STATUS_L1_0_0_RDLH_LINK_UP_CHGED	BIT(3)
 #define APPL_INTR_STATUS_L1_0_0_SURPRISE_DOWN_ERR_STATE	BIT(4)
 #define APPL_INTR_STATUS_L1_0_0_HOT_RESET_DONE		BIT(30)
 
@@ -837,7 +839,8 @@ static irqreturn_t tegra_pcie_rp_irq_handler(struct tegra_pcie_dw *pcie)
 
 static irqreturn_t tegra_pcie_ep_irq_handler(struct tegra_pcie_dw *pcie)
 {
-	u32 val = 0;
+	struct dw_pcie_ep *ep = &pcie->pci.ep;
+	u32 val = 0, tmp;
 
 	val = readl(pcie->appl_base + APPL_INTR_STATUS_L0);
 	dev_dbg(pcie->dev, "APPL_INTR_STATUS_L0 = 0x%08X\n", val);
@@ -862,6 +865,13 @@ static irqreturn_t tegra_pcie_ep_irq_handler(struct tegra_pcie_dw *pcie)
 				return IRQ_HANDLED;
 			}
 			wake_up(&pcie->wq);
+		}
+		if (val & APPL_INTR_STATUS_L1_0_0_RDLH_LINK_UP_CHGED) {
+			tmp = readl(pcie->appl_base + APPL_LINK_STATUS);
+			if (tmp & APPL_LINK_STATUS_RDLH_LINK_UP) {
+				dev_dbg(pcie->dev, "link is up\n");
+				dw_pcie_ep_linkup(ep);
+			}
 		}
 	} else if (val & APPL_INTR_STATUS_L0_PCI_CMD_EN_INT) {
 		val = readl(pcie->appl_base + APPL_INTR_STATUS_L1_15);
@@ -3560,6 +3570,7 @@ static void pex_ep_event_pex_rst_deassert(struct tegra_pcie_dw *pcie)
 
 	val = readl(pcie->appl_base + APPL_INTR_EN_L1_0_0);
 	val |= APPL_INTR_EN_L1_0_0_HOT_RESET_DONE_INT_EN;
+	val |= APPL_INTR_EN_L1_0_0_RDLH_LINK_UP_INT_EN;
 	writel(val, pcie->appl_base + APPL_INTR_EN_L1_0_0);
 
 	reset_control_deassert(pcie->core_rst);

@@ -1927,7 +1927,7 @@
 		};
 	};
 
-	pcie-controller@1003000 {
+	pcie@1003000 {
 		compatible = "nvidia,tegra210-pcie", "nvidia,tegra124-pcie";
 		power-domains = <&pd_pcie>;
 		device_type = "pci";

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2019, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2020, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -178,10 +178,13 @@ struct gk20a;
 /* NVGPU_GPU_IOCTL_GET_GPU_LOAD is available */
 #define NVGPU_SUPPORT_GET_GPU_LOAD	70
 
+/* PLATFORM_ATOMIC support */
+#define NVGPU_SUPPORT_PLATFORM_ATOMIC		71
+
 /*
  * Must be greater than the largest bit offset in the above list.
  */
-#define NVGPU_MAX_ENABLED_BITS			71
+#define NVGPU_MAX_ENABLED_BITS			72
 
 /**
  * nvgpu_is_enabled - Check if the passed flag is enabled.

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2020, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -155,6 +155,7 @@ struct nvgpu_gmmu_pd {
  *   valid:       Set if the PTE should be marked valid.
  *   aperture:    VIDMEM or SYSMEM.
  *   debug:       When set print debugging info.
+ *   platform_atomic: True if platform_atomic flag is valid.
  *
  * These fields are dynamically updated as necessary during the map:
  *
@@ -173,8 +174,8 @@ struct nvgpu_gmmu_attrs {
 	bool			 valid;
 	enum nvgpu_aperture	 aperture;
 	bool			 debug;
-
 	bool			 l3_alloc;
+	bool			 platform_atomic;
 };
 
 struct gk20a_mmu_level {

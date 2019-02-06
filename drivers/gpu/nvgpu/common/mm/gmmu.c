@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2020, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -628,7 +628,7 @@ static int __nvgpu_gmmu_update_page_table(struct vm_gk20a *vm,
 		   "vm=%s "
 		   "%-5s GPU virt %#-12llx +%#-9llx    phys %#-12llx "
 		   "phys offset: %#-4llx;  pgsz: %3dkb perm=%-2s | "
-		   "kind=%#02x APT=%-6s %c%c%c%c%c",
+		   "kind=%#02x APT=%-6s %c%c%c%c%c%c",
 		   vm->name,
 		   (sgt != NULL) ? "MAP" : "UNMAP",
 		   virt_addr,
@@ -643,7 +643,8 @@ static int __nvgpu_gmmu_update_page_table(struct vm_gk20a *vm,
 		   attrs->sparse    ? 'S' : '-',
 		   attrs->priv      ? 'P' : '-',
 		   attrs->coherent  ? 'I' : '-',
-		   attrs->valid     ? 'V' : '-');
+		   attrs->valid     ? 'V' : '-',
+		   attrs->platform_atomic ? 'A' : '-');
 
 	err = __nvgpu_gmmu_do_update_page_table(vm,
 						sgt,
@@ -702,7 +703,8 @@ u64 gk20a_locked_gmmu_map(struct vm_gk20a *vm,
 		.priv      = priv,
 		.coherent  = flags & NVGPU_VM_MAP_IO_COHERENT,
 		.valid     = (flags & NVGPU_VM_MAP_UNMAPPED_PTE) == 0U,
-		.aperture  = aperture
+		.aperture  = aperture,
+		.platform_atomic = (flags & NVGPU_VM_MAP_PLATFORM_ATOMIC) != 0U
 	};
 
 	/*

@@ -104,6 +104,22 @@
 				up_compensation = <20>;
 				down_compensation = <20>;
 			};
+			trips {
+				pll_dram_throttle: dram-throttle {
+					temperature = <70000>;
+					hysteresis = <1000>;
+					type = "passive";
+					writable;
+				};
+			};
+			cooling-maps {
+				map-tegra-dram {
+					trip = <&pll_dram_throttle>;
+					cooling-device = <&tegra210_emc_dram_cdev 1 1>;
+					cdev-type = "tegra-dram";
+				};
+			};
+
 		};
 		AO-therm {
 			status = "okay";

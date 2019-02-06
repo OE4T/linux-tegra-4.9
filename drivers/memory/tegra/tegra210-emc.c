@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2019, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -2463,7 +2463,7 @@ static int tegra210_emc_resume(struct device *dev)
 #endif
 
 static const struct dev_pm_ops tegra210_emc_pm_ops = {
-	SET_SYSTEM_SLEEP_PM_OPS(tegra210_emc_suspend, tegra210_emc_resume)
+	SET_LATE_SYSTEM_SLEEP_PM_OPS(tegra210_emc_suspend, tegra210_emc_resume)
 };
 
 static struct of_device_id tegra210_emc_of_match[] = {

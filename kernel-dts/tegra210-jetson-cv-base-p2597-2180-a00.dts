@@ -200,7 +200,7 @@
 		};
 	};
 
-	pcie-controller@1003000 {
+	pcie@1003000 {
 		nvidia,wake-gpio = <&gpio TEGRA_GPIO(A, 2) 0>;
 		avdd-pll-uerefe-supply = <&max77620_ldo7>;
 		hvddio-pex-supply = <&max77620_sd3>;

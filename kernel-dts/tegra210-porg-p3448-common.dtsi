@@ -253,6 +253,13 @@
 				vddio-uart-supply = <&max77620_sd3>;
 				fsync-width = <15>;
 				status = "okay";
+
+				/*
+				 * I2S4 on Jetson Nano uses the I2S4B pads
+                                 * and to use these pads bit 0 in the I2S_CYA
+				 * register must be set.
+				 */
+				enable-cya;
 			};
 
 			i2s@702d1400 {

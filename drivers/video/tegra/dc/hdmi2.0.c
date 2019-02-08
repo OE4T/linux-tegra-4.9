@@ -1821,7 +1821,9 @@ static void tegra_hdmi_config(struct tegra_hdmi *hdmi)
 	max_ac = (hblank - rekey - 18) / 32;
 
 	val = 0;
-	val |= hdmi->dvi ? 0x0 : NV_SOR_HDMI_CTRL_ENABLE;
+	/* no DVI when the display mode belongs to HDMI 2.0 */
+	val |= (hdmi->dvi && tegra_sor_get_link_rate(hdmi->dc) <= 340000000)
+		? 0x0 : NV_SOR_HDMI_CTRL_ENABLE;
 	val |= NV_SOR_HDMI_CTRL_REKEY(rekey);
 	val |= NV_SOR_HDMI_CTRL_MAX_AC_PACKET(max_ac);
 	val |= NV_SOR_HDMI_CTRL_AUDIO_LAYOUT_SELECT;

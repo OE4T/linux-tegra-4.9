@@ -145,6 +145,8 @@ int __pci_epc_mem_init(struct pci_epc *epc, phys_addr_t phys_addr, size_t size,
 void pci_epc_mem_exit(struct pci_epc *epc);
 void __iomem *pci_epc_mem_alloc_addr(struct pci_epc *epc,
 				     phys_addr_t *phys_addr, size_t size);
+void __iomem *pci_epc_wc_mem_alloc_addr(struct pci_epc *epc,
+					phys_addr_t *phys_addr, size_t size);
 void pci_epc_mem_free_addr(struct pci_epc *epc, phys_addr_t phys_addr,
 			   void __iomem *virt_addr, size_t size);
 #endif /* __LINUX_PCI_EPC_H */

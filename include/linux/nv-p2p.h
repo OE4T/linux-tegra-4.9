@@ -159,13 +159,13 @@ int nvidia_p2p_free_page_table(struct nvidia_p2p_page_table *page_table);
  *    0           upon successful completion.
  *    Negative number if any other error
  */
-int nvidia_p2p_map_pages(struct device *dev,
+int nvidia_p2p_dma_map_pages(struct device *dev,
 		struct nvidia_p2p_page_table *page_table,
 		struct nvidia_p2p_dma_mapping **map,
 		enum dma_data_direction direction);
 /*
  * @brief
- *   Unmap the pages previously mapped using nvidia_p2p_map_pages
+ *   Unmap the pages previously mapped using nvidia_p2p_dma_map_pages
  *
  * @param[in]	*map
  *   A pointer to struct nvidia_p2p_dma_mapping.
@@ -175,11 +175,11 @@ int nvidia_p2p_map_pages(struct device *dev,
  *    0           upon successful completion.
  *    Negative number if any other error
  */
-int nvidia_p2p_unmap_pages(struct nvidia_p2p_dma_mapping *map);
+int nvidia_p2p_dma_unmap_pages(struct nvidia_p2p_dma_mapping *map);
 
 /*
  * @brief
- *   Unmap the pages previously mapped using nvidia_p2p_map_pages.
+ *   Unmap the pages previously mapped using nvidia_p2p_dma_map_pages.
  *  This is called  during the  execution of the free_callback().
  *
  * @param[in]	*map

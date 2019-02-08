@@ -167,7 +167,7 @@ int nvidia_p2p_free_page_table(struct nvidia_p2p_page_table *page_table)
 }
 EXPORT_SYMBOL(nvidia_p2p_free_page_table);
 
-int nvidia_p2p_map_pages(struct device *dev,
+int nvidia_p2p_dma_map_pages(struct device *dev,
 		struct nvidia_p2p_page_table *page_table,
 		struct nvidia_p2p_dma_mapping **dma_mapping,
 		enum dma_data_direction direction)
@@ -254,9 +254,9 @@ free_dma_mapping:
 
 	return ret;
 }
-EXPORT_SYMBOL(nvidia_p2p_map_pages);
+EXPORT_SYMBOL(nvidia_p2p_dma_map_pages);
 
-int nvidia_p2p_unmap_pages(struct nvidia_p2p_dma_mapping *dma_mapping)
+int nvidia_p2p_dma_unmap_pages(struct nvidia_p2p_dma_mapping *dma_mapping)
 {
 	struct nvidia_p2p_page_table *page_table = NULL;
 
@@ -287,10 +287,10 @@ int nvidia_p2p_unmap_pages(struct nvidia_p2p_dma_mapping *dma_mapping)
 
 	return 0;
 }
-EXPORT_SYMBOL(nvidia_p2p_unmap_pages);
+EXPORT_SYMBOL(nvidia_p2p_dma_unmap_pages);
 
 int nvidia_p2p_free_dma_mapping(struct nvidia_p2p_dma_mapping *dma_mapping)
 {
-	return nvidia_p2p_unmap_pages(dma_mapping);
+	return nvidia_p2p_dma_unmap_pages(dma_mapping);
 }
 EXPORT_SYMBOL(nvidia_p2p_free_dma_mapping);

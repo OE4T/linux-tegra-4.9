@@ -380,6 +380,25 @@
                                         status = "okay";
                                 };
                         };
+			overrides@18 {
+				target = <&aud_pinmux_state>;
+				_overlay_ {
+					nvidia,pins = "aud_mclk_pj4";
+					nvidia,function = "aud";
+					nvidia,tristate = <TEGRA_PIN_DISABLE>;
+					nvidia,enable-input = <TEGRA_PIN_DISABLE>;
+					nvidia,pull = <TEGRA_PIN_PULL_NONE>;
+				};
+			};
+			overrides@19 {
+				target = <&jack_pinmux_state>;
+				_overlay_ {
+					nvidia,pins = "gpio_aud0_pj5";
+					nvidia,tristate = <TEGRA_PIN_ENABLE>;
+					nvidia,enable-input = <TEGRA_PIN_ENABLE>;
+					nvidia,pull = <TEGRA_PIN_PULL_UP>;
+				};
+			};
 		};
 
 		fragment-e2614-a00@1 {

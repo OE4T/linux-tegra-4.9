@@ -2897,32 +2897,6 @@ static struct snd_soc_codec_conf
 	},
 };
 
-void tegra_machine_set_machine_links(
-	struct snd_soc_dai_link *links)
-{
-	tegra_asoc_machine_links = links;
-}
-EXPORT_SYMBOL_GPL(tegra_machine_set_machine_links);
-
-struct snd_soc_dai_link *tegra_machine_get_machine_links(void)
-{
-	return tegra_asoc_machine_links;
-}
-EXPORT_SYMBOL_GPL(tegra_machine_get_machine_links);
-
-void tegra_machine_set_machine_codec_conf(
-	struct snd_soc_codec_conf *codec_conf)
-{
-	tegra_asoc_codec_conf = codec_conf;
-}
-EXPORT_SYMBOL_GPL(tegra_machine_set_machine_codec_conf);
-
-struct snd_soc_codec_conf *tegra_machine_get_machine_codec_conf(void)
-{
-	return tegra_asoc_codec_conf;
-}
-EXPORT_SYMBOL_GPL(tegra_machine_get_machine_codec_conf);
-
 struct snd_soc_dai_link *tegra_machine_get_dai_link(void)
 {
 	struct snd_soc_dai_link *link;
@@ -3477,40 +3451,6 @@ err:
 }
 EXPORT_SYMBOL_GPL(tegra_machine_get_tx_mask);
 
-void tegra_machine_set_num_dai_links(unsigned int val)
-{
-	num_dai_links = val;
-}
-EXPORT_SYMBOL_GPL(tegra_machine_set_num_dai_links);
-
-unsigned int tegra_machine_get_num_dai_links(void)
-{
-	return num_dai_links;
-}
-EXPORT_SYMBOL_GPL(tegra_machine_get_num_dai_links);
-
-unsigned int *tegra_machine_get_bclk_ratio_array(void)
-{
-	return bclk_ratio;
-}
-EXPORT_SYMBOL_GPL(tegra_machine_get_bclk_ratio_array);
-
-unsigned int *tegra_machine_get_rx_mask_array(void)
-{
-	return rx_mask;
-}
-EXPORT_SYMBOL_GPL(tegra_machine_get_rx_mask_array);
-unsigned int *tegra_machine_get_tx_mask_array(void)
-{
-	return tx_mask;
-}
-EXPORT_SYMBOL_GPL(tegra_machine_get_tx_mask_array);
-
-static int tegra_machine_get_num_links_t18x(void)
-{
-	return num_links;
-}
-
 #if IS_ENABLED(CONFIG_SND_SOC_TEGRA210_ADSP_ALT)
 void tegra_machine_remove_adsp_links_t18x(void)
 {
@@ -3528,14 +3468,14 @@ EXPORT_SYMBOL_GPL(tegra_machine_remove_adsp_links_t18x);
 struct snd_soc_dai_link *tegra_machine_get_dai_link_t18x(void)
 {
 	struct snd_soc_dai_link *link = tegra186_xbar_dai_links;
-	unsigned int size = tegra_machine_get_num_links_t18x();
+	unsigned int size = num_links;
 	struct snd_soc_dai_link *tegra_asoc_machine_links_t18x =
-		tegra_machine_get_machine_links();
+		tegra_asoc_machine_links;
 
 	if (tegra_asoc_machine_links_t18x)
 		return tegra_asoc_machine_links_t18x;
 
-	tegra_machine_set_num_dai_links(size);
+	num_dai_links = size;
 
 	tegra_asoc_machine_links_t18x = kzalloc(size *
 		sizeof(struct snd_soc_dai_link), GFP_KERNEL);
@@ -3543,7 +3483,7 @@ struct snd_soc_dai_link *tegra_machine_get_dai_link_t18x(void)
 	memcpy(tegra_asoc_machine_links_t18x, link,
 		size * sizeof(struct snd_soc_dai_link));
 
-	tegra_machine_set_machine_links(tegra_asoc_machine_links_t18x);
+	tegra_asoc_machine_links = tegra_asoc_machine_links_t18x;
 
 	return tegra_asoc_machine_links_t18x;
 }
@@ -3552,15 +3492,15 @@ EXPORT_SYMBOL_GPL(tegra_machine_get_dai_link_t18x);
 int tegra_machine_append_dai_link_t18x(struct snd_soc_dai_link *link,
 		unsigned int link_size)
 {
-	unsigned int size1 = tegra_machine_get_num_dai_links();
+	unsigned int size1 = num_dai_links;
 	unsigned int size2 = link_size;
 	struct snd_soc_dai_link *tegra_asoc_machine_links_t18x =
-		tegra_machine_get_machine_links();
+		tegra_asoc_machine_links;
 
 	if (!tegra_asoc_machine_links_t18x) {
 		if (link) {
-			tegra_machine_set_machine_links(link);
-			tegra_machine_set_num_dai_links(size2);
+			tegra_asoc_machine_links = link;
+			num_dai_links = size2;
 			return size2;
 		} else {
 			return 0;
@@ -3571,14 +3511,14 @@ int tegra_machine_append_dai_link_t18x(struct snd_soc_dai_link *link,
 				(struct snd_soc_dai_link *) krealloc(
 				tegra_asoc_machine_links_t18x, (size1 + size2) *
 				sizeof(struct snd_soc_dai_link), GFP_KERNEL);
-			tegra_machine_set_machine_links(
-				tegra_asoc_machine_links_t18x);
+			tegra_asoc_machine_links =
+				tegra_asoc_machine_links_t18x;
 			memcpy(&tegra_asoc_machine_links_t18x[size1], link,
 				size2 * sizeof(struct snd_soc_dai_link));
-			tegra_machine_set_num_dai_links(size1+size2);
+			num_dai_links = size1 + size2;
 			return size1+size2;
 		} else {
-			tegra_machine_set_num_dai_links(size1);
+			num_dai_links = size1;
 			return size1;
 		}
 	}
@@ -3589,7 +3529,7 @@ struct snd_soc_codec_conf *tegra_machine_get_codec_conf_t18x(void)
 {
 	struct snd_soc_codec_conf *conf = tegra186_xbar_codec_conf;
 	struct snd_soc_codec_conf *tegra_asoc_codec_conf_t18x =
-		tegra_machine_get_machine_codec_conf();
+		tegra_asoc_codec_conf;
 	unsigned int size = TEGRA186_XBAR_CODEC_CONF;
 
 	if (tegra_asoc_codec_conf_t18x)
@@ -3601,7 +3541,7 @@ struct snd_soc_codec_conf *tegra_machine_get_codec_conf_t18x(void)
 	memcpy(tegra_asoc_codec_conf_t18x, conf,
 		size * sizeof(struct snd_soc_codec_conf));
 
-	tegra_machine_set_machine_codec_conf(tegra_asoc_codec_conf_t18x);
+	tegra_asoc_codec_conf = tegra_asoc_codec_conf_t18x;
 
 	return tegra_asoc_codec_conf_t18x;
 }
@@ -3613,11 +3553,11 @@ int tegra_machine_append_codec_conf_t18x(struct snd_soc_codec_conf *conf,
 	unsigned int size1 = TEGRA186_XBAR_CODEC_CONF;
 	unsigned int size2 = conf_size;
 	struct snd_soc_codec_conf *tegra_asoc_codec_conf_t18x =
-		tegra_machine_get_machine_codec_conf();
+		tegra_asoc_codec_conf;
 
 	if (!tegra_asoc_codec_conf_t18x) {
 		if (conf) {
-			tegra_machine_set_machine_codec_conf(conf);
+			tegra_asoc_codec_conf = conf;
 			return size2;
 		} else {
 			return 0;
@@ -3628,8 +3568,7 @@ int tegra_machine_append_codec_conf_t18x(struct snd_soc_codec_conf *conf,
 				(struct snd_soc_codec_conf *) krealloc(
 				tegra_asoc_codec_conf_t18x, (size1 + size2) *
 				sizeof(struct snd_soc_codec_conf), GFP_KERNEL);
-			tegra_machine_set_machine_codec_conf(
-				tegra_asoc_codec_conf_t18x);
+			tegra_asoc_codec_conf = tegra_asoc_codec_conf_t18x;
 			memcpy(&tegra_asoc_codec_conf_t18x[size1], conf,
 				size2 * sizeof(struct snd_soc_codec_conf));
 			return size1+size2;
@@ -3641,14 +3580,14 @@ EXPORT_SYMBOL_GPL(tegra_machine_append_codec_conf_t18x);
 
 unsigned int tegra_machine_get_codec_dai_link_idx_t18x(const char *codec_name)
 {
-	unsigned int idx = tegra_machine_get_num_links_t18x();
+	unsigned int idx = num_links;
 	struct snd_soc_dai_link *tegra_asoc_machine_links_t18x =
-		tegra_machine_get_machine_links();
+		tegra_asoc_machine_links;
 
-	if (tegra_machine_get_num_dai_links() <= idx)
+	if (num_dai_links <= idx)
 		goto err;
 
-	while (idx < tegra_machine_get_num_dai_links()) {
+	while (idx < num_dai_links) {
 		if (tegra_asoc_machine_links_t18x[idx].name)
 			if (!strcmp(tegra_asoc_machine_links_t18x[idx].name,
 				codec_name))
@@ -3668,13 +3607,12 @@ int tegra_machine_get_bclk_ratio_t18x(struct snd_soc_pcm_runtime *rtd,
 	char *codec_name = (char *)codec_dai_link->name;
 	unsigned int idx =
 		tegra_machine_get_codec_dai_link_idx_t18x(codec_name);
-	unsigned int *bclk_ratio_t18x =
-		tegra_machine_get_bclk_ratio_array();
+	unsigned int *bclk_ratio_t18x = bclk_ratio;
 
 	if (idx == -EINVAL || !ratio || !bclk_ratio_t18x)
 		return -EINVAL;
 
-	idx = idx - tegra_machine_get_num_links_t18x();
+	idx = idx - num_links;
 
 	*ratio = bclk_ratio_t18x[idx];
 
@@ -3689,15 +3627,15 @@ unsigned int tegra_machine_get_rx_mask_t18x(
 	char *codec_name = (char *)codec_dai_link->name;
 	unsigned int idx =
 		tegra_machine_get_codec_dai_link_idx_t18x(codec_name);
-	unsigned int *rx_mask_t18x =
-		tegra_machine_get_rx_mask_array();
+	unsigned int *rx_mask_t18x = rx_mask;
+
 	if (idx == -EINVAL)
 		goto err;
 
 	if (!rx_mask_t18x)
 		goto err;
 
-	idx = idx - tegra_machine_get_num_links_t18x();
+	idx = idx - num_links;
 
 	return rx_mask_t18x[idx];
 
@@ -3713,8 +3651,7 @@ unsigned int tegra_machine_get_tx_mask_t18x(
 	char *codec_name = (char *)codec_dai_link->name;
 	unsigned int idx =
 		tegra_machine_get_codec_dai_link_idx_t18x(codec_name);
-	unsigned int *tx_mask_t18x =
-		tegra_machine_get_tx_mask_array();
+	unsigned int *tx_mask_t18x = tx_mask;
 
 	if (idx == -EINVAL)
 		goto err;
@@ -3722,7 +3659,7 @@ unsigned int tegra_machine_get_tx_mask_t18x(
 	if (!tx_mask_t18x)
 		goto err;
 
-	idx = idx - tegra_machine_get_num_links_t18x();
+	idx = idx - num_links;
 
 	return tx_mask_t18x[idx];
 

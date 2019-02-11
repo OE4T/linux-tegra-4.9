@@ -1,7 +1,7 @@
 /*
  * tegra_asoc_machine_alt.h
  *
- * Copyright (c) 2014-2018 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2019 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -413,22 +413,6 @@ unsigned int tegra_machine_get_rx_mask(
 	struct snd_soc_pcm_runtime *rtd);
 unsigned int tegra_machine_get_tx_mask(
 	struct snd_soc_pcm_runtime *rtd);
-
-void tegra_machine_set_num_dai_links(unsigned int val);
-
-unsigned int tegra_machine_get_num_dai_links(void);
-
-void tegra_machine_set_machine_links(struct snd_soc_dai_link *links);
-
-struct snd_soc_dai_link *tegra_machine_get_machine_links(void);
-
-void tegra_machine_set_machine_codec_conf(struct snd_soc_codec_conf *codec_conf);
-
-struct snd_soc_codec_conf *tegra_machine_get_machine_codec_conf(void);
-
-unsigned int *tegra_machine_get_bclk_ratio_array(void);
-unsigned int *tegra_machine_get_rx_mask_array(void);
-unsigned int *tegra_machine_get_tx_mask_array(void);
 
 /* t18x specifc APIs */
 struct snd_soc_dai_link *tegra_machine_get_dai_link_t18x(void);

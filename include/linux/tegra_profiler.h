@@ -1,7 +1,7 @@
 /*
  * include/linux/tegra_profiler.h
  *
- * Copyright (c) 2013-2018, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013-2019, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -19,7 +19,7 @@
 
 #include <linux/ioctl.h>
 
-#define QUADD_SAMPLES_VERSION	45
+#define QUADD_SAMPLES_VERSION	46
 #define QUADD_IO_VERSION	26
 
 #define QUADD_IO_VERSION_DYNAMIC_RB		5
@@ -72,6 +72,7 @@
 #define QUADD_SAMPLE_VERSION_SAMPLE_ALL_TASKS		43
 #define QUADD_SAMPLE_VERSION_KTHREAD_TSK_FLAG		44
 #define QUADD_SAMPLE_VERSION_MMAP_CPUID			45
+#define QUADD_SAMPLE_VERSION_PCLK_SEND_CHANGES		46
 
 #define QUADD_MMAP_HEADER_VERSION	1
 
@@ -283,13 +284,19 @@ struct quadd_ma_data {
 	u32 rss_size;
 };
 
+enum {
+	QUADD_POWER_CLK_CPU = 1,
+	QUADD_POWER_CLK_GPU,
+	QUADD_POWER_CLK_EMC,
+};
+
 struct quadd_power_rate_data {
+	u8 type;
 	u64 time;
+	u32 cpu_id;
 
-	u8 nr_cpus;
-
-	u32 gpu;
-	u32 emc;
+	u16 nr_values;
+	u32 flags;
 };
 
 struct quadd_hotplug_data {

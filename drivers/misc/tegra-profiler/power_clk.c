@@ -1,7 +1,7 @@
 /*
  * drivers/misc/tegra-profiler/power_clk.c
  *
- * Copyright (c) 2013-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013-2019, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -36,8 +36,8 @@
 #define PCLK_MAX_VALUES	32
 
 struct power_clk_data {
-	unsigned long value;
-	unsigned long prev;
+	unsigned int value;
+	unsigned int prev;
 };
 
 #define PCLK_NB_GPU	0
@@ -57,6 +57,7 @@ struct power_clk_source {
 	struct clk *clkp;
 	struct notifier_block nb[PCLK_NB_MAX];
 
+	int cpu;
 	int nr;
 	struct power_clk_data data[PCLK_MAX_VALUES];
 
@@ -75,63 +76,35 @@ struct power_clk_context_s {
 	struct quadd_ctx *quadd_ctx;
 };
 
-enum {
-	QUADD_POWER_CLK_CPU = 1,
-	QUADD_POWER_CLK_GPU,
-	QUADD_POWER_CLK_EMC,
-};
-
 static struct power_clk_context_s power_ctx;
 
-static void make_sample(void)
+static void make_sample(struct power_clk_source *s)
 {
 	int i;
-	u32 extra_cpus[NR_CPUS];
-	struct power_clk_source *s;
+	u32 values[PCLK_MAX_VALUES];
 	struct quadd_iovec vec;
 
 	struct quadd_record_data record;
-	struct quadd_power_rate_data *power_rate = &record.power_rate;
+	struct quadd_power_rate_data *p = &record.power_rate;
 
 	record.record_type = QUADD_RECORD_TYPE_POWER_RATE;
 
-	power_rate->time = quadd_get_time();
+	p->type = (u8)s->type;
+	p->time = quadd_get_time();
+	p->cpu_id = (u32)s->cpu;
+	p->flags = 0;
 
-	s = &power_ctx.cpu;
-	mutex_lock(&s->lock);
-	if (atomic_read(&s->active)) {
-		power_rate->nr_cpus = s->nr;
-		for (i = 0; i < s->nr; i++)
-			extra_cpus[i] = s->data[i].value;
+	if (s->type == QUADD_POWER_CLK_CPU) {
+		p->nr_values = 1;
+		values[0] = s->data[s->cpu].value;
 	} else {
-		power_rate->nr_cpus = 0;
+		p->nr_values = (u16)s->nr;
+		for (i = 0; i < s->nr; i++)
+			values[i] = s->data[i].value;
 	}
-	mutex_unlock(&s->lock);
 
-	s = &power_ctx.gpu;
-	mutex_lock(&s->lock);
-	if (atomic_read(&s->active))
-		power_rate->gpu = s->data[0].value;
-	else
-		power_rate->gpu = 0;
-
-	mutex_unlock(&s->lock);
-
-	s = &power_ctx.emc;
-	mutex_lock(&s->lock);
-	if (atomic_read(&s->active))
-		power_rate->emc = s->data[0].value;
-	else
-		power_rate->emc = 0;
-
-	mutex_unlock(&s->lock);
-/*
- *	pr_debug("make_sample: cpu: %u/%u/%u/%u, gpu: %u, emc: %u\n",
- *		 extra_cpus[0], extra_cpus[1], extra_cpus[2], extra_cpus[3],
- *		 power_rate->gpu, power_rate->emc);
- */
-	vec.base = extra_cpus;
-	vec.len = power_rate->nr_cpus * sizeof(extra_cpus[0]);
+	vec.base = values;
+	vec.len = p->nr_values * sizeof(values[0]);
 
 	quadd_put_sample(&record, &vec, 1);
 }
@@ -155,7 +128,12 @@ make_sample_hotplug(int cpu, int is_online)
 static inline int
 is_data_changed(struct power_clk_source *s)
 {
-	int i;
+	int i, cpu;
+
+	if (s->type == QUADD_POWER_CLK_CPU) {
+		cpu = s->cpu;
+		return (s->data[cpu].value != s->data[cpu].prev);
+	}
 
 	for (i = 0; i < s->nr; i++) {
 		if (s->data[i].value != s->data[i].prev)
@@ -168,63 +146,24 @@ is_data_changed(struct power_clk_source *s)
 static inline void
 update_data(struct power_clk_source *s)
 {
-	int i;
+	int i, cpu;
+
+	if (s->type == QUADD_POWER_CLK_CPU) {
+		cpu = s->cpu;
+		s->data[cpu].prev = s->data[cpu].value;
+		return;
+	}
 
 	for (i = 0; i < s->nr; i++)
 		s->data[i].prev = s->data[i].value;
 }
 
-static void check_clks(void)
-{
-	struct power_clk_source *s;
-	int changed = 0;
-
-	s = &power_ctx.gpu;
-	mutex_lock(&s->lock);
-	if (is_data_changed(s)) {
-		update_data(s);
-		changed = 1;
-	}
-	mutex_unlock(&s->lock);
-
-	s = &power_ctx.emc;
-	mutex_lock(&s->lock);
-	if (is_data_changed(s)) {
-		update_data(s);
-		changed = 1;
-	}
-	mutex_unlock(&s->lock);
-
-	if (changed) {
-		pr_debug("gpu: %lu, emc: %lu\n",
-			 power_ctx.gpu.data[0].value,
-			 power_ctx.emc.data[0].value);
-
-		make_sample();
-	}
-}
-
 static void check_source(struct power_clk_source *s)
 {
-	mutex_lock(&s->lock);
-
-	if (!is_data_changed(s))
-		goto out_unlock;
-
-	pr_debug("cpu: %lu/%lu/%lu/%lu\n",
-		 power_ctx.cpu.data[0].value,
-		 power_ctx.cpu.data[1].value,
-		 power_ctx.cpu.data[2].value,
-		 power_ctx.cpu.data[3].value);
-
-	update_data(s);
-	mutex_unlock(&s->lock);
-
-	make_sample();
-	return;
-
-out_unlock:
-	mutex_unlock(&s->lock);
+	if (is_data_changed(s)) {
+		update_data(s);
+		make_sample(s);
+	}
 }
 
 static void
@@ -242,32 +181,44 @@ read_source(struct power_clk_source *s, int cpu)
 
 		value = cpufreq_get(cpu);
 
-		mutex_lock(&s->lock);
+		if (!mutex_trylock(&s->lock))
+			break;
+
+		s->cpu = cpu;
 		s->data[cpu].value = value;
-		pr_debug("QUADD_POWER_CLK_CPU, cpu: %d, value: %lu\n",
-			 cpu, s->data[cpu].value);
+		pr_debug("PCLK_CPU(%d), value: %u\n", cpu, s->data[cpu].value);
+		check_source(s);
+
 		mutex_unlock(&s->lock);
 		break;
 
 	case QUADD_POWER_CLK_GPU:
 		/* update gpu frequency */
-		mutex_lock(&s->lock);
+		if (!mutex_trylock(&s->lock))
+			break;
+
 		if (s->clkp)
 			s->data[0].value =
-				clk_get_rate(s->clkp) / 1000;
-		pr_debug("QUADD_POWER_CLK_GPU, value: %lu\n",
-			 s->data[0].value);
+				(unsigned int)(clk_get_rate(s->clkp) / 1000);
+		pr_debug("PCLK_GPU, value: %u\n", s->data[0].value);
+		s->cpu = cpu;
+		check_source(s);
+
 		mutex_unlock(&s->lock);
 		break;
 
 	case QUADD_POWER_CLK_EMC:
 		/* update emc frequency */
-		mutex_lock(&s->lock);
+		if (!mutex_trylock(&s->lock))
+			break;
+
 		if (s->clkp)
 			s->data[0].value =
-				clk_get_rate(s->clkp) / 1000;
-		pr_debug("QUADD_POWER_CLK_EMC, value: %lu\n",
-			 s->data[0].value);
+				(unsigned int)(clk_get_rate(s->clkp) / 1000);
+		pr_debug("PCLK_EMC, value: %u\n", s->data[0].value);
+		s->cpu = cpu;
+		check_source(s);
+
 		mutex_unlock(&s->lock);
 		break;
 
@@ -282,8 +233,6 @@ gpu_notifier_call(struct notifier_block *nb,
 		  unsigned long action, void *data)
 {
 	read_source(&power_ctx.gpu, -1);
-	check_clks();
-
 	return NOTIFY_DONE;
 }
 
@@ -292,8 +241,6 @@ emc_notifier_call(struct notifier_block *nb,
 		  unsigned long action, void *data)
 {
 	read_source(&power_ctx.emc, -1);
-	check_clks();
-
 	return NOTIFY_DONE;
 }
 
@@ -302,7 +249,8 @@ read_cpufreq(struct power_clk_source *s, struct cpufreq_freqs *freq)
 {
 	int cpu, cpufreq;
 
-	mutex_lock(&s->lock);
+	if (!mutex_trylock(&s->lock))
+		return;
 
 	if (!atomic_read(&s->active))
 		goto out_unlock;
@@ -317,14 +265,13 @@ read_cpufreq(struct power_clk_source *s, struct cpufreq_freqs *freq)
 		goto out_unlock;
 	}
 
+	s->cpu = cpu;
 	s->data[cpu].value = cpufreq;
 
 	pr_debug("[%d] cpufreq: %u --> %u\n",
 		 cpu, freq->old, cpufreq);
 
-	mutex_unlock(&s->lock);
 	check_source(s);
-	return;
 
 out_unlock:
 	mutex_unlock(&s->lock);
@@ -404,7 +351,7 @@ static void reset_data(struct power_clk_source *s)
 
 static void init_source(struct power_clk_source *s,
 			int nr_values,
-			int type)
+			unsigned int type)
 {
 	s->clkp = NULL;
 	s->type = type;
@@ -420,8 +367,6 @@ power_clk_work_func(struct work_struct *work)
 {
 	read_source(&power_ctx.gpu, -1);
 	read_source(&power_ctx.emc, -1);
-
-	check_clks();
 }
 
 static DECLARE_WORK(power_clk_work, power_clk_work_func);
@@ -446,9 +391,6 @@ read_all_sources_work_func(struct work_struct *work)
 
 	read_source(&power_ctx.gpu, -1);
 	read_source(&power_ctx.emc, -1);
-
-	check_clks();
-	check_source(s);
 }
 
 static DECLARE_WORK(read_all_sources_work, read_all_sources_work_func);

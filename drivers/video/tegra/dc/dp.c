@@ -1,7 +1,7 @@
 /*
  * dp.c: tegra dp driver.
  *
- * Copyright (c) 2011-2018, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2011-2019, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -1209,10 +1209,15 @@ int tegra_dc_dp_get_max_link_bw(struct tegra_dc_dp_data *dp)
 	}
 
 	/* Constraint #2 */
-	if (tegra_dc_dp_read_ext_dpcd_caps(dp, &cfg->ext_dpcd_caps)) {
-		dev_err(&dp->dc->ndev->dev,
+	if (tegra_dc_is_ext_dp_panel(dp->dc) && !cfg->ext_dpcd_caps.valid) {
+		/* DPCD caps are already read in hpd worker, use them if they
+		 * are valid. Also, use cached values for internal panels as
+		 * they don't change during runtime */
+		if (tegra_dc_dp_read_ext_dpcd_caps(dp, &cfg->ext_dpcd_caps)) {
+			dev_err(&dp->dc->ndev->dev,
 			"dp: Failed to read ext DPCD caps\n");
-		return 0;
+			return 0;
+		}
 	}
 
 	if (cfg->ext_dpcd_caps.valid)
@@ -2399,6 +2404,7 @@ static void tegra_dp_hpd_op_edid_ready(void *drv_data)
 	dc->out->height = dc->out->height ? : dc->out->v_size;
 
 	tegra_dp_read_sink_cap(dp);
+	tegra_dc_dp_read_ext_dpcd_caps(dp, &dp->link_cfg.ext_dpcd_caps);
 
 	tegra_dc_io_start(dc);
 	tegra_dc_dp_dpcd_read(dp, NV_DPCD_SINK_COUNT,

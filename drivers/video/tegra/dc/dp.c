@@ -2039,7 +2039,8 @@ static int tegra_dc_dp_init(struct tegra_dc *dc)
 	if ((
 			((dc->pdata->flags & TEGRA_DC_FLAG_ENABLED) &&
 			(dc->pdata->flags & TEGRA_DC_FLAG_SET_EARLY_MODE))
-			|| tegra_fb_is_console_enabled(dc->pdata)
+			|| (tegra_fb_is_console_enabled(dc->pdata) &&
+			tegra_dc_is_ext_dp_panel(dc))
 		) &&
 		dc->out->type != TEGRA_DC_OUT_FAKE_DP
 	) {
@@ -3202,6 +3203,16 @@ static bool tegra_dc_dp_detect(struct tegra_dc *dc)
 		dp->edid_src != EDID_SRC_DT) {
 		complete(&dc->hpd_complete);
 		return false;
+	}
+
+	if (tegra_fb_is_console_enabled(dc->pdata) &&
+		!tegra_dc_is_ext_dp_panel(dc) &&
+		dc->out->type != TEGRA_DC_OUT_FAKE_DP) {
+		if (dp->hpd_data.mon_spec.modedb_len > 0) {
+			tegra_fb_update_monspecs(dc->fb, &dp->hpd_data.mon_spec,
+					tegra_dc_dp_ops.mode_filter);
+			tegra_fb_update_fix(dc->fb, &dp->hpd_data.mon_spec);
+		}
 	}
 
 	tegra_dp_pending_hpd(dp);

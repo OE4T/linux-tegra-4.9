@@ -128,7 +128,9 @@ struct tegra_dc_ext_flip_data {
 	bool dirty_rect_valid;
 	u8 flags;
 	struct tegra_dc_hdr hdr_data;
+	struct tegra_dc_ext_avi avi_info;
 	bool hdr_cache_dirty;
+	bool avi_cache_dirty;
 	bool imp_dirty;
 	u64 imp_session_id;
 	bool cmu_update_needed; /* this is needed for ENABLE or DISABLE */
@@ -1241,6 +1243,11 @@ static void tegra_dc_ext_flip_worker(struct kthread_work *work)
 		tegra_dc_update_windows(wins, nr_win,
 			data->dirty_rect_valid ? data->dirty_rect : NULL,
 			wait_for_vblank, lock_flip);
+
+		if (data->avi_cache_dirty)
+			if (dc->out_ops && dc->out_ops->set_avi)
+				dc->out_ops->set_avi(dc, &data->avi_info);
+
 		/* TODO: implement swapinterval here */
 		tegra_dc_sync_windows(wins, nr_win);
 
@@ -1786,15 +1793,15 @@ static int tegra_dc_ext_read_user_data(struct tegra_dc_ext_flip_data *data,
 			}
 			break;
 		}
-		case TEGRA_DC_EXT_FLIP_USER_DATA_CHANGE_AVI:
+		case TEGRA_DC_EXT_FLIP_USER_DATA_AVI_DATA:
 		{
-			struct tegra_dc *dc = data->ext->dc;
-			int avi_colorimetry_change =
-				flip_user_data[i].avi_info.avi_colorimetry_change;
+			struct tegra_dc_ext_avi *kdata =
+						 &data->avi_info;
+			struct tegra_dc_ext_avi *udata =
+						 &flip_user_data[i].avi_info;
 
-			if (dc->out_ops->set_avi)
-				dc->out_ops->set_avi(dc, avi_colorimetry_change);
-
+			kdata->avi_colorimetry = udata->avi_colorimetry;
+			data->avi_cache_dirty = true;
 			break;
 		}
 		case TEGRA_DC_EXT_FLIP_USER_DATA_IMP_TAG:

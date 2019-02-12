@@ -104,11 +104,10 @@ static int __init tegra_init_pd(struct device_node *np)
 	if (tpd_init_cb)
 		tpd_init_cb(gpd);
 
-	if (of_property_read_bool(np, "is_off"))
-		is_off = true;
-
 	if (of_property_read_u32(np, "partition-id", &tpd->partition_id))
 		tpd->partition_id = -1;
+
+	is_off = !tegra_powergate_is_powered(tpd->partition_id);
 
 	pm_genpd_init(gpd, &simple_qos_governor, is_off);
 

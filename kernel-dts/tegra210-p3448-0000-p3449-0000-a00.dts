@@ -17,51 +17,13 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
  */
+
 #include "tegra210-porg-p3448-common.dtsi"
 #include "porg-platforms/tegra210-porg-pinmux-p3448-0000-a00.dtsi"
 #include "porg-platforms/tegra210-porg-gpio-p3448-0000-a00.dtsi"
-#include "porg-platforms/tegra210-porg-extcon-p3448-0000-a00.dtsi"
-#include "porg-platforms/tegra210-porg-p3448-emc-a00.dtsi"
-#include "porg-platforms/tegra210-porg-pcie.dtsi"
-#include "porg-platforms/tegra210-porg-prods.dtsi"
-#include "porg-platforms/tegra210-porg-super-module-e2614.dtsi"
 
 / {
 	model = "jetson-nano";
 	compatible = "nvidia,jetson-nano", "nvidia,tegra210";
 	nvidia,dtsfilename = __FILE__;
-	nvidia,fastboot-usb-pid = <0xb442>;
-
-	chosen {
-		nvidia,tegra-porg-sku;
-		stdout-path = "/serial@70006000";
-		nvidia,tegra-always-on-personality;
-		bootargs = "kmemleak=on earlycon=uart8250,mmio32,0x70006000";
-	};
-
-	firmware {
-		android {
-			compatible = "android,firmware";
-			hardware = "porg";
-		};
-	};
-
-	rollback-protection {
-		status = "okay";
-	};
-
-	bcmdhd_wlan {
-		fw_path = "/system/vendor/firmware/fw_bcmdhd.bin";
-		nv_path = "/system/vendor/firmware/nvram_darcy_a00.txt";
-		tuned_nv_path = "/system/vendor/firmware/nvram_darcy_a00.txt";
-	};
-
-	watchdog@60005100 {
-		status = "okay";
-	};
-
 };
-
-#if LINUX_VERSION >= 414
-#include <tegra210-linux-4.14.dtsi>
-#endif

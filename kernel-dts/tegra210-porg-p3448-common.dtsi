@@ -17,9 +17,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
  */
-
 /dts-v1/;
-
 /memreserve/ 0x80000000 0x00020000;
 
 #include <t210-common-platforms/tegra210-common.dtsi>
@@ -27,7 +25,6 @@
 #include <t210-common-platforms/tegra210-p2530-common.dtsi>
 #include "porg-platforms/tegra210-porg-power-tree-p3448-0000-a00.dtsi"
 #include "porg-platforms/tegra210-pinmux-drive-sdmmc-common.dtsi"
-#include "porg-platforms/tegra210-porg-comms.dtsi"
 #include "porg-platforms/tegra210-porg-pwm-fan.dtsi"
 #include "porg-platforms/tegra210-porg-camera.dtsi"
 #include "porg-platforms/tegra210-porg-camera-rbpcv2-imx219.dtsi"
@@ -43,11 +40,32 @@
 #include "porg-plugin-manager/tegra210-porg-eeprom-manager.dtsi"
 #include "porg-plugin-manager/tegra210-porg-plugin-manager.dtsi"
 #include <tegra210-soc/mods-simple-bus.dtsi>
+#include "porg-platforms/tegra210-porg-extcon-p3448-0000-a00.dtsi"
+#include "porg-platforms/tegra210-porg-p3448-emc-a00.dtsi"
+#include "porg-platforms/tegra210-porg-pcie.dtsi"
+#include "porg-platforms/tegra210-porg-prods.dtsi"
+#include "porg-platforms/tegra210-porg-super-module-e2614.dtsi"
 
 / {
         nvidia,boardids = "3448";
         nvidia,proc-boardid = "3448";
         nvidia,pmu-boardid = "3448";
+	nvidia,fastboot-usb-pid = <0xb442>;
+
+	chosen {
+		nvidia,tegra-porg-sku;
+		stdout-path = "/serial@70006000";
+		nvidia,tegra-always-on-personality;
+		bootargs = "kmemleak=on earlycon=uart8250,mmio32,0x70006000";
+	};
+
+	rollback-protection {
+		status = "okay";
+	};
+
+	watchdog@60005100 {
+		status = "okay";
+	};
 
 	host1x {
 		/* Camera unit clocks */
@@ -651,3 +669,7 @@
 		compatible = "nvidia,tegra-udrm";
 	};
 };
+
+#if LINUX_VERSION >= 414
+#include <tegra210-linux-4.14.dtsi>
+#endif

@@ -72,129 +72,6 @@
 		};
 
 		fragment@3 {
-			ids = ">=3448-0002-200";
-			override@0 {
-				target = <&{/pinmux@700008d4/common/sdmmc1_clk_pm0}>;
-				_overlay_ {
-					nvidia,function = "rsvd1";
-					nvidia,pull = <TEGRA_PIN_PULL_DOWN>;
-					nvidia,tristate = <TEGRA_PIN_ENABLE>;
-					nvidia,enable-input = <TEGRA_PIN_DISABLE>;
-				};
-			};
-
-			override@1 {
-				target = <&{/pinmux@700008d4/common/sdmmc1_cmd_pm1}>;
-				_overlay_ {
-					nvidia,function = "rsvd2";
-					nvidia,pull = <TEGRA_PIN_PULL_DOWN>;
-					nvidia,tristate = <TEGRA_PIN_ENABLE>;
-					nvidia,enable-input = <TEGRA_PIN_DISABLE>;
-				};
-			};
-
-			override@2 {
-				target = <&{/pinmux@700008d4/common/sdmmc1_dat0_pm5}>;
-				_overlay_ {
-					nvidia,function = "rsvd1";
-					nvidia,pull = <TEGRA_PIN_PULL_DOWN>;
-					nvidia,tristate = <TEGRA_PIN_ENABLE>;
-					nvidia,enable-input = <TEGRA_PIN_DISABLE>;
-				};
-			};
-
-			override@3 {
-				target = <&{/pinmux@700008d4/common/sdmmc1_dat1_pm4}>;
-				_overlay_ {
-					nvidia,function = "rsvd2";
-					nvidia,pull = <TEGRA_PIN_PULL_DOWN>;
-					nvidia,tristate = <TEGRA_PIN_ENABLE>;
-					nvidia,enable-input = <TEGRA_PIN_DISABLE>;
-				};
-			};
-
-			override@4 {
-				target = <&{/pinmux@700008d4/common/sdmmc1_dat2_pm3}>;
-				_overlay_ {
-					nvidia,function = "rsvd2";
-					nvidia,pull = <TEGRA_PIN_PULL_DOWN>;
-					nvidia,tristate = <TEGRA_PIN_ENABLE>;
-					nvidia,enable-input = <TEGRA_PIN_DISABLE>;
-				};
-			};
-
-			override@5 {
-				target = <&{/pinmux@700008d4/common/sdmmc1_dat3_pm2}>;
-				_overlay_ {
-					nvidia,function = "rsvd2";
-					nvidia,pull = <TEGRA_PIN_PULL_DOWN>;
-					nvidia,tristate = <TEGRA_PIN_ENABLE>;
-					nvidia,enable-input = <TEGRA_PIN_DISABLE>;
-				};
-			};
-
-			override@6 {
-				target = <&{/pinmux@700008d4/common/qspi_io0_pee2}>;
-				_overlay_ {
-					nvidia,function = "rsvd1";
-					nvidia,pull = <TEGRA_PIN_PULL_DOWN>;
-					nvidia,tristate = <TEGRA_PIN_ENABLE>;
-					nvidia,enable-input = <TEGRA_PIN_DISABLE>;
-				};
-			};
-
-			override@7 {
-				target = <&{/pinmux@700008d4/common/qspi_io1_pee3}>;
-				_overlay_ {
-					nvidia,function = "rsvd1";
-					nvidia,pull = <TEGRA_PIN_PULL_DOWN>;
-					nvidia,tristate = <TEGRA_PIN_ENABLE>;
-					nvidia,enable-input = <TEGRA_PIN_DISABLE>;
-				};
-			};
-
-			override@8 {
-				target = <&{/pinmux@700008d4/common/qspi_sck_pee0}>;
-				_overlay_ {
-					nvidia,function = "rsvd1";
-					nvidia,pull = <TEGRA_PIN_PULL_DOWN>;
-					nvidia,tristate = <TEGRA_PIN_ENABLE>;
-					nvidia,enable-input = <TEGRA_PIN_DISABLE>;
-				};
-			};
-
-			override@9 {
-				target = <&{/pinmux@700008d4/common/qspi_cs_n_pee1}>;
-				_overlay_ {
-					nvidia,function = "rsvd1";
-					nvidia,pull = <TEGRA_PIN_PULL_DOWN>;
-					nvidia,tristate = <TEGRA_PIN_ENABLE>;
-					nvidia,enable-input = <TEGRA_PIN_DISABLE>;
-				};
-			};
-
-			override@10 {
-				target = <&{/pinmux@700008d4/unused_lowpower/qspi_io2_pee4}>;
-				_overlay_ {
-					nvidia,function = "rsvd1";
-					nvidia,pull = <TEGRA_PIN_PULL_DOWN>;
-					nvidia,tristate = <TEGRA_PIN_ENABLE>;
-					nvidia,enable-input = <TEGRA_PIN_DISABLE>;
-				};
-			};
-
-			override@11 {
-				target = <&{/pinmux@700008d4/unused_lowpower/qspi_io3_pee5}>;
-				_overlay_ {
-					nvidia,function = "rsvd1";
-					nvidia,pull = <TEGRA_PIN_PULL_DOWN>;
-					nvidia,tristate = <TEGRA_PIN_ENABLE>;
-					nvidia,enable-input = <TEGRA_PIN_DISABLE>;
-				};
-			};
-		};
-
-		fragment@4 {
 			ids = ">=3448-0002-100";
 			override@0 {
 				target = <&sdhci3>;
@@ -211,7 +88,7 @@
                 	};
 		};
 
-		fragment@5 {
+		fragment@4 {
 			ids = "3449-0000-000";
 			override@0 {
 				target = <&suspend_gpio>;
@@ -230,7 +107,7 @@
 			};
 		};
 
-		fragment@6 {
+		fragment@5 {
 			ids = "3449-0000-100", "3449-0000-200";
 			override@0 {
 				target = <&suspend_gpio>;

@@ -598,7 +598,7 @@ static void tegra_sdhci_apply_tuning_correction(struct sdhci_host *host,
 					first_pass_def = true;
 				}
 			} else if (!(tun_word & (mask << j)) && start_fail_def
-					&& start_pass_def) {
+					&& start_pass_def && !end_pass_def) {
 				end_pass = i*TUNING_WORD_BIT_SIZE + j - 1;
 				end_pass_def = true;
 			} else if ((tun_word & (mask << j)) && start_pass_def

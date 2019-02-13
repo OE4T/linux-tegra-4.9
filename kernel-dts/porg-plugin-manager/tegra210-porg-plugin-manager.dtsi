@@ -551,5 +551,15 @@
 				};
 			};
 		};
+
+		fragement@11 {
+			ids = ">=3448-0000-400", ">=3448-0002-400";
+			override@0 {
+				target = <&{/pcie@1003000/pci@2,0/ethernet@0,0}>;
+				_overlay_ {
+					enable-aspm;
+				};
+			};
+		};
 	};
 };

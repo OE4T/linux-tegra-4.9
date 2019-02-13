@@ -1,7 +1,7 @@
 /*
  * tegra186-soc-base.dtsi: SoC Base DTSI file.
  *
- * Copyright (c) 2014-2018, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2019, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -2659,6 +2659,9 @@
 		clock-names = "can","can_host","pllaon";
 		resets = <&tegra_car TEGRA186_RESET_CAN1>;
 		reset-names = "can";
+		mram-params = <0 16 16 32 0 0 16 16 16>;
+		tx-config = <0 16 0 64>;
+		rx-config = <64 64 64>;
 		status = "disabled";
 	};
 
@@ -2676,6 +2679,9 @@
 		clock-names = "can","can_host","pllaon";
 		resets = <&tegra_car TEGRA186_RESET_CAN2>;
 		reset-names = "can";
+		mram-params = <0 16 16 32 0 0 16 16 16>;
+		tx-config = <0 16 0 64>;
+		rx-config = <64 64 64>;
 		status = "disabled";
 	};
 

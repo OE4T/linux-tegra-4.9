@@ -1980,6 +1980,27 @@ void gk20a_fifo_recover_tsg(struct gk20a *g, struct tsg_gk20a *tsg,
 	nvgpu_mutex_release(&g->dbg_sessions_lock);
 }
 
+void gk20a_fifo_teardown_mask_intr(struct gk20a *g)
+{
+	u32 val;
+
+	val = gk20a_readl(g, fifo_intr_en_0_r());
+	val &= ~(fifo_intr_en_0_sched_error_m() |
+		fifo_intr_en_0_mmu_fault_m());
+	gk20a_writel(g, fifo_intr_en_0_r(), val);
+	gk20a_writel(g, fifo_intr_0_r(), fifo_intr_0_sched_error_reset_f());
+}
+
+void gk20a_fifo_teardown_unmask_intr(struct gk20a *g)
+{
+	u32 val;
+
+	val = gk20a_readl(g, fifo_intr_en_0_r());
+	val |= fifo_intr_en_0_mmu_fault_f(1) | fifo_intr_en_0_sched_error_f(1);
+	gk20a_writel(g, fifo_intr_en_0_r(), val);
+
+}
+
 void gk20a_fifo_teardown_ch_tsg(struct gk20a *g, u32 __engine_ids,
 			u32 hw_id, unsigned int id_type, unsigned int rc_type,
 			 struct mmu_fault_info *mmfault)
@@ -1987,7 +2008,6 @@ void gk20a_fifo_teardown_ch_tsg(struct gk20a *g, u32 __engine_ids,
 	unsigned long engine_id, i;
 	unsigned long _engine_ids = __engine_ids;
 	unsigned long engine_ids = 0;
-	u32 val;
 	u32 mmu_fault_engines = 0;
 	u32 ref_type;
 	u32 ref_id;
@@ -2048,25 +2068,12 @@ void gk20a_fifo_teardown_ch_tsg(struct gk20a *g, u32 __engine_ids,
 	}
 
 	if (mmu_fault_engines) {
-		/*
-		 * sched error prevents recovery, and ctxsw error will retrigger
-		 * every 100ms. Disable the sched error to allow recovery.
-		 */
-		val = gk20a_readl(g, fifo_intr_en_0_r());
-		val &= ~(fifo_intr_en_0_sched_error_m() |
-			fifo_intr_en_0_mmu_fault_m());
-		gk20a_writel(g, fifo_intr_en_0_r(), val);
-		gk20a_writel(g, fifo_intr_0_r(),
-				fifo_intr_0_sched_error_reset_f());
-
+		g->ops.fifo.teardown_mask_intr(g);
 		g->ops.fifo.trigger_mmu_fault(g, engine_ids);
 		gk20a_fifo_handle_mmu_fault_locked(g, mmu_fault_engines, ref_id,
 				ref_id_is_tsg);
 
-		val = gk20a_readl(g, fifo_intr_en_0_r());
-		val |= fifo_intr_en_0_mmu_fault_f(1)
-			| fifo_intr_en_0_sched_error_f(1);
-		gk20a_writel(g, fifo_intr_en_0_r(), val);
+		g->ops.fifo.teardown_unmask_intr(g);
 	}
 
 	nvgpu_log_info(g, "release runlist_lock for all runlists");

@@ -426,6 +426,8 @@ bool gk20a_fifo_check_ch_ctxsw_timeout(struct channel_gk20a *ch,
 			bool *verbose, u32 *ms);
 bool gk20a_fifo_check_tsg_ctxsw_timeout(struct tsg_gk20a *tsg,
 			bool *verbose, u32 *ms);
+void gk20a_fifo_teardown_mask_intr(struct gk20a *g);
+void gk20a_fifo_teardown_unmask_intr(struct gk20a *g);
 bool gk20a_fifo_handle_sched_error(struct gk20a *g);
 
 void gk20a_fifo_reset_pbdma_method(struct gk20a *g, int pbdma_id,

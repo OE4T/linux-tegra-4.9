@@ -982,6 +982,33 @@ static void gv11b_fifo_locked_abort_runlist_active_tsgs(struct gk20a *g,
 	}
 }
 
+void gv11b_fifo_teardown_mask_intr(struct gk20a *g)
+{
+	u32 val;
+
+	/*
+	 * ctxsw timeout error prevents recovery, and ctxsw error will retrigger
+	 * every 100ms. Disable ctxsw timeout error to allow recovery.
+	 */
+	val = gk20a_readl(g, fifo_intr_en_0_r());
+	val &= ~ fifo_intr_0_ctxsw_timeout_pending_f();
+	gk20a_writel(g, fifo_intr_en_0_r(), val);
+	gk20a_writel(g, fifo_intr_ctxsw_timeout_r(),
+			gk20a_readl(g, fifo_intr_ctxsw_timeout_r()));
+
+}
+
+void gv11b_fifo_teardown_unmask_intr(struct gk20a *g)
+{
+	u32 val;
+
+	/* enable ctxsw timeout interrupt */
+	val = gk20a_readl(g, fifo_intr_en_0_r());
+	val |= fifo_intr_0_ctxsw_timeout_pending_f();
+	gk20a_writel(g, fifo_intr_en_0_r(), val);
+}
+
+
 void gv11b_fifo_teardown_ch_tsg(struct gk20a *g, u32 act_eng_bitmask,
 			u32 id, unsigned int id_type, unsigned int rc_type,
 			 struct mmu_fault_info *mmfault)
@@ -1000,6 +1027,8 @@ void gv11b_fifo_teardown_ch_tsg(struct gk20a *g, u32 act_eng_bitmask,
 		nvgpu_mutex_acquire(&f->runlist_info[rlid].
 			runlist_lock);
 	}
+
+	g->ops.fifo.teardown_mask_intr(g);
 
 	/* get runlist id and tsg */
 	if (id_type == ID_TYPE_TSG) {
@@ -1194,6 +1223,8 @@ void gv11b_fifo_teardown_ch_tsg(struct gk20a *g, u32 act_eng_bitmask,
 	if (g->support_pmu && g->elpg_enabled) {
 		nvgpu_pmu_enable_elpg(g);
 	}
+
+	g->ops.fifo.teardown_unmask_intr(g);
 
 	/* release runlist_lock */
 	if (runlist_id != FIFO_INVAL_RUNLIST_ID) {

@@ -1228,10 +1228,12 @@ cifs_parse_mount_options(const char *mountdata, const char *devname,
 	char *string = NULL;
 	char *tmp_end, *value;
 	char delim;
+	char comma;
 	bool got_ip = false;
 	unsigned short port = 0;
 	struct sockaddr *dstaddr = (struct sockaddr *)&vol->dstaddr;
 
+	comma = 0x01;
 	separator[0] = ',';
 	separator[1] = 0;
 	delim = separator[0];
@@ -1738,11 +1740,18 @@ cifs_parse_mount_options(const char *mountdata, const char *devname,
 			}
 
 			for (i = 0, j = 0; i < temp_len; i++, j++) {
+				if (value[i] == comma) {
+				/* Replace the special comma char
+				* with an actual comma, then skip.*/
+					vol->password[j] = ',';
+				} else {
 				vol->password[j] = value[i];
 				if ((value[i] == delim) &&
-				     value[i+1] == delim)
-					/* skip the second deliminator */
+					value[i+1] == delim) {
+				/* skip the second deliminator */
 					i++;
+					}
+				}
 			}
 			vol->password[j] = '\0';
 			break;
@@ -3560,7 +3569,7 @@ cifs_setup_volume_info(struct smb_vol *volume_info, char *mount_data,
 	} else if (volume_info->username) {
 		/* BB fixme parse for domain name here */
 		cifs_dbg(FYI, "Username: %s\n", volume_info->username);
-	} else {
+    } else {
 		cifs_dbg(VFS, "No username specified\n");
 	/* In userspace mount helper we can get user name from alternate
 	   locations such as env variables and files on disk */

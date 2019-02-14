@@ -874,10 +874,12 @@ static int vi5_power_on(struct tegra_channel *chan)
 	if (ret < 0)
 		return ret;
 
-	ret = tegra_channel_set_power(chan, 1);
-	if (ret < 0) {
-		dev_err(vi->dev, "Failed to power on subdevices\n");
-		return ret;
+	if (atomic_add_return(1, &chan->power_on_refcnt) == 1) {
+		ret = tegra_channel_set_power(chan, 1);
+		if (ret < 0) {
+			dev_err(vi->dev, "Failed to power on subdevices\n");
+			return ret;
+		}
 	}
 
 	return 0;
@@ -892,9 +894,11 @@ static void vi5_power_off(struct tegra_channel *chan)
 	vi = chan->vi;
 	csi = vi->csi;
 
-	ret = tegra_channel_set_power(chan, 0);
-	if (ret < 0)
-		dev_err(vi->dev, "Failed to power off subdevices\n");
+	if (atomic_dec_and_test(&chan->power_on_refcnt)) {
+		ret = tegra_channel_set_power(chan, 0);
+		if (ret < 0)
+			dev_err(vi->dev, "Failed to power off subdevices\n");
+	}
 
 	tegra_vi5_power_off(vi);
 	nvhost_module_remove_client(vi->ndev, &chan->video);

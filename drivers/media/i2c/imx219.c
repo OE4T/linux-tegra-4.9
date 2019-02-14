@@ -314,15 +314,15 @@ static int imx219_power_on(struct camera_common_data *s_data)
 		return err;
 	}
 
-	if (unlikely(!(pw->avdd || pw->iovdd || pw->dvdd)))
-		goto skip_power_seqn;
-
 	if (pw->reset_gpio) {
 		if (gpio_cansleep(pw->reset_gpio))
 			gpio_set_value_cansleep(pw->reset_gpio, 0);
 		else
 			gpio_set_value(pw->reset_gpio, 0);
 	}
+
+	if (unlikely(!(pw->avdd || pw->iovdd || pw->dvdd)))
+		goto skip_power_seqn;
 
 	usleep_range(10, 20);
 
@@ -355,8 +355,8 @@ skip_power_seqn:
 	}
 
 	/* Need to wait for t4 + t5 + t9 time as per the data sheet */
-	/* t4 - 200us, t5 - 6ms, t9 - 1.2ms */
-	usleep_range(7400, 7410);
+	/* t4 - 200us, t5 - 21.2ms, t9 - 1.2ms */
+	usleep_range(23000, 23100);
 
 	pw->state = SWITCH_ON;
 
@@ -397,7 +397,7 @@ static int imx219_power_off(struct camera_common_data *s_data)
 				gpio_set_value(pw->reset_gpio, 0);
 		}
 
-		usleep_range(10, 20);
+		usleep_range(10, 10);
 
 		if (pw->dvdd)
 			regulator_disable(pw->dvdd);
@@ -574,7 +574,7 @@ static int imx219_set_mode(struct tegracam_device *tc_dev)
 	err = imx219_write_table(priv, mode_table[IMX219_MODE_COMMON]);
 	if (err)
 		return err;
-
+pr_info("fc99: mode = %d\n", s_data->mode);
 	err = imx219_write_table(priv, mode_table[s_data->mode]);
 	if (err)
 		return err;
@@ -591,9 +591,14 @@ static int imx219_start_streaming(struct tegracam_device *tc_dev)
 
 static int imx219_stop_streaming(struct tegracam_device *tc_dev)
 {
+	int err;
 	struct imx219 *priv = (struct imx219 *)tegracam_get_privdata(tc_dev);
 
-	return imx219_write_table(priv, mode_table[IMX219_STOP_STREAM]);
+	err = imx219_write_table(priv, mode_table[IMX219_STOP_STREAM]);
+
+	usleep_range(50000, 51000);
+
+	return err;
 }
 
 static struct camera_common_sensor_ops imx219_common_ops = {

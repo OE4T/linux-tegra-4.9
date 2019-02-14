@@ -175,18 +175,20 @@
 		status = "disabled";
 	};
 
-	spi@70410000{
+	spi@70410000 {
 		status = "okay";
+		spi-max-frequency = <104000000>;
 		spiflash@0 {
 			#address-cells = <1>;
 			#size-cells = <1>;
 			compatible = "MX25U3235F";
 			reg = <0>;
-			spi-max-frequency = <51000000>;
+			spi-max-frequency = <104000000>;
 			controller-data {
 				nvidia,x1-len-limit = <4194304>;
-				nvidia,x1-bus-speed = <51000000>; /* In Mhz */
+				nvidia,x1-bus-speed = <104000000>;
 				nvidia,x1-dymmy-cycle = <8>;
+				nvidia,ctrl-bus-clk-ratio = /bits/ 8 <0x01>;
 			};
 		};
 	};

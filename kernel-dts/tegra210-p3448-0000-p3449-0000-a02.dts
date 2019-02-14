@@ -23,4 +23,14 @@
 
 / {
 	nvidia,dtsfilename = __FILE__;
+		spi@70410000 {
+			status = "okay";
+			spiflash@0 {
+				controller-data {
+					nvidia,x1-len-limit = <16>;
+					nvidia,x4-bus-speed = <104000000>;
+					nvidia,x4-dymmy-cycle = <8>;
+				};
+			};
+		};
 };

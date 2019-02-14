@@ -1,7 +1,7 @@
 /*
  * drivers/ata/ahci_tegra.c
  *
- * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2019, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -559,8 +559,26 @@ static void tegra_ahci_badblk_manage(struct work_struct *work)
 static void tegra_ahci_unbind(struct work_struct *work)
 {
 	struct tegra_ahci_priv *tegra =
-			container_of(work, struct tegra_ahci_priv, work);
+			container_of(to_delayed_work(work),
+					struct tegra_ahci_priv, work);
 	struct platform_device *pdev = tegra->pdev;
+	struct ata_host *host = platform_get_drvdata(pdev);
+	int i = 0;
+
+	for (i = 0; i < host->n_ports; i++) {
+		struct ata_port *ap = host->ports[i];
+		unsigned long flags;
+
+		spin_lock_irqsave(ap->lock, flags);
+		if (ap && ((ap->pflags & ATA_PFLAG_LOADING) ||
+					(ap->pflags & ATA_PFLAG_INITIALIZING))) {
+			INIT_DELAYED_WORK(&tegra->work, tegra_ahci_unbind);
+			schedule_delayed_work(&tegra->work, msecs_to_jiffies(1000));
+			spin_unlock_irqrestore(ap->lock, flags);
+			return;
+		}
+		spin_unlock_irqrestore(ap->lock, flags);
+	}
 
 	tegra_ahci_shutdown(pdev);
 	pm_runtime_put_sync(&pdev->dev);
@@ -685,8 +703,8 @@ static void tegra_ahci_error_handler(struct ata_port *ap)
 			struct ahci_host_priv *hpriv =  host->private_data;
 			struct tegra_ahci_priv *tegra = hpriv->plat_data;
 
-			INIT_WORK(&tegra->work, tegra_ahci_unbind);
-			schedule_work(&tegra->work);
+			INIT_DELAYED_WORK(&tegra->work, tegra_ahci_unbind);
+			schedule_delayed_work(&tegra->work, msecs_to_jiffies(1000));
 		}
 	}
 }

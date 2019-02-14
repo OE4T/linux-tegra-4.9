@@ -1,7 +1,7 @@
 /*
  * drivers/ata/ahci_tegra.h
  *
- * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2019, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -246,7 +246,7 @@ struct tegra_ahci_priv {
 	struct pinctrl_state	   *devslp_active;
 	struct pinctrl_state	   *devslp_pullup;
 	struct tegra_prod	   *prod_list;
-	struct work_struct	   work;
+	struct delayed_work	   work;
 	struct tegra_ahci_badblk_priv badblk;
 	int			   devslp_gpio;
 	bool			   devslp_override;

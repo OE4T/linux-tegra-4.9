@@ -371,8 +371,10 @@ int gk20a_fecs_trace_poll(struct gk20a *g)
 
 	while (read != write) {
 		cnt = gk20a_fecs_trace_ring_read(g, read);
-		if (cnt <= 0)
-			break;
+		if (cnt > 0) {
+			nvgpu_log(g, gpu_dbg_ctxsw,
+				"number of trace entries added: %d", cnt);
+		}
 
 		/* Get to next record. */
 		read = (read + 1) & (GK20A_FECS_TRACE_NUM_RECORDS - 1);

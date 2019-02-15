@@ -368,11 +368,11 @@ void gk20a_scale_init(struct device *dev)
 		profile->devfreq_profile.get_cur_freq = get_cur_freq;
 		profile->devfreq_profile.polling_ms = 25;
 
-		devfreq = devfreq_add_device(dev,
+		devfreq = devm_devfreq_add_device(dev,
 					&profile->devfreq_profile,
 					platform->devfreq_governor, NULL);
 
-		if (IS_ERR(devfreq))
+		if (IS_ERR_OR_NULL(devfreq))
 			devfreq = NULL;
 
 		l->devfreq = devfreq;
@@ -401,8 +401,6 @@ void gk20a_scale_exit(struct device *dev)
 {
 	struct gk20a_platform *platform = dev_get_drvdata(dev);
 	struct gk20a *g = platform->g;
-	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
-	int err;
 
 #ifdef CONFIG_GK20A_PM_QOS
 	if (platform->qos_notify) {
@@ -412,11 +410,6 @@ void gk20a_scale_exit(struct device *dev)
 				&g->scale_profile->qos_notify_block);
 	}
 #endif
-
-	if (platform->devfreq_governor) {
-		err = devfreq_remove_device(l->devfreq);
-		l->devfreq = NULL;
-	}
 
 	nvgpu_kfree(g, g->scale_profile);
 	g->scale_profile = NULL;

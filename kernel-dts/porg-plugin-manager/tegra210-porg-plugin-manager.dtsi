@@ -28,20 +28,6 @@
 				};
 			};
 
-			override@1 {
-				target = <&p3449_vdd_usb_hub_en>;
-				_overlay_ {
-					enable-active-high;
-					delete-target-property = "enable-active-low";
-				};
-			};
-
-			override@2 {
-				target = <&p3449_vdd_usb_hub_en>;
-				_overlay_ {
-					delete-target-property = "gpio-open-drain";
-				};
-			};
 		};
 
 		fragment@1 {
@@ -223,6 +209,43 @@
 					status = "disabled";
 				};
                 	};
+		};
+
+		fragment@5 {
+			ids = "3449-0000-000";
+			override@0 {
+				target = <&suspend_gpio>;
+				_overlay_ {
+					status = "disabled";
+				};
+			};
+
+			override@1 {
+				target = <&p3449_vdd_usb_hub_en>;
+				_overlay_ {
+					gpio = <&gpio TEGRA_GPIO(A, 6) 0>;
+					enable-active-low;
+					gpio-open-drain;
+				};
+			};
+		};
+
+		fragment@6 {
+			ids = "3449-0000-100", "3449-0000-200";
+			override@0 {
+				target = <&suspend_gpio>;
+				_overlay_ {
+					status = "disabled";
+				};
+			};
+
+			override@1 {
+				target = <&p3449_vdd_usb_hub_en>;
+				_overlay_ {
+					gpio = <&gpio TEGRA_GPIO(A, 6) 0>;
+					enable-active-high;
+				};
+			};
 		};
 	};
 };

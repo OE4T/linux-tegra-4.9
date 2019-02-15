@@ -121,9 +121,6 @@
 			regulator-name = "vdd-usb-hub-en";
 			regulator-min-microvolt = <5000000>;
 			regulator-max-microvolt = <5000000>;
-			gpio = <&gpio TEGRA_GPIO(A, 6) 0>;
-			enable-active-low;
-			gpio-open-drain;
 			vin-supply = <&p3449_vdd_1v8>;
 		};
 

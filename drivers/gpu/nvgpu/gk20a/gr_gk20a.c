@@ -3473,6 +3473,8 @@ static int gr_gk20a_init_gr_config(struct gk20a *g, struct gr_gk20a *gr)
 		gr->sm_to_cluster = nvgpu_kzalloc(g, gr->gpc_count *
 					gr->max_tpc_per_gpc_count *
 					sm_per_tpc * sizeof(struct sm_info));
+		if (!gr->sm_to_cluster)
+			goto clean_up;
 	} else {
 		memset(gr->sm_to_cluster, 0, gr->gpc_count *
 					gr->max_tpc_per_gpc_count *

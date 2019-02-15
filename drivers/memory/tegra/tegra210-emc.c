@@ -1750,7 +1750,8 @@ static int emc_get_dram_temperature(void)
 
 	spin_lock_irqsave(&emc_access_lock, flags);
 	mr4_0 = emc_read_mrr(0, 4);
-	mr4_1 = emc_read_mrr(1, 4);
+	if (tegra_dram_dev_num == 2)
+		mr4_1 = emc_read_mrr(1, 4);
 	spin_unlock_irqrestore(&emc_access_lock, flags);
 
 	if (mr4_0 < 0)

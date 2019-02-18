@@ -24,22 +24,7 @@
 #define __NVIDIA_P2P_H__
 
 #include <linux/dma-mapping.h>
-#include <linux/module.h>
-#include <linux/kernel.h>
-#include <linux/init.h>
-#include <linux/miscdevice.h>
-#include <linux/fs.h>
-#include <linux/mm.h>
-#include <linux/mman.h>
 #include <linux/mmu_notifier.h>
-#include <linux/types.h>
-#include <linux/uaccess.h>
-#include <linux/sched.h>
-#include <linux/spinlock.h>
-#include <linux/slab.h>
-#include <linux/highmem.h>
-#include <linux/mutex.h>
-#include <linux/spinlock.h>
 
 #define	NVIDIA_P2P_UNINITIALIZED 0x0
 #define	NVIDIA_P2P_PINNED 0x1

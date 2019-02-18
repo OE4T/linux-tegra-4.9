@@ -57,6 +57,7 @@ void (*psci_prepare_poweroff)(void);
  * require cooperation with a Trusted OS driver.
  */
 static int resident_cpu = -1;
+static bool system_lp0_disable;
 
 bool psci_tos_resident_on(int cpu)
 {
@@ -470,7 +471,7 @@ static void __init psci_init_system_suspend(void)
 {
 	int ret;
 
-	if (!IS_ENABLED(CONFIG_SUSPEND))
+	if (!IS_ENABLED(CONFIG_SUSPEND) || system_lp0_disable)
 		return;
 
 	ret = psci_features(PSCI_FN_NATIVE(1_0, SYSTEM_SUSPEND));
@@ -623,6 +624,10 @@ static int __init psci_0_2_init(struct device_node *np)
 
 	if (err)
 		goto out_put_node;
+
+	if (of_property_read_bool(np, "nvidia,system-lp0-disable"))
+		system_lp0_disable = 1;
+
 	/*
 	 * Starting with v0.2, the PSCI specification introduced a call
 	 * (PSCI_VERSION) that allows probing the firmware version, so

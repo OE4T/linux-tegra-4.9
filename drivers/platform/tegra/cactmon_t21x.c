@@ -143,10 +143,7 @@ static void enb_dev_intr_all(void __iomem *base)
 
 static void enb_dev_intr(u32 val, void __iomem *base)
 {
-	u32 old_val = __raw_readl(base + ACTMON_DEV_CTRL);
-
-	old_val |= val;
-	__raw_writel(old_val, base + ACTMON_DEV_CTRL);
+	__raw_writel(val, base + ACTMON_DEV_CTRL);
 }
 
 static u32 get_dev_intr(void __iomem *base)

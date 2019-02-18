@@ -336,7 +336,7 @@ int imx274_set_exposure_shr_dol_short(struct tegracam_device *tc_dev, s64 val)
 	if (hdr_en != SWITCH_ON)  {
 		dev_dbg(dev, "%s: SHR DOL1 is ignored for non-HDR mode\n",
 			__func__);
-		goto fail;
+		return 0;
 	}
 
 	if (s_data->mode == IMX274_MODE_3840X2160_DOL_30FPS) {

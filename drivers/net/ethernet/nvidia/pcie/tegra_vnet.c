@@ -1024,13 +1024,15 @@ static int tvnet_probe(struct pci_dev *pdev, const struct pci_device_id *pci_id)
 	mutex_init(&tvnet->link_state_lock);
 	init_waitqueue_head(&tvnet->link_state_wq);
 
-	ret = pci_enable_msi(pdev);
-	if (ret) {
-		dev_err(&pdev->dev, "register_netdev() fail: %d\n", ret);
+	ret = pci_alloc_irq_vectors(pdev, 1, 1, PCI_IRQ_MSIX);
+	if (ret <= 0) {
+		dev_err(&pdev->dev, "pci_alloc_irq_vectors() fail: %d\n", ret);
+		ret = -EIO;
 		goto unreg_netdev;
 	}
 
-	ret = request_irq(pdev->irq, tvnet_irq, IRQF_SHARED, ndev->name, ndev);
+	ret = request_irq(pci_irq_vector(pdev, 0), tvnet_irq, IRQF_SHARED,
+			  ndev->name, ndev);
 	if (ret < 0) {
 		dev_err(&pdev->dev, "request_irq() fail: %d\n", ret);
 		goto disable_msi;
@@ -1045,7 +1047,7 @@ static int tvnet_probe(struct pci_dev *pdev, const struct pci_device_id *pci_id)
 	return 0;
 
 disable_msi:
-	pci_disable_msi(pdev);
+	pci_free_irq_vectors(pdev);
 unreg_netdev:
 	unregister_netdev(ndev);
 pci_disable:

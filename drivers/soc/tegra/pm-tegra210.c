@@ -447,7 +447,7 @@ static int debugfs_init(void)
 	}
 
 
-	dfs_file = debugfs_create_file("forced_idle_duration_us", 0644,
+	dfs_file = debugfs_create_file("forced_idle_duration_us", 0200,
 				cpuidle_debugfs_root, NULL, &duration_us_fops);
 
 	if (!dfs_file) {

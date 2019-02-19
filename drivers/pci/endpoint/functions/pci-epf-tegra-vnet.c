@@ -506,7 +506,7 @@ static int tvnet_write_ctrl_msg(struct pci_epf_tvnet *tvnet,
 
 	if (tvnet_ivc_full(ep_cnt, host_cnt, EP2H_CTRL)) {
 		/* Raise an interrupt to let host process EP2H ring */
-		pci_epc_raise_irq(epc, PCI_EPC_IRQ_MSI, 0);
+		pci_epc_raise_irq(epc, PCI_EPC_IRQ_MSIX, 0);
 		dev_dbg(tvnet->fdev, "%s: EP2H ctrl ring full\n", __func__);
 		return -EAGAIN;
 	}
@@ -514,7 +514,7 @@ static int tvnet_write_ctrl_msg(struct pci_epf_tvnet *tvnet,
 	idx = tvnet_ivc_get_wr_cnt(ep_cnt, host_cnt, EP2H_CTRL) % RING_COUNT;
 	memcpy(&ctrl_msg[idx], msg, sizeof(*msg));
 	tvnet_ivc_advance_wr(ep_cnt, host_cnt, EP2H_CTRL);
-	pci_epc_raise_irq(epc, PCI_EPC_IRQ_MSI, 0);
+	pci_epc_raise_irq(epc, PCI_EPC_IRQ_MSIX, 0);
 
 	return 0;
 }
@@ -622,7 +622,7 @@ static void tvnet_alloc_empty_buffers(struct pci_epf_tvnet *tvnet)
 		tvnet_ivc_advance_wr(ep_cnt, host_cnt, H2EP_EMPTY_BUF);
 	}
 
-	pci_epc_raise_irq(epc, PCI_EPC_IRQ_MSI, 0);
+	pci_epc_raise_irq(epc, PCI_EPC_IRQ_MSIX, 0);
 }
 
 static void tvnet_free_empty_buffers(struct pci_epf_tvnet *tvnet)
@@ -830,7 +830,7 @@ static netdev_tx_t tvnet_start_xmit(struct sk_buff *skb,
 
 	/* Check if EP2H_EMPTY_BUF available to read */
 	if (!tvnet_ivc_rd_available(ep_cnt, host_cnt, EP2H_EMPTY_BUF)) {
-		pci_epc_raise_irq(epc, PCI_EPC_IRQ_MSI, 0);
+		pci_epc_raise_irq(epc, PCI_EPC_IRQ_MSIX, 0);
 		dev_dbg(fdev, "%s: No EP2H empty msg, stop tx\n", __func__);
 		netif_stop_queue(ndev);
 		return NETDEV_TX_BUSY;
@@ -838,7 +838,7 @@ static netdev_tx_t tvnet_start_xmit(struct sk_buff *skb,
 
 	/* Check if EP2H_FULL_BUF available to write */
 	if (tvnet_ivc_full(ep_cnt, host_cnt, EP2H_FULL_BUF)) {
-		pci_epc_raise_irq(epc, PCI_EPC_IRQ_MSI, 0);
+		pci_epc_raise_irq(epc, PCI_EPC_IRQ_MSIX, 0);
 		dev_dbg(fdev, "%s: No EP2H full buf, stop tx\n", __func__);
 		netif_stop_queue(ndev);
 		return NETDEV_TX_BUSY;
@@ -881,7 +881,7 @@ static netdev_tx_t tvnet_start_xmit(struct sk_buff *skb,
 	 */
 	tvnet_ivc_advance_rd(ep_cnt, host_cnt, EP2H_EMPTY_BUF);
 	/* Raise an interrupt to let host populate EP2H_EMPTY_BUF ring */
-	pci_epc_raise_irq(epc, PCI_EPC_IRQ_MSI, 0);
+	pci_epc_raise_irq(epc, PCI_EPC_IRQ_MSIX, 0);
 
 	/* Copy skb->data to host dst address, use CPU virt addr */
 	memcpy((void *)(tvnet->tx_dst_va + dst_off), skb->data, len);
@@ -897,7 +897,7 @@ static netdev_tx_t tvnet_start_xmit(struct sk_buff *skb,
 	ep2h_full_msg[wr_idx].u.full_buffer.packet_size = len;
 	ep2h_full_msg[wr_idx].u.full_buffer.pcie_address = dst_iova;
 	tvnet_ivc_advance_wr(ep_cnt, host_cnt, EP2H_FULL_BUF);
-	pci_epc_raise_irq(epc, PCI_EPC_IRQ_MSI, 0);
+	pci_epc_raise_irq(epc, PCI_EPC_IRQ_MSIX, 0);
 
 	/* Free temp src and skb */
 	pci_epc_unmap_addr(epc, tvnet->tx_dst_pci_addr);

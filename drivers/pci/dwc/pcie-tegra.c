@@ -335,6 +335,13 @@
 #define PL16G_CAP_OFF_USP_16G_TX_PRESET_MASK	GENMASK(7, 4)
 #define PL16G_CAP_OFF_USP_16G_TX_PRESET_SHIFT	4
 
+#define MSIX_ADDR_MATCH_LOW_OFF		0x940
+#define MSIX_ADDR_MATCH_LOW_OFF_EN	BIT(0)
+#define MSIX_ADDR_MATCH_LOW_OFF_MASK	GENMASK(31, 2)
+
+#define MSIX_ADDR_MATCH_HIGH_OFF	0x944
+#define MSIX_ADDR_MATCH_HIGH_OFF_MASK	GENMASK(31, 0)
+
 #define AUX_CLK_FREQ			0xB40
 
 #define GEN4_LANE_MARGINING_1	0xb80
@@ -3471,6 +3478,7 @@ static void pex_ep_event_pex_rst_assert(struct tegra_pcie_dw *pcie)
 static void pex_ep_event_pex_rst_deassert(struct tegra_pcie_dw *pcie)
 {
 	struct dw_pcie *pci = &pcie->pci;
+	struct dw_pcie_ep *ep = &pci->ep;
 	u32 val = 0;
 	int ret = 0;
 
@@ -3678,6 +3686,18 @@ static void pex_ep_event_pex_rst_deassert(struct tegra_pcie_dw *pcie)
 	writel(val, pci->dbi_base + PORT_LOGIC_MISC_CONTROL);
 
 	clk_set_rate(pcie->core_clk, GEN4_CORE_CLK_FREQ);
+
+	/* Automatic triggering of MSI-X generation when PCIe MWr is issued
+	 * with an address equal to MSIX_ADDRESS_MATCH_LOW_OFF and
+	 * MSIX_ADDRESS_MATCH_HIGH_OFF. Program these registers with
+	 * base address allocated in dw_pcie_ep_init().
+	 */
+
+	val = (ep->msi_mem_phys & MSIX_ADDR_MATCH_LOW_OFF_MASK);
+	val |= MSIX_ADDR_MATCH_LOW_OFF_EN;
+	writel(val, pci->dbi_base + MSIX_ADDR_MATCH_LOW_OFF);
+	val = ((ep->msi_mem_phys >> 32) & MSIX_ADDR_MATCH_HIGH_OFF_MASK);
+	writel(val, pci->dbi_base + MSIX_ADDR_MATCH_HIGH_OFF);
 
 	dw_pcie_set_regs_available(pci);
 
@@ -3952,6 +3972,15 @@ static int tegra_pcie_raise_msi_irq(struct tegra_pcie_dw *pcie,
 	return 0;
 }
 
+static int tegra_pcie_raise_msix_irq(struct tegra_pcie_dw *pcie,
+				     u8 irq)
+{
+	struct dw_pcie_ep *ep = &pcie->pci.ep;
+
+	writel(irq, ep->msi_mem);
+	return 0;
+}
+
 static int tegra_pcie_raise_irq(struct dw_pcie_ep *ep,
 				enum pci_epc_irq_type type, u8 interrupt_num)
 {
@@ -3964,6 +3993,9 @@ static int tegra_pcie_raise_irq(struct dw_pcie_ep *ep,
 		break;
 	case PCI_EPC_IRQ_MSI:
 		return tegra_pcie_raise_msi_irq(pcie, interrupt_num);
+		break;
+	case PCI_EPC_IRQ_MSIX:
+		return tegra_pcie_raise_msix_irq(pcie, interrupt_num);
 		break;
 	default:
 		dev_err(pci->dev, "UNKNOWN IRQ type\n");

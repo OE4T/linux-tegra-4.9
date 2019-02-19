@@ -201,6 +201,8 @@ struct dw_pcie_ep {
 	unsigned long		ob_window_map;
 	u32			num_ib_windows;
 	u32			num_ob_windows;
+	void __iomem		*msi_mem;
+	phys_addr_t		msi_mem_phys;
 
 	bool			hw_regs_not_available;
 	struct pci_epf_header	cached_hdr;

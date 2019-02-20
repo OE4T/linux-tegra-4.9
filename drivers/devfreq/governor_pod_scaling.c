@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2012-2019, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -366,6 +366,7 @@ static void nvhost_scale_emc_debug_init(struct devfreq *df)
 	podgov->debugdir = debugfs_create_dir(dirname, NULL);
 	if (!podgov->debugdir) {
 		pr_err("podgov: can\'t create debugfs directory\n");
+		dump_stack();
 		return;
 	}
 

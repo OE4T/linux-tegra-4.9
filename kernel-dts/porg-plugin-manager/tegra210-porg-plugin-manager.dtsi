@@ -85,7 +85,38 @@
 				_overlay_ {
 					status = "disabled";
 				};
-                	};
+			};
+		};
+
+		fragement@5 {
+			odm-data = "enable-tegra-wdt";
+			override@0 {
+				target = <&tegra_wdt>;
+				_overlay_ {
+					status = "okay";
+				};
+			};
+		};
+
+		fragement@6 {
+			odm-data = "enable-pmic-wdt";
+			override@0 {
+				target = <&spmic_wdt>;
+				_overlay_ {
+					status = "okay";
+				};
+			};
+		};
+
+		fragement@7 {
+			odm-data = "enable-pmic-wdt",
+				"enable-tegra-wdt";
+			override@0 {
+				target = <&soft_wdt>;
+				_overlay_ {
+					status = "disabled";
+				};
+			};
 		};
 
 		fragment@4 {

@@ -67,6 +67,10 @@
 		status = "okay";
 	};
 
+	tegra_wdt: watchdog@60005100 {
+		status = "disabled";
+	};
+
 	host1x {
 		/* Camera unit clocks */
 		assigned-clocks = <&tegra_car TEGRA210_CLK_EXTERN3>,
@@ -667,6 +671,10 @@
 
 	tegra_udrm: tegra_udrm {
 		compatible = "nvidia,tegra-udrm";
+	};
+
+	soft_wdt: soft_watchdog {
+		status = "okay";
 	};
 };
 

@@ -51,6 +51,10 @@
 				};
 			};
 
+			spmic_wdt: watchdog {
+				status = "disabled";
+			};
+
 			spmic-default-output-high {
 				gpio-hog;
 				output-high;

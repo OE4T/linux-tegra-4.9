@@ -1,7 +1,7 @@
 /*
  * tegra186-quill-p3489-0000-a00-plugin-manager.dtsi: P3489 plugin manager
  *
- * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2019, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -48,6 +48,11 @@
 			i2c-bus = <&cam_i2c>;
 			eeprom@0 {
 				slave-address = <0x54>;
+				label = "cam";
+				enable-gpio = <2 9>;
+			};
+			eeprom@1 {
+				slave-address = <0x57>;
 				label = "cam";
 				enable-gpio = <2 9>;
 			};

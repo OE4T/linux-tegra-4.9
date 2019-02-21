@@ -1,7 +1,7 @@
 /*
  * ov5693_mode_tbls.h - ov5693 sensor mode tables
  *
- * Copyright (c) 2015-2017, NVIDIA CORPORATION, All Rights Reserved.
+ * Copyright (c) 2015-2019, NVIDIA CORPORATION, All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -25,6 +25,8 @@
 #define OV5693_TABLE_END	1
 #define OV5693_MAX_RETRIES	3
 #define OV5693_WAIT_MS		10
+
+#define ENABLE_EXTRA_MODES 0
 
 #define ov5693_reg struct reg_8
 
@@ -2386,11 +2388,13 @@ static const struct camera_common_frmfmt ov5693_frmfmt[] = {
 	{{2592, 1944},	ov5693_30fps,	1, 0,	OV5693_MODE_2592X1944},
 	{{2592, 1458},	ov5693_30fps,	1, 0,	OV5693_MODE_2592X1458},
 	{{1280, 720},	ov5693_120fps,	1, 0,	OV5693_MODE_1280X720_120FPS},
+#if ENABLE_EXTRA_MODES
 	{{640, 480},	ov5693_30fps,   1, 0,	OV5693_MODE_640X480},
 	{{1920, 1080},	ov5693_30fps,	1, 0,	OV5693_MODE_1920X1080},
 	{{2592, 1944},	ov5693_24fps,	1, 1,	OV5693_MODE_2592X1944_HDR},
 	{{1920, 1080},	ov5693_30fps,	1, 1,	OV5693_MODE_1920X1080_HDR},
 	{{2592, 1944},	ov5693_15fps,	1, 1,	OV5693_MODE_2592x1944_15FPS},
+#endif
 };
 #endif  /* __OV5693_TABLES__ */
 

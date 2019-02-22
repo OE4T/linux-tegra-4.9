@@ -124,11 +124,18 @@
 		dt-override-status-odm-data = <0x1000000 0x1000000>;
 	};
 
-	watchdog@60005100 {
+	tegra_wdt: watchdog@60005100 {
 		dt-override-status-odm-data = <0x00010000 0x00010000>;
 		nvidia,enable-on-init;
 		timeout-sec = <120>;
 	};
+
+	soft_wdt: soft_watchdog {
+		compatible = "softdog-platform";
+		status = "okay";
+		dt-override-status-odm-data = <0x00030000 0x00000000>;
+	};
+
 
 	tegra-supply-tests {
 		compatible = "nvidia,tegra-supply-tests";

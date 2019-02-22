@@ -105,7 +105,7 @@
 				label = "spmic-default-output-high";
 			};
 
-			watchdog {
+			spmic_wdt: watchdog {
 				maxim,wdt-boot-timeout = <16>;
 				maxim,wdt-clear-time = <13>;
 				status = "disabled";

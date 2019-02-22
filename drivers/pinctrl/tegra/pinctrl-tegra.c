@@ -935,7 +935,7 @@ static int tegra_pinctrl_suspend(void)
 
 	for (i = 0; i < pmx->nbanks; i++) {
 		regs = pmx->regs[i];
-		for (j = 0; j < pmx->reg_bank_size[i] / 4; j++, regs += 4)
+		for (j = 0; j <= pmx->reg_bank_size[i] / 4; j++, regs += 4)
 			*pg_data++ = readl(regs);
 	}
 
@@ -964,7 +964,7 @@ static void tegra_pinctrl_resume(void)
 
 	for (i = 0; i < pmx->nbanks; i++) {
 		regs = pmx->regs[i];
-		for (j = 0; j < pmx->reg_bank_size[i] / 4; j++, regs += 4)
+		for (j = 0; j <= pmx->reg_bank_size[i] / 4; j++, regs += 4)
 			writel(*pg_data++, regs);
 	}
 

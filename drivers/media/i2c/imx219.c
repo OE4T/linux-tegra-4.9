@@ -574,7 +574,7 @@ static int imx219_set_mode(struct tegracam_device *tc_dev)
 	err = imx219_write_table(priv, mode_table[IMX219_MODE_COMMON]);
 	if (err)
 		return err;
-pr_info("fc99: mode = %d\n", s_data->mode);
+
 	err = imx219_write_table(priv, mode_table[s_data->mode]);
 	if (err)
 		return err;

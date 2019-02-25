@@ -20,71 +20,72 @@
 #include <linux/ioctl.h>
 #include <linux/types.h>
 
-#define QUADD_SAMPLES_VERSION   46
-#define QUADD_IO_VERSION        26
+#define QUADD_SAMPLES_VERSION	47
+#define QUADD_IO_VERSION	26
 
-#define QUADD_IO_VERSION_DYNAMIC_RB             5
-#define QUADD_IO_VERSION_RB_MAX_FILL_COUNT      6
-#define QUADD_IO_VERSION_MOD_STATE_STATUS_FIELD 7
-#define QUADD_IO_VERSION_BT_KERNEL_CTX          8
-#define QUADD_IO_VERSION_GET_MMAP               9
-#define QUADD_IO_VERSION_BT_UNWIND_TABLES       10
-#define QUADD_IO_VERSION_UNWIND_MIXED           11
-#define QUADD_IO_VERSION_EXTABLES_MMAP          12
-#define QUADD_IO_VERSION_ARCH_TIMER_OPT         13
-#define QUADD_IO_VERSION_DATA_MMAP              14
-#define QUADD_IO_VERSION_BT_LOWER_BOUND         15
-#define QUADD_IO_VERSION_STACK_OFFSET           16
-#define QUADD_IO_VERSION_SECTIONS_INFO          17
-#define QUADD_IO_VERSION_UNW_METHODS_OPT        18
-#define QUADD_IO_VERSION_PER_CPU_SETUP          19
-#define QUADD_IO_VERSION_TRACE_ALL_TASKS        20
-#define QUADD_IO_VERSION_CB_POWER_OF_2          21
-#define QUADD_IO_VERSION_RAW_EVENTS             22
-#define QUADD_IO_VERSION_SAMPLING_MODE          23
-#define QUADD_IO_VERSION_FORCE_ARCH_TIMER       24
-#define QUADD_IO_VERSION_SAMPLE_ALL_TASKS       25
-#define QUADD_IO_VERSION_EXTABLES_PID           26
+#define QUADD_IO_VERSION_DYNAMIC_RB		5
+#define QUADD_IO_VERSION_RB_MAX_FILL_COUNT	6
+#define QUADD_IO_VERSION_MOD_STATE_STATUS_FIELD	7
+#define QUADD_IO_VERSION_BT_KERNEL_CTX		8
+#define QUADD_IO_VERSION_GET_MMAP		9
+#define QUADD_IO_VERSION_BT_UNWIND_TABLES	10
+#define QUADD_IO_VERSION_UNWIND_MIXED		11
+#define QUADD_IO_VERSION_EXTABLES_MMAP		12
+#define QUADD_IO_VERSION_ARCH_TIMER_OPT		13
+#define QUADD_IO_VERSION_DATA_MMAP		14
+#define QUADD_IO_VERSION_BT_LOWER_BOUND		15
+#define QUADD_IO_VERSION_STACK_OFFSET		16
+#define QUADD_IO_VERSION_SECTIONS_INFO		17
+#define QUADD_IO_VERSION_UNW_METHODS_OPT	18
+#define QUADD_IO_VERSION_PER_CPU_SETUP		19
+#define QUADD_IO_VERSION_TRACE_ALL_TASKS	20
+#define QUADD_IO_VERSION_CB_POWER_OF_2		21
+#define QUADD_IO_VERSION_RAW_EVENTS		22
+#define QUADD_IO_VERSION_SAMPLING_MODE		23
+#define QUADD_IO_VERSION_FORCE_ARCH_TIMER	24
+#define QUADD_IO_VERSION_SAMPLE_ALL_TASKS	25
+#define QUADD_IO_VERSION_EXTABLES_PID		26
 
-#define QUADD_SAMPLE_VERSION_THUMB_MODE_FLAG            17
-#define QUADD_SAMPLE_VERSION_GROUP_SAMPLES              18
-#define QUADD_SAMPLE_VERSION_THREAD_STATE_FLD           19
-#define QUADD_SAMPLE_VERSION_BT_UNWIND_TABLES           22
-#define QUADD_SAMPLE_VERSION_SUPPORT_IP64               23
-#define QUADD_SAMPLE_VERSION_SPECIAL_MMAP               24
-#define QUADD_SAMPLE_VERSION_UNWIND_MIXED               25
-#define QUADD_SAMPLE_VERSION_UNW_ENTRY_TYPE             26
-#define QUADD_SAMPLE_VERSION_USE_ARCH_TIMER             27
-#define QUADD_SAMPLE_VERSION_SCHED_SAMPLES              28
-#define QUADD_SAMPLE_VERSION_HDR_UNW_METHOD             29
-#define QUADD_SAMPLE_VERSION_HDR_ARCH_TIMER             30
-#define QUADD_SAMPLE_VERSION_STACK_OFFSET               31
-#define QUADD_SAMPLE_VERSION_SCHED_TASK_STATE           32
-#define QUADD_SAMPLE_VERSION_URCS                       33
-#define QUADD_SAMPLE_VERSION_HOTPLUG                    34
-#define QUADD_SAMPLE_VERSION_PER_CPU_SETUP              35
-#define QUADD_SAMPLE_VERSION_REPORT_TGID                36
-#define QUADD_SAMPLE_VERSION_MMAP_TS                    37
-#define QUADD_SAMPLE_VERSION_RAW_EVENTS                 38
-#define QUADD_SAMPLE_VERSION_OVERHEAD_INFO              39
-#define QUADD_SAMPLE_VERSION_REPORT_VPID                40
-#define QUADD_SAMPLE_VERSION_SCHED_REPORT_VPID          41
-#define QUADD_SAMPLE_VERSION_SAMPLING_MODE              42
-#define QUADD_SAMPLE_VERSION_SAMPLE_ALL_TASKS           43
-#define QUADD_SAMPLE_VERSION_KTHREAD_TSK_FLAG           44
-#define QUADD_SAMPLE_VERSION_MMAP_CPUID                 45
-#define QUADD_SAMPLE_VERSION_PCLK_SEND_CHANGES          46
+#define QUADD_SAMPLE_VERSION_THUMB_MODE_FLAG	17
+#define QUADD_SAMPLE_VERSION_GROUP_SAMPLES	18
+#define QUADD_SAMPLE_VERSION_THREAD_STATE_FLD	19
+#define QUADD_SAMPLE_VERSION_BT_UNWIND_TABLES	22
+#define QUADD_SAMPLE_VERSION_SUPPORT_IP64	23
+#define QUADD_SAMPLE_VERSION_SPECIAL_MMAP	24
+#define QUADD_SAMPLE_VERSION_UNWIND_MIXED	25
+#define QUADD_SAMPLE_VERSION_UNW_ENTRY_TYPE	26
+#define QUADD_SAMPLE_VERSION_USE_ARCH_TIMER	27
+#define QUADD_SAMPLE_VERSION_SCHED_SAMPLES	28
+#define QUADD_SAMPLE_VERSION_HDR_UNW_METHOD	29
+#define QUADD_SAMPLE_VERSION_HDR_ARCH_TIMER	30
+#define QUADD_SAMPLE_VERSION_STACK_OFFSET	31
+#define QUADD_SAMPLE_VERSION_SCHED_TASK_STATE	32
+#define QUADD_SAMPLE_VERSION_URCS		33
+#define QUADD_SAMPLE_VERSION_HOTPLUG		34
+#define QUADD_SAMPLE_VERSION_PER_CPU_SETUP	35
+#define QUADD_SAMPLE_VERSION_REPORT_TGID	36
+#define QUADD_SAMPLE_VERSION_MMAP_TS		37
+#define QUADD_SAMPLE_VERSION_RAW_EVENTS		38
+#define QUADD_SAMPLE_VERSION_OVERHEAD_INFO	39
+#define QUADD_SAMPLE_VERSION_REPORT_VPID	40
+#define QUADD_SAMPLE_VERSION_SCHED_REPORT_VPID	41
+#define QUADD_SAMPLE_VERSION_SAMPLING_MODE	42
+#define QUADD_SAMPLE_VERSION_SAMPLE_ALL_TASKS	43
+#define QUADD_SAMPLE_VERSION_KTHREAD_TSK_FLAG	44
+#define QUADD_SAMPLE_VERSION_MMAP_CPUID		45
+#define QUADD_SAMPLE_VERSION_PCLK_SEND_CHANGES	46
+#define QUADD_SAMPLE_VERSION_COMM_SAMPLES	47
 
-#define QUADD_MMAP_HEADER_VERSION       1
+#define QUADD_MMAP_HEADER_VERSION	1
 
-#define QUADD_MAX_COUNTERS      32
-#define QUADD_MAX_PROCESS       64
+#define QUADD_MAX_COUNTERS	32
+#define QUADD_MAX_PROCESS	64
 
-#define QUADD_DEVICE_NAME       "quadd"
-#define QUADD_AUTH_DEVICE_NAME  "quadd_auth"
+#define QUADD_DEVICE_NAME		"quadd"
+#define QUADD_AUTH_DEVICE_NAME		"quadd_auth"
 
-#define QUADD_MOD_DEVICE_NAME           "quadd_mod"
-#define QUADD_MOD_AUTH_DEVICE_NAME      "quadd_mod_auth"
+#define QUADD_MOD_DEVICE_NAME		"quadd_mod"
+#define QUADD_MOD_AUTH_DEVICE_NAME	"quadd_mod_auth"
 
 #define QUADD_IOCTL	100
 
@@ -345,6 +346,17 @@ enum {
 	QM_DEBUG_SAMPLE_TYPE_SOURCE_STOP,
 };
 
+#define QUADD_COMM_FLAG_EXEC	(1U << 0)
+
+struct quadd_comm_data {
+	__u32 pid;
+	__u32 tgid;
+	__u64 time;
+
+	__u16 length;
+	__u32 flags;
+};
+
 struct quadd_debug_data {
 	__u8 type;
 
@@ -414,6 +426,7 @@ struct quadd_record_data {
 		struct quadd_power_rate_data	power_rate;
 		struct quadd_hotplug_data	hotplug;
 		struct quadd_sched_data		sched;
+		struct quadd_comm_data		comm;
 		struct quadd_additional_sample	additional_sample;
 	};
 } __aligned(4);
@@ -457,34 +470,34 @@ struct quadd_event {
 };
 
 struct quadd_parameters {
-        __u32 freq;
-        __u32 ma_freq;
-        __u32 power_rate_freq;
+	__u32 freq;
+	__u32 ma_freq;
+	__u32 power_rate_freq;
 
-        __u64   backtrace:1,
-                use_freq:1,
-                system_wide:1,
-                debug_samples:1,
-                trace_all_tasks:1;
+	__u64   backtrace:1,
+		use_freq:1,
+		system_wide:1,
+		debug_samples:1,
+		trace_all_tasks:1;
 
-        __u32 pids[QUADD_MAX_PROCESS];
-        __u32 nr_pids;
+	__u32 pids[QUADD_MAX_PROCESS];
+	__u32 nr_pids;
 
-        __u8 package_name[QUADD_MAX_PACKAGE_NAME];
+	__u8 package_name[QUADD_MAX_PACKAGE_NAME];
 
-        struct quadd_event events[QUADD_MAX_COUNTERS];
-        __u32 nr_events;
+	struct quadd_event events[QUADD_MAX_COUNTERS];
+	__u32 nr_events;
 
-        __u32 reserved[16];     /* reserved fields for future extensions */
+	__u32 reserved[16];     /* reserved fields for future extensions */
 };
 
 struct quadd_pmu_setup_for_cpu {
-        __u32 cpuid;
+	__u32 cpuid;
 
-        struct quadd_event events[QUADD_MAX_COUNTERS];
-        __u32 nr_events;
+	struct quadd_event events[QUADD_MAX_COUNTERS];
+	__u32 nr_events;
 
-        __u32 reserved[16];
+	__u32 reserved[16];
 };
 
 struct quadd_events_cap {

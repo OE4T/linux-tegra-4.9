@@ -607,7 +607,7 @@
 	pinmux: pinmux@700008d4 {
                 compatible = "nvidia,tegra210-pinmux";
                 reg = <0x0 0x700008d4 0x0 0x2a5    /* Pad control registers */
-                       0x0 0x70003000 0x0 0x290>; /* Mux registers */
+                       0x0 0x70003000 0x0 0x294>; /* Mux registers */
 		#gpio-range-cells = <3>;
 		status = "disabled";
         };

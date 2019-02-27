@@ -14,8 +14,7 @@
  * You should have received a copy of the GNU General Public License along
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-
-#include <t210-common-platforms/tegra210-ers-pmic-e2174-1101-a00.dtsi>
+#include "tegra210-porg-pmic-p3448-0000-a00.dtsi"
 #include <t210-common-platforms/tegra210-ers-power-dvfs-e2174-1101-a00.dtsi>
 #include "tegra210-porg-fixed-p3448-0000-a00.dtsi"
 
@@ -25,47 +24,6 @@
 			maxim,power-shutdown-gpio-states = <1 0>;
 			low-battery-monitor {
 				maxim,low-battery-shutdown-enable;
-			};
-
-			max77620_default: pinmux@0 {
-				pin_gpio1 {
-					pins = "gpio1";
-					function = "gpio";
-					/delete-property/ drive-push-pull;
-					drive-open-drain = <1>;
-					maxim,active-fps-source = <MAX77620_FPS_SRC_NONE>;
-					maxim,active-fps-power-up-slot = <0>;
-					maxim,active-fps-power-down-slot = <7>;
-				};
-
-				pin_gpio2 {
-					maxim,active-fps-source = <MAX77620_FPS_SRC_0>;
-					maxim,active-fps-power-up-slot = <0>;
-					maxim,active-fps-power-down-slot = <7>;
-				};
-
-				pin_gpio3 {
-					maxim,active-fps-source = <MAX77620_FPS_SRC_0>;
-					maxim,active-fps-power-up-slot = <4>;
-					maxim,active-fps-power-down-slot = <3>;
-				};
-			};
-
-			spmic_wdt: watchdog {
-				status = "disabled";
-			};
-
-			spmic-default-output-high {
-				gpio-hog;
-				output-high;
-				gpios = <1 0>;
-				line-name = "spmic-default-output-high";
-			};
-
-			fps {
-				fps1 {
-					maxim,shutdown-fps-time-period-us = <1280>;
-				};
 			};
 
 			regulators {
@@ -359,11 +317,6 @@
 		l0_hvddio_sata-supply = <&max77620_sd3>;
 		l0_dvddio_sata-supply = <&max77620_ldo8>;
 		dvdd_sata_pll-supply = <&max77620_ldo8>;
-	};
-
-	bluedroid_pm {
-		avdd-supply = <&battery_reg>;
-		dvdd-supply = <&max77620_sd3>;
 	};
 
 	pwm-fan {

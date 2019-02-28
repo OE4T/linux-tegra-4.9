@@ -276,47 +276,6 @@ int gk20a_channel_free_cycle_stats_snapshot(struct channel_gk20a *ch)
 
 	return ret;
 }
-
-static int gk20a_channel_cycle_stats_snapshot(struct channel_gk20a *ch,
-			struct nvgpu_cycle_stats_snapshot_args *args)
-{
-	int ret;
-
-	/* is it allowed to handle calls for current GPU? */
-	if (!nvgpu_is_enabled(ch->g, NVGPU_SUPPORT_CYCLE_STATS_SNAPSHOT))
-		return -ENOSYS;
-
-	if (!args->dmabuf_fd)
-		return -EINVAL;
-
-	nvgpu_speculation_barrier();
-	/* handle the command (most frequent cases first) */
-	switch (args->cmd) {
-	case NVGPU_IOCTL_CHANNEL_CYCLE_STATS_SNAPSHOT_CMD_FLUSH:
-		ret = gk20a_flush_cycle_stats_snapshot(ch);
-		args->extra = 0;
-		break;
-
-	case NVGPU_IOCTL_CHANNEL_CYCLE_STATS_SNAPSHOT_CMD_ATTACH:
-		ret = gk20a_attach_cycle_stats_snapshot(ch,
-						args->dmabuf_fd,
-						args->extra,
-						&args->extra);
-		break;
-
-	case NVGPU_IOCTL_CHANNEL_CYCLE_STATS_SNAPSHOT_CMD_DETACH:
-		ret = gk20a_channel_free_cycle_stats_snapshot(ch);
-		args->extra = 0;
-		break;
-
-	default:
-		pr_err("cyclestats: unknown command %u\n", args->cmd);
-		ret = -EINVAL;
-		break;
-	}
-
-	return ret;
-}
 #endif
 
 static int gk20a_channel_set_wdt_status(struct channel_gk20a *ch,
@@ -1269,20 +1228,6 @@ long gk20a_channel_ioctl(struct file *filp,
 				(struct nvgpu_set_error_notifier *)buf);
 		gk20a_idle(ch->g);
 		break;
-#ifdef CONFIG_GK20A_CYCLE_STATS
-	case NVGPU_IOCTL_CHANNEL_CYCLE_STATS:
-		err = gk20a_busy(ch->g);
-		if (err) {
-			dev_err(dev,
-				"%s: failed to host gk20a for ioctl cmd: 0x%x",
-				__func__, cmd);
-			break;
-		}
-		err = gk20a_channel_cycle_stats(ch,
-				((struct nvgpu_cycle_stats_args *)buf)->dmabuf_fd);
-		gk20a_idle(ch->g);
-		break;
-#endif
 	case NVGPU_IOCTL_CHANNEL_SET_TIMEOUT:
 	{
 		u32 timeout =
@@ -1385,20 +1330,6 @@ long gk20a_channel_ioctl(struct file *filp,
 				NVGPU_ERR_NOTIFIER_RESETCHANNEL_VERIF_ERROR, true);
 		gk20a_idle(ch->g);
 		break;
-#ifdef CONFIG_GK20A_CYCLE_STATS
-	case NVGPU_IOCTL_CHANNEL_CYCLE_STATS_SNAPSHOT:
-		err = gk20a_busy(ch->g);
-		if (err) {
-			dev_err(dev,
-				"%s: failed to host gk20a for ioctl cmd: 0x%x",
-				__func__, cmd);
-			break;
-		}
-		err = gk20a_channel_cycle_stats_snapshot(ch,
-				(struct nvgpu_cycle_stats_snapshot_args *)buf);
-		gk20a_idle(ch->g);
-		break;
-#endif
 	case NVGPU_IOCTL_CHANNEL_WDT:
 		err = gk20a_channel_set_wdt_status(ch,
 				(struct nvgpu_channel_wdt_args *)buf);

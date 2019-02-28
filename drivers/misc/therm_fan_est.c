@@ -825,6 +825,8 @@ static int therm_fan_est_probe(struct platform_device *pdev)
 	else
 		est_data->is_pid_gov = false;
 
+	rwlock_init(&est_data->state_lock);
+
 	est_data->tzp = tzp;
 	est_data->thz = thermal_zone_device_register(
 					(char *)dev_name(&pdev->dev),
@@ -836,8 +838,6 @@ static int therm_fan_est_probe(struct platform_device *pdev)
 		goto free_tzp;
 	}
 	pr_info("THERMAL EST: thz register success.\n");
-
-	rwlock_init(&est_data->state_lock);
 
 	/* workqueue related */
 	est_data->workqueue = alloc_workqueue(dev_name(&pdev->dev),

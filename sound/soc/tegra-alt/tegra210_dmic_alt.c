@@ -75,22 +75,12 @@ static const struct reg_default tegra210_dmic_reg_defaults[] = {
 static int tegra210_dmic_runtime_suspend(struct device *dev)
 {
 	struct tegra210_dmic *dmic = dev_get_drvdata(dev);
-	int ret;
 
 	regcache_cache_only(dmic->regmap, true);
 	regcache_mark_dirty(dmic->regmap);
 
-	if (!(tegra_platform_is_unit_fpga() || tegra_platform_is_fpga())) {
-		if (!IS_ERR(dmic->pin_idle_state) && dmic->is_pinctrl) {
-			ret = pinctrl_select_state(
-				dmic->pinctrl, dmic->pin_idle_state);
-			if (ret < 0)
-				dev_err(dev,
-				"setting dap pinctrl idle state failed\n");
-		}
-
+	if (!(tegra_platform_is_unit_fpga() || tegra_platform_is_fpga()))
 		clk_disable_unprepare(dmic->clk_dmic);
-	}
 
 	return 0;
 }
@@ -100,29 +90,13 @@ static int tegra210_dmic_runtime_resume(struct device *dev)
 	struct tegra210_dmic *dmic = dev_get_drvdata(dev);
 	int ret;
 
-	if (dmic->prod_name) {
-		ret = tegra_pinctrl_config_prod(dev, dmic->prod_name);
-		if (ret < 0)
-			dev_warn(dev, "Failed to set %s setting\n",
-					dmic->prod_name);
-	}
-
 	if (!(tegra_platform_is_unit_fpga() || tegra_platform_is_fpga())) {
-		if (!IS_ERR(dmic->pin_active_state) && dmic->is_pinctrl) {
-			ret = pinctrl_select_state(dmic->pinctrl,
-						dmic->pin_active_state);
-			if (ret < 0)
-				dev_err(dev,
-				"setting dap pinctrl active state failed\n");
-		}
-
 		ret = clk_prepare_enable(dmic->clk_dmic);
 		if (ret) {
 			dev_err(dev, "clk_enable failed: %d\n", ret);
 			return ret;
 		}
 	}
-
 
 	regcache_cache_only(dmic->regmap, false);
 
@@ -250,6 +224,52 @@ int tegra210_dmic_set_start_callback(int id, void (*callback)(void))
 	return 0;
 }
 EXPORT_SYMBOL_GPL(tegra210_dmic_set_start_callback);
+
+static int tegra210_dmic_startup(struct snd_pcm_substream *substream,
+				 struct snd_soc_dai *dai)
+{
+	struct device *dev = dai->dev;
+	struct tegra210_dmic *dmic = snd_soc_dai_get_drvdata(dai);
+	int ret;
+
+	if (dmic->prod_name != NULL) {
+		ret = tegra_pinctrl_config_prod(dev, dmic->prod_name);
+		if (ret < 0) {
+			dev_warn(dev, "Failed to set %s setting\n",
+					dmic->prod_name);
+		}
+	}
+
+	if (!(tegra_platform_is_unit_fpga() || tegra_platform_is_fpga())) {
+		if (!IS_ERR(dmic->pin_active_state) && dmic->is_pinctrl) {
+			ret = pinctrl_select_state(dmic->pinctrl,
+						dmic->pin_active_state);
+			if (ret < 0) {
+				dev_err(dev,
+				"setting dap pinctrl active state failed\n");
+			}
+		}
+	}
+	return 0;
+}
+
+static void tegra210_dmic_shutdown(struct snd_pcm_substream *substream,
+				   struct snd_soc_dai *dai)
+{
+	struct device *dev = dai->dev;
+	struct tegra210_dmic *dmic = snd_soc_dai_get_drvdata(dai);
+	int ret;
+
+	if (!(tegra_platform_is_unit_fpga() || tegra_platform_is_fpga())) {
+		if (!IS_ERR(dmic->pin_idle_state) && dmic->is_pinctrl) {
+			ret = pinctrl_select_state(
+				dmic->pinctrl, dmic->pin_idle_state);
+			if (ret < 0)
+				dev_err(dev,
+				"setting dap pinctrl idle state failed\n");
+		}
+	}
+}
 
 static int tegra210_dmic_hw_params(struct snd_pcm_substream *substream,
 				 struct snd_pcm_hw_params *params,
@@ -468,6 +488,8 @@ static int tegra210_dmic_codec_probe(struct snd_soc_codec *codec)
 static struct snd_soc_dai_ops tegra210_dmic_dai_ops = {
 	.hw_params	= tegra210_dmic_hw_params,
 	.set_bclk_ratio	= tegra210_dmic_set_dai_bclk_ratio,
+	.startup	= tegra210_dmic_startup,
+	.shutdown	= tegra210_dmic_shutdown,
 };
 
 static struct snd_soc_dai_driver tegra210_dmic_dais[] = {

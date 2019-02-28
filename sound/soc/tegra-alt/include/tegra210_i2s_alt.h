@@ -1,7 +1,7 @@
 /*
  * tegra210_i2s_alt.h - Definitions for Tegra210 I2S driver
  *
- * Copyright (c) 2014-2018 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2019 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -232,7 +232,7 @@ struct tegra210_i2s {
 	unsigned int fsync_width;
 	unsigned int tx_mask;
 	unsigned int rx_mask;
-	unsigned int loopback;
+	bool loopback;
 	unsigned int format;
 	bool enable_cya;
 	unsigned int rx_fifo_th; /* should be programmed interms of frames */

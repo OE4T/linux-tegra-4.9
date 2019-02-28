@@ -220,29 +220,12 @@ static int tegra210_i2s_tx_stop(struct snd_soc_dapm_widget *w,
 static int tegra210_i2s_runtime_suspend(struct device *dev)
 {
 	struct tegra210_i2s *i2s = dev_get_drvdata(dev);
-	int ret;
 
+	regcache_cache_only(i2s->regmap, true);
 	if (!(tegra_platform_is_unit_fpga() || tegra_platform_is_fpga())) {
-		if (!IS_ERR(i2s->pin_idle_state)) {
-			ret = pinctrl_select_state(
-				i2s->pinctrl, i2s->pin_idle_state);
-			if (ret < 0)
-				dev_err(dev, "setting dap pinctrl idle state failed\n");
-		}
-
-		if (i2s->num_supplies > 0) {
-			ret = regulator_bulk_disable(i2s->num_supplies,
-								i2s->supplies);
-			if (ret < 0)
-				dev_err(dev, "failed to disable i2s io regulator\n");
-		}
-
-		regcache_cache_only(i2s->regmap, true);
 		regcache_mark_dirty(i2s->regmap);
-
 		clk_disable_unprepare(i2s->clk_i2s);
-	} else
-		regcache_cache_only(i2s->regmap, true);
+	}
 
 	return 0;
 }
@@ -253,34 +236,12 @@ static int tegra210_i2s_runtime_resume(struct device *dev)
 	int ret;
 
 	if (!(tegra_platform_is_unit_fpga() || tegra_platform_is_fpga())) {
-		if (i2s->prod_name) {
-			ret = tegra_pinctrl_config_prod(dev, i2s->prod_name);
-			if (ret < 0)
-				dev_warn(dev, "Failed to set %s setting\n",
-						i2s->prod_name);
-		}
-
-		if (!IS_ERR(i2s->pin_default_state)) {
-			ret = pinctrl_select_state(i2s->pinctrl,
-						i2s->pin_default_state);
-			if (ret < 0)
-				dev_err(dev, "setting dap pinctrl default state failed\n");
-		}
-
-		if (i2s->num_supplies > 0) {
-			ret = regulator_bulk_enable(i2s->num_supplies,
-								i2s->supplies);
-			if (ret < 0)
-				dev_err(dev, "failed to enable i2s io regulator\n");
-		}
-
 		ret = clk_prepare_enable(i2s->clk_i2s);
 		if (ret) {
 			dev_err(dev, "clk_enable failed: %d\n", ret);
 			return ret;
 		}
 	}
-
 
 	regcache_cache_only(i2s->regmap, false);
 	if (!i2s->is_shutdown)
@@ -536,6 +497,69 @@ static const struct soc_enum tegra210_i2s_format_enum =
 		ARRAY_SIZE(tegra210_i2s_format_text),
 		tegra210_i2s_format_text);
 
+static int tegra210_i2s_startup(struct snd_pcm_substream *substream,
+				 struct snd_soc_dai *dai)
+{
+	struct device *dev = dai->dev;
+	struct tegra210_i2s *i2s = dev_get_drvdata(dev);
+	int ret;
+
+	if (!(tegra_platform_is_unit_fpga() || tegra_platform_is_fpga()) &&
+							!i2s->loopback) {
+		if (i2s->prod_name != NULL) {
+			ret = tegra_pinctrl_config_prod(dev, i2s->prod_name);
+			if (ret < 0) {
+				dev_warn(dev, "Failed to set %s setting\n",
+						i2s->prod_name);
+			}
+		}
+
+		if (!IS_ERR(i2s->pin_default_state)) {
+			ret = pinctrl_select_state(i2s->pinctrl,
+						i2s->pin_default_state);
+			if (ret < 0)
+				dev_err(dev, "setting dap pinctrl default state failed\n");
+		}
+
+		if (i2s->num_supplies > 0) {
+			ret = regulator_bulk_enable(i2s->num_supplies,
+								i2s->supplies);
+			if (ret < 0)
+				dev_err(dev, "failed to enable i2s io regulator\n");
+		}
+	}
+
+	return 0;
+}
+
+static void tegra210_i2s_shutdown(struct snd_pcm_substream *substream,
+				 struct snd_soc_dai *dai)
+{
+	struct device *dev = dai->dev;
+	struct tegra210_i2s *i2s = dev_get_drvdata(dev);
+	int ret;
+
+	if (!(tegra_platform_is_unit_fpga() || tegra_platform_is_fpga())) {
+		if (!IS_ERR(i2s->pin_idle_state)) {
+			ret = pinctrl_select_state(
+				i2s->pinctrl, i2s->pin_idle_state);
+			if (ret < 0) {
+				dev_err(dev,
+				"setting dap pinctrl idle state failed\n");
+			}
+		}
+
+		if (i2s->num_supplies > 0) {
+			ret = regulator_bulk_disable(i2s->num_supplies,
+								i2s->supplies);
+			if (ret < 0) {
+				dev_err(dev,
+				"failed to disable i2s io regulator\n");
+			}
+		}
+	}
+}
+
 static int tegra210_i2s_hw_params(struct snd_pcm_substream *substream,
 				 struct snd_pcm_hw_params *params,
 				 struct snd_soc_dai *dai)
@@ -746,6 +770,8 @@ static struct snd_soc_dai_ops tegra210_i2s_dai_ops = {
 	.hw_params	= tegra210_i2s_hw_params,
 	.set_bclk_ratio	= tegra210_i2s_set_dai_bclk_ratio,
 	.set_tdm_slot	= tegra210_i2s_set_tdm_slot,
+	.startup	= tegra210_i2s_startup,
+	.shutdown	= tegra210_i2s_shutdown,
 };
 
 static struct snd_soc_dai_driver tegra210_i2s_dais[] = {

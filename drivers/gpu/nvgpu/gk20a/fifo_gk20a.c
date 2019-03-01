@@ -2410,6 +2410,34 @@ bool gk20a_fifo_handle_sched_error(struct gk20a *g)
 	sched_error = gk20a_readl(g, fifo_intr_sched_error_r());
 
 	engine_id = gk20a_fifo_get_failing_engine_data(g, &id, &is_tsg);
+	/*
+	 * Could not find the engine
+	 * Possible Causes:
+	 * a)
+	 * On hitting engine reset, h/w drops the ctxsw_status to INVALID in
+	 * fifo_engine_status register. Also while the engine is held in reset
+	 * h/w passes busy/idle straight through. fifo_engine_status registers
+	 * are correct in that there is no context switch outstanding
+	 * as the CTXSW is aborted when reset is asserted.
+	 * This is just a side effect of how gv100 and earlier versions of
+	 * ctxsw_timeout behave.
+	 * With gv11b and later, h/w snaps the context at the point of error
+	 * so that s/w can see the tsg_id which caused the HW timeout.
+	 * b)
+	 * If engines are not busy and ctxsw state is valid then intr occurred
+	 * in the past and if the ctxsw state has moved on to VALID from LOAD
+	 * or SAVE, it means that whatever timed out eventually finished
+	 * anyways. The problem with this is that s/w cannot conclude which
+	 * context caused the problem as maybe more switches occurred before
+	 * intr is handled.
+	 */
+	if (engine_id == FIFO_INVAL_ENGINE_ID) {
+		nvgpu_info(g, "fifo sched error: 0x%08x, failed to find engine "
+				"that is busy doing ctxsw. "
+				"May be ctxsw already happened", sched_error);
+		ret = false;
+		goto err;
+	}
 
 	/* could not find the engine - should never happen */
 	if (!gk20a_fifo_is_valid_engine_id(g, engine_id)) {

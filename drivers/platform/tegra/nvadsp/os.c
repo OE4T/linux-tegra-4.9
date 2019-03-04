@@ -87,7 +87,7 @@
 #define DISABLE_MBOX2_FULL_INT	0x0
 #define ENABLE_MBOX2_FULL_INT	0xFFFFFFFF
 
-#define LOGGER_TIMEOUT		1 /* in ms */
+#define LOGGER_TIMEOUT		20 /* in ms */
 #define ADSP_WFI_TIMEOUT	800 /* in ms */
 #define LOGGER_COMPLETE_TIMEOUT	500 /* in ms */
 
@@ -234,6 +234,7 @@ static ssize_t adsp_logger_read(struct file *file, char __user *buf,
 	ssize_t ret_num_char = 1;
 	char last_char;
 
+loop:
 	last_char = logger->debug_ram_rdr[logger->ram_iter];
 
 	if ((last_char != EOT) && (last_char != 0)) {
@@ -269,13 +270,7 @@ static ssize_t adsp_logger_read(struct file *file, char __user *buf,
 		goto exit;
 	}
 
-	last_char = BELL;
-	if (copy_to_user(buf, &last_char, 1)) {
-		dev_err(dev, "%s failed in copying bell character\n", __func__);
-		ret_num_char = -EFAULT;
-		goto exit;
-	}
-	ret_num_char = 1;
+	goto loop;
 exit:
 	return ret_num_char;
 }

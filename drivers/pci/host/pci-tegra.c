@@ -414,8 +414,9 @@ struct tegra_msi {
 	struct msi_controller chip;
 	DECLARE_BITMAP(used, INT_PCI_MSI_NR);
 	struct irq_domain *domain;
-	unsigned long pages;
 	struct mutex lock;
+	void *virt;
+	u64 phys;
 	int irq;
 };
 
@@ -3038,9 +3039,9 @@ static int tegra_msi_setup_irq(struct msi_controller *chip, struct pci_dev *pdev
 
 	irq_set_msi_desc(irq, desc);
 
-	msg.address_lo = virt_to_phys((void *)msi->pages) & 0xFFFFFFFF;
+	msg.address_lo = lower_32_bits(msi->phys);
 #ifdef CONFIG_ARM64
-	msg.address_hi = virt_to_phys((void *)msi->pages) >> 32;
+	msg.address_hi = upper_32_bits(msi->phys);
 #else
 	msg.address_hi = 0;
 #endif
@@ -3085,13 +3086,12 @@ static int tegra_pcie_enable_msi(struct tegra_pcie *pcie, bool no_init)
 {
 	struct platform_device *pdev = to_platform_device(pcie->dev);
 	struct tegra_msi *msi = &pcie->msi;
-	unsigned long base;
 	int err;
 	u32 reg;
 
 	PR_FUNC_LINE;
 
-	if (!msi->pages) {
+	if (!msi->virt) {
 		if (no_init)
 			return true;
 
@@ -3111,7 +3111,7 @@ static int tegra_pcie_enable_msi(struct tegra_pcie *pcie, bool no_init)
 		err = platform_get_irq_byname(pdev, "msi");
 		if (err < 0) {
 			dev_err(&pdev->dev, "failed to get IRQ: %d\n", err);
-			goto err;
+			goto free_irq_domain;
 		}
 
 		msi->irq = err;
@@ -3119,16 +3119,28 @@ static int tegra_pcie_enable_msi(struct tegra_pcie *pcie, bool no_init)
 				  tegra_msi_irq_chip.name, pcie);
 		if (err < 0) {
 			dev_err(&pdev->dev, "failed to request IRQ: %d\n", err);
-			goto err;
+			goto free_irq_domain;
 		}
 
 		/* setup AFI/FPCI range */
-		msi->pages = __get_free_pages(GFP_DMA, 0);
-	}
-	base = virt_to_phys((void *)msi->pages);
+		err = dma_set_coherent_mask(pcie->dev, DMA_BIT_MASK(32));
+		if (err < 0) {
+			dev_err(&pdev->dev, "dma_set_coherent_mask() failed: %d\n",
+				err);
+			goto free_irq;
+		}
 
-	afi_writel(pcie, base >> 8, AFI_MSI_FPCI_BAR_ST);
-	afi_writel(pcie, base, AFI_MSI_AXI_BAR_ST);
+		msi->virt = dma_alloc_coherent(pcie->dev, PAGE_SIZE,
+					       &msi->phys, GFP_KERNEL);
+		if (!msi->virt) {
+			dev_err(&pdev->dev, "%s: failed to alloc dma mem\n", __func__);
+			err = -ENOMEM;
+			goto free_irq;
+		}
+	}
+
+	afi_writel(pcie, msi->phys >> 8, AFI_MSI_FPCI_BAR_ST);
+	afi_writel(pcie, msi->phys, AFI_MSI_AXI_BAR_ST);
 	/* this register is in 4K increments */
 	afi_writel(pcie, 1, AFI_MSI_BAR_SZ);
 
@@ -3149,7 +3161,9 @@ static int tegra_pcie_enable_msi(struct tegra_pcie *pcie, bool no_init)
 
 	return 0;
 
-err:
+free_irq:
+	free_irq(msi->irq, pcie);
+free_irq_domain:
 	irq_domain_remove(msi->domain);
 	return err;
 }
@@ -3180,7 +3194,7 @@ static int tegra_pcie_disable_msi(struct tegra_pcie *pcie)
 	afi_writel(pcie, 0, AFI_MSI_EN_VEC6_0);
 	afi_writel(pcie, 0, AFI_MSI_EN_VEC7_0);
 
-	free_pages(msi->pages, 0);
+	dma_free_coherent(pcie->dev, PAGE_SIZE, msi->virt, msi->phys);
 
 	if (msi->irq > 0)
 		free_irq(msi->irq, pcie);

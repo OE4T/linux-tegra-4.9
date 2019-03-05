@@ -4,7 +4,7 @@
  * Copyright (C) 2010 Google, Inc.
  * Author: Erik Gilling <konkers@android.com>
  *
- * Copyright (c) 2010-2018, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2010-2019, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -1970,8 +1970,6 @@ static int tegra_dc_crossbar_display_reinit(struct tegra_dc *dc,
 		pr_warn("crossbar: initialize DC out ops for new topology failed\n");
 		return -EFAULT;
 	}
-
-	dc->hotplug_supported = tegra_dc_hotplug_supported(dc);
 
 	if (dc->out_ops->get_connector_instance) {
 		char sor_path[CHAR_BUF_SIZE_MAX];
@@ -4023,6 +4021,7 @@ static int tegra_dc_set_out(struct tegra_dc *dc, struct tegra_dc_out *out,
 	int err = 0;
 
 	dc->out = out;
+	dc->hotplug_supported = tegra_dc_hotplug_supported(dc);
 
 	if (initialized) {
 		dc->initialized = false;
@@ -6627,8 +6626,6 @@ static int tegra_dc_probe(struct platform_device *ndev)
 
 	dc->boot_topology.valid = true;
 	dc->current_topology = dc->boot_topology;
-
-	dc->hotplug_supported = tegra_dc_hotplug_supported(dc);
 
 	if ((dc->pdata->flags & TEGRA_DC_FLAG_ENABLED) &&
 		dc->out->type == TEGRA_DC_OUT_LVDS) {

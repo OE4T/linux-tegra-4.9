@@ -1465,7 +1465,7 @@ bool gk20a_fifo_should_defer_engine_reset(struct gk20a *g, u32 engine_id,
 static bool gk20a_fifo_ch_timeout_debug_dump_state(struct gk20a *g,
 		struct channel_gk20a *refch)
 {
-	bool verbose = true;
+	bool verbose = false;
 	if (!refch) {
 		return verbose;
 	}

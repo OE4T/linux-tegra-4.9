@@ -284,7 +284,7 @@
 				vbus-supply = <&p3449_vdd_usb_vbus>;
 			};
 			usb2-1 {
-				vbus-supply = <&p3449_vdd_usb_hub_en>;
+				vbus-supply = <&battery_reg>;
 			};
 			usb2-2 {
 				vbus-supply = <&p3449_vdd_usb_vbus2>;

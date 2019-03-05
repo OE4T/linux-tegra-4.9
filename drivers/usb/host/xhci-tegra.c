@@ -3975,7 +3975,7 @@ static void tegra_xhci_disable_phy_wake(struct tegra_xusb *tegra)
 		for (j = 0; j < tegra->soc->num_typed_phys[i]; j++) {
 			phy = tegra->typed_phys[i][j];
 
-			if (!phy || !is_host_mode_phy(tegra, i, j))
+			if (!phy)
 				continue;
 
 			if (tegra_xusb_padctl_remote_wake_detected(
@@ -4000,7 +4000,7 @@ static void tegra_xhci_disable_phy_sleepwalk(struct tegra_xusb *tegra)
 		for (j = 0; j < tegra->soc->num_typed_phys[i]; j++) {
 			phy = tegra->typed_phys[i][j];
 
-			if (!phy || !is_host_mode_phy(tegra, i, j))
+			if (!phy)
 				continue;
 
 			tegra_xusb_padctl_disable_phy_sleepwalk(padctl, phy);

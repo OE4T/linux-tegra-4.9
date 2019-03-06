@@ -54,7 +54,7 @@ enum nvidia_p2p_page_size_type {
 	NVIDIA_P2P_PAGE_SIZE_COUNT
 };
 
-struct nvidia_p2p_page_table {
+typedef struct nvidia_p2p_page_table {
 	u32 version;
 	u32 page_size;
 	u64 size;
@@ -69,9 +69,9 @@ struct nvidia_p2p_page_table {
 	struct mutex lock;
 	void (*free_callback)(void *data);
 	void *data;
-};
+} nvidia_p2p_page_table_t;
 
-struct nvidia_p2p_dma_mapping {
+typedef struct nvidia_p2p_dma_mapping {
 	u32 version;
 	dma_addr_t *hw_address;
 	u32 *hw_len;
@@ -81,7 +81,7 @@ struct nvidia_p2p_dma_mapping {
 	struct device *dev;
 	struct nvidia_p2p_page_table *page_table;
 	enum dma_data_direction direction;
-};
+} nvidia_p2p_dma_mapping_t;
 
 #define NVIDIA_P2P_PAGE_TABLE_VERSION   0x00010000
 

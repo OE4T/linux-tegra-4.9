@@ -22,7 +22,8 @@
 
 #include <t210-common-platforms/tegra210-common.dtsi>
 #include <tegra210-soc/tegra210-sdhci.dtsi>
-#include <t210-common-platforms/tegra210-p2530-common.dtsi>
+#include <t210-common-platforms/tegra210-thermal-nct72-p2530.dtsi>
+#include <tegra210-soc/tegra210-thermal-Tboard-Tdiode.dtsi>
 #include "porg-platforms/tegra210-porg-power-tree-p3448-0000-a00.dtsi"
 #include "porg-platforms/tegra210-pinmux-drive-sdmmc-common.dtsi"
 #include "porg-platforms/tegra210-porg-pwm-fan.dtsi"
@@ -57,6 +58,19 @@
 		stdout-path = "/serial@70006000";
 		nvidia,tegra-always-on-personality;
 		bootargs = "kmemleak=on earlycon=uart8250,mmio32,0x70006000";
+		fastboot-instructions = "Tap on power button to navigate menu options.\nHold down power button for 2 sec and release for selecting an option\n";
+	};
+
+	cpus {
+		cpu@0 {
+			clocks = <&tegra_car TEGRA210_CLK_CCLK_G>,
+				 <&tegra_car TEGRA210_CLK_CCLK_LP>,
+				 <&tegra_car TEGRA210_CLK_PLL_X>,
+				 <&tegra_car TEGRA210_CLK_PLL_P_OUT4>,
+				 <&tegra_clk_dfll>;
+			clock-names = "cpu_g", "cpu_lp", "pll_x", "pll_p", "dfll";
+			clock-latency = <300000>;
+		};
 	};
 
 	rollback-protection {
@@ -156,8 +170,16 @@
 	};
 
 	pmc@7000e400 {
+		#nvidia,wake-cells = <3>;
+		nvidia,invert-interrupt;
+		nvidia,suspend-mode = <0>;
+		nvidia,cpu-pwr-good-time = <0>;
+		nvidia,cpu-pwr-off-time = <0>;
+		nvidia,core-pwr-good-time = <4587 3876>;
+		nvidia,core-pwr-off-time = <39065>;
 		nvidia,core-pwr-req-active-high;
 		nvidia,sys-clock-req-active-high;
+
 		iopad-defaults {
 			audio-hv-pads {
 				pins = "audio-hv";
@@ -251,6 +273,7 @@
 		nvidia,update-pinctrl-settings;
 		nvidia,pmc-wakeup = <&tegra_pmc PMC_WAKE_TYPE_GPIO 35
 			PMC_TRIGGER_TYPE_NONE>;
+		uhs-mask = <0xc>;
 		no-sdio;
 		no-mmc;
 		disable-wp;
@@ -258,7 +281,8 @@
 	};
 
 	aconnect@702c0000 {
-		adma {
+		adma@702e2000 {
+			dma-channels = <10>;
 			status = "okay";
 		};
 
@@ -568,18 +592,6 @@
 		status = "okay";
 	};
 
-	pwm-leds {
-		compatible = "pwm-leds";
-		lightbar {
-			label = "led_lightbar";
-			pwms = <&tegra_pwm 0 10000000>;
-			gpios = <&gpio TEGRA_GPIO(V, 0) GPIO_ACTIVE_LOW>;
-			max-brightness = <255>;
-			default-brightness = <255>;
-			linux,default-trigger = "default-on";
-		};
-	};
-
 	pwm_regulators {
 		compatible = "simple-bus";
 		pwm-regulator@0 {
@@ -605,11 +617,22 @@
 				nvidia,gpu-throt-level =
 					<TEGRA_SOCTHERM_THROT_LEVEL_NONE>;
 			};
+
+			throttle_oc3: oc3 {
+				nvidia,priority = <40>;
+				nvidia,polarity-active-low = <1>;
+				nvidia,count-threshold = <15>;
+				nvidia,alarm-filter = <5100000>;
+				nvidia,alarm-period = <0>;
+				nvidia,cpu-throt-percent = <75>;
+				nvidia,gpu-throt-level =
+					<TEGRA_SOCTHERM_THROT_LEVEL_MED>;
+			};
 		};
 	};
 
 	serial@70006000 { /* UART-A : UART1: Debug */
-		compatible = "nvidia,tegra20-uart", "nvidia,tegra114-hsuart";
+		compatible = "nvidia,tegra210-uart", "nvidia,tegra114-hsuart", "nvidia,tegra20-uart";
 		console-port;
 		sqa-automation-port;
 		/delete-property/ resets;
@@ -647,11 +670,6 @@
 		};
 	};
 
-	nvs_dsm {
-		compatible = "nvidia,nvs_dsm";
-		status = "okay";
-	};
-
 	dfll_cap: dfll-cdev-cap {
 		compatible = "nvidia,tegra-dfll-cdev-action";
 		act-dev = <&tegra_clk_dfll>;
@@ -672,12 +690,29 @@
 		};
 	};
 	clock@70110000 {
-                status = "okay";
-                vdd-cpu-supply = <&cpu_ovr_reg>;
-                nvidia,dfll-max-freq-khz = <1479000>;
+		status = "okay";
+		vdd-cpu-supply = <&cpu_ovr_reg>;
+		nvidia,dfll-max-freq-khz = <1479000>;
+		nvidia,pwm-to-pmic;
+		nvidia,init-uv = <1000000>;
+		nvidia,sample-rate = <25000>;
+		nvidia,droop-ctrl = <0x00000f00>;
+		nvidia,force-mode = <1>;
+		nvidia,cf = <6>;
+		nvidia,ci = <0>;
+		nvidia,cg = <2>;
+		nvidia,idle-override;
+		nvidia,one-shot-calibrate;
+		nvidia,pwm-period = <2500>; /* 2.5us */
+		pinctrl-names = "dvfs_pwm_enable", "dvfs_pwm_disable";
+		pinctrl-0 = <&dvfs_pwm_active_state>;
+		pinctrl-1 = <&dvfs_pwm_inactive_state>;
+		nvidia,align-offset-uv = <708000>;
+		nvidia,align-step-uv = <19200>;
 	};
 
 	dvfs {
+		compatible = "nvidia,tegra210-dvfs";
                 vdd-cpu-supply = <&cpu_ovr_reg>;
                 nvidia,gpu-max-freq-khz = <921600>;
 	};
@@ -725,6 +760,41 @@
 		};
 	};
 
+	memory-controller@70019000 {
+		status = "okay";
+	};
+
+	mailbox@70098000 {
+		status = "okay";
+	};
+
+	memory@80000000 {
+		device_type = "memory";
+		reg = < 0x0 0x80000000 0x0 0x80000000 >;
+	};
+
+	pinmux@700008d4 {
+                dvfs_pwm_active_state: dvfs_pwm_active {
+                        dvfs_pwm_pbb1 {
+                                nvidia,pins = "dvfs_pwm_pbb1";
+                                nvidia,tristate = <TEGRA_PIN_DISABLE>;
+                        };
+                };
+
+                dvfs_pwm_inactive_state: dvfs_pwm_inactive {
+                        dvfs_pwm_pbb1 {
+                                nvidia,pins = "dvfs_pwm_pbb1";
+                                nvidia,tristate = <TEGRA_PIN_ENABLE>;
+                        };
+                };
+        };
+
+        pwm@70110000 {
+                pinctrl-0 = <&dvfs_pwm_active_state>;
+                pinctrl-1 = <&dvfs_pwm_inactive_state>;
+                pwm-regulator = <&cpu_ovr_reg>;
+                status = "okay";
+        };
 };
 
 #if LINUX_VERSION >= 414

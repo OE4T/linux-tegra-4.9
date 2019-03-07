@@ -1320,7 +1320,8 @@ int eqos_probe(struct platform_device *pdev)
 	eqos_clock_disable(pdata);
 
 	/* put Ethernet PHY in reset for power save */
-	if (gpio_is_valid(pdata->phy_reset_gpio))
+	if (gpio_is_valid(pdata->phy_reset_gpio) &&
+	    (pdata->mac_ver > EQOS_MAC_CORE_4_10))
 		gpio_set_value(pdata->phy_reset_gpio, 0);
 
 	return 0;

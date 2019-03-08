@@ -68,6 +68,10 @@ struct therm_fan_estimator {
 	const char *name;
 	bool is_pid_gov;
 	bool reset_trip_index;
+	/* allow cooling device to turn off at higher temperature if sleep */
+	bool sleep_mode;
+	int sleep_temp;
+	int nonsleep_temp;
 };
 
 
@@ -80,6 +84,10 @@ static void fan_set_trip_temp_hyst(struct therm_fan_estimator *est, int trip,
 	est->active_trip_temps_hyst[(trip << 1)] = trip_temp;
 	est->active_trip_temps_hyst[((trip - 1) << 1) + 1] =
 						trip_temp - hyst_temp;
+	if (trip == 1) {
+		est->sleep_temp = est->active_trip_temps[1];
+		est->nonsleep_temp = est->active_trip_temps_hyst[1];
+	}
 }
 
 static void therm_fan_est_work_func(struct work_struct *work)
@@ -159,6 +167,20 @@ static void therm_fan_est_work_func(struct work_struct *work)
 #endif
 		}
 		est->current_trip_index = trip_index - 1;
+	}
+
+	/*
+	 * spec for sleep mode is to attempt to turn off fan once only
+	 * more details in bug 2527983
+	 */
+	if (est->sleep_mode && est->current_trip_index == 0) {
+		pr_info("%s, cooling device in sleep.\n", __func__);
+		write_lock(&est->state_lock);
+		est->sleep_mode = false;
+		est->active_trip_temps_hyst[1] = est->nonsleep_temp;
+		est->active_hysteresis[1] =
+			est->active_trip_temps[1] - est->nonsleep_temp;
+		write_unlock(&est->state_lock);
 	}
 
 	est->ntemp++;
@@ -457,6 +479,49 @@ static ssize_t set_fan_profile(struct device *dev,
 	return count;
 }
 
+static ssize_t show_sleep_mode(struct device *dev,
+				struct device_attribute *da,
+				char *buf)
+{
+	struct therm_fan_estimator *est = dev_get_drvdata(dev);
+	int ret;
+
+	if (!est)
+		return -EINVAL;
+	ret = sprintf(buf, "%s.\n", est->sleep_mode ? "True" : "False");
+	return ret;
+}
+
+static ssize_t set_sleep_mode(struct device *dev,
+				struct device_attribute *da,
+				const char *buf, size_t count)
+{
+	struct therm_fan_estimator *est = dev_get_drvdata(dev);
+	int flag;
+
+	if (kstrtoint(buf, 0, &flag))
+		return -EINVAL;
+
+	if (flag != 0 && flag != 1)
+		return -EINVAL;
+
+	write_lock(&est->state_lock);
+	if (flag) {
+		est->sleep_mode = true;
+		est->active_trip_temps_hyst[1] = est->sleep_temp;
+		est->active_hysteresis[1] =
+				est->active_trip_temps[1] - est->sleep_temp;
+	} else {
+		est->sleep_mode = false;
+		est->active_trip_temps_hyst[1] = est->nonsleep_temp;
+		est->active_hysteresis[1] =
+			est->active_trip_temps[1] - est->nonsleep_temp;
+	}
+	write_unlock(&est->state_lock);
+
+	return count;
+}
+
 static ssize_t show_temps(struct device *dev,
 				struct device_attribute *da,
 				char *buf)
@@ -501,7 +566,10 @@ static ssize_t set_temps(struct device *dev,
 static struct sensor_device_attribute therm_fan_est_nodes[] = {
 	SENSOR_ATTR(coeff, S_IRUGO | S_IWUSR, show_coeff, set_coeff, 0),
 	SENSOR_ATTR(offset, S_IRUGO | S_IWUSR, show_offset, set_offset, 0),
-	SENSOR_ATTR(fan_profile, S_IRUGO | S_IWUSR, show_fan_profile, set_fan_profile, 0),
+	SENSOR_ATTR(fan_profile, S_IRUGO | S_IWUSR,
+				show_fan_profile, set_fan_profile, 0),
+	SENSOR_ATTR(sleep_mode, S_IRUGO | S_IWUSR,
+				show_sleep_mode, set_sleep_mode, 0),
 #if DEBUG
 	SENSOR_ATTR(temps, S_IRUGO | S_IWUSR, show_temps, set_temps, 0),
 #else
@@ -781,6 +849,10 @@ static int therm_fan_est_probe(struct platform_device *pdev)
 	for (i = 0; i < (MAX_ACTIVE_STATES << 1) + 1; i++)
 		pr_debug("THERMAL EST index %d: trip_temps_hyst %d\n",
 			i, est_data->active_trip_temps_hyst[i]);
+
+	est_data->sleep_temp = est_data->active_trip_temps[1];
+	est_data->nonsleep_temp = est_data->active_trip_temps_hyst[1];
+	est_data->sleep_mode = false;
 
 	for (i = 0; i < est_data->ndevs; i++) {
 		dev = &est_data->devs[i];

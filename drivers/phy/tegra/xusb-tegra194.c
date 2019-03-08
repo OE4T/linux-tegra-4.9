@@ -1062,12 +1062,14 @@ static int tegra194_utmi_phy_init(struct phy *phy)
 
 	mutex_lock(&padctl->lock);
 
-	/* reset VBUS&ID OVERRIDE */
-	reg = padctl_readl(padctl, USB2_VBUS_ID(port->vbus_id));
-	reg &= ~VBUS_OVERRIDE;
-	reg &= ~ID_OVERRIDE(~0);
-	reg |= ID_OVERRIDE_FLOATING;
-	padctl_writel(padctl, reg, USB2_VBUS_ID(port->vbus_id));
+	if (padctl->otg_vbus_usb2_port_base_1[port->vbus_id] == index + 1) {
+		/* reset VBUS&ID OVERRIDE */
+		reg = padctl_readl(padctl, USB2_VBUS_ID(port->vbus_id));
+		reg &= ~VBUS_OVERRIDE;
+		reg &= ~ID_OVERRIDE(~0);
+		reg |= ID_OVERRIDE_FLOATING;
+		padctl_writel(padctl, reg, USB2_VBUS_ID(port->vbus_id));
+	}
 
 	if (port->port_cap == USB_OTG_CAP) {
 		padctl->usb2_otg_port_base_1 = index + 1;

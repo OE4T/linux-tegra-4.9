@@ -33,7 +33,7 @@
 
 #include "imx274_mode_tbls.h"
 
-#define IMX274_GAIN_FACTOR		10
+#define IMX274_GAIN_FACTOR		1000000
 #define IMX274_MIN_GAIN			(1 * IMX274_GAIN_FACTOR)
 #define IMX274_MAX_ANALOG_GAIN	(IMX274_MIN_GAIN * 111 / 5)
 #define IMX274_MAX_DIGITAL_GAIN	64
@@ -270,11 +270,12 @@ static int imx274_set_gain(struct tegracam_device *tc_dev, s64 val)
 		dgain = 1;
 		reg_dgain = 0x00;
 	}
-	again = val / (dgain * mode->control_properties.gain_factor);
 
-	reg_again = 2048 - (2048 / again);
+	reg_again = 2048 -
+		(2048 * dgain * mode->control_properties.gain_factor / val);
 	if (reg_again > 1957)
 		reg_again = 1957;
+	again = val / (dgain * mode->control_properties.gain_factor);
 
 	imx274_get_gain_reg(reg_list, reg_again);
 
@@ -282,7 +283,7 @@ static int imx274_set_gain(struct tegracam_device *tc_dev, s64 val)
 			__func__,
 			val,
 			val / IMX274_MIN_GAIN,
-			again / IMX274_MIN_GAIN,
+			again,
 			reg_again,
 			dgain,
 			reg_dgain);

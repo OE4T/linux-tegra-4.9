@@ -1142,6 +1142,14 @@ static int eqos_open(struct net_device *dev)
 		goto err_out_desc_buf_alloc_failed;
 	}
 
+#ifdef EQOS_CONFIG_PTP
+	ret = eqos_ptp_init(pdata);
+	if (ret < 0) {
+		dev_err(&dev->dev, "failed to init PTP\n");
+		goto err_ptp;
+	}
+#endif
+
 	mutex_lock(&pdata->hw_change_lock);
 	eqos_start_dev(pdata);
 
@@ -1154,6 +1162,9 @@ static int eqos_open(struct net_device *dev)
 
 	pr_debug("<--%s()\n", __func__);
 	return Y_SUCCESS;
+
+ err_ptp:
+	desc_if->free_buff_and_desc(pdata);
 
  err_out_desc_buf_alloc_failed:
 	free_txrx_irqs(pdata);
@@ -1194,6 +1205,9 @@ static int eqos_close(struct net_device *dev)
 		pdata->phydev = NULL;
 	}
 
+#ifdef EQOS_CONFIG_PTP
+	eqos_ptp_remove(pdata);
+#endif
 	mutex_lock(&pdata->hw_change_lock);
 	eqos_stop_dev(pdata);
 

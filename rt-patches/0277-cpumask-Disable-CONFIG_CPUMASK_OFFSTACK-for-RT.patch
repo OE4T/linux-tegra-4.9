@@ -1,7 +1,7 @@
-From fd807d39f8616520ae5328d728d03615387ca33b Mon Sep 17 00:00:00 2001
+From afbc22b838fef028e165a6484899b9a863f7f069 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Wed, 14 Dec 2011 01:03:49 +0100
-Subject: [PATCH 277/353] cpumask: Disable CONFIG_CPUMASK_OFFSTACK for RT
+Subject: [PATCH 277/352] cpumask: Disable CONFIG_CPUMASK_OFFSTACK for RT
 
 There are "valid" GFP_ATOMIC allocations such as
 

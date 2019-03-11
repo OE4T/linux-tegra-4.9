@@ -1,7 +1,7 @@
-From 6c580f49a67bbd02bd7a2e59e8862d566b308886 Mon Sep 17 00:00:00 2001
+From a2f98579c13665d73e8fcaeef60f10c618685b37 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Sun, 17 Jul 2011 21:42:26 +0200
-Subject: [PATCH 225/353] workqueue: Use local irq lock instead of irq disable
+Subject: [PATCH 225/352] workqueue: Use local irq lock instead of irq disable
  regions
 
 Use a local_irq_lock as a replacement for irq off regions. We keep the

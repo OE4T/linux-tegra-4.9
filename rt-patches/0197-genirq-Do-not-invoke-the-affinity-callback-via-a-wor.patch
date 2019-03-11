@@ -1,7 +1,7 @@
-From 089ed959b1ac13e440e0a6cb745fb5bfca7e4de3 Mon Sep 17 00:00:00 2001
+From ff07733a36176136b0801b4735f896043f9df114 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Wed, 21 Aug 2013 17:48:46 +0200
-Subject: [PATCH 197/353] genirq: Do not invoke the affinity callback via a
+Subject: [PATCH 197/352] genirq: Do not invoke the affinity callback via a
  workqueue on RT
 
 Joe Korty reported, that __irq_set_affinity_locked() schedules a
@@ -65,7 +65,7 @@ index 807d3f6..4917b62 100644
  	void (*release)(struct kref *ref);
  };
 diff --git a/kernel/irq/manage.c b/kernel/irq/manage.c
-index c4f3e6c..0c4d417 100644
+index 18c90de..973ba13 100644
 --- a/kernel/irq/manage.c
 +++ b/kernel/irq/manage.c
 @@ -235,7 +235,12 @@ int irq_set_affinity_locked(struct irq_data *data, const struct cpumask *mask,

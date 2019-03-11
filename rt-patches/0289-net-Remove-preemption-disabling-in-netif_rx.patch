@@ -1,7 +1,7 @@
-From 8288126c2864fbfcedf01e68556a3b9e13f4ecaa Mon Sep 17 00:00:00 2001
+From 53e7b3f59df6e5e1d916f42f8a31f5d960ff0c0d Mon Sep 17 00:00:00 2001
 From: Priyanka Jain <Priyanka.Jain@freescale.com>
 Date: Thu, 17 May 2012 09:35:11 +0530
-Subject: [PATCH 289/353] net: Remove preemption disabling in netif_rx()
+Subject: [PATCH 289/352] net: Remove preemption disabling in netif_rx()
 
 1)enqueue_to_backlog() (called from netif_rx) should be
   bind to a particluar CPU. This can be achieved by
@@ -35,7 +35,7 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  1 file changed, 4 insertions(+), 4 deletions(-)
 
 diff --git a/net/core/dev.c b/net/core/dev.c
-index 4db8870..16acd7c 100644
+index 457bab7..0e67996 100644
 --- a/net/core/dev.c
 +++ b/net/core/dev.c
 @@ -3871,7 +3871,7 @@ static int netif_rx_internal(struct sk_buff *skb)

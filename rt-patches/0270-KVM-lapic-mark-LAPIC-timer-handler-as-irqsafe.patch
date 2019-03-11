@@ -1,7 +1,7 @@
-From d10590b5fc45a0bbbf4a09a32b83674ddd8a84a1 Mon Sep 17 00:00:00 2001
+From 5410534dbd1a702bac2e4c6af7104a61e4681217 Mon Sep 17 00:00:00 2001
 From: Marcelo Tosatti <mtosatti@redhat.com>
 Date: Wed, 8 Apr 2015 20:33:25 -0300
-Subject: [PATCH 270/353] KVM: lapic: mark LAPIC timer handler as irqsafe
+Subject: [PATCH 270/352] KVM: lapic: mark LAPIC timer handler as irqsafe
 
 Since lapic timer handler only wakes up a simple waitqueue,
 it can be executed from hardirq context.

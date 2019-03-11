@@ -1,7 +1,7 @@
-From 03ef98da3cbf14a57881857e9c445f2b93231263 Mon Sep 17 00:00:00 2001
+From 210ca8bdba5aaf3ef9b74e0f9a602b824d3053bc Mon Sep 17 00:00:00 2001
 From: Timo Alho <talho@nvidia.com>
 Date: Wed, 14 Feb 2018 23:05:10 +0200
-Subject: [PATCH 351/353] printk: make rt aware (again)
+Subject: [PATCH 351/352] printk: make rt aware (again)
 
 Similar to patch "printk: Make rt aware", make changes to downstream
 added code as well:
@@ -9,16 +9,17 @@ added code as well:
 Drop the lock before calling the console driver and do not disable
 interrupts while printing to a serial console.
 
+Change-Id: I0b02bf79c77ce934d4eaa390c2024967a1f3eb97
 Signed-off-by: Timo Alho <talho@nvidia.com>
 ---
- kernel/printk/printk.c | 6 +++++-
- 1 file changed, 5 insertions(+), 1 deletion(-)
+ kernel/printk/printk.c | 6 ++++--
+ 1 file changed, 4 insertions(+), 2 deletions(-)
 
 diff --git a/kernel/printk/printk.c b/kernel/printk/printk.c
-index e92b3de..5458b40 100644
+index b737ec8..dac6d89 100644
 --- a/kernel/printk/printk.c
 +++ b/kernel/printk/printk.c
-@@ -1676,6 +1676,7 @@ static void call_force_console_drivers(const char *force_text,
+@@ -1664,6 +1664,7 @@ static void call_force_console_drivers(const char *force_text,
  		if (con->flags & CON_FORCE_LEVEL)
  			con->write(con, force_text, force_len);
  	}
@@ -26,15 +27,15 @@ index e92b3de..5458b40 100644
  }
  
  /*
-@@ -1694,6 +1695,7 @@ static void call_console_drivers(int level,
- 	if (!console_drivers)
- 		return;
+@@ -1707,7 +1708,6 @@ static void call_console_drivers(int level,
+ 		else
+ 			con->write(con, text, len);
+ 	}
+-	migrate_enable();
+ }
  
-+	migrate_disable();
- 	for_each_console(con) {
- 		if (exclusive_console && con != exclusive_console)
- 			continue;
-@@ -2441,10 +2443,10 @@ static void console_cont_flush(char *text, size_t size)
+ int printk_delay_msec __read_mostly;
+@@ -2348,10 +2348,10 @@ static void console_cont_flush(char *text, size_t size)
  	len = cont_print_text(text, size);
  #ifdef CONFIG_PREEMPT_RT_FULL
  	raw_spin_unlock_irqrestore(&logbuf_lock, flags);
@@ -46,7 +47,7 @@ index e92b3de..5458b40 100644
  	call_console_drivers(cont.level, NULL, 0, text, len);
  
  	/* Add prefix in case console is with CON_FORCE_LEVEL */
-@@ -2462,6 +2464,7 @@ static void console_cont_flush(char *text, size_t size)
+@@ -2369,6 +2369,7 @@ static void console_cont_flush(char *text, size_t size)
  		call_force_console_drivers(text, len);
  	}
  
@@ -54,14 +55,14 @@ index e92b3de..5458b40 100644
  	start_critical_timings();
  	local_irq_restore(flags);
  #endif
-@@ -2600,6 +2603,7 @@ void console_unlock(void)
+@@ -2510,6 +2511,7 @@ void console_unlock(void)
  #ifdef CONFIG_PREEMPT_RT_FULL
- 		raw_spin_unlock_irqrestore(&logbuf_lock, flags);
+ 		printk_safe_exit_irqrestore(flags);
  		call_console_drivers(level, ext_text, ext_len, text, len);
 +		call_force_console_drivers(force_text, force_len);
  #else
- 		raw_spin_unlock(&logbuf_lock);
  
+ 		stop_critical_timings();	/* don't trace print latency */
 -- 
 2.7.4
 

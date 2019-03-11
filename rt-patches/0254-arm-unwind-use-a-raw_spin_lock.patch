@@ -1,7 +1,7 @@
-From 704696fb1e52d720cc06401a051c7ca87a745e17 Mon Sep 17 00:00:00 2001
+From 62a9d54646e972835470f9cd97426e27e30d2a82 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Fri, 20 Sep 2013 14:31:54 +0200
-Subject: [PATCH 254/353] arm/unwind: use a raw_spin_lock
+Subject: [PATCH 254/352] arm/unwind: use a raw_spin_lock
 
 Mostly unwind is done with irqs enabled however SLUB may call it with
 irqs disabled while creating a new SLUB cache.

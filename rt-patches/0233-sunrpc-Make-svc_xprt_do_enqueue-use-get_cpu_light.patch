@@ -1,7 +1,7 @@
-From 5234fdc0c2ab426c43b3423382dcf7b1367d1566 Mon Sep 17 00:00:00 2001
+From 7af64c9874f66e9c4fcad36b6fa5ff1c6e6caddc Mon Sep 17 00:00:00 2001
 From: Mike Galbraith <umgwanakikbuti@gmail.com>
 Date: Wed, 18 Feb 2015 16:05:28 +0100
-Subject: [PATCH 233/353] sunrpc: Make svc_xprt_do_enqueue() use
+Subject: [PATCH 233/352] sunrpc: Make svc_xprt_do_enqueue() use
  get_cpu_light()
 
 |BUG: sleeping function called from invalid context at kernel/locking/rtmutex.c:915
@@ -33,7 +33,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  1 file changed, 3 insertions(+), 3 deletions(-)
 
 diff --git a/net/sunrpc/svc_xprt.c b/net/sunrpc/svc_xprt.c
-index 9c9db55..e6583b0 100644
+index 064f20b..b49cd30 100644
 --- a/net/sunrpc/svc_xprt.c
 +++ b/net/sunrpc/svc_xprt.c
 @@ -396,7 +396,7 @@ void svc_xprt_do_enqueue(struct svc_xprt *xprt)

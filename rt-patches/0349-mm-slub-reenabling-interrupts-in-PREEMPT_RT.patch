@@ -1,7 +1,7 @@
-From 2f27e3a1742501cc1680ee421c0aea20d57b38fb Mon Sep 17 00:00:00 2001
+From df8e1ddee099332c55372385629c90464b769100 Mon Sep 17 00:00:00 2001
 From: dmitry pervushin <dpervushin@nvidia.com>
 Date: Thu, 17 Nov 2016 13:39:25 +0100
-Subject: [PATCH 349/353] mm: slub: reenabling interrupts in PREEMPT_RT
+Subject: [PATCH 349/352] mm: slub: reenabling interrupts in PREEMPT_RT
 
 If we are past SYSTEM_BOOTING_SINGLECORE, we have smp fully
 initialized and should allow our spinlocks to sleep

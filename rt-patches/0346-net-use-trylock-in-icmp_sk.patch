@@ -1,7 +1,7 @@
-From 9f5620bdbd6678f4634748a3f4d6c445dee07350 Mon Sep 17 00:00:00 2001
+From 79a40ff30174cfed8f1c4448407c547edba4088a Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Thu, 21 Sep 2017 14:42:04 +0200
-Subject: [PATCH 346/353] net: use trylock in icmp_sk
+Subject: [PATCH 346/352] net: use trylock in icmp_sk
 
 The locking path can be recursive (same as for sk->sk_lock.slock) and
 therefore we need a trylock version for the locallock, too.

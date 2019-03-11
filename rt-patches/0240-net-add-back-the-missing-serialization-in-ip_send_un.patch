@@ -1,7 +1,7 @@
-From 2ecd5cf5c50048e5295d06cae39d42ffe61baea7 Mon Sep 17 00:00:00 2001
+From ededc603b7588d482ca2431182805e593b4569bd Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Wed, 31 Aug 2016 17:21:56 +0200
-Subject: [PATCH 240/353] net: add back the missing serialization in
+Subject: [PATCH 240/352] net: add back the missing serialization in
  ip_send_unicast_reply()
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8

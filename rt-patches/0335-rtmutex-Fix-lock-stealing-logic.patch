@@ -1,7 +1,7 @@
-From 5b934946681716de20fe148b1b8545fa8b91a346 Mon Sep 17 00:00:00 2001
+From 03374011b547c5f9e9b1c91cf5d33abab2d9e159 Mon Sep 17 00:00:00 2001
 From: Mike Galbraith <efault@gmx.de>
 Date: Fri, 23 Jun 2017 09:37:14 +0200
-Subject: [PATCH 335/353] rtmutex: Fix lock stealing logic
+Subject: [PATCH 335/352] rtmutex: Fix lock stealing logic
 
 1. When trying to acquire an rtmutex, we first try to grab it without
 queueing the waiter, and explicitly check for that initial attempt

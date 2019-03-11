@@ -1,7 +1,7 @@
-From db6ffd0ead6e3e412ace0b918a3388ac4ef133cf Mon Sep 17 00:00:00 2001
+From f885eb9d5fd4cce855240d5d81aa5ca465ed017c Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Thu, 9 Apr 2015 15:23:01 +0200
-Subject: [PATCH 312/353] cpufreq: drop K8's driver from beeing selected
+Subject: [PATCH 312/352] cpufreq: drop K8's driver from beeing selected
 
 Ralf posted a picture of a backtrace from
 

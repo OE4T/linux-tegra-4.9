@@ -1,7 +1,7 @@
-From ac5309b69c4de87235e4293b411794e6b2b2e877 Mon Sep 17 00:00:00 2001
+From 598893d0a2e8a0c55e1b54af994e0bb756652af6 Mon Sep 17 00:00:00 2001
 From: Julia Cartwright <julia@ni.com>
 Date: Sun, 5 Aug 2018 23:38:08 -0500
-Subject: [PATCH 347/353] Linux 4.9.115-rt93 REBASE
+Subject: [PATCH 347/352] Linux 4.9.115-rt93 REBASE
 
 ---
  localversion-rt | 2 +-

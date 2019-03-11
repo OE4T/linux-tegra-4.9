@@ -1,7 +1,7 @@
-From 1cfd1e4bbfb116d46edcb006e8c5a3fb5a1ae275 Mon Sep 17 00:00:00 2001
+From 59f6184dd07ff047adfb2e0fe8b98b40fb10bdd9 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Wed, 7 Mar 2012 21:10:04 +0100
-Subject: [PATCH 222/353] net: Use cpu_chill() instead of cpu_relax()
+Subject: [PATCH 222/352] net: Use cpu_chill() instead of cpu_relax()
 
 Retry loops on RT might loop forever when the modifying side was
 preempted. Use cpu_chill() instead of cpu_relax() to let the system

@@ -1,7 +1,7 @@
-From 0fbd33e346542b592edb58ebff374c0ea57c76e3 Mon Sep 17 00:00:00 2001
+From aeb0f0d33b308849a15f2f26410bb8d786d11869 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Wed, 14 Sep 2016 17:36:35 +0200
-Subject: [PATCH 239/353] net/Qdisc: use a seqlock instead seqcount
+Subject: [PATCH 239/352] net/Qdisc: use a seqlock instead seqcount
 
 The seqcount disables preemption on -RT while it is held which can't
 remove. Also we don't want the reader to spin for ages if the writer is

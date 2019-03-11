@@ -1,7 +1,7 @@
-From 6e64e9bdbb1593041147f4fd4af2e8db92890e5a Mon Sep 17 00:00:00 2001
+From 6b9dad81828a5d55cd91fbf22245f7eb25ba7601 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Sat, 19 Sep 2015 10:15:00 +0200
-Subject: [PATCH 264/353] mm: rt: Fix generic kmap_atomic for RT
+Subject: [PATCH 264/352] mm: rt: Fix generic kmap_atomic for RT
 
 The update to 4.1 brought in the mainline variant of the pagefault
 disable distangling from preempt count. That introduced a

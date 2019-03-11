@@ -1,7 +1,7 @@
-From d1ac5348f18737baa3c37dd69e71af4a9d5c05dc Mon Sep 17 00:00:00 2001
+From f5a77460b5571971d9ef17643bb4d20443fd3e50 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Mon, 21 Aug 2017 15:09:13 +0200
-Subject: [PATCH 339/353] net: take the tcp_sk_lock lock with BH disabled
+Subject: [PATCH 339/352] net: take the tcp_sk_lock lock with BH disabled
 
 Lockdep may complain about an unsafe locking scenario:
 |      CPU0                    CPU1
@@ -26,7 +26,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  1 file changed, 4 insertions(+), 4 deletions(-)
 
 diff --git a/net/ipv4/tcp_ipv4.c b/net/ipv4/tcp_ipv4.c
-index 5365350..482a7f43 100644
+index 5365350..482a7f4 100644
 --- a/net/ipv4/tcp_ipv4.c
 +++ b/net/ipv4/tcp_ipv4.c
 @@ -703,8 +703,8 @@ static void tcp_v4_send_reset(const struct sock *sk, struct sk_buff *skb)

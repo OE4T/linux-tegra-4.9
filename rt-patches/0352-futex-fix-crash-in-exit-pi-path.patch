@@ -1,7 +1,7 @@
-From f6d0f6b22fd2ba58c7b9187bc643f7634e615ab1 Mon Sep 17 00:00:00 2001
+From 542516c23127a3aed163eccc21aafa92e0be87f9 Mon Sep 17 00:00:00 2001
 From: abhijit <abhijit@nvidia.com>
 Date: Tue, 24 Apr 2018 11:35:30 +0530
-Subject: [PATCH 353/353] futex: fix crash in exit pi path.
+Subject: [PATCH 352/352] futex: fix crash in exit pi path.
 
 This patch is taken from below upstream commit 153fbd1226fb.
 
@@ -54,7 +54,7 @@ Signed-off-by: Abhijit <abhijit@nvidia.com>
  1 file changed, 19 insertions(+), 1 deletion(-)
 
 diff --git a/kernel/futex.c b/kernel/futex.c
-index 8ab0ddd..c407a21 100644
+index 12d03af..cbf2167 100644
 --- a/kernel/futex.c
 +++ b/kernel/futex.c
 @@ -900,6 +900,24 @@ void exit_pi_state_list(struct task_struct *curr)

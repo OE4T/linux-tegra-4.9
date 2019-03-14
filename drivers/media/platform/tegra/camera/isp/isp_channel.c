@@ -57,6 +57,8 @@
 		_IOW('I', 9, struct isp_capture_req_ex)
 #define ISP_CAPTURE_SET_PROGRESS_STATUS_NOTIFIER \
 		_IOW('I', 10, struct isp_capture_progress_status_req)
+#define ISP_CAPTURE_BUFFER_REQUEST \
+		_IOW('I', 11, struct isp_buffer_req)
 
 struct isp_channel_drv {
 	struct device *dev;
@@ -179,6 +181,17 @@ static long isp_channel_ioctl(struct file *file, unsigned int cmd,
 		if (err)
 			dev_err(chan->isp_dev,
 					"isp capture set progress status buffers failed\n");
+		break;
+	}
+	case _IOC_NR(ISP_CAPTURE_BUFFER_REQUEST): {
+		struct isp_buffer_req req;
+
+		if (copy_from_user(&req, ptr, sizeof(req)) != 0U)
+			break;
+
+		err = isp_capture_buffer_request(chan, &req);
+		if (err < 0)
+			dev_err(chan->isp_dev, "isp buffer req failed\n");
 		break;
 	}
 	default: {

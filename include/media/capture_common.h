@@ -1,7 +1,7 @@
 /*
  * Tegra capture common operations
  *
- * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2019, NVIDIA CORPORATION.  All rights reserved.
  *
  * Author: Sudhir Vyas <svyas@nvidia.com>
  *
@@ -16,6 +16,36 @@
 #define PROGRESS_STATUS_BUSY		(U32_C(0x1))
 #define PROGRESS_STATUS_DONE		(U32_C(0x2))
 
+#define BUFFER_READ	(U32_C(0x01))
+#define BUFFER_WRITE	(U32_C(0x02))
+#define BUFFER_ADD	(U32_C(0x04))
+#define BUFFER_RDWR	(BUFFER_READ|BUFFER_WRITE)
+
+
+/**
+ * @struct capture_buffer_table
+ * A structure holding buffer mapping relationship for a device
+ */
+struct capture_buffer_table;
+
+struct capture_buffer_table *create_buffer_table(struct device *dev);
+
+void destroy_buffer_table(struct capture_buffer_table *tab);
+
+int capture_buffer_request(
+	struct capture_buffer_table *tab, uint32_t memfd, uint32_t flag);
+
+static inline int
+capture_buffer_add(struct capture_buffer_table *t, uint32_t fd)
+{
+	return capture_buffer_request(t, fd, BUFFER_ADD | BUFFER_RDWR);
+}
+
+struct capture_mapping;
+
+void put_mapping(
+	struct capture_buffer_table *t, struct capture_mapping *pin);
+
 /* buffer details including dma_buf and iova etc. */
 struct capture_common_buf {
 	struct dma_buf *buf;
@@ -27,18 +57,18 @@ struct capture_common_buf {
 /* unpin details for a capture channel, per request */
 struct capture_common_unpins {
 	uint32_t num_unpins;
-	struct capture_common_buf data[];
+	struct capture_mapping *data[];
 };
 
 struct capture_common_pin_req {
 	struct device *dev;
 	struct device *rtcpu_dev;
+	struct capture_buffer_table *table;
 	struct capture_common_unpins *unpins;
 	struct capture_common_buf *requests;
-	struct capture_common_buf *requests_dev;
 	uint32_t request_size;
 	uint32_t request_offset;
-	uint32_t requests_mem;
+	struct dma_buf *requests_mem;
 	uint32_t num_relocs;
 	uint32_t __user *reloc_user;
 };

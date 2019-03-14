@@ -4,6 +4,7 @@
  * Copyright (c) 2017-2021, NVIDIA CORPORATION.  All rights reserved.
  *
  * Author: Sudhir Vyas <svyas@nvidia.com>
+ *         Ziqi Qing <zqing@nvidia.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -14,13 +15,309 @@
 #include <linux/dma-mapping.h>
 #include <linux/nvhost.h>
 #include <linux/slab.h>
+#include <linux/hashtable.h>
+#include <linux/atomic.h>
 #include <media/capture_common.h>
 #include <media/mc_common.h>
 
-struct surface_t {
-	uint32_t offset;
-	uint32_t offset_hi;
+
+#define fmt(_f) "%s:%d:" _f "\n", __func__, __LINE__
+
+static inline bool
+flag_compatible(unsigned int self, unsigned int other)
+{
+	return (self & other) == other;
+}
+
+static inline unsigned int
+flag_access_mode(unsigned int flag)
+{
+	return flag & BUFFER_RDWR;
+}
+
+static inline enum dma_data_direction
+flag_dma_direction(unsigned int flag)
+{
+	static const enum dma_data_direction dir[4U] = {
+		[0U] = DMA_BIDIRECTIONAL,
+		[BUFFER_READ] = DMA_TO_DEVICE,
+		[BUFFER_WRITE] = DMA_FROM_DEVICE,
+		[BUFFER_RDWR] = DMA_BIDIRECTIONAL,
+	};
+
+	return dir[flag_access_mode(flag)];
+}
+
+
+/* capture buffer mapping table */
+struct capture_buffer_table {
+	struct device *dev;
+	struct kmem_cache *cache;
+	rwlock_t hlock;
+	DECLARE_HASHTABLE(hhead, 4U);
 };
+
+/* a pinned buffer for capture vi/isp device */
+struct capture_mapping {
+	struct hlist_node hnode;
+	atomic_t refcnt;
+	struct dma_buf *buf;
+	struct dma_buf_attachment *atch;
+	struct sg_table *sgt;
+	unsigned int flag;
+};
+
+struct capture_buffer_table *
+create_buffer_table(struct device *dev)
+{
+	struct capture_buffer_table *tab;
+
+	tab = kmalloc(sizeof(*tab), GFP_KERNEL);
+
+	if (likely(tab != NULL)) {
+		tab->cache = KMEM_CACHE(capture_mapping, 0U);
+
+		if (likely(tab->cache != NULL)) {
+			tab->dev = dev;
+			hash_init(tab->hhead);
+			rwlock_init(&tab->hlock);
+		} else {
+			kfree(tab);
+			tab = NULL;
+		}
+	}
+
+	return tab;
+}
+
+void destroy_buffer_table(struct capture_buffer_table *tab)
+{
+	size_t bkt;
+	struct hlist_node *next;
+	struct capture_mapping *pin;
+
+	write_lock(&tab->hlock);
+
+	hash_for_each_safe(tab->hhead, bkt, next, pin, hnode) {
+		hash_del(&pin->hnode);
+		dma_buf_unmap_attachment(
+			pin->atch, pin->sgt, flag_dma_direction(pin->flag));
+		dma_buf_detach(pin->buf, pin->atch);
+		dma_buf_put(pin->buf);
+		kmem_cache_free(tab->cache, pin);
+	}
+
+	write_unlock(&tab->hlock);
+
+	kmem_cache_destroy(tab->cache);
+	kfree(tab);
+}
+
+static inline dma_addr_t
+mapping_iova(const struct capture_mapping *pin)
+{
+	dma_addr_t addr = sg_dma_address(pin->sgt->sgl);
+
+	return (addr != 0) ? addr : sg_phys(pin->sgt->sgl);
+}
+
+static inline struct dma_buf *
+mapping_buf(const struct capture_mapping *pin)
+{
+	return pin->buf;
+}
+
+static inline bool
+mapping_preserved(const struct capture_mapping *pin)
+{
+	return (bool)(pin->flag & BUFFER_ADD);
+}
+
+static inline void
+set_mapping_preservation(struct capture_mapping *pin, bool val)
+{
+	if (val) {
+		pin->flag |=  BUFFER_ADD;
+		atomic_inc(&pin->refcnt);
+	} else {
+		pin->flag &= (~BUFFER_ADD);
+		atomic_dec(&pin->refcnt);
+	}
+}
+
+static struct capture_mapping *
+find_mapping(
+	struct capture_buffer_table *tab,
+	struct dma_buf *buf,
+	unsigned int flag)
+{
+	struct capture_mapping *pin;
+	bool success;
+
+	read_lock(&tab->hlock);
+
+	hash_for_each_possible(tab->hhead, pin, hnode, (unsigned long)buf) {
+		if (
+			(pin->buf == buf) &&
+			flag_compatible(pin->flag, flag)
+		) {
+			success =  atomic_inc_not_zero(&pin->refcnt);
+			if (success) {
+				read_unlock(&tab->hlock);
+				return pin;
+			}
+		}
+	}
+
+	read_unlock(&tab->hlock);
+
+	return NULL;
+}
+
+static struct capture_mapping *
+get_mapping(
+	struct capture_buffer_table *tab,
+	uint32_t fd,
+	unsigned int flag)
+{
+	struct capture_mapping *pin;
+	struct dma_buf *buf;
+	void *err;
+
+	buf = dma_buf_get((int)fd);
+	if (IS_ERR(buf)) {
+		dev_err(tab->dev, fmt("invalid memfd %u; errno %ld"),
+			fd, PTR_ERR(buf));
+		return ERR_CAST(buf);
+	}
+
+	pin = find_mapping(tab, buf, flag);
+	if (pin != NULL) {
+		dma_buf_put(buf);
+		return pin;
+	}
+
+	pin = kmem_cache_alloc(tab->cache, GFP_KERNEL);
+	if (unlikely(pin == NULL)) {
+		err = ERR_PTR(-ENOMEM);
+		goto err0;
+	}
+
+	pin->atch = dma_buf_attach(buf, tab->dev);
+	if (unlikely(IS_ERR(pin->atch))) {
+		err = pin->atch;
+		goto err1;
+	}
+
+	pin->sgt = dma_buf_map_attachment(pin->atch, flag_dma_direction(flag));
+	if (unlikely(IS_ERR(pin->sgt))) {
+		err = pin->sgt;
+		goto err2;
+	}
+
+	pin->flag = flag;
+	pin->buf = buf;
+	atomic_set(&pin->refcnt, 1U);
+	INIT_HLIST_NODE(&pin->hnode);
+
+	write_lock(&tab->hlock);
+	hash_add(tab->hhead, &pin->hnode, (unsigned long)pin->buf);
+	write_unlock(&tab->hlock);
+
+	return pin;
+err2:
+	dma_buf_detach(buf, pin->atch);
+err1:
+	kmem_cache_free(tab->cache, pin);
+err0:
+	dma_buf_put(buf);
+	dev_err(tab->dev, fmt("memfd %u, flag %u; errno %ld"),
+		fd, flag, PTR_ERR(buf));
+	return err;
+}
+
+void put_mapping(
+	struct capture_buffer_table *t, struct capture_mapping *pin)
+{
+	bool zero;
+
+	zero = atomic_dec_and_test(&pin->refcnt);
+	if (zero) {
+		if (unlikely(mapping_preserved(pin))) {
+			dev_err(t->dev,
+				fmt("unexpected put for a preserved mapping"));
+			atomic_inc(&pin->refcnt);
+			return;
+		}
+
+		write_lock(&t->hlock);
+		hash_del(&pin->hnode);
+		write_unlock(&t->hlock);
+
+		dma_buf_unmap_attachment(
+			pin->atch, pin->sgt, flag_dma_direction(pin->flag));
+		dma_buf_detach(pin->buf, pin->atch);
+		dma_buf_put(pin->buf);
+		kmem_cache_free(t->cache, pin);
+	}
+}
+
+
+static DEFINE_MUTEX(req_lock);
+
+int capture_buffer_request(
+	struct capture_buffer_table *tab, uint32_t memfd, uint32_t flag)
+{
+	struct capture_mapping *pin;
+	struct dma_buf *buf;
+	bool add = (bool)(flag & BUFFER_ADD);
+	int err = 0;
+
+	mutex_lock(&req_lock);
+
+	if (add) {
+		pin = get_mapping(tab, memfd, flag_access_mode(flag));
+		if (IS_ERR(pin)) {
+			err = PTR_ERR_OR_ZERO(pin);
+			dev_err(tab->dev, fmt("memfd %u, flag %u; errno %d"),
+				memfd, flag, err);
+			goto end;
+		}
+
+		if (mapping_preserved(pin)) {
+			err = -EEXIST;
+			dev_err(tab->dev, fmt("memfd %u exists; errno %d"),
+				memfd, err);
+			put_mapping(tab, pin);
+			goto end;
+		}
+	} else {
+		buf = dma_buf_get((int)memfd);
+		if (IS_ERR(buf)) {
+			err = PTR_ERR_OR_ZERO(buf);
+			dev_err(tab->dev, fmt("invalid memfd %u; errno %d"),
+				memfd, err);
+			goto end;
+		}
+
+		pin = find_mapping(tab, buf, BUFFER_ADD);
+		if (pin == NULL) {
+			err = -ENOENT;
+			dev_err(tab->dev, fmt("memfd %u not exists; errno %d"),
+				memfd, err);
+			dma_buf_put(buf);
+			goto end;
+		}
+	}
+
+	set_mapping_preservation(pin, add);
+	put_mapping(tab, pin);
+
+end:
+	mutex_unlock(&req_lock);
+	return err;
+}
+
 
 int capture_common_setup_progress_status_notifier(
 		struct capture_common_status_notifier *status_notifier,
@@ -167,6 +464,14 @@ void capture_common_unpin_memory(struct capture_common_buf *unpin_data)
 	unpin_data->iova = 0;
 }
 
+union capture_surface {
+	uint64_t raw;
+	struct {
+		uint32_t offset;
+		uint32_t hmem;
+	};
+};
+
 int capture_common_request_pin_and_reloc(struct capture_common_pin_req *req)
 {
 	uint32_t *reloc_relatives;
@@ -186,7 +491,7 @@ int capture_common_request_pin_and_reloc(struct capture_common_pin_req *req)
 	}
 
 	req->unpins = kzalloc(sizeof(struct capture_common_unpins) +
-		(sizeof(struct capture_common_buf) * req->num_relocs),
+		(sizeof(req->unpins->data[0]) * req->num_relocs),
 		GFP_KERNEL);
 	if (unlikely(req->unpins == NULL)) {
 		dev_err(req->dev, "failed to allocate request unpins\n");
@@ -215,10 +520,8 @@ int capture_common_request_pin_and_reloc(struct capture_common_pin_req *req)
 		uint32_t reloc_relative = reloc_relatives[i];
 		uint32_t reloc_offset = req->request_offset + reloc_relative;
 
-		uint64_t surface_raw;
-		struct surface_t *surface;
-		uint32_t mem;
-		uint32_t target_offset;
+		union capture_surface surf;
+		struct capture_mapping *pin;
 		dma_addr_t target_phys_addr = 0;
 
 		dev_dbg(req->dev,
@@ -244,46 +547,32 @@ int capture_common_request_pin_and_reloc(struct capture_common_pin_req *req)
 		}
 
 		/* read surf offset and mem handle from request descr */
-		surface_raw = __raw_readq(
+		surf.raw = __raw_readq(
 			(void __iomem *)(reloc_page_addr +
 			(reloc_offset & ~PAGE_MASK)));
-		surface = (struct surface_t *)&surface_raw;
-		target_offset = surface->offset;
-		mem = surface->offset_hi;
 
-		if (!mem) {
-			dev_err(req->dev,
-					"%s: invalid mem handle\n", __func__);
-			err = -EINVAL;
+		dev_dbg(req->dev, "%s: hmem:0x%x offset:0x%x\n", __func__,
+				surf.hmem, surf.offset);
+
+		pin = get_mapping(req->table, surf.hmem, BUFFER_RDWR);
+		if (IS_ERR(pin)) {
+			err = PTR_ERR_OR_ZERO(pin);
+			dev_info(req->dev,
+				"%s: pin memory failed pin count %d\n",
+				__func__, req->unpins->num_unpins);
 			goto pin_fail;
 		}
 
-		dev_dbg(req->dev, "%s: hmem:0x%x offset:0x%x\n", __func__,
-				mem, target_offset);
+		target_phys_addr = (mapping_buf(pin) == req->requests_mem) ?
+			mapping_iova(pin) + req->request_offset + surf.offset :
+			mapping_iova(pin) + surf.offset;
 
-		if (mem == req->requests_mem) {
-			target_phys_addr = req->requests_dev->iova +
-					req->request_offset + target_offset;
-		} else {
-			err = capture_common_pin_memory(req->dev, mem,
-				&req->unpins->data[req->unpins->num_unpins]);
-			if (err < 0) {
-				dev_info(req->dev,
-					"%s: pin memory failed pin count %d\n",
-					__func__, req->unpins->num_unpins);
-				goto pin_fail;
-			}
-			target_phys_addr =
-				req->unpins->data[req->unpins->num_unpins].iova
-					+ target_offset;
-
-			req->unpins->num_unpins++;
-		}
+		req->unpins->data[req->unpins->num_unpins++] = pin;
 
 		if (!target_phys_addr) {
 			dev_err(req->dev,
 				"%s: target addr is NULL for mem 0x%x\n",
-				__func__, mem);
+				__func__, surf.hmem);
 			err = -EINVAL;
 			goto pin_fail;
 		}
@@ -308,7 +597,7 @@ int capture_common_request_pin_and_reloc(struct capture_common_pin_req *req)
 pin_fail:
 	if (err) {
 		for (i = 0; i < req->unpins->num_unpins; i++)
-			capture_common_unpin_memory(&req->unpins->data[i]);
+			put_mapping(req->table, req->unpins->data[i]);
 	}
 
 reloc_fail:

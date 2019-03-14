@@ -35,11 +35,9 @@
 
 struct isp_desc_rec {
 	struct capture_common_buf requests;
-	struct capture_common_buf requests_isp;
 	size_t request_buf_size;
 	uint32_t queue_depth;
 	uint32_t request_size;
-	uint32_t desc_mem;
 
 	uint32_t progress_status_buffer_depth;
 
@@ -52,6 +50,7 @@ struct isp_capture {
 	uint16_t channel_id;
 	struct device *rtcpu_dev;
 	struct tegra_isp_channel *isp_channel;
+	struct capture_buffer_table *buffer_ctx;
 
 	/* isp capture desc and it's ring buffer related details */
 	struct isp_desc_rec capture_desc_ctx;
@@ -412,6 +411,7 @@ static void isp_capture_release_syncpts(struct tegra_isp_channel *chan)
 int isp_capture_setup(struct tegra_isp_channel *chan,
 		struct isp_capture_setup *setup)
 {
+	struct capture_buffer_table *buffer_ctx;
 	struct isp_capture *capture = chan->capture_data;
 	uint32_t transaction;
 	struct CAPTURE_CONTROL_MSG control_msg;
@@ -444,6 +444,12 @@ int isp_capture_setup(struct tegra_isp_channel *chan,
 			setup->request_size == 0)
 		return -EINVAL;
 
+	buffer_ctx = create_buffer_table(chan->isp_dev);
+	if (unlikely(buffer_ctx == NULL)) {
+		dev_err(chan->isp_dev, "cannot setup buffer context");
+		return -ENOMEM;
+	}
+
 	/* pin the capture descriptor ring buffer to RTCPU */
 	dev_dbg(chan->isp_dev, "%s: descr buffer handle 0x%x\n",
 			__func__, setup->mem);
@@ -451,18 +457,15 @@ int isp_capture_setup(struct tegra_isp_channel *chan,
 			setup->mem, &capture->capture_desc_ctx.requests);
 	if (err < 0) {
 		dev_err(chan->isp_dev, "%s: memory setup failed\n", __func__);
-		return -EFAULT;
+		goto pin_fail;
 	}
 
 	/* pin the capture descriptor ring buffer to ISP */
-	err = capture_common_pin_memory(chan->isp_dev,
-			setup->mem, &capture->capture_desc_ctx.requests_isp);
+	err = capture_buffer_add(buffer_ctx, setup->mem);
 	if (err < 0) {
 		dev_err(chan->isp_dev, "%s: memory setup failed\n", __func__);
-		return -EFAULT;
+		goto pin_fail;
 	}
-
-	capture->capture_desc_ctx.desc_mem = setup->mem;
 
 	/* cache isp capture desc ring buffer details */
 	capture->capture_desc_ctx.queue_depth = setup->queue_depth;
@@ -493,16 +496,12 @@ int isp_capture_setup(struct tegra_isp_channel *chan,
 	}
 
 	/* pin the isp program descriptor ring buffer to ISP */
-	err = capture_common_pin_memory(chan->isp_dev,
-				setup->isp_program_mem,
-				&capture->program_desc_ctx.requests_isp);
+	err = capture_buffer_add(buffer_ctx, setup->isp_program_mem);
 	if (err < 0) {
 		dev_err(chan->isp_dev,
 			"%s: isp_program memory setup failed\n", __func__);
 		goto prog_pin_fail;
 	}
-
-	capture->program_desc_ctx.desc_mem = setup->isp_program_mem;
 
 	/* cache isp program desc ring buffer details */
 	capture->program_desc_ctx.queue_depth = setup->isp_program_queue_depth;
@@ -596,6 +595,8 @@ int isp_capture_setup(struct tegra_isp_channel *chan,
 		goto cb_fail;
 	}
 
+	capture->buffer_ctx = buffer_ctx;
+
 	return 0;
 
 cb_fail:
@@ -613,6 +614,8 @@ prog_pin_fail:
 	kfree(capture->capture_desc_ctx.unpins_list);
 unpins_list_fail:
 	capture_common_unpin_memory(&capture->capture_desc_ctx.requests);
+pin_fail:
+	destroy_buffer_table(buffer_ctx);
 	return err;
 }
 
@@ -761,7 +764,6 @@ int isp_capture_release(struct tegra_isp_channel *chan,
 	speculation_barrier();
 
 	capture_common_unpin_memory(&capture->program_desc_ctx.requests);
-	capture_common_unpin_memory(&capture->program_desc_ctx.requests_isp);
 
 	for (i = 0; i < capture->capture_desc_ctx.queue_depth; i++) {
 		complete(&capture->capture_resp);
@@ -771,7 +773,6 @@ int isp_capture_release(struct tegra_isp_channel *chan,
 	isp_capture_release_syncpts(chan);
 
 	capture_common_unpin_memory(&capture->capture_desc_ctx.requests);
-	capture_common_unpin_memory(&capture->capture_desc_ctx.requests_isp);
 
 	kfree(capture->program_desc_ctx.unpins_list);
 	kfree(capture->capture_desc_ctx.unpins_list);
@@ -779,6 +780,8 @@ int isp_capture_release(struct tegra_isp_channel *chan,
 	if (capture->is_progress_status_notifier_set)
 		capture_common_release_progress_status_notifier(
 			&capture->progress_status_notifier);
+
+	destroy_buffer_table(capture->buffer_ctx);
 
 	capture->channel_id = CAPTURE_CHANNEL_ISP_INVALID_ID;
 
@@ -1006,7 +1009,7 @@ static void isp_capture_request_unpin(struct tegra_isp_channel *chan,
 	unpins = capture->capture_desc_ctx.unpins_list[buffer_index];
 	if (unpins != NULL) {
 		for (i = 0; i < unpins->num_unpins; i++)
-			capture_common_unpin_memory(&unpins->data[i]);
+			put_mapping(capture->buffer_ctx, unpins->data[i]);
 		kfree(unpins);
 		capture->capture_desc_ctx.unpins_list[buffer_index] = NULL;
 	}
@@ -1024,7 +1027,7 @@ static void isp_capture_program_request_unpin(struct tegra_isp_channel *chan,
 	unpins = capture->program_desc_ctx.unpins_list[buffer_index];
 	if (unpins != NULL) {
 		for (i = 0; i < unpins->num_unpins; i++)
-			capture_common_unpin_memory(&unpins->data[i]);
+			put_mapping(capture->buffer_ctx, unpins->data[i]);
 		kfree(unpins);
 		capture->program_desc_ctx.unpins_list[buffer_index] = NULL;
 	}
@@ -1078,15 +1081,15 @@ int isp_capture_program_request(struct tegra_isp_channel *chan,
 				req->buffer_index;
 
 	/* memory pin and reloc */
+	cap_common_req.table = capture->buffer_ctx;
 	cap_common_req.dev = chan->isp_dev;
 	cap_common_req.rtcpu_dev = capture->rtcpu_dev;
 	cap_common_req.unpins = NULL;
 	cap_common_req.requests = &capture->program_desc_ctx.requests;
-	cap_common_req.requests_dev = &capture->program_desc_ctx.requests_isp;
 	cap_common_req.request_size = capture->program_desc_ctx.request_size;
 	cap_common_req.request_offset = req->buffer_index *
 					capture->program_desc_ctx.request_size;
-	cap_common_req.requests_mem = capture->program_desc_ctx.desc_mem;
+	cap_common_req.requests_mem = capture->program_desc_ctx.requests.buf;
 	cap_common_req.num_relocs = req->isp_program_relocs.num_relocs;
 	cap_common_req.reloc_user = (uint32_t __user *)
 			(uintptr_t)req->isp_program_relocs.reloc_relatives;
@@ -1223,14 +1226,14 @@ int isp_capture_request(struct tegra_isp_channel *chan,
 	}
 
 	/* pin and reloc */
+	cap_common_req.table = capture->buffer_ctx;
 	cap_common_req.dev = chan->isp_dev;
 	cap_common_req.rtcpu_dev = capture->rtcpu_dev;
 	cap_common_req.unpins = NULL;
 	cap_common_req.requests = &capture->capture_desc_ctx.requests;
-	cap_common_req.requests_dev = &capture->capture_desc_ctx.requests_isp;
 	cap_common_req.request_size = capture->capture_desc_ctx.request_size;
 	cap_common_req.request_offset = request_offset;
-	cap_common_req.requests_mem = capture->capture_desc_ctx.desc_mem;
+	cap_common_req.requests_mem = capture->capture_desc_ctx.requests.buf;
 	cap_common_req.num_relocs = req->isp_relocs.num_relocs;
 	cap_common_req.reloc_user = (uint32_t __user *)
 			(uintptr_t)req->isp_relocs.reloc_relatives;
@@ -1428,5 +1431,16 @@ int isp_capture_set_progress_status_notifier(struct tegra_isp_channel *chan,
 			req->program_buffer_depth;
 
 	capture->is_progress_status_notifier_set = true;
+	return err;
+}
+
+int isp_capture_buffer_request(
+	struct tegra_isp_channel *chan, struct isp_buffer_req *req)
+{
+	struct isp_capture *capture = chan->capture_data;
+	int err;
+
+	err = capture_buffer_request(
+		capture->buffer_ctx, req->mem, req->flag);
 	return err;
 }

@@ -43,6 +43,8 @@
 #define VI_CAPTURE_SET_COMPAND	_IOW('I', 8, struct vi_capture_compand)
 #define VI_CAPTURE_SET_PROGRESS_STATUS_NOTIFIER \
 	_IOW('I', 9, struct vi_capture_progress_status_req)
+#define VI_CAPTURE_BUFFER_REQUEST \
+	_IOW('I', 10, struct vi_buffer_req)
 
 struct vi_channel_drv {
 	struct device *dev;
@@ -64,7 +66,7 @@ void vi_capture_request_unpin(struct tegra_vi_channel *chan,
 	unpins = capture->unpins_list[buffer_index];
 	if (unpins != NULL) {
 		for (i = 0; i < unpins->num_unpins; i++)
-			capture_common_unpin_memory(&unpins->data[i]);
+			put_mapping(capture->buf_ctx, unpins->data[i]);
 		capture->unpins_list[buffer_index] = NULL;
 		kfree(unpins);
 	}
@@ -87,11 +89,18 @@ static long vi_channel_ioctl(struct file *file, unsigned int cmd,
 		if (copy_from_user(&setup, ptr, sizeof(setup)))
 			break;
 
+		capture->buf_ctx = create_buffer_table(chan->dev);
+		if (capture->buf_ctx == NULL) {
+			dev_err(chan->dev, "vi buffer setup failed");
+			break;
+		}
+
 		/* pin the capture descriptor ring buffer */
 		err = capture_common_pin_memory(capture->rtcpu_dev,
 				setup.mem, &capture->requests);
 		if (err < 0) {
 			dev_err(chan->dev, "%s: memory setup failed\n", __func__);
+			destroy_buffer_table(capture->buf_ctx);
 			return -EFAULT;
 		}
 
@@ -102,6 +111,7 @@ static long vi_channel_ioctl(struct file *file, unsigned int cmd,
 		if (unlikely(capture->unpins_list == NULL)) {
 			dev_err(chan->dev, "failed to allocate unpins array\n");
 			capture_common_unpin_memory(&capture->requests);
+			destroy_buffer_table(capture->buf_ctx);
 			return -ENOMEM;
 		}
 
@@ -111,6 +121,7 @@ static long vi_channel_ioctl(struct file *file, unsigned int cmd,
 			dev_err(chan->dev, "vi capture setup failed\n");
 			kfree(capture->unpins_list);
 			capture_common_unpin_memory(&capture->requests);
+			destroy_buffer_table(capture->buf_ctx);
 			return err;
 		}
 		break;
@@ -148,6 +159,7 @@ static long vi_channel_ioctl(struct file *file, unsigned int cmd,
 				vi_capture_request_unpin(chan, i);
 			capture_common_unpin_memory(&capture->requests);
 			kfree(capture->unpins_list);
+			destroy_buffer_table(capture->buf_ctx);
 		}
 		break;
 	}
@@ -188,11 +200,11 @@ static long vi_channel_ioctl(struct file *file, unsigned int cmd,
 
 		/* pin and reloc */
 		memset(&cap_common_req, 0, sizeof(cap_common_req));
+		cap_common_req.table = capture->buf_ctx;
 		cap_common_req.dev = chan->dev;
 		cap_common_req.rtcpu_dev = capture->rtcpu_dev;
 		cap_common_req.unpins = NULL;
 		cap_common_req.requests = &capture->requests;
-		cap_common_req.requests_dev = NULL;
 		cap_common_req.request_size = capture->request_size;
 		cap_common_req.request_offset = req.buffer_index *
 				capture->request_size;
@@ -256,6 +268,20 @@ static long vi_channel_ioctl(struct file *file, unsigned int cmd,
 					"setting progress status buffer failed\n");
 		break;
 	}
+
+	case _IOC_NR(VI_CAPTURE_BUFFER_REQUEST): {
+		struct vi_buffer_req req;
+
+		if (copy_from_user(&req, ptr, sizeof(req)) != 0U)
+			break;
+
+		err = capture_buffer_request(
+			capture->buf_ctx, req.mem, req.flag);
+		if (err < 0)
+			dev_err(chan->dev, "vi buffer request failed\n");
+		break;
+	}
+
 	default: {
 		dev_err(chan->dev, "%s:Unknown ioctl\n", __func__);
 		return -ENOIOCTLCMD;

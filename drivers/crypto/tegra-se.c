@@ -1372,15 +1372,6 @@ static int tegra_se_rng_drbg_get_random(struct crypto_rng *tfm,
 	mutex_lock(&se_hw_lock);
 	pm_runtime_get_sync(se_dev->dev);
 
-	if (se_dev->chipdata->drbg_src_entropy_clk_enable) {
-		/* enable clock for entropy */
-		ret = clk_prepare_enable(se_dev->enclk);
-		if (ret) {
-			dev_err(se_dev->dev, "entropy clock enable failed\n");
-			goto out;
-		}
-	}
-
 	*se_dev->src_ll_buf = 0;
 	*se_dev->dst_ll_buf = 0;
 	src_ll = (struct tegra_se_ll *)(se_dev->src_ll_buf + 1);
@@ -1413,9 +1404,6 @@ static int tegra_se_rng_drbg_get_random(struct crypto_rng *tfm,
 	if (!ret)
 		ret = dlen;
 
-	if (se_dev->chipdata->drbg_src_entropy_clk_enable)
-		clk_disable_unprepare(se_dev->enclk);
-out:
 	pm_runtime_put(se_dev->dev);
 	mutex_unlock(&se_hw_lock);
 

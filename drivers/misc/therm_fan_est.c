@@ -40,6 +40,7 @@
 #define MAX_PROFILE_NAME_LENGTH	31
 struct therm_fan_estimator {
 	long cur_temp;
+	long pre_temp;
 #if DEBUG
 	long cur_temp_debug;
 #endif
@@ -51,7 +52,7 @@ struct therm_fan_estimator {
 	int ndevs;
 	struct therm_fan_est_subdevice *devs;
 	struct thermal_zone_device *thz;
-	int current_trip_index;
+	int current_trip_level;
 	const char *cdev_type;
 	rwlock_t state_lock;
 	int num_profiles;
@@ -61,7 +62,6 @@ struct therm_fan_estimator {
 	s32 **fan_profile_trip_hysteresis;
 	s32 active_trip_temps[MAX_ACTIVE_STATES];
 	s32 active_hysteresis[MAX_ACTIVE_STATES];
-	s32 active_trip_temps_hyst[(MAX_ACTIVE_STATES << 1) + 1];
 	struct thermal_zone_params *tzp;
 	int num_resources;
 	int trip_length;
@@ -70,8 +70,7 @@ struct therm_fan_estimator {
 	bool reset_trip_index;
 	/* allow cooling device to turn off at higher temperature if sleep */
 	bool sleep_mode;
-	int sleep_temp;
-	int nonsleep_temp;
+	int nonsleep_hyst;
 };
 
 
@@ -81,18 +80,14 @@ static void fan_set_trip_temp_hyst(struct therm_fan_estimator *est, int trip,
 {
 	est->active_hysteresis[trip] = hyst_temp;
 	est->active_trip_temps[trip] = trip_temp;
-	est->active_trip_temps_hyst[(trip << 1)] = trip_temp;
-	est->active_trip_temps_hyst[((trip - 1) << 1) + 1] =
-						trip_temp - hyst_temp;
 	if (trip == 1) {
-		est->sleep_temp = est->active_trip_temps[1];
-		est->nonsleep_temp = est->active_trip_temps_hyst[1];
+		est->nonsleep_hyst = est->active_hysteresis[1];
 	}
 }
 
 static void therm_fan_est_work_func(struct work_struct *work)
 {
-	int i, j, group, index, trip_index;
+	int i, j, group, index, trip_index = 0;
 	int sum[MAX_SUBDEVICE_GROUP] = {0, };
 	int sum_max = 0;
 	int temp = 0;
@@ -127,59 +122,69 @@ static void therm_fan_est_work_func(struct work_struct *work)
 #else
 	est->cur_temp = est->cur_temp_debug;
 #endif
-	read_lock(&est->state_lock);
-	for (trip_index = 0;
-		trip_index < ((MAX_ACTIVE_STATES << 1) + 1); trip_index++) {
-		if (est->cur_temp < est->active_trip_temps_hyst[trip_index])
-			break;
-	}
-	read_unlock(&est->state_lock);
+
 	if (est->reset_trip_index) {
-		est->current_trip_index = 0;
 		est->reset_trip_index = 0;
-	}
-	if (est->current_trip_index != (trip_index - 1)) {
-		 if ((trip_index - 1) > est->current_trip_index) {
-			/* temperature is rising */
-			/* check cur_temp cross over rising trip point */
-			if ((trip_index - 1) % 2 == 0)
-				update_flag = true;
-			/* check cur_temp crose over 2 more trip point at a time */
-			if (((trip_index - 1) - est->current_trip_index) >= 2)
-				update_flag = true;
-		} else {
-			/* temperature is cooling */
-			/* check cur_temp cross over cooling trip point */
-			if ((est->current_trip_index % 2) == 1)
-				update_flag = true;
-			 /* check cur_temp crose over 2 more trip point at a time */
-			if ((est->current_trip_index - (trip_index - 1)) >= 2)
-				update_flag = true;
-		}
-		if (update_flag == true) {
-			pr_debug("%s, cur_temp: %ld, cur_trip_index: %d\n",
-				__func__, est->cur_temp, est->current_trip_index);
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 9, 0)
-			thermal_zone_device_update(est->thz,
-						THERMAL_EVENT_UNSPECIFIED);
-#else
-			thermal_zone_device_update(est->thz);
-#endif
-		}
-		est->current_trip_index = trip_index - 1;
+		est->current_trip_level = 0;
 	}
 
+	if (est->cur_temp != est->pre_temp) {
+		if (est->cur_temp > est->pre_temp) {
+			/* temperature is rising */
+			read_lock(&est->state_lock);
+			for (trip_index = 0;
+				trip_index < (MAX_ACTIVE_STATES + 1); trip_index++) {
+				if (est->cur_temp < est->active_trip_temps[trip_index])
+					break;
+			}
+			read_unlock(&est->state_lock);
+
+			if (est->current_trip_level < trip_index
+				&& est->current_trip_level != (trip_index - 1))
+				update_flag = true;
+		} else if (est->cur_temp < est->pre_temp) {
+			/* temperature is cooling */
+			read_lock(&est->state_lock);
+			for (trip_index = 1;
+				trip_index < (MAX_ACTIVE_STATES + 1); trip_index++) {
+				if (est->cur_temp < (est->active_trip_temps[trip_index]
+					- est->active_hysteresis[trip_index]))
+					break;
+			}
+			read_unlock(&est->state_lock);
+
+			if (est->current_trip_level >= trip_index
+				&& est->current_trip_level != (trip_index - 1)
+				&& trip_index != (MAX_ACTIVE_STATES + 1))
+				update_flag = true;
+		}
+
+		if (update_flag) {
+			est->current_trip_level = trip_index - 1;
+			pr_info("FAN %s trip_level:%d cur_temp:%ld trip_temps[%d]:%d\n",
+				(est->cur_temp < est->pre_temp)?"cooling":"rising",
+				est->current_trip_level, est->cur_temp,
+				trip_index, est->active_trip_temps[trip_index]);
+
+		#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 9, 0)
+					thermal_zone_device_update(est->thz,
+						THERMAL_EVENT_UNSPECIFIED);
+		#else
+					thermal_zone_device_update(est->thz);
+		#endif
+		}
+
+		est->pre_temp = est->cur_temp;
+	}
 	/*
 	 * spec for sleep mode is to attempt to turn off fan once only
 	 * more details in bug 2527983
 	 */
-	if (est->sleep_mode && est->current_trip_index == 0) {
+	if (est->sleep_mode && est->current_trip_level == 0) {
 		pr_info("%s, cooling device in sleep.\n", __func__);
 		write_lock(&est->state_lock);
 		est->sleep_mode = false;
-		est->active_trip_temps_hyst[1] = est->nonsleep_temp;
-		est->active_hysteresis[1] =
-			est->active_trip_temps[1] - est->nonsleep_temp;
+		est->active_hysteresis[1] = est->nonsleep_hyst;
 		write_unlock(&est->state_lock);
 	}
 
@@ -231,10 +236,10 @@ static int therm_fan_est_get_trip_temp(struct thermal_zone_device *thz,
 
 	read_lock(&est->state_lock);
 	if (trip == 0) {
-		*temp = est->active_trip_temps_hyst[0];
+		*temp = est->active_trip_temps[0] - est->active_hysteresis[0];
 		goto out;
 	} else if (trip < 0) {
-		*temp = est->active_trip_temps_hyst[0];
+		*temp = est->active_trip_temps[0] - est->active_hysteresis[0];
 		ret = -EINVAL;
 		goto out;
 	}
@@ -246,13 +251,13 @@ static int therm_fan_est_get_trip_temp(struct thermal_zone_device *thz,
 	if (est->is_pid_gov) {
 		*temp = est->active_trip_temps[trip];
 	} else {
-		if (est->current_trip_index == 0)
+		if (est->current_trip_level == 0)
 			*temp = 0;
 
-		if (trip * 2 <= est->current_trip_index) /* tripped then lower */
-			*temp = est->active_trip_temps_hyst[trip * 2 - 1];
+		if (trip  <= est->current_trip_level) /* tripped then lower */
+			*temp = est->active_trip_temps[trip] - est->active_hysteresis[trip];
 		else /* not tripped, then upper */
-			*temp = est->active_trip_temps_hyst[trip * 2];
+			*temp = est->active_trip_temps[trip];
 	}
 out:
 	read_unlock(&est->state_lock);
@@ -457,8 +462,6 @@ static ssize_t set_fan_profile(struct device *dev,
 	memcpy(est->active_hysteresis, est->fan_profile_trip_hysteresis[profile_index],
 			sizeof(s32) * MAX_ACTIVE_STATES);
 
-	/* Update temp_hysts correctly */
-	est->active_trip_temps_hyst[0] = est->active_trip_temps[0];
 	for (i = 1; i < MAX_ACTIVE_STATES; i++)
 		fan_set_trip_temp_hyst(est, i,
 			est->active_hysteresis[i],
@@ -508,14 +511,10 @@ static ssize_t set_sleep_mode(struct device *dev,
 	write_lock(&est->state_lock);
 	if (flag) {
 		est->sleep_mode = true;
-		est->active_trip_temps_hyst[1] = est->sleep_temp;
-		est->active_hysteresis[1] =
-				est->active_trip_temps[1] - est->sleep_temp;
+		est->active_hysteresis[1] = 0;
 	} else {
 		est->sleep_mode = false;
-		est->active_trip_temps_hyst[1] = est->nonsleep_temp;
-		est->active_hysteresis[1] =
-			est->active_trip_temps[1] - est->nonsleep_temp;
+		est->active_hysteresis[1] = est->nonsleep_hyst;
 	}
 	write_unlock(&est->state_lock);
 
@@ -841,17 +840,22 @@ static int therm_fan_est_probe(struct platform_device *pdev)
 			i, est_data->active_trip_temps[i],
 			est_data->active_hysteresis[i]);
 
-	est_data->active_trip_temps_hyst[0] = est_data->active_trip_temps[0];
-	for (i = 1; i < MAX_ACTIVE_STATES; i++)
-		fan_set_trip_temp_hyst(est_data, i,
-			est_data->active_hysteresis[i],
+	for (i = 1; i < MAX_ACTIVE_STATES; i++) {
+		fan_set_trip_temp_hyst(est_data, i, est_data->active_hysteresis[i],
 			est_data->active_trip_temps[i]);
-	for (i = 0; i < (MAX_ACTIVE_STATES << 1) + 1; i++)
+		if (((i + 1) < MAX_ACTIVE_STATES)
+			&& ((est_data->active_trip_temps[i] - est_data->active_hysteresis[i])
+			>= (est_data->active_trip_temps[i + 1] - est_data->active_hysteresis[i + 1]))) {
+			pr_err("THERMAL EST: active hysteresis invalid\n");
+			err = -EINVAL;
+			goto free_subdevs;
+		}
+	}
+	for (i = 0; i < MAX_ACTIVE_STATES; i++)
 		pr_debug("THERMAL EST index %d: trip_temps_hyst %d\n",
-			i, est_data->active_trip_temps_hyst[i]);
+			i, est_data->active_trip_temps[i] - est_data->active_hysteresis[i]);
 
-	est_data->sleep_temp = est_data->active_trip_temps[1];
-	est_data->nonsleep_temp = est_data->active_trip_temps_hyst[1];
+	est_data->nonsleep_hyst  = est_data->active_hysteresis[1];
 	est_data->sleep_mode = false;
 
 	for (i = 0; i < est_data->ndevs; i++) {
@@ -919,7 +923,7 @@ static int therm_fan_est_probe(struct platform_device *pdev)
 		goto free_tzp;
 	}
 
-	est_data->current_trip_index = 0;
+	est_data->current_trip_level = 0;
 	est_data->reset_trip_index = 0;
 	INIT_DELAYED_WORK(&est_data->therm_fan_est_work,
 				therm_fan_est_work_func);
@@ -977,7 +981,7 @@ static int therm_fan_est_suspend(struct platform_device *pdev,
 
 	pr_debug("therm-fan-est: %s, cur_temp:%ld", __func__, est->cur_temp);
 	cancel_delayed_work(&est->therm_fan_est_work);
-	est->current_trip_index = 0;
+	est->current_trip_level = 0;
 
 	return 0;
 }

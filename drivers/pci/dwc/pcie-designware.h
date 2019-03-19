@@ -105,12 +105,7 @@
 #define MSI_MESSAGE_ADDR_L32		0x54
 #define MSI_MESSAGE_ADDR_U32		0x58
 
-/*
- * Maximum number of MSI IRQs can be 256 per controller. But keep
- * it 32 as of now. Probably we will never need more than 32. If needed,
- * then increment it in multiple of 32.
- */
-#define MAX_MSI_IRQS			32
+#define MAX_MSI_IRQS			256
 #define MAX_MSI_CTRLS			(MAX_MSI_IRQS / 32)
 
 struct pcie_port;

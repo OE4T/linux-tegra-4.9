@@ -4751,6 +4751,7 @@ static void tegra210_adsp_audio_platform_shutdown(
 {
 	struct tegra210_adsp *adsp = dev_get_drvdata(&pdev->dev);
 
+	tegra210_adsp_deinit(adsp);
 	adsp->is_shutdown = true;
 }
 

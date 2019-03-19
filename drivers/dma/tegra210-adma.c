@@ -121,25 +121,6 @@
 #define ADMA_SHRD_SMP_BITS		(ADMA_SHRD_SMP_CPU | ADMA_SHRD_SMP_ADSP)
 #define ADMA_SHRD_SEM_WAIT_COUNT		50
 
-#define ADMA_AST_CONTROL					0x000
-#define ADMA_AST_RGN_SLAVE_BASE_LO				0x100
-#define ADMA_AST_RGN_SLAVE_BASE_HI				0x104
-#define ADMA_AST_RGN_MASK_BASE_LO				0x108
-#define ADMA_AST_RGN_MASK_BASE_HI				0x10c
-#define ADMA_AST_RGN_MASTER_BASE_LO				0x110
-#define ADMA_AST_RGN_MASTER_BASE_HI				0x114
-#define ADMA_AST_RGN_CONTOL					0x118
-
-#define AST_PAGE_MASK						(~0xFFF)
-#define AST_LO_SHIFT						32
-#define AST_LO_MASK						0xFFFFFFFF
-#define AST_PHY_SID_IDX						0
-#define AST_APE_SID_IDX						1
-#define AST_NS							(1 << 3)
-#define AST_VMINDEX(IDX)					(IDX << 15)
-#define AST_RGN_ENABLE						(1 << 0)
-#define AST_RGN_OFFSET						0x20
-
 struct tegra_adma;
 struct device *dma_device;
 
@@ -171,8 +152,6 @@ struct tegra_adma_chip_data {
 	unsigned int ch_req_mask;
 	unsigned int ch_req_max;
 	struct tegra_adma_war adma_war;
-	int (*tegra_adast_init)(struct platform_device *pdev,
-			void __iomem *adast_addr);
 	unsigned int (*adma_get_burst_config)(unsigned int burst_size);
 };
 
@@ -230,7 +209,6 @@ struct tegra_adma {
 	struct device			*dev;
 	struct clk                      *ahub_clk;
 	void __iomem			*base_addr;
-	void __iomem			*adast_addr;
 	void __iomem			*shrd_sem_addr;
 	unsigned int			nr_channels;
 	unsigned long			rx_requests_reserved;
@@ -310,96 +288,6 @@ static int tegra_adma_slave_config(struct dma_chan *dc,
 	struct tegra_adma_chan *tdc = to_tegra_adma_chan(dc);
 
 	memcpy(&tdc->sconfig, sconfig, sizeof(*sconfig));
-
-	return 0;
-}
-
-#define ADAST_REGIONS	1
-
-struct adast_region {
-	u64	rgn;
-	u64	rgn_ctrl;
-	u64	slave;
-	u64	size;
-	u64	master;
-};
-
-static struct adast_region adast_regions[ADAST_REGIONS];
-
-static inline void adast_write(void __iomem *adast, u32 reg, u32 val)
-{
-	writel(val, adast + reg);
-}
-
-static inline u32 __maybe_unused adast_read(void __iomem *adast, u32 reg)
-{
-	return readl(adast + reg);
-}
-
-static inline u32 adast_rgn_reg(u32 rgn, u32 reg)
-{
-	return rgn * AST_RGN_OFFSET + reg;
-}
-
-static void tegra18x_adast_map(void __iomem *adast, u64 rgn, u64 rgn_ctrl,
-			       u64 slave, u64 size, u64 master)
-{
-	u32 val;
-
-	val = (slave & AST_LO_MASK) | AST_RGN_ENABLE;
-	adast_write(adast,
-		    adast_rgn_reg(rgn, ADMA_AST_RGN_SLAVE_BASE_LO), val);
-	val = slave >> AST_LO_SHIFT;
-	adast_write(adast,
-		    adast_rgn_reg(rgn, ADMA_AST_RGN_SLAVE_BASE_HI), val);
-
-	val = master & AST_LO_MASK;
-	adast_write(adast,
-		    adast_rgn_reg(rgn, ADMA_AST_RGN_MASTER_BASE_LO), val);
-	val = master >> AST_LO_SHIFT;
-	adast_write(adast,
-		    adast_rgn_reg(rgn, ADMA_AST_RGN_MASTER_BASE_HI), val);
-
-	val = ((size - 1) & AST_PAGE_MASK) & AST_LO_MASK;
-	adast_write(adast,
-		    adast_rgn_reg(rgn, ADMA_AST_RGN_MASK_BASE_LO), val);
-	val = (size - 1) >> AST_LO_SHIFT;
-	adast_write(adast,
-		    adast_rgn_reg(rgn, ADMA_AST_RGN_MASK_BASE_HI), val);
-
-	adast_write(adast,
-		    adast_rgn_reg(rgn, ADMA_AST_RGN_CONTOL), rgn_ctrl);
-}
-
-static int tegra_adast_init(struct platform_device *pdev,
-			void __iomem *adast)
-{
-	struct device_node *node = pdev->dev.of_node;
-	int i, ret;
-
-	ret = of_property_read_u64_array(node, "nvidia,adast",
-			(u64 *)&adast_regions[0],
-			 sizeof(adast_regions)/sizeof(u64));
-	if (ret) {
-		dev_info(&pdev->dev,
-			 "valid nvidia,adast dt prop not present.\n");
-		return 0;
-	}
-
-	for (i = 0; i < ADAST_REGIONS; i++) {
-		tegra18x_adast_map(adast,
-				   adast_regions[i].rgn,
-				   adast_regions[i].rgn_ctrl,
-				   adast_regions[i].slave,
-				   adast_regions[i].size,
-				   adast_regions[i].master);
-
-		dev_dbg(&pdev->dev, "i:%d rgn:0x%llx rgn_ctrl:0x%llx",
-			 i, adast_regions[i].rgn, adast_regions[i].rgn_ctrl);
-		dev_dbg(&pdev->dev, "slave:0x%llx size:0x%llx master:0x%llx\n",
-			 adast_regions[i].slave, adast_regions[i].size,
-			 adast_regions[i].master);
-	}
 
 	return 0;
 }
@@ -1068,7 +956,6 @@ static int tegra_adma_runtime_suspend(struct device *dev)
 
 static int tegra_adma_runtime_resume(struct device *dev)
 {
-	struct platform_device *pdev = to_platform_device(dev);
 	struct tegra_adma *tdma = dev_get_drvdata(dev);
 	int ret, i;
 
@@ -1080,19 +967,8 @@ static int tegra_adma_runtime_resume(struct device *dev)
 		}
 	}
 
-	if (tdma->is_virt == false) {
-		if (tdma->chip_data->tegra_adast_init != NULL) {
-			ret = tdma->chip_data->tegra_adast_init(pdev,
-					tdma->adast_addr);
-			if (ret) {
-				dev_err(dev, "tegra_adast_init failed: %d\n",
-									ret);
-				return ret;
-			}
-		}
-
+	if (tdma->is_virt == false)
 		tdma_global_write(tdma, ADMA_GLOBAL_CMD, tdma->global_cmd);
-	}
 
 	if (tdma->global_cmd) {
 		for (i = 0; i < tdma->nr_channels; i++) {
@@ -1126,7 +1002,6 @@ static const struct tegra_adma_chip_data tegra210_chip_data = {
 	.global_reg_offset	= 0xc00,
 	.slave_id		= 2,
 	.outstanding_request	= 0,
-	.tegra_adast_init	= NULL,
 	.adma_get_burst_config  = tegra210_adma_get_burst_config,
 	.ch_fifo_size_mask	= T210_ADMA_CH_FIFO_CTRL_FIFO_SIZE_MASK,
 	.ch_req_tx_shift	= T210_ADMA_CH_CTRL_TX_REQ_SEL_SHIFT,
@@ -1150,7 +1025,6 @@ static const struct tegra_adma_chip_data tegra186_chip_data = {
 	.global_reg_offset	= 0,
 	.slave_id		= 4,
 	.outstanding_request	= (0x8 << 4),
-	.tegra_adast_init	= tegra_adast_init,
 	.adma_get_burst_config  = tegra186_adma_get_burst_config,
 	.ch_fifo_size_mask	= T186_ADMA_CH_FIFO_CTRL_FIFO_SIZE_MASK,
 	.ch_req_tx_shift	= T186_ADMA_CH_CTRL_TX_REQ_SEL_SHIFT,
@@ -1174,7 +1048,6 @@ static const struct tegra_adma_chip_data tegra194_chip_data = {
 	.global_reg_offset	= 0,
 	.slave_id		= 4,
 	.outstanding_request	= (0x8 << 4),
-	.tegra_adast_init	= tegra_adast_init,
 	.adma_get_burst_config  = tegra186_adma_get_burst_config,
 	.ch_fifo_size_mask	= T186_ADMA_CH_FIFO_CTRL_FIFO_SIZE_MASK,
 	.ch_req_tx_shift	= T186_ADMA_CH_CTRL_TX_REQ_SEL_SHIFT,
@@ -1261,13 +1134,8 @@ static int tegra_adma_probe(struct platform_device *pdev)
 	if (IS_ERR(tdma->base_addr))
 		return PTR_ERR(tdma->base_addr);
 
-	res = platform_get_resource(pdev, IORESOURCE_MEM, 1);
-	tdma->adast_addr = devm_ioremap_resource(&pdev->dev, res);
-	if (IS_ERR(tdma->adast_addr))
-		return PTR_ERR(tdma->adast_addr);
-
 	if (cdata->adma_war.is_adma_war) {
-		res = platform_get_resource(pdev, IORESOURCE_MEM, 2);
+		res = platform_get_resource(pdev, IORESOURCE_MEM, 1);
 		tdma->shrd_sem_addr = devm_ioremap_nocache(&pdev->dev,
 							  res->start,
 							  resource_size(res));

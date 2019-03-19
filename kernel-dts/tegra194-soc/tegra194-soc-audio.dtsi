@@ -144,9 +144,7 @@
 			compatible = "nvidia,tegra194-adma";
 			interrupt-parent = <&tegra_agic>;
 			reg = <0x0 0x02930000 0x0 0x50000>,	/* ADMA Reg */
-			      <0x0 0x02996000 0x0 0x2000>,	/* ADAST */
 			      <0x0 0x029f0000 0x0 0x10>;	/* HSP SS */
-			nvidia,adast =  <0x0 0x2 0x0 0x00008008 0x0 0x40000000 0x0 0x20000000 0x0 0x40000000>;
 			clocks = <&bpmp_clks TEGRA194_CLK_AHUB>;
 			clock-names = "d_audio";
 			interrupts =  <GIC_SPI INT_ADMA_EOT0 IRQ_TYPE_LEVEL_HIGH ROUTE_TO_HOST_INTF0>,

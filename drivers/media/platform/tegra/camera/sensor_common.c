@@ -424,13 +424,13 @@ static int sensor_common_parse_control_props(
 	/* ignore err for this prop */
 	err = read_property_u32(node, "min_hdr_ratio", &value);
 	if (err)
-		control->min_hdr_ratio = 0;
+		control->min_hdr_ratio = 1;
 	else
 		control->min_hdr_ratio = value;
 
 	err = read_property_u32(node, "max_hdr_ratio", &value);
 	if (err)
-		control->max_hdr_ratio = 0;
+		control->max_hdr_ratio = 1;
 	else
 		control->max_hdr_ratio = value;
 

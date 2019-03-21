@@ -33,46 +33,9 @@
 #include <linux/hwmon-sysfs.h>
 #include <linux/version.h>
 
-#define DEFERRED_RESUME_TIME 3000
-#define THERMAL_GOV_PID "pid_thermal_gov"
-#define DEBUG 0
+
 /* Based off of max device tree node name length */
 #define MAX_PROFILE_NAME_LENGTH	31
-struct therm_fan_estimator {
-	long cur_temp;
-	long pre_temp;
-#if DEBUG
-	long cur_temp_debug;
-#endif
-	long polling_period;
-	struct workqueue_struct *workqueue;
-	struct delayed_work therm_fan_est_work;
-	long toffset;
-	int ntemp;
-	int ndevs;
-	struct therm_fan_est_subdevice *devs;
-	struct thermal_zone_device *thz;
-	int current_trip_level;
-	const char *cdev_type;
-	rwlock_t state_lock;
-	int num_profiles;
-	int current_profile;
-	const char **fan_profile_names;
-	s32 **fan_profile_trip_temps;
-	s32 **fan_profile_trip_hysteresis;
-	s32 active_trip_temps[MAX_ACTIVE_STATES];
-	s32 active_hysteresis[MAX_ACTIVE_STATES];
-	struct thermal_zone_params *tzp;
-	int num_resources;
-	int trip_length;
-	const char *name;
-	bool is_pid_gov;
-	bool reset_trip_index;
-	/* allow cooling device to turn off at higher temperature if sleep */
-	bool sleep_mode;
-	int nonsleep_hyst;
-};
-
 
 static void fan_set_trip_temp_hyst(struct therm_fan_estimator *est, int trip,
 							unsigned long hyst_temp,
@@ -122,6 +85,9 @@ static void therm_fan_est_work_func(struct work_struct *work)
 #else
 	est->cur_temp = est->cur_temp_debug;
 #endif
+
+	if (est->is_continuous_gov)
+		goto next_work;
 
 	if (est->reset_trip_index) {
 		est->reset_trip_index = 0;
@@ -188,10 +154,24 @@ static void therm_fan_est_work_func(struct work_struct *work)
 		write_unlock(&est->state_lock);
 	}
 
+next_work:
 	est->ntemp++;
 	queue_delayed_work(est->workqueue, &est->therm_fan_est_work,
 				msecs_to_jiffies(est->polling_period));
 }
+
+#ifdef CONFIG_THERMAL_GOV_CONTINUOUS
+/*function defined in continu_thermal_gov.c*/
+void register_fetch_pwm_func(int (*func)(struct thermal_cooling_device *cdev, int trip));
+
+/*fetch pwm table for continuous_therm_gov and then caculate the slope*/
+static int fetch_trip_pwm(struct thermal_cooling_device *cdev, int trip)
+{
+	struct fan_dev_data *fan_data = cdev->devdata;
+
+	return fan_data->fan_pwm[trip];
+}
+#endif
 
 static int therm_fan_est_bind(struct thermal_zone_device *thz,
 				struct thermal_cooling_device *cdev)
@@ -203,6 +183,11 @@ static int therm_fan_est_bind(struct thermal_zone_device *thz,
 			thermal_zone_bind_cooling_device(thz, i, cdev, i, i,
 					THERMAL_WEIGHT_DEFAULT);
 	}
+
+#ifdef CONFIG_THERMAL_GOV_CONTINUOUS
+	if (est->is_continuous_gov)
+		register_fetch_pwm_func(fetch_trip_pwm);
+#endif
 
 	return 0;
 }
@@ -901,13 +886,30 @@ static int therm_fan_est_probe(struct platform_device *pdev)
 	else
 		est_data->is_pid_gov = false;
 
+	if (!strncmp(tzp->governor_name,
+			THERMAL_CONTINUOUS_GOV,
+			strlen(THERMAL_CONTINUOUS_GOV)))
+		est_data->is_continuous_gov = true;
+	else
+		est_data->is_continuous_gov = false;
+
 	rwlock_init(&est_data->state_lock);
+
+	if (est_data->is_continuous_gov) {
+		value = est_data->polling_period;
+		if (!value) {
+			err = -EINVAL;
+			goto free_tzp;
+		}
+	}
+	else
+		value = 0;
 
 	est_data->tzp = tzp;
 	est_data->thz = thermal_zone_device_register(
 					(char *)dev_name(&pdev->dev),
 					10, 0x3FF, est_data,
-					&therm_fan_est_ops, tzp, 0, 0);
+					&therm_fan_est_ops, tzp, 0, value);
 	if (IS_ERR_OR_NULL(est_data->thz)) {
 		pr_err("THERMAL EST: thz register failed\n");
 		err = -EINVAL;
@@ -928,8 +930,8 @@ static int therm_fan_est_probe(struct platform_device *pdev)
 	INIT_DELAYED_WORK(&est_data->therm_fan_est_work,
 				therm_fan_est_work_func);
 	queue_delayed_work(est_data->workqueue,
-				&est_data->therm_fan_est_work,
-				msecs_to_jiffies(est_data->polling_period));
+			&est_data->therm_fan_est_work,
+			msecs_to_jiffies(est_data->polling_period));
 
 	for (i = 0; i < ARRAY_SIZE(therm_fan_est_nodes); i++)
 		device_create_file(&pdev->dev,

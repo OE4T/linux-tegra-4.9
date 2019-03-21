@@ -540,13 +540,13 @@ static int tegra_admaif_get_format(struct snd_kcontrol *kcontrol,
 				admaif->override_channels[mc->reg];
 	else {
 		for (i = 0 ; i < admaif->soc_data->num_ch; i++) {
-			snprintf(buf, 50, "ADMAIF%d RX stereo to mono", i+1);
+			snprintf(buf, 50, "ADMAIF%d Capture stereo to mono", i+1);
 			if (strstr(kcontrol->id.name, buf)) {
 				ucontrol->value.integer.value[0] =
 					admaif->rx_stereo_to_mono[i];
 				break;
 			}
-			snprintf(buf, 50, "ADMAIF%d TX mono to stereo", i+1);
+			snprintf(buf, 50, "ADMAIF%d Playback mono to stereo", i+1);
 			if (strstr(kcontrol->id.name, buf)) {
 				ucontrol->value.integer.value[0] =
 					admaif->tx_mono_to_stereo[i];
@@ -576,12 +576,12 @@ static int tegra_admaif_put_format(struct snd_kcontrol *kcontrol,
 			return -EINVAL;
 	} else {
 		for (i = 0 ; i < admaif->soc_data->num_ch; i++) {
-			snprintf(buf, 50, "ADMAIF%d RX stereo to mono", i+1);
+			snprintf(buf, 50, "ADMAIF%d Capture stereo to mono", i+1);
 			if (strstr(kcontrol->id.name, buf)) {
 				admaif->rx_stereo_to_mono[i] = value;
 				break;
 			}
-			snprintf(buf, 50, "ADMAIF%d TX mono to stereo", i+1);
+			snprintf(buf, 50, "ADMAIF%d Playback mono to stereo", i+1);
 			if (strstr(kcontrol->id.name, buf)) {
 				admaif->tx_mono_to_stereo[i] = value;
 				break;
@@ -928,12 +928,12 @@ static const struct soc_enum tegra_admaif_stereo_conv_enum =
 		tegra_admaif_get_format, tegra_admaif_put_format)
 
 #define TEGRA_ADMAIF_TX_CIF_CTRL(reg) \
-	SOC_ENUM_EXT("ADMAIF" #reg " TX mono to stereo conv", \
+	SOC_ENUM_EXT("ADMAIF" #reg " Playback mono to stereo conv", \
 		 tegra_admaif_mono_conv_enum, tegra_admaif_get_format, \
 		 tegra_admaif_put_format)
 
 #define TEGRA_ADMAIF_RX_CIF_CTRL(reg) \
-	SOC_ENUM_EXT("ADMAIF" #reg " RX stereo to mono conv", \
+	SOC_ENUM_EXT("ADMAIF" #reg " Capture stereo to mono conv", \
 		 tegra_admaif_stereo_conv_enum, tegra_admaif_get_format, \
 		 tegra_admaif_put_format)
 

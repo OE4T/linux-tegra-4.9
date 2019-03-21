@@ -45,6 +45,8 @@
 #include <linux/sched.h>
 #include <linux/version.h>
 
+#include "thermal_core.h"
+
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
 #include <linux/sched/clock.h>
 #endif
@@ -53,63 +55,6 @@
 
 /* Based off of max device tree node name length */
 #define MAX_PROFILE_NAME_LENGTH	31
-
-struct fan_dev_data {
-	int next_state;
-	int active_steps;
-	int *fan_rpm;
-	int *fan_pwm;
-	int *fan_rru;
-	int *fan_rrd;
-	int *fan_state_cap_lookup;
-	int num_profiles;
-	int current_profile;
-	const char **fan_profile_names;
-	int **fan_profile_pwms;
-	int *fan_profile_caps;
-	struct workqueue_struct *workqueue;
-	int fan_temp_control_flag;
-	struct pwm_device *pwm_dev;
-	bool pwm_legacy_api;
-	int fan_cap_pwm;
-	int fan_cur_pwm;
-	int next_target_pwm;
-	struct thermal_cooling_device *cdev;
-	struct delayed_work fan_ramp_work;
-	struct delayed_work fan_hyst_work;
-	int step_time;
-	int precision_multiplier;
-	struct mutex fan_state_lock;
-	int pwm_period;
-	int fan_pwm_max;
-	struct device *dev;
-	int tach_gpio;
-	int tach_irq;
-	atomic_t tach_enabled;
-	int fan_state_cap;
-	int pwm_gpio;
-	int pwm_id;
-	int fan_startup_pwm;
-	int fan_startup_time;
-	bool fan_kickstart; /*flag to check if fan is kickstart*/
-	bool kickstart_en;  /*flag to check if kickstart feature is enabled*/
-	enum pwm_polarity fan_pwm_polarity;
-	int suspend_state;
-	const char *name;
-	struct regulator *fan_reg;
-	bool is_fan_reg_enabled;
-	struct dentry *debugfs_root;
-	/* for tach feedback */
-	atomic64_t rpm_measured;
-	struct delayed_work fan_tach_work;
-	struct workqueue_struct *tach_workqueue;
-	int tach_period;
-	spinlock_t irq_lock;
-	int irq_count;
-	u64 first_irq;
-	u64 last_irq;
-	u64 old_irq;
-};
 
 static void fan_update_target_pwm(struct fan_dev_data *fan_data, int val)
 {
@@ -407,6 +352,16 @@ static int pwm_fan_set_cur_state(struct thermal_cooling_device *cdev,
 		return 0;
 	}
 
+	if (fan_data->continuous_gov) {
+		/*"continuous_therm_gov" used, "cur_state" indicate target pwm value*/
+		target_pwm = min(fan_data->fan_cap_pwm, (int)cur_state);
+		fan_data->next_target_pwm = target_pwm;
+		fan_update_target_pwm(fan_data, target_pwm);
+
+		mutex_unlock(&fan_data->fan_state_lock);
+		return 0;
+	}
+
 	if (cur_state >= fan_data->active_steps) {
 		mutex_unlock(&fan_data->fan_state_lock);
 		return -EINVAL;
@@ -511,6 +466,9 @@ static int get_next_higher_pwm(int pwm, struct fan_dev_data *fan_data)
 {
 	int i;
 
+	if (fan_data->continuous_gov)
+		return fan_data->next_target_pwm;
+
 	for (i = 0; i < fan_data->active_steps; i++)
 		if (pwm < fan_data->fan_pwm[i])
 			return fan_data->fan_pwm[i];
@@ -521,6 +479,9 @@ static int get_next_higher_pwm(int pwm, struct fan_dev_data *fan_data)
 static int get_next_lower_pwm(int pwm, struct fan_dev_data *fan_data)
 {
 	int i;
+
+	if (fan_data->continuous_gov)
+		return fan_data->next_target_pwm;
 
 	for (i = fan_data->active_steps - 1; i >= 0; i--)
 		if (pwm > fan_data->fan_pwm[i])
@@ -1271,6 +1232,8 @@ static int pwm_fan_probe(struct platform_device *pdev)
 		}
 	}
 	fan_data->fan_kickstart = false;
+
+	fan_data->continuous_gov = of_property_read_bool(node, "continuous_gov_boot_on");
 
 	INIT_DELAYED_WORK(&(fan_data->fan_ramp_work), fan_ramping_work_func);
 	INIT_DELAYED_WORK(&(fan_data->fan_hyst_work), fan_hyst_work_func);

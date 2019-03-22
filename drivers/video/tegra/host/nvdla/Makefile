@@ -8,7 +8,9 @@ ccflags-y += -Werror
 
 nvhost-nvdla-objs  = \
 		nvdla.o \
+		nvdla_buffer.o \
 		nvdla_ioctl.o \
+		dla_queue.o \
 		nvdla_queue.o \
 		nvdla_debug.o
 

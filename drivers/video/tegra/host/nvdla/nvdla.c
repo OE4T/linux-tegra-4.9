@@ -31,15 +31,17 @@
 #include "dev.h"
 #include "bus_client.h"
 #include "nvhost_acm.h"
-#include "nvhost_buffer.h"
+
 #include "flcn/flcn.h"
 #include "flcn/hw_flcn.h"
 #include "nvhost_syncpt_unit_interface.h"
 
 #include "t194/t194.h"
-#include "nvhost_queue.h"
+
 
 #include "nvdla/nvdla.h"
+#include "nvdla/dla_queue.h"
+#include "nvdla/nvdla_buffer.h"
 #include "nvdla/nvdla_debug.h"
 #include <uapi/linux/nvhost_nvdla_ioctl.h>
 #include "dla_fw_version.h"
@@ -771,7 +773,7 @@ static int nvdla_probe(struct platform_device *pdev)
 	if (pdata->flcn_isr)
 		flcn_intr_init(pdev);
 
-	nvdla_dev->pool = nvhost_queue_init(pdev, &nvdla_queue_ops,
+	nvdla_dev->pool = nvdla_queue_init(pdev, &nvdla_queue_ops,
 				MAX_NVDLA_QUEUE_COUNT);
 	if (IS_ERR(nvdla_dev->pool)) {
 		err = PTR_ERR(nvdla_dev->pool);
@@ -794,7 +796,7 @@ static int nvdla_probe(struct platform_device *pdev)
 	return 0;
 err_alloc_cmd_mem:
 err_mss_init:
-	nvhost_queue_deinit(nvdla_dev->pool);
+	nvdla_queue_deinit(nvdla_dev->pool);
 err_queue_init:
 	nvhost_client_device_release(pdev);
 err_client_device_init:
@@ -814,7 +816,7 @@ static int __exit nvdla_remove(struct platform_device *pdev)
 	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
 	struct nvdla_device *nvdla_dev = pdata->private_data;
 
-	nvhost_queue_deinit(nvdla_dev->pool);
+	nvdla_queue_deinit(nvdla_dev->pool);
 	nvhost_client_device_release(pdev);
 
 	nvdla_free_gcov_region(pdev, false);

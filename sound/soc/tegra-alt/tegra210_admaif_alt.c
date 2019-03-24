@@ -396,13 +396,6 @@ static int tegra_admaif_hw_params(struct snd_pcm_substream *substream,
 
 	memset(&cif_conf, 0, sizeof(struct tegra210_xbar_cif_conf));
 
-	channels = params_channels(params);
-	if (admaif->override_channels[dai->id] > 0)
-		channels = admaif->override_channels[dai->id];
-
-	cif_conf.audio_channels = channels;
-	cif_conf.client_channels = channels;
-
 	switch (params_format(params)) {
 	case SNDRV_PCM_FORMAT_S8:
 		cif_conf.audio_bits = TEGRA210_AUDIOCIF_BITS_8;
@@ -429,30 +422,43 @@ static int tegra_admaif_hw_params(struct snd_pcm_substream *substream,
 		return -EINVAL;
 	}
 
+	channels = params_channels(params);
+	cif_conf.client_channels = channels;
+	cif_conf.audio_channels = channels;
+
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
 		reg = admaif->soc_data->tx_base +
 			TEGRA_ADMAIF_CHAN_ACIF_TX_CTRL +
 			(dai->id * TEGRA_ADMAIF_CHANNEL_REG_STRIDE);
-		/* For playback path, the mono input from client channel
-		 * can be converted to stereo using cif controls.
-		*/
-		if (admaif->tx_mono_to_stereo[dai->id] > 0) {
+		/* For playback path, if client channel is 1 and mono to
+		 * stereo control was non-zero, then audio channels will be
+		 * set to 2 for mono to stereo conversion.
+		 */
+		if ((admaif->tx_mono_to_stereo[dai->id] > 0) &&
+						(channels == 1)) {
 			cif_conf.mono_conv =
 				admaif->tx_mono_to_stereo[dai->id] - 1;
 			cif_conf.audio_channels = 2;
-			cif_conf.client_channels = 1;
 		}
 	} else {
 		reg = TEGRA_ADMAIF_CHAN_ACIF_RX_CTRL +
 			(dai->id * TEGRA_ADMAIF_CHANNEL_REG_STRIDE);
-		/* For capture path, the stereo audio channel can be
-		 * converted to mono using cif controls.
-		*/
-		if (admaif->rx_stereo_to_mono[dai->id] > 0) {
+
+		/* The override channels are needed only for capture path as
+		 * the audio and client channels can be different on RX path.
+		 */
+		if (admaif->override_channels[dai->id] > 0) {
+			cif_conf.audio_channels =
+					admaif->override_channels[dai->id];
+		}
+
+		/* For capture path, if client channel is 1 and audio channel
+		 * is 2, only then stereo to mono settings will take effect.
+		 */
+		if ((admaif->rx_stereo_to_mono[dai->id] > 0) &&
+			(cif_conf.audio_channels == 2) && (channels == 1)) {
 			cif_conf.stereo_conv =
 				admaif->rx_stereo_to_mono[dai->id] - 1;
-			cif_conf.audio_channels = 2;
-			cif_conf.client_channels = 1;
 		}
 	}
 

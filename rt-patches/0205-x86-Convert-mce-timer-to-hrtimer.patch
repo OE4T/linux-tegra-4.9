@@ -1,7 +1,7 @@
-From 846ea583b427c227ab18830bd55c344018dc7de5 Mon Sep 17 00:00:00 2001
+From 1984bdaeb9301651116d026ad08fa6d86aaaa55b Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Mon, 13 Dec 2010 16:33:39 +0100
-Subject: [PATCH 205/352] x86: Convert mce timer to hrtimer
+Subject: [PATCH 205/369] x86: Convert mce timer to hrtimer
 
 mce_timer is started in atomic contexts of cpu bringup. This results
 in might_sleep() warnings on RT. Convert mce_timer to a hrtimer to
@@ -160,7 +160,7 @@ index 7e6163c..d8febf3 100644
  }
  
  /* Get notified when a cpu comes on/off. Be hotplug friendly. */
-@@ -2547,7 +2538,6 @@ static int
+@@ -2547,7 +2538,6 @@ static void mce_reenable_cpu(void *h)
  mce_cpu_callback(struct notifier_block *nfb, unsigned long action, void *hcpu)
  {
  	unsigned int cpu = (unsigned long)hcpu;
@@ -168,7 +168,7 @@ index 7e6163c..d8febf3 100644
  
  	switch (action & ~CPU_TASKS_FROZEN) {
  	case CPU_ONLINE:
-@@ -2567,11 +2557,9 @@ mce_cpu_callback(struct notifier_block *nfb, unsigned long action, void *hcpu)
+@@ -2567,11 +2557,9 @@ static void mce_reenable_cpu(void *h)
  		break;
  	case CPU_DOWN_PREPARE:
  		smp_call_function_single(cpu, mce_disable_cpu, &action, 1);
@@ -181,5 +181,5 @@ index 7e6163c..d8febf3 100644
  	}
  
 -- 
-2.7.4
+1.9.1
 

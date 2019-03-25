@@ -1,7 +1,7 @@
-From a17605d6b2b8a18728fe6455f3caa1c8d9318947 Mon Sep 17 00:00:00 2001
+From 791578a84ba922a7eb0851bfb0c6f0b3e532c703 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Mon, 6 Nov 2017 18:45:30 +0100
-Subject: [PATCH 330/352] fs: convert two more BH_Uptodate_Lock related
+Subject: [PATCH 330/369] fs: convert two more BH_Uptodate_Lock related
  bitspinlocks
 
 We convert all BH_Uptodate_Lock based bit-spinlocks to use
@@ -44,7 +44,7 @@ diff --git a/fs/xfs/xfs_aops.c b/fs/xfs/xfs_aops.c
 index f3acecf..c30dbde 100644
 --- a/fs/xfs/xfs_aops.c
 +++ b/fs/xfs/xfs_aops.c
-@@ -112,8 +112,7 @@ xfs_finish_page_writeback(
+@@ -112,8 +112,7 @@ struct block_device *
  	ASSERT(bvec->bv_offset + bvec->bv_len <= PAGE_SIZE);
  	ASSERT((bvec->bv_len & (i_blocksize(inode) - 1)) == 0);
  
@@ -54,7 +54,7 @@ index f3acecf..c30dbde 100644
  	do {
  		if (off >= bvec->bv_offset &&
  		    off < bvec->bv_offset + bvec->bv_len) {
-@@ -136,8 +135,7 @@ xfs_finish_page_writeback(
+@@ -136,8 +135,7 @@ struct block_device *
  		}
  		off += bh->b_size;
  	} while ((bh = bh->b_this_page) != head);
@@ -65,5 +65,5 @@ index f3acecf..c30dbde 100644
  	if (!busy)
  		end_page_writeback(bvec->bv_page);
 -- 
-2.7.4
+1.9.1
 

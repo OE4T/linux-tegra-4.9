@@ -1,12 +1,13 @@
-From d271d7c084119bc69571c7d3d8b9a37d7be95054 Mon Sep 17 00:00:00 2001
+From 11e50b56c97dd8e75084ad52dd940a59337b4a5f Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Fri, 11 Jan 2013 11:23:51 +0100
-Subject: [PATCH 195/352] completion: Use simple wait queues
+Subject: [PATCH 195/369] completion: Use simple wait queues
 
 Completions have no long lasting callbacks and therefor do not need
 the complex waitqueue variant. Use simple waitqueues which reduces the
 contention on the waitqueue lock.
 
+Change-Id: Ifc2329f558ef00439b852c0e7f8e307517e86806
 Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
 ---
  .../net/wireless/intersil/orinoco/orinoco_usb.c    |  2 +-
@@ -53,7 +54,7 @@ diff --git a/drivers/usb/gadget/legacy/inode.c b/drivers/usb/gadget/legacy/inode
 index b8534d3..8fcaf02 100644
 --- a/drivers/usb/gadget/legacy/inode.c
 +++ b/drivers/usb/gadget/legacy/inode.c
-@@ -347,7 +347,7 @@ ep_io (struct ep_data *epdata, void *buf, unsigned len)
+@@ -347,7 +347,7 @@ static void epio_complete (struct usb_ep *ep, struct usb_request *req)
  	spin_unlock_irq (&epdata->dev->lock);
  
  	if (likely (value == 0)) {
@@ -62,7 +63,7 @@ index b8534d3..8fcaf02 100644
  		if (value != 0) {
  			spin_lock_irq (&epdata->dev->lock);
  			if (likely (epdata->ep != NULL)) {
-@@ -356,7 +356,7 @@ ep_io (struct ep_data *epdata, void *buf, unsigned len)
+@@ -356,7 +356,7 @@ static void epio_complete (struct usb_ep *ep, struct usb_request *req)
  				usb_ep_dequeue (epdata->ep, epdata->req);
  				spin_unlock_irq (&epdata->dev->lock);
  
@@ -182,7 +183,7 @@ index 72d2d26..968255f 100644
  }
  
 diff --git a/kernel/power/suspend.c b/kernel/power/suspend.c
-index 880c5a2..af00974 100644
+index 880c5a2..94f05cb 100644
 --- a/kernel/power/suspend.c
 +++ b/kernel/power/suspend.c
 @@ -560,6 +560,8 @@ static void pm_suspend_marker(char *annotation)
@@ -194,15 +195,15 @@ index 880c5a2..af00974 100644
  /**
   * pm_suspend - Externally visible function for suspending the system.
   * @state: System sleep state to enter.
-@@ -574,6 +576,8 @@ int pm_suspend(suspend_state_t state)
- 	if (state <= PM_SUSPEND_ON || state >= PM_SUSPEND_MAX)
+@@ -575,6 +577,8 @@ int pm_suspend(suspend_state_t state)
  		return -EINVAL;
  
+ 	pm_suspend_marker("entry");
 +	pm_in_action = true;
 +
- 	pm_suspend_marker("entry");
  	error = enter_state(state);
  	if (error) {
+ 		suspend_stats.fail++;
 @@ -583,6 +587,7 @@ int pm_suspend(suspend_state_t state)
  		suspend_stats.success++;
  	}
@@ -243,7 +244,7 @@ index 8d0f35d..b62cf64 100644
  }
  EXPORT_SYMBOL(complete_all);
  
-@@ -62,20 +62,20 @@ do_wait_for_common(struct completion *x,
+@@ -62,20 +62,20 @@ void complete_all(struct completion *x)
  		   long (*action)(long), long timeout, int state)
  {
  	if (!x->done) {
@@ -269,7 +270,7 @@ index 8d0f35d..b62cf64 100644
  		if (!x->done)
  			return timeout;
  	}
-@@ -89,9 +89,9 @@ __wait_for_common(struct completion *x,
+@@ -89,9 +89,9 @@ void complete_all(struct completion *x)
  {
  	might_sleep();
  
@@ -306,7 +307,7 @@ index 8d0f35d..b62cf64 100644
  }
  EXPORT_SYMBOL(completion_done);
 diff --git a/kernel/sched/core.c b/kernel/sched/core.c
-index 50adeae..e61c6d30 100644
+index 080adee..73bfb25 100644
 --- a/kernel/sched/core.c
 +++ b/kernel/sched/core.c
 @@ -3426,7 +3426,10 @@ void migrate_disable(void)
@@ -371,5 +372,5 @@ index 9c2da06..a26906f 100644
  {
  	unsigned long flags;
 -- 
-2.7.4
+1.9.1
 

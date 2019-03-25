@@ -1,22 +1,22 @@
-From a89e96532d76b48402b32b6ed9b3e928a6431e10 Mon Sep 17 00:00:00 2001
+From ca07f80d91f677daf80b5601c2766cf9e559d967 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Thu, 21 Mar 2013 19:01:05 +0100
-Subject: [PATCH 249/352] printk: Drop the logbuf_lock more often
+Subject: [PATCH 249/369] printk: Drop the logbuf_lock more often
 
 The lock is hold with irgs off. The latency drops 500us+ on my arm bugs
 with a "full" buffer after executing "dmesg" on the shell.
 
-Change-Id: I825444cb8aa3c3e582aec9c4957ec680c9ae2b15
+Change-Id: Ic4fd57d6c082d578a1120b81921efa57935ec4bd
 Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 ---
  kernel/printk/printk.c | 26 ++++++++++++++++++++++++++
  1 file changed, 26 insertions(+)
 
 diff --git a/kernel/printk/printk.c b/kernel/printk/printk.c
-index 7938094..b737ec8 100644
+index 1a9d534..029c154 100644
 --- a/kernel/printk/printk.c
 +++ b/kernel/printk/printk.c
-@@ -1395,6 +1395,7 @@ static int syslog_print_all(char __user *buf, int size, bool clear)
+@@ -1454,6 +1454,7 @@ static int syslog_print_all(char __user *buf, int size, bool clear)
  {
  	char *text;
  	int len = 0;
@@ -24,7 +24,7 @@ index 7938094..b737ec8 100644
  
  	text = kmalloc(LOG_LINE_MAX + PREFIX_MAX, GFP_KERNEL);
  	if (!text)
-@@ -1406,6 +1407,14 @@ static int syslog_print_all(char __user *buf, int size, bool clear)
+@@ -1465,6 +1466,14 @@ static int syslog_print_all(char __user *buf, int size, bool clear)
  		u64 seq;
  		u32 idx;
  		enum log_flags prev;
@@ -39,37 +39,37 @@ index 7938094..b737ec8 100644
  
  		/*
  		 * Find first record that fits, including all following records,
-@@ -1421,6 +1430,14 @@ static int syslog_print_all(char __user *buf, int size, bool clear)
+@@ -1480,6 +1489,14 @@ static int syslog_print_all(char __user *buf, int size, bool clear)
  			prev = msg->flags;
  			idx = log_next(idx);
  			seq++;
 +			num_msg++;
 +			if (num_msg > 5) {
 +				num_msg = 0;
-+				logbuf_unlock_irq();
-+				logbuf_lock_irq();
++				raw_spin_unlock_irq(&logbuf_lock);
++				raw_spin_lock_irq(&logbuf_lock);
 +				if (clear_seq < log_first_seq)
 +					goto try_again;
 +			}
  		}
  
  		/* move first record forward until length fits into the buffer */
-@@ -1434,6 +1451,14 @@ static int syslog_print_all(char __user *buf, int size, bool clear)
+@@ -1493,6 +1510,14 @@ static int syslog_print_all(char __user *buf, int size, bool clear)
  			prev = msg->flags;
  			idx = log_next(idx);
  			seq++;
 +			num_msg++;
 +			if (num_msg > 5) {
 +				num_msg = 0;
-+				logbuf_unlock_irq();
-+				logbuf_lock_irq();
++				raw_spin_unlock_irq(&logbuf_lock);
++				raw_spin_lock_irq(&logbuf_lock);
 +				if (clear_seq < log_first_seq)
 +					goto try_again;
 +			}
  		}
  
  		/* last message fitting into this dump */
-@@ -1474,6 +1499,7 @@ static int syslog_print_all(char __user *buf, int size, bool clear)
+@@ -1533,6 +1558,7 @@ static int syslog_print_all(char __user *buf, int size, bool clear)
  		clear_seq = log_next_seq;
  		clear_idx = log_next_idx;
  	}
@@ -78,5 +78,5 @@ index 7938094..b737ec8 100644
  
  	kfree(text);
 -- 
-2.7.4
+1.9.1
 

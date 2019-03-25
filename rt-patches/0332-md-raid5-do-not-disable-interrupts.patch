@@ -1,7 +1,7 @@
-From 603e9c7e6c6195d853459325d9561931c4af9b8e Mon Sep 17 00:00:00 2001
+From 1a388847909b7c1db6af8f96bfd08898bd1222d6 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Fri, 17 Nov 2017 16:21:00 +0100
-Subject: [PATCH 332/352] md/raid5: do not disable interrupts
+Subject: [PATCH 332/369] md/raid5: do not disable interrupts
 
 |BUG: sleeping function called from invalid context at kernel/locking/rtmutex.c:974
 |in_atomic(): 0, irqs_disabled(): 1, pid: 2992, name: lvm
@@ -57,5 +57,5 @@ index d05864f..160c8a0 100644
  
  static inline void remove_hash(struct stripe_head *sh)
 -- 
-2.7.4
+1.9.1
 

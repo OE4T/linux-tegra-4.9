@@ -1,7 +1,7 @@
-From 712d89fba4a5ff3f4c5f903cf6e26adeda47fc50 Mon Sep 17 00:00:00 2001
+From 6793c8aa263b526424f5355ffb5331c569122836 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Wed, 20 Jan 2016 15:39:05 +0100
-Subject: [PATCH 237/352] net: provide a way to delegate processing a softirq
+Subject: [PATCH 237/369] net: provide a way to delegate processing a softirq
  to ksoftirqd
 
 If the NET_RX uses up all of his budget it moves the following NAPI
@@ -23,7 +23,7 @@ diff --git a/include/linux/interrupt.h b/include/linux/interrupt.h
 index 4917b62..6e3c032 100644
 --- a/include/linux/interrupt.h
 +++ b/include/linux/interrupt.h
-@@ -497,6 +497,14 @@ extern void thread_do_softirq(void);
+@@ -497,6 +497,14 @@ static inline void do_softirq_own_stack(void)
  extern void open_softirq(int nr, void (*action)(struct softirq_action *));
  extern void softirq_init(void);
  extern void __raise_softirq_irqoff(unsigned int nr);
@@ -84,5 +84,5 @@ index 1b44303..230e57c 100644
  	net_rps_action_and_irq_enable(sd);
  }
 -- 
-2.7.4
+1.9.1
 

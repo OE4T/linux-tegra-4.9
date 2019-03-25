@@ -1,7 +1,7 @@
-From 4388d2973590b5d0414980309356e2451c5d4c2d Mon Sep 17 00:00:00 2001
+From 1738428985df80f426517a1224b4fb9de5275324 Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Wed, 22 Mar 2017 11:35:56 +0100
-Subject: [PATCH 013/352] futex,rt_mutex: Introduce rt_mutex_init_waiter()
+Subject: [PATCH 013/369] futex,rt_mutex: Introduce rt_mutex_init_waiter()
 
 Upstream commit 50809358dd7199aa7ce232f6877dd09ec30ef374
 
@@ -61,7 +61,7 @@ index c0639b5..d7dbce1 100644
  /**
   * __rt_mutex_slowlock() - Perform the wait-wake-try-to-take loop
   * @lock:		 the rt_mutex to take
-@@ -1258,9 +1266,7 @@ rt_mutex_slowlock(struct rt_mutex *lock, int state,
+@@ -1258,9 +1266,7 @@ static void rt_mutex_handle_deadlock(int res, int detect_deadlock,
  	unsigned long flags;
  	int ret = 0;
  
@@ -85,5 +85,5 @@ index d4d98c9..74b4cf2f 100644
  				     struct rt_mutex_waiter *waiter,
  				     struct task_struct *task);
 -- 
-2.7.4
+1.9.1
 

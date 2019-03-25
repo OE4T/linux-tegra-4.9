@@ -1,7 +1,7 @@
-From 160b8852d4b9b1f26e7341c16490f47ea7a6a180 Mon Sep 17 00:00:00 2001
+From e487e93193e6c865f579dd5a4f37ace189f314c4 Mon Sep 17 00:00:00 2001
 From: Ingo Molnar <mingo@elte.hu>
 Date: Fri, 3 Jul 2009 08:29:34 -0500
-Subject: [PATCH 119/352] timers: Prepare for full preemption
+Subject: [PATCH 119/369] timers: Prepare for full preemption
 
 When softirqs can be preempted we need to make sure that cancelling
 the timer from the active thread can not deadlock vs. a running timer
@@ -19,7 +19,7 @@ diff --git a/include/linux/timer.h b/include/linux/timer.h
 index ec86e4e..8e5b680 100644
 --- a/include/linux/timer.h
 +++ b/include/linux/timer.h
-@@ -241,7 +241,7 @@ extern void add_timer(struct timer_list *timer);
+@@ -241,7 +241,7 @@ static inline void timer_stats_timer_clear_start_info(struct timer_list *timer)
  
  extern int try_to_del_timer_sync(struct timer_list *timer);
  
@@ -29,7 +29,7 @@ index ec86e4e..8e5b680 100644
  #else
  # define del_timer_sync(t)		del_timer(t)
 diff --git a/kernel/sched/core.c b/kernel/sched/core.c
-index e0b1697..d8fffe3 100644
+index 01968de..0c4ce3a 100644
 --- a/kernel/sched/core.c
 +++ b/kernel/sched/core.c
 @@ -540,11 +540,14 @@ void resched_cpu(int cpu)
@@ -62,7 +62,7 @@ diff --git a/kernel/time/timer.c b/kernel/time/timer.c
 index f14e352..a0cb1a2 100644
 --- a/kernel/time/timer.c
 +++ b/kernel/time/timer.c
-@@ -195,6 +195,9 @@ EXPORT_SYMBOL(jiffies_64);
+@@ -195,6 +195,9 @@
  struct timer_base {
  	raw_spinlock_t		lock;
  	struct timer_list	*running_timer;
@@ -163,5 +163,5 @@ index f14e352..a0cb1a2 100644
  }
  
 -- 
-2.7.4
+1.9.1
 

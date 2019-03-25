@@ -1,7 +1,7 @@
-From abb7f59ffba3577676c8b784a40b2890ebee84df Mon Sep 17 00:00:00 2001
+From 66c59ae3e13e3523164c4efa03e1d27f4f7fbf7c Mon Sep 17 00:00:00 2001
 From: Steven Rostedt <srostedt@redhat.com>
 Date: Mon, 16 Jul 2012 08:07:43 +0000
-Subject: [PATCH 281/352] cpu/rt: Rework cpu down for PREEMPT_RT
+Subject: [PATCH 281/369] cpu/rt: Rework cpu down for PREEMPT_RT
 
 Bringing a CPU down is a pain with the PREEMPT_RT kernel because
 tasks can be preempted in many more places than in non-RT. In
@@ -55,7 +55,7 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  3 files changed, 280 insertions(+), 41 deletions(-)
 
 diff --git a/include/linux/sched.h b/include/linux/sched.h
-index 2961350a..8ebfcf3 100644
+index 97f57f0..8a20375 100644
 --- a/include/linux/sched.h
 +++ b/include/linux/sched.h
 @@ -2679,6 +2679,10 @@ extern void do_set_cpus_allowed(struct task_struct *p,
@@ -83,7 +83,7 @@ diff --git a/kernel/cpu.c b/kernel/cpu.c
 index 41cc8ae..87424f1 100644
 --- a/kernel/cpu.c
 +++ b/kernel/cpu.c
-@@ -217,16 +217,10 @@ static int cpu_hotplug_disabled;
+@@ -217,16 +217,10 @@ void cpu_maps_update_done(void)
  
  static struct {
  	struct task_struct *active_writer;
@@ -100,7 +100,7 @@ index 41cc8ae..87424f1 100644
  	/*
  	 * Also blocks the new readers during
  	 * an ongoing cpu hotplug operation.
-@@ -239,24 +233,12 @@ static struct {
+@@ -239,24 +233,12 @@ void cpu_maps_update_done(void)
  } cpu_hotplug = {
  	.active_writer = NULL,
  	.wq = __WAIT_QUEUE_HEAD_INITIALIZER(cpu_hotplug.wq),
@@ -125,7 +125,7 @@ index 41cc8ae..87424f1 100644
  /* Lockdep annotations for get/put_online_cpus() and cpu_hotplug_begin/end() */
  #define cpuhp_lock_acquire_read() lock_map_acquire_read(&cpu_hotplug.dep_map)
  #define cpuhp_lock_acquire_tryread() \
-@@ -264,12 +246,42 @@ static struct {
+@@ -264,12 +246,42 @@ void cpu_maps_update_done(void)
  #define cpuhp_lock_acquire()      lock_map_acquire(&cpu_hotplug.dep_map)
  #define cpuhp_lock_release()      lock_map_release(&cpu_hotplug.dep_map)
  
@@ -168,7 +168,7 @@ index 41cc8ae..87424f1 100644
  static DEFINE_PER_CPU(struct hotplug_pcp, hotplug_pcp);
  
  /**
-@@ -283,18 +295,39 @@ static DEFINE_PER_CPU(struct hotplug_pcp, hotplug_pcp);
+@@ -283,18 +295,39 @@ struct hotplug_pcp {
  void pin_current_cpu(void)
  {
  	struct hotplug_pcp *hp;
@@ -441,7 +441,7 @@ index 41cc8ae..87424f1 100644
  	 * Prevent irq alloc/free while the dying cpu reorganizes the
  	 * interrupt affinities.
 diff --git a/kernel/sched/core.c b/kernel/sched/core.c
-index 224b95a..c8af959 100644
+index f39ef52..4dd9f70 100644
 --- a/kernel/sched/core.c
 +++ b/kernel/sched/core.c
 @@ -1169,6 +1169,84 @@ void do_set_cpus_allowed(struct task_struct *p, const struct cpumask *new_mask)
@@ -530,5 +530,5 @@ index 224b95a..c8af959 100644
   * Change a given task's CPU affinity. Migrate the thread to a
   * proper CPU and schedule it away if the CPU it's executing on
 -- 
-2.7.4
+1.9.1
 

@@ -1,7 +1,7 @@
-From 019cc89e593a2211258b5ad8aac8d7e14ae9a305 Mon Sep 17 00:00:00 2001
+From 42a94d128af92491263c2ccbafbefc08f2ecc66f Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Fri, 8 Jul 2011 20:25:16 +0200
-Subject: [PATCH 326/352] Add localversion for -RT release
+Subject: [PATCH 326/369] Add localversion for -RT release
 
 Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
 ---
@@ -17,5 +17,5 @@ index 0000000..9a218ca
 @@ -0,0 +1 @@
 +-rt23
 -- 
-2.7.4
+1.9.1
 

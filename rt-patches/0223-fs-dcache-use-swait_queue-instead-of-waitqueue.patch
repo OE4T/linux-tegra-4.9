@@ -1,7 +1,7 @@
-From e79a6c3acbdd8f8186e6b6f37eb7d60e5d9b0c8a Mon Sep 17 00:00:00 2001
+From efcb8a3148f8a53c3ec0d5bc127dbc12ef405b72 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Wed, 14 Sep 2016 14:35:49 +0200
-Subject: [PATCH 223/352] fs/dcache: use swait_queue instead of waitqueue
+Subject: [PATCH 223/369] fs/dcache: use swait_queue instead of waitqueue
 
 __d_lookup_done() invokes wake_up_all() while holding a hlist_bl_lock()
 which disables preemption. As a workaround convert it to swait.
@@ -18,14 +18,14 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  fs/proc/proc_sysctl.c   |  2 +-
  include/linux/dcache.h  |  4 ++--
  include/linux/nfs_xdr.h |  2 +-
- kernel/sched/swait.c    |  2 +-
- 11 files changed, 29 insertions(+), 26 deletions(-)
+ kernel/sched/swait.c    |  1 +
+ 11 files changed, 29 insertions(+), 25 deletions(-)
 
 diff --git a/fs/cifs/readdir.c b/fs/cifs/readdir.c
 index ef24b45..3ce6331 100644
 --- a/fs/cifs/readdir.c
 +++ b/fs/cifs/readdir.c
-@@ -80,7 +80,7 @@ cifs_prime_dcache(struct dentry *parent, struct qstr *name,
+@@ -80,7 +80,7 @@ static inline void dump_cifs_file_struct(struct file *file, char *label)
  	struct inode *inode;
  	struct super_block *sb = parent->d_sb;
  	struct cifs_sb_info *cifs_sb = CIFS_SB(sb);
@@ -97,10 +97,10 @@ index 547a324..320ba94 100644
  	if (!o->nodeid) {
  		/*
 diff --git a/fs/namei.c b/fs/namei.c
-index a5a05d3..8149e43 100644
+index 88eb41c..4f265b4 100644
 --- a/fs/namei.c
 +++ b/fs/namei.c
-@@ -1640,7 +1640,7 @@ static struct dentry *lookup_slow(const struct qstr *name,
+@@ -1681,7 +1681,7 @@ static struct dentry *lookup_slow(const struct qstr *name,
  {
  	struct dentry *dentry = ERR_PTR(-ENOENT), *old;
  	struct inode *inode = dir->d_inode;
@@ -109,7 +109,7 @@ index a5a05d3..8149e43 100644
  
  	inode_lock_shared(inode);
  	/* Don't go there if it's already dead */
-@@ -3122,7 +3122,7 @@ static int lookup_open(struct nameidata *nd, struct path *path,
+@@ -3163,7 +3163,7 @@ static int lookup_open(struct nameidata *nd, struct path *path,
  	struct dentry *dentry;
  	int error, create_error = 0;
  	umode_t mode = op->mode;
@@ -122,7 +122,7 @@ diff --git a/fs/nfs/dir.c b/fs/nfs/dir.c
 index 24c0a09..2510f2b 100644
 --- a/fs/nfs/dir.c
 +++ b/fs/nfs/dir.c
-@@ -485,7 +485,7 @@ static
+@@ -485,7 +485,7 @@ void nfs_force_use_readdirplus(struct inode *dir)
  void nfs_prime_dcache(struct dentry *parent, struct nfs_entry *entry)
  {
  	struct qstr filename = QSTR_INIT(entry->name, entry->len);
@@ -153,7 +153,7 @@ index 0165a95..58990c8 100644
  #include <linux/namei.h>
  #include <linux/fsnotify.h>
  
-@@ -205,7 +205,7 @@ nfs_async_unlink(struct dentry *dentry, const struct qstr *name)
+@@ -205,7 +205,7 @@ static int nfs_call_unlink(struct dentry *dentry, struct nfs_unlinkdata *data)
  		goto out_free_name;
  	}
  	data->res.dir_attr = &data->dir_attr;
@@ -201,7 +201,7 @@ index d3d3aca..05b7100 100644
  	};
  	struct list_head d_child;	/* child of parent list */
  	struct list_head d_subdirs;	/* our children */
-@@ -233,7 +233,7 @@ extern void d_set_d_op(struct dentry *dentry, const struct dentry_operations *op
+@@ -233,7 +233,7 @@ struct dentry_operations {
  extern struct dentry * d_alloc(struct dentry *, const struct qstr *);
  extern struct dentry * d_alloc_pseudo(struct super_block *, const struct qstr *);
  extern struct dentry * d_alloc_parallel(struct dentry *, const struct qstr *,
@@ -224,18 +224,17 @@ index 3bf867a..71c6bdd 100644
  	struct nfs_fattr dir_attr;
  	long timeout;
 diff --git a/kernel/sched/swait.c b/kernel/sched/swait.c
-index a26906f..6b7e6d3 100644
+index a26906f..d29069d 100644
 --- a/kernel/sched/swait.c
 +++ b/kernel/sched/swait.c
-@@ -67,7 +67,7 @@ void swake_up_all(struct swait_queue_head *q)
- {
+@@ -68,6 +68,7 @@ void swake_up_all(struct swait_queue_head *q)
  	struct swait_queue *curr;
  	LIST_HEAD(tmp);
--
+ 
 +	WARN_ON(irqs_disabled());
  	raw_spin_lock_irq(&q->lock);
  	list_splice_init(&q->task_list, &tmp);
  	while (!list_empty(&tmp)) {
 -- 
-2.7.4
+1.9.1
 

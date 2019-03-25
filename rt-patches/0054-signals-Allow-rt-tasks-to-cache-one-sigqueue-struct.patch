@@ -1,7 +1,7 @@
-From 760a84b9f8decfd186e9611866fafecb37ee885e Mon Sep 17 00:00:00 2001
+From b1551acfe96627683cb1be3c6886f3177f4b8d75 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Fri, 3 Jul 2009 08:44:56 -0500
-Subject: [PATCH 054/352] signals: Allow rt tasks to cache one sigqueue struct
+Subject: [PATCH 054/369] signals: Allow rt tasks to cache one sigqueue struct
 
 To avoid allocation allow rt tasks to cache one sigqueue struct in
 task struct.
@@ -108,7 +108,7 @@ index d0b3c0e..f5465ea 100644
  {
  	struct sigqueue *q = NULL;
  	struct user_struct *user;
-@@ -377,7 +395,10 @@ __sigqueue_alloc(int sig, struct task_struct *t, gfp_t flags, int override_rlimi
+@@ -377,7 +395,10 @@ static bool task_participate_group_stop(struct task_struct *task)
  	if (override_rlimit ||
  	    atomic_read(&user->sigpending) <=
  			task_rlimit(t, RLIMIT_SIGPENDING)) {
@@ -120,7 +120,7 @@ index d0b3c0e..f5465ea 100644
  	} else {
  		print_dropped_signal(sig);
  	}
-@@ -394,6 +415,13 @@ __sigqueue_alloc(int sig, struct task_struct *t, gfp_t flags, int override_rlimi
+@@ -394,6 +415,13 @@ static bool task_participate_group_stop(struct task_struct *task)
  	return q;
  }
  
@@ -196,7 +196,7 @@ index d0b3c0e..f5465ea 100644
  	/* We only dequeue private signals from ourselves, we don't let
  	 * signalfd steal them
  	 */
-@@ -1499,7 +1559,8 @@ EXPORT_SYMBOL(kill_pid);
+@@ -1499,7 +1559,8 @@ int kill_pid(struct pid *pid, int sig, int priv)
   */
  struct sigqueue *sigqueue_alloc(void)
  {
@@ -207,5 +207,5 @@ index d0b3c0e..f5465ea 100644
  	if (q)
  		q->flags |= SIGQUEUE_PREALLOC;
 -- 
-2.7.4
+1.9.1
 

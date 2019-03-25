@@ -1,7 +1,7 @@
-From c75325660327e87a8fe87a576cd553c9e7dd5496 Mon Sep 17 00:00:00 2001
+From 78fcfa0bb8eae36c0d2776d1db593e98dbe057a2 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Sun, 28 Oct 2012 13:26:09 +0000
-Subject: [PATCH 299/352] rcu: Disable RCU_FAST_NO_HZ on RT
+Subject: [PATCH 299/369] rcu: Disable RCU_FAST_NO_HZ on RT
 
 This uses a timer_list timer from the irq disabled guts of the idle
 code. Disable it for now to prevent wreckage.
@@ -25,5 +25,5 @@ index d7b52e9..868cc41 100644
  	help
  	  This option permits CPUs to enter dynticks-idle state even if
 -- 
-2.7.4
+1.9.1
 

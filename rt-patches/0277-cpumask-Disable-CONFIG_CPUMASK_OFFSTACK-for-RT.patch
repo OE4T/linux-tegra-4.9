@@ -1,7 +1,7 @@
-From afbc22b838fef028e165a6484899b9a863f7f069 Mon Sep 17 00:00:00 2001
+From b411b79d7a86392e8811eeda2174eaeffd22af4f Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Wed, 14 Dec 2011 01:03:49 +0100
-Subject: [PATCH 277/352] cpumask: Disable CONFIG_CPUMASK_OFFSTACK for RT
+Subject: [PATCH 277/369] cpumask: Disable CONFIG_CPUMASK_OFFSTACK for RT
 
 There are "valid" GFP_ATOMIC allocations such as
 
@@ -71,5 +71,5 @@ index 260a80e..b06becb 100644
  	  Use dynamic allocation for cpumask_var_t, instead of putting
  	  them on the stack.  This is a bit more expensive, but avoids
 -- 
-2.7.4
+1.9.1
 

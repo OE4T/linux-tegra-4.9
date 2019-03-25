@@ -1,7 +1,7 @@
-From bc22e928c29db8d007c275a3acbab42e0b9261de Mon Sep 17 00:00:00 2001
+From 049fdfe05cf64896ecb0aa171582995e7c21f867 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Mon, 19 Jun 2017 09:55:47 +0200
-Subject: [PATCH 309/352] sched/migrate disable: handle updated task-mask
+Subject: [PATCH 309/369] sched/migrate disable: handle updated task-mask
  mg-dis section
 
 If task's cpumask changes while in the task is in a migrate_disable()
@@ -22,7 +22,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  2 files changed, 54 insertions(+), 6 deletions(-)
 
 diff --git a/include/linux/sched.h b/include/linux/sched.h
-index 0cd17a0..182f8cc 100644
+index 1123df7..766af84 100644
 --- a/include/linux/sched.h
 +++ b/include/linux/sched.h
 @@ -1717,6 +1717,7 @@ struct task_struct {
@@ -34,7 +34,7 @@ index 0cd17a0..182f8cc 100644
  	int migrate_disable_atomic;
  # endif
 diff --git a/kernel/sched/core.c b/kernel/sched/core.c
-index ddf157c..d252c77 100644
+index 7116c38..ab6229f 100644
 --- a/kernel/sched/core.c
 +++ b/kernel/sched/core.c
 @@ -1167,18 +1167,14 @@ void set_cpus_allowed_common(struct task_struct *p, const struct cpumask *new_ma
@@ -124,5 +124,5 @@ index ddf157c..d252c77 100644
  	preempt_enable();
  	preempt_lazy_enable();
 -- 
-2.7.4
+1.9.1
 

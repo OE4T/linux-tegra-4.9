@@ -1,7 +1,7 @@
-From 4752019dde39da2276f02c4416b378c7867b3639 Mon Sep 17 00:00:00 2001
+From 3a3f7e7996428bbe5fd2442fa3fee31db84231fb Mon Sep 17 00:00:00 2001
 From: Ingo Molnar <mingo@elte.hu>
 Date: Fri, 3 Jul 2009 08:30:16 -0500
-Subject: [PATCH 084/352] input: gameport: Do not disable interrupts on
+Subject: [PATCH 084/369] input: gameport: Do not disable interrupts on
  PREEMPT_RT
 
 Use the _nort() primitives.
@@ -62,5 +62,5 @@ index 4a2a9e3..e970d9a 100644
  		if (t2 - t1 < tx) tx = t2 - t1;
  	}
 -- 
-2.7.4
+1.9.1
 

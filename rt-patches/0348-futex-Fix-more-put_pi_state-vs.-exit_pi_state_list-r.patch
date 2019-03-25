@@ -1,11 +1,10 @@
-From 542516c23127a3aed163eccc21aafa92e0be87f9 Mon Sep 17 00:00:00 2001
-From: abhijit <abhijit@nvidia.com>
-Date: Tue, 24 Apr 2018 11:35:30 +0530
-Subject: [PATCH 352/352] futex: fix crash in exit pi path.
+From 7deb188b62c23369b9bce26880a2afc8146511a8 Mon Sep 17 00:00:00 2001
+From: Peter Zijlstra <peterz@infradead.org>
+Date: Wed, 6 Jun 2018 15:31:27 +0200
+Subject: [PATCH 348/369] futex: Fix more put_pi_state() vs.
+ exit_pi_state_list() races
 
-This patch is taken from below upstream commit 153fbd1226fb.
-
-futex: Fix more put_pi_state() vs. exit_pi_state_list() races
+[ Upstream commit 51d00899f7e6ded15c89cb4e2cb11a35283bac81 ]
 
 Dmitry (through syzbot) reported being able to trigger the WARN in
 get_pi_state() and a use-after-free on:
@@ -40,24 +39,33 @@ remove the entry from the list.
 
 Reported-by: Dmitry Vyukov <dvyukov@google.com>
 Signed-off-by: Peter Zijlstra (Intel) <peterz@infradead.org>
+Reviewed-by: Thomas Gleixner <tglx@linutronix.de>
 Cc: Gratian Crisan <gratian.crisan@ni.com>
 Cc: Linus Torvalds <torvalds@linux-foundation.org>
 Cc: Peter Zijlstra <peterz@infradead.org>
-Cc: Thomas Gleixner <tglx@linutronix.de>
 Cc: dvhart@infradead.org
 Cc: syzbot <bot+2af19c9e1ffe4d4ee1d16c56ae7580feaee75765@syzkaller.appspotmail.com>
 Cc: syzkaller-bugs@googlegroups.com
+Cc: <stable@vger.kernel.org>
+Fixes: c74aef2d06a9 ("futex: Fix pi_state->owner serialization")
+Link: http://lkml.kernel.org/r/20171031101853.xpfh72y643kdfhjs@hirez.programming.kicks-ass.net
 Signed-off-by: Ingo Molnar <mingo@kernel.org>
-Signed-off-by: Abhijit <abhijit@nvidia.com>
+Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
+Signed-off-by: Julia Cartwright <julia@ni.com>
 ---
- kernel/futex.c | 20 +++++++++++++++++++-
- 1 file changed, 19 insertions(+), 1 deletion(-)
+ kernel/futex.c | 23 ++++++++++++++++++++---
+ 1 file changed, 20 insertions(+), 3 deletions(-)
 
 diff --git a/kernel/futex.c b/kernel/futex.c
-index 12d03af..cbf2167 100644
+index d07f8e7..49e5a6f2 100644
 --- a/kernel/futex.c
 +++ b/kernel/futex.c
-@@ -900,6 +900,24 @@ void exit_pi_state_list(struct task_struct *curr)
+@@ -899,11 +899,27 @@ void exit_pi_state_list(struct task_struct *curr)
+ 	 */
+ 	raw_spin_lock_irq(&curr->pi_lock);
+ 	while (!list_empty(head)) {
+-
+ 		next = head->next;
  		pi_state = list_entry(next, struct futex_pi_state, list);
  		key = pi_state->key;
  		hb = hash_futex(&key);
@@ -78,26 +86,33 @@ index 12d03af..cbf2167 100644
 +			raw_spin_lock_irq(&curr->pi_lock);
 +			continue;
 +		}
-+
  		raw_spin_unlock_irq(&curr->pi_lock);
  
  		spin_lock(&hb->lock);
-@@ -913,6 +931,7 @@ void exit_pi_state_list(struct task_struct *curr)
- 			raw_spin_unlock_irq(&curr->pi_lock);
+@@ -914,10 +930,12 @@ void exit_pi_state_list(struct task_struct *curr)
+ 		 * task still owns the PI-state:
+ 		 */
+ 		if (head->next != next) {
++			/* retain curr->pi_lock for the loop invariant */
+ 			raw_spin_unlock(&curr->pi_lock);
+ 			raw_spin_unlock_irq(&pi_state->pi_mutex.wait_lock);
  			spin_unlock(&hb->lock);
  			raw_spin_lock_irq(&curr->pi_lock);
 +			put_pi_state(pi_state);
  			continue;
  		}
  
-@@ -922,7 +941,6 @@ void exit_pi_state_list(struct task_struct *curr)
+@@ -925,9 +943,8 @@ void exit_pi_state_list(struct task_struct *curr)
+ 		WARN_ON(list_empty(&pi_state->list));
+ 		list_del_init(&pi_state->list);
  		pi_state->owner = NULL;
- 		raw_spin_unlock_irq(&curr->pi_lock);
+-		raw_spin_unlock(&curr->pi_lock);
  
 -		get_pi_state(pi_state);
++		raw_spin_unlock(&curr->pi_lock);
+ 		raw_spin_unlock_irq(&pi_state->pi_mutex.wait_lock);
  		spin_unlock(&hb->lock);
  
- 		rt_mutex_futex_unlock(&pi_state->pi_mutex);
 -- 
-2.7.4
+1.9.1
 

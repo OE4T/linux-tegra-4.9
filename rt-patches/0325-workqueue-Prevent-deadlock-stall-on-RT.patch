@@ -1,7 +1,7 @@
-From 4d8fc1d2a0e7385bb27cf38795cce91e8bd5729e Mon Sep 17 00:00:00 2001
+From ef6052671121c275c67b4e78eb84a818d66f2e63 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Fri, 27 Jun 2014 16:24:52 +0200
-Subject: [PATCH 325/352] workqueue: Prevent deadlock/stall on RT
+Subject: [PATCH 325/369] workqueue: Prevent deadlock/stall on RT
 
 Austin reported a XFS deadlock/stall on RT where scheduled work gets
 never exececuted and tasks are waiting for each other for ever.
@@ -42,7 +42,7 @@ Cc: Steven Rostedt <rostedt@goodmis.org>
  2 files changed, 52 insertions(+), 15 deletions(-)
 
 diff --git a/kernel/sched/core.c b/kernel/sched/core.c
-index d252c77..ec9a8e8 100644
+index ab6229f..d5c5043 100644
 --- a/kernel/sched/core.c
 +++ b/kernel/sched/core.c
 @@ -3768,9 +3768,8 @@ void __noreturn do_task_dead(void)
@@ -83,7 +83,7 @@ index b69456e..67eb847 100644
   * A: pool->attach_mutex protected.
   *
   * PL: wq_pool_mutex protected.
-@@ -430,6 +435,31 @@ static void workqueue_sysfs_unregister(struct workqueue_struct *wq);
+@@ -430,6 +435,31 @@ struct workqueue_struct {
  		if (({ assert_rcu_or_wq_mutex(wq); false; })) { }	\
  		else
  
@@ -203,5 +203,5 @@ index b69456e..67eb847 100644
  	wake_up_process(worker->task);
  }
 -- 
-2.7.4
+1.9.1
 

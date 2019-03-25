@@ -1,7 +1,7 @@
-From 62a9d54646e972835470f9cd97426e27e30d2a82 Mon Sep 17 00:00:00 2001
+From 92fabae409e7eee2e536c6672526499e6b84b2d4 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Fri, 20 Sep 2013 14:31:54 +0200
-Subject: [PATCH 254/352] arm/unwind: use a raw_spin_lock
+Subject: [PATCH 254/369] arm/unwind: use a raw_spin_lock
 
 Mostly unwind is done with irqs enabled however SLUB may call it with
 irqs disabled while creating a new SLUB cache.
@@ -32,7 +32,7 @@ diff --git a/arch/arm/kernel/unwind.c b/arch/arm/kernel/unwind.c
 index 0bee233..314cfb2 100644
 --- a/arch/arm/kernel/unwind.c
 +++ b/arch/arm/kernel/unwind.c
-@@ -93,7 +93,7 @@ extern const struct unwind_idx __start_unwind_idx[];
+@@ -93,7 +93,7 @@ enum regs {
  static const struct unwind_idx *__origin_unwind_idx;
  extern const struct unwind_idx __stop_unwind_idx[];
  
@@ -84,5 +84,5 @@ index 0bee233..314cfb2 100644
  	kfree(tab);
  }
 -- 
-2.7.4
+1.9.1
 

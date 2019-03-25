@@ -1,7 +1,7 @@
-From d13b95b5dab85d3fb54932df3706c1ddc4e5c62b Mon Sep 17 00:00:00 2001
+From ae2152d60543937c7a0309c71a82a6f121471bd2 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Thu, 29 Aug 2013 11:48:57 +0200
-Subject: [PATCH 324/352] md: disable bcache
+Subject: [PATCH 324/369] md: disable bcache
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
@@ -36,5 +36,5 @@ index 4d20088..98b64ed 100644
  	Allows a block device to be used as cache for other devices; uses
  	a btree for indexing and the layout is optimized for SSDs.
 -- 
-2.7.4
+1.9.1
 

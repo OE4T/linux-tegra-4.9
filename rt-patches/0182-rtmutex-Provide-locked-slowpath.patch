@@ -1,7 +1,7 @@
-From 7f27d668c5d09c8baabe8c4a9d0e2093982250db Mon Sep 17 00:00:00 2001
+From b161118c6375a50f6653d51e6e86d6b267615baf Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Sat, 1 Apr 2017 12:51:01 +0200
-Subject: [PATCH 182/352] rtmutex: Provide locked slowpath
+Subject: [PATCH 182/369] rtmutex: Provide locked slowpath
 
 The new rt rwsem implementation needs rtmutex::wait_lock to protect struct
 rw_semaphore. Dropping the lock and reaquiring it for locking the rtmutex
@@ -64,7 +64,7 @@ index 9076a74..43f1394a 100644
  		return 0;
  	}
  
-@@ -1789,13 +1771,13 @@ rt_mutex_slowlock(struct rt_mutex *lock, int state,
+@@ -1789,13 +1771,13 @@ static void ww_mutex_account_lock(struct rt_mutex *lock,
  	if (unlikely(timeout))
  		hrtimer_start_expires(&timeout->timer, HRTIMER_MODE_ABS);
  
@@ -82,7 +82,7 @@ index 9076a74..43f1394a 100644
  		/* ww_mutex received EDEADLK, let it become EALREADY */
  		ret = __mutex_lock_check_stamp(lock, ww_ctx);
  		BUG_ON(!ret);
-@@ -1804,10 +1786,10 @@ rt_mutex_slowlock(struct rt_mutex *lock, int state,
+@@ -1804,10 +1786,10 @@ static void ww_mutex_account_lock(struct rt_mutex *lock,
  	if (unlikely(ret)) {
  		__set_current_state(TASK_RUNNING);
  		if (rt_mutex_has_waiters(lock))
@@ -95,7 +95,7 @@ index 9076a74..43f1394a 100644
  	} else if (ww_ctx) {
  		ww_mutex_account_lock(lock, ww_ctx);
  	}
-@@ -1817,6 +1799,36 @@ rt_mutex_slowlock(struct rt_mutex *lock, int state,
+@@ -1817,6 +1799,36 @@ static void ww_mutex_account_lock(struct rt_mutex *lock,
  	 * unconditionally. We might have to fix that up.
  	 */
  	fixup_rt_mutex_waiters(lock);
@@ -153,5 +153,5 @@ index 32ae70f..64d89d7 100644
  # include "rtmutex-debug.h"
  #else
 -- 
-2.7.4
+1.9.1
 

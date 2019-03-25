@@ -1,7 +1,7 @@
-From 46d4a81c47a61f626b2bc543ca1fa7c48ae9c2cf Mon Sep 17 00:00:00 2001
+From 903a8f60689b3db41fba0358ade9f71ff5975892 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Mon, 10 Apr 2017 18:03:36 +0200
-Subject: [PATCH 026/352] futex: Avoid freeing an active timer
+Subject: [PATCH 026/369] futex: Avoid freeing an active timer
 
 Upstream commit 97181f9bd57405b879403763284537e27d46963d
 
@@ -54,5 +54,5 @@ index c4ff5027..d523b98 100644
  
  uaddr_faulted:
 -- 
-2.7.4
+1.9.1
 

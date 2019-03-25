@@ -1,7 +1,7 @@
-From 0802f5b0a3e6666b483701c5beb1b75b3cdfaf7d Mon Sep 17 00:00:00 2001
+From ba6780b74b9d6c278e640706b1947b8320af30b3 Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Wed, 7 Jun 2017 10:12:45 +0200
-Subject: [PATCH 135/352] sched: Remove TASK_ALL
+Subject: [PATCH 135/369] sched: Remove TASK_ALL
 
 It's unused:
 
@@ -19,10 +19,10 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  1 file changed, 1 deletion(-)
 
 diff --git a/include/linux/sched.h b/include/linux/sched.h
-index 922b6e7..f72541d 100644
+index 307c217..6d9bb67 100644
 --- a/include/linux/sched.h
 +++ b/include/linux/sched.h
-@@ -239,7 +239,6 @@ extern char ___assert_task_state[1 - 2*!!(
+@@ -239,7 +239,6 @@ static inline void cpu_load_update_nohz_stop(void) { }
  
  /* Convenience macros for the sake of wake_up */
  #define TASK_NORMAL		(TASK_INTERRUPTIBLE | TASK_UNINTERRUPTIBLE)
@@ -31,5 +31,5 @@ index 922b6e7..f72541d 100644
  /* get_task_state() */
  #define TASK_REPORT		(TASK_RUNNING | TASK_INTERRUPTIBLE | \
 -- 
-2.7.4
+1.9.1
 

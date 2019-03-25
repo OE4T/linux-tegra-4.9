@@ -1,7 +1,7 @@
-From 16d1ba648b39f06369d6a6d1711884f6dbc2b250 Mon Sep 17 00:00:00 2001
+From eff044a54200b79b6ff11f16072b1ba9351383a8 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Sun, 13 Nov 2011 17:17:09 +0100
-Subject: [PATCH 153/352] softirq: Check preemption after reenabling interrupts
+Subject: [PATCH 153/369] softirq: Check preemption after reenabling interrupts
 
 raise_softirq_irqoff() disables interrupts and wakes the softirq
 daemon, but after reenabling interrupts there is no preemption check,
@@ -52,7 +52,7 @@ diff --git a/include/linux/preempt.h b/include/linux/preempt.h
 index f17045b..2eed4b5 100644
 --- a/include/linux/preempt.h
 +++ b/include/linux/preempt.h
-@@ -165,8 +165,10 @@ do { \
+@@ -165,8 +165,10 @@
  
  #ifdef CONFIG_PREEMPT_RT_BASE
  # define preempt_enable_no_resched() sched_preempt_enable_no_resched()
@@ -63,7 +63,7 @@ index f17045b..2eed4b5 100644
  #endif
  
  #define preemptible()	(preempt_count() == 0 && !irqs_disabled())
-@@ -237,6 +239,7 @@ do { \
+@@ -237,6 +239,7 @@
  #define preempt_disable_notrace()		barrier()
  #define preempt_enable_no_resched_notrace()	barrier()
  #define preempt_enable_notrace()		barrier()
@@ -176,5 +176,5 @@ index 071c589..7ff9f83e 100644
  	/* Process offline CPU's input_pkt_queue */
  	while ((skb = __skb_dequeue(&oldsd->process_queue))) {
 -- 
-2.7.4
+1.9.1
 

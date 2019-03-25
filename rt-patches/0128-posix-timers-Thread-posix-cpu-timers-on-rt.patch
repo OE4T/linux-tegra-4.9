@@ -1,7 +1,7 @@
-From bdbfd43072bc461d2dddad7267dca8fca85c83ae Mon Sep 17 00:00:00 2001
+From d95ff7886f7c67e2ce06a78c87ebf368b4e6606a Mon Sep 17 00:00:00 2001
 From: John Stultz <johnstul@us.ibm.com>
 Date: Fri, 3 Jul 2009 08:29:58 -0500
-Subject: [PATCH 128/352] posix-timers: Thread posix-cpu-timers on -rt
+Subject: [PATCH 128/369] posix-timers: Thread posix-cpu-timers on -rt
 
 posix-cpu-timer code takes non -rt safe locks in hard irq
 context. Move it to a thread.
@@ -21,7 +21,7 @@ diff --git a/include/linux/init_task.h b/include/linux/init_task.h
 index d359b1a..a56e263 100644
 --- a/include/linux/init_task.h
 +++ b/include/linux/init_task.h
-@@ -150,6 +150,12 @@ extern struct task_group root_task_group;
+@@ -150,6 +150,12 @@
  # define INIT_PERF_EVENTS(tsk)
  #endif
  
@@ -34,7 +34,7 @@ index d359b1a..a56e263 100644
  #ifdef CONFIG_VIRT_CPU_ACCOUNTING_GEN
  # define INIT_VTIME(tsk)						\
  	.vtime_seqcount = SEQCNT_ZERO(tsk.vtime_seqcount),	\
-@@ -251,6 +257,7 @@ extern struct task_group root_task_group;
+@@ -251,6 +257,7 @@
  	.cpu_timers	= INIT_CPU_TIMERS(tsk.cpu_timers),		\
  	.pi_lock	= __RAW_SPIN_LOCK_UNLOCKED(tsk.pi_lock),	\
  	.timer_slack_ns = 50000, /* 50 usec default slack */		\
@@ -43,7 +43,7 @@ index d359b1a..a56e263 100644
  		[PIDTYPE_PID]  = INIT_PID_LINK(PIDTYPE_PID),		\
  		[PIDTYPE_PGID] = INIT_PID_LINK(PIDTYPE_PGID),		\
 diff --git a/include/linux/sched.h b/include/linux/sched.h
-index 54cadad..d57d9ef 100644
+index 132a0ea..d9fb0e6 100644
 --- a/include/linux/sched.h
 +++ b/include/linux/sched.h
 @@ -1838,6 +1838,9 @@ struct task_struct {
@@ -308,5 +308,5 @@ index 21a27bb..6ee4181 100644
   * Set one of the process-wide special case CPU timers or RLIMIT_CPU.
   * The tsk->sighand->siglock must be held by the caller.
 -- 
-2.7.4
+1.9.1
 

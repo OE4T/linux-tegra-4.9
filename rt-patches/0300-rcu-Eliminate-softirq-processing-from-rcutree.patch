@@ -1,7 +1,7 @@
-From 5ecf120b74027902e8ff3d63274940f8a8101107 Mon Sep 17 00:00:00 2001
+From 05059dfc5c148042e4ca4cd716e52e99558a2b14 Mon Sep 17 00:00:00 2001
 From: "Paul E. McKenney" <paulmck@linux.vnet.ibm.com>
 Date: Mon, 4 Nov 2013 13:21:10 -0800
-Subject: [PATCH 300/352] rcu: Eliminate softirq processing from rcutree
+Subject: [PATCH 300/369] rcu: Eliminate softirq processing from rcutree
 
 Running RCU out of softirq is a problem for some workloads that would
 like to manage RCU core processing independently of other softirq work,
@@ -38,7 +38,7 @@ index dc5638f..a7b11a2 100644
  
  #include "tree.h"
  #include "rcu.h"
-@@ -3054,18 +3059,17 @@ __rcu_process_callbacks(struct rcu_state *rsp)
+@@ -3054,18 +3059,17 @@ static void force_quiescent_state(struct rcu_state *rsp)
  /*
   * Do RCU core processing for the current CPU.
   */
@@ -184,7 +184,7 @@ diff --git a/kernel/rcu/tree.h b/kernel/rcu/tree.h
 index e803255..958ac10 100644
 --- a/kernel/rcu/tree.h
 +++ b/kernel/rcu/tree.h
-@@ -596,12 +596,10 @@ extern struct rcu_state rcu_bh_state;
+@@ -596,12 +596,10 @@ struct rcu_state {
  extern struct rcu_state rcu_preempt_state;
  #endif /* #ifdef CONFIG_PREEMPT_RCU */
  
@@ -197,7 +197,7 @@ index e803255..958ac10 100644
  
  #ifndef RCU_TREE_NONCORE
  
-@@ -621,10 +619,9 @@ void call_rcu(struct rcu_head *head, rcu_callback_t func);
+@@ -621,10 +619,9 @@ struct rcu_state {
  static void __init __rcu_init_preempt(void);
  static void rcu_initiate_boost(struct rcu_node *rnp, unsigned long flags);
  static void rcu_preempt_boost_start_gp(struct rcu_node *rnp);
@@ -240,7 +240,7 @@ index 7812de1..a1a7baf 100644
  #else /* #ifdef CONFIG_RCU_BOOST */
  
  /*
-@@ -56,6 +40,14 @@ DEFINE_PER_CPU(char, rcu_cpu_has_work);
+@@ -56,6 +40,14 @@
  
  #endif /* #else #ifdef CONFIG_RCU_BOOST */
  
@@ -440,5 +440,5 @@ index 7812de1..a1a7baf 100644
  {
  	return false;
 -- 
-2.7.4
+1.9.1
 

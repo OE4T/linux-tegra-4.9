@@ -1,7 +1,7 @@
-From 10491d5d5832781baf067462e202a5d32cd6fbd3 Mon Sep 17 00:00:00 2001
+From be92f974dc1d6087f95a5a8e390da55886a30105 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Mon, 28 Oct 2013 12:19:57 +0100
-Subject: [PATCH 193/352] wait.h: include atomic.h
+Subject: [PATCH 193/369] wait.h: include atomic.h
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
@@ -37,5 +37,5 @@ index 2408e8d5..db50d66 100644
  typedef struct __wait_queue wait_queue_t;
  typedef int (*wait_queue_func_t)(wait_queue_t *wait, unsigned mode, int flags, void *key);
 -- 
-2.7.4
+1.9.1
 

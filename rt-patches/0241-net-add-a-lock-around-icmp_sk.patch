@@ -1,7 +1,7 @@
-From 474c6574e1146f4e730c658fb797c4b3c2ba1b45 Mon Sep 17 00:00:00 2001
+From a8ee0ca7f8d70c65252295c0a30c29d4acfdd887 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Wed, 31 Aug 2016 17:54:09 +0200
-Subject: [PATCH 241/352] net: add a lock around icmp_sk()
+Subject: [PATCH 241/369] net: add a lock around icmp_sk()
 
 It looks like the this_cpu_ptr() access in icmp_sk() is protected with
 local_bh_disable(). To avoid missing serialization in -RT I am adding
@@ -25,7 +25,7 @@ index 42a19fb..0fd1e72 100644
  #include <net/snmp.h>
  #include <net/ip.h>
  #include <net/route.h>
-@@ -204,6 +205,8 @@ static const struct icmp_control icmp_pointers[NR_ICMP_TYPES+1];
+@@ -204,6 +205,8 @@ struct icmp_control {
   *
   *	On SMP we have one ICMP socket per-cpu.
   */
@@ -74,5 +74,5 @@ index 42a19fb..0fd1e72 100644
  
  /*
 -- 
-2.7.4
+1.9.1
 

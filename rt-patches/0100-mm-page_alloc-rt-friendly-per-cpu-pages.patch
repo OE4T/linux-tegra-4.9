@@ -1,7 +1,7 @@
-From 4d512a25ca20f3ce37939e91ca1adc75c2b68305 Mon Sep 17 00:00:00 2001
+From 94505ef062ce9f3050677918d562b7050903af96 Mon Sep 17 00:00:00 2001
 From: Ingo Molnar <mingo@elte.hu>
 Date: Fri, 3 Jul 2009 08:29:37 -0500
-Subject: [PATCH 100/352] mm: page_alloc: rt-friendly per-cpu pages
+Subject: [PATCH 100/369] mm: page_alloc: rt-friendly per-cpu pages
 
 rt-friendly per-cpu pages: convert the irqs-off per-cpu locking
 method into a preemptible, explicit-per-cpu-locks method.
@@ -10,6 +10,7 @@ Contains fixes from:
 	 Peter Zijlstra <a.p.zijlstra@chello.nl>
 	 Thomas Gleixner <tglx@linutronix.de>
 
+Change-Id: Ieb45a90e58ad4f681542880ff2b0ef7b853d594a
 Signed-off-by: Ingo Molnar <mingo@elte.hu>
 Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
 ---
@@ -17,7 +18,7 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  1 file changed, 41 insertions(+), 16 deletions(-)
 
 diff --git a/mm/page_alloc.c b/mm/page_alloc.c
-index 26ba311..c717779 100644
+index 7e39489..a800653 100644
 --- a/mm/page_alloc.c
 +++ b/mm/page_alloc.c
 @@ -61,6 +61,7 @@
@@ -28,7 +29,7 @@ index 26ba311..c717779 100644
  #include <linux/page_owner.h>
  #include <linux/kthread.h>
  #include <linux/memcontrol.h>
-@@ -293,6 +294,18 @@ EXPORT_SYMBOL(nr_node_ids);
+@@ -293,6 +294,18 @@ bool pm_suspended_storage(void)
  EXPORT_SYMBOL(nr_online_nodes);
  #endif
  
@@ -177,7 +178,7 @@ index 26ba311..c717779 100644
  	return NULL;
  }
  
-@@ -6602,6 +6626,7 @@ static int page_alloc_cpu_notify(struct notifier_block *self,
+@@ -6592,6 +6616,7 @@ static int page_alloc_cpu_notify(struct notifier_block *self,
  void __init page_alloc_init(void)
  {
  	hotcpu_notifier(page_alloc_cpu_notify, 0);
@@ -185,7 +186,7 @@ index 26ba311..c717779 100644
  }
  
  /*
-@@ -7443,7 +7468,7 @@ void zone_pcp_reset(struct zone *zone)
+@@ -7433,7 +7458,7 @@ void zone_pcp_reset(struct zone *zone)
  	struct per_cpu_pageset *pset;
  
  	/* avoid races with drain_pages()  */
@@ -194,7 +195,7 @@ index 26ba311..c717779 100644
  	if (zone->pageset != &boot_pageset) {
  		for_each_online_cpu(cpu) {
  			pset = per_cpu_ptr(zone->pageset, cpu);
-@@ -7452,7 +7477,7 @@ void zone_pcp_reset(struct zone *zone)
+@@ -7442,7 +7467,7 @@ void zone_pcp_reset(struct zone *zone)
  		free_percpu(zone->pageset);
  		zone->pageset = &boot_pageset;
  	}
@@ -204,5 +205,5 @@ index 26ba311..c717779 100644
  
  #ifdef CONFIG_MEMORY_HOTREMOVE
 -- 
-2.7.4
+1.9.1
 

@@ -1,7 +1,7 @@
-From 81e6e42eab2aef6f4bdce7bbab3371cfab0b7bbf Mon Sep 17 00:00:00 2001
+From f4c28ef123b96b4a27615ac1e2aac5d43374be3d Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Wed, 31 Oct 2012 12:04:11 +0100
-Subject: [PATCH 306/352] arm: Add support for lazy preemption
+Subject: [PATCH 306/369] arm: Add support for lazy preemption
 
 Implement the arm pieces for lazy preempt.
 
@@ -152,7 +152,7 @@ diff --git a/arch/arm/kernel/signal.c b/arch/arm/kernel/signal.c
 index 6bee5c9..ddbc098 100644
 --- a/arch/arm/kernel/signal.c
 +++ b/arch/arm/kernel/signal.c
-@@ -575,7 +575,8 @@ do_work_pending(struct pt_regs *regs, unsigned int thread_flags, int syscall)
+@@ -575,7 +575,8 @@ static int do_signal(struct pt_regs *regs, int syscall)
  	 */
  	trace_hardirqs_off();
  	do {
@@ -163,5 +163,5 @@ index 6bee5c9..ddbc098 100644
  		} else {
  			if (unlikely(!user_mode(regs)))
 -- 
-2.7.4
+1.9.1
 

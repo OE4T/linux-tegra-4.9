@@ -1,7 +1,7 @@
-From caef7f0706778f37347bc2e06af81ad5236f6ddc Mon Sep 17 00:00:00 2001
+From faa074568843dc90eb9f648f3e65ac70e3f40593 Mon Sep 17 00:00:00 2001
 From: Mike Galbraith <umgwanakikbuti@gmail.com>
 Date: Sun, 2 Nov 2014 08:31:37 +0100
-Subject: [PATCH 209/352] x86: UV: raw_spinlock conversion
+Subject: [PATCH 209/369] x86: UV: raw_spinlock conversion
 
 Shrug.  Lots of hobbyists have a beast in their basement, right?
 
@@ -144,7 +144,7 @@ diff --git a/arch/x86/platform/uv/uv_time.c b/arch/x86/platform/uv/uv_time.c
 index b333fc4..8b85916 100644
 --- a/arch/x86/platform/uv/uv_time.c
 +++ b/arch/x86/platform/uv/uv_time.c
-@@ -57,7 +57,7 @@ static DEFINE_PER_CPU(struct clock_event_device, cpu_ced);
+@@ -57,7 +57,7 @@
  
  /* There is one of these allocated per node */
  struct uv_rtc_timer_head {
@@ -225,5 +225,5 @@ index b333fc4..8b85916 100644
  
  /*
 -- 
-2.7.4
+1.9.1
 

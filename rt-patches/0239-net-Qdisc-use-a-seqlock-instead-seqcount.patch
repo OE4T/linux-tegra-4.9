@@ -1,7 +1,7 @@
-From aeb0f0d33b308849a15f2f26410bb8d786d11869 Mon Sep 17 00:00:00 2001
+From c4e1259319631ec42acd4808d1dc3e7c9118074e Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Wed, 14 Sep 2016 17:36:35 +0200
-Subject: [PATCH 239/352] net/Qdisc: use a seqlock instead seqcount
+Subject: [PATCH 239/369] net/Qdisc: use a seqlock instead seqcount
 
 The seqcount disables preemption on -RT while it is held which can't
 remove. Also we don't want the reader to spin for ages if the writer is
@@ -211,7 +211,7 @@ diff --git a/net/core/gen_stats.c b/net/core/gen_stats.c
 index 18f17e1..9afe5d6 100644
 --- a/net/core/gen_stats.c
 +++ b/net/core/gen_stats.c
-@@ -142,7 +142,7 @@ __gnet_stats_copy_basic_cpu(struct gnet_stats_basic_packed *bstats,
+@@ -142,7 +142,7 @@
  }
  
  void
@@ -220,7 +220,7 @@ index 18f17e1..9afe5d6 100644
  			struct gnet_stats_basic_packed *bstats,
  			struct gnet_stats_basic_cpu __percpu *cpu,
  			struct gnet_stats_basic_packed *b)
-@@ -155,10 +155,10 @@ __gnet_stats_copy_basic(const seqcount_t *running,
+@@ -155,10 +155,10 @@
  	}
  	do {
  		if (running)
@@ -233,7 +233,7 @@ index 18f17e1..9afe5d6 100644
  }
  EXPORT_SYMBOL(__gnet_stats_copy_basic);
  
-@@ -176,7 +176,7 @@ EXPORT_SYMBOL(__gnet_stats_copy_basic);
+@@ -176,7 +176,7 @@
   * if the room in the socket buffer was not sufficient.
   */
  int
@@ -290,5 +290,5 @@ index 2cff9e4..77d50f2 100644
  	sch->ops = ops;
  	sch->enqueue = ops->enqueue;
 -- 
-2.7.4
+1.9.1
 

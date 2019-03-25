@@ -1,7 +1,7 @@
-From 53359e59d45ce835d7d94dc65255c2897c64dc01 Mon Sep 17 00:00:00 2001
+From 813b2108df9c8864ab30a650f9582747ac576a73 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Sat, 1 Apr 2017 12:50:59 +0200
-Subject: [PATCH 173/352] rtmutex: Make lock_killable work
+Subject: [PATCH 173/369] rtmutex: Make lock_killable work
 
 Locking an rt mutex killable does not work because signal handling is
 restricted to TASK_INTERRUPTIBLE.
@@ -19,7 +19,7 @@ diff --git a/kernel/locking/rtmutex.c b/kernel/locking/rtmutex.c
 index d2eb3db..9d664ee 100644
 --- a/kernel/locking/rtmutex.c
 +++ b/kernel/locking/rtmutex.c
-@@ -1213,18 +1213,13 @@ __rt_mutex_slowlock(struct rt_mutex *lock, int state,
+@@ -1213,18 +1213,13 @@ void rt_mutex_init_waiter(struct rt_mutex_waiter *waiter)
  		if (try_to_take_rt_mutex(lock, current, waiter))
  			break;
  
@@ -46,5 +46,5 @@ index d2eb3db..9d664ee 100644
  
  		raw_spin_unlock_irq(&lock->wait_lock);
 -- 
-2.7.4
+1.9.1
 

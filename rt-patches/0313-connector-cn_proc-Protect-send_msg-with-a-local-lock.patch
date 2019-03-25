@@ -1,7 +1,7 @@
-From 776fdd4b8d4a6710ae2072c0f33f2ed2a32a6e17 Mon Sep 17 00:00:00 2001
+From 9c18344a8bdd9ffbdd31d5e73d35bc5056651e37 Mon Sep 17 00:00:00 2001
 From: Mike Galbraith <umgwanakikbuti@gmail.com>
 Date: Sun, 16 Oct 2016 05:11:54 +0200
-Subject: [PATCH 313/352] connector/cn_proc: Protect send_msg() with a local
+Subject: [PATCH 313/369] connector/cn_proc: Protect send_msg() with a local
  lock on RT
 
 |BUG: sleeping function called from invalid context at kernel/locking/rtmutex.c:931
@@ -46,7 +46,7 @@ index a782ce8..19d2659 100644
  
  /*
   * Size of a cn_msg followed by a proc_event structure.  Since the
-@@ -54,10 +55,11 @@ static struct cb_id cn_proc_event_id = { CN_IDX_PROC, CN_VAL_PROC };
+@@ -54,10 +55,11 @@ static inline struct cn_msg *buffer_to_cn_msg(__u8 *buffer)
  
  /* proc_event_counts is used as the sequence number of the netlink message */
  static DEFINE_PER_CPU(__u32, proc_event_counts) = { 0 };
@@ -69,5 +69,5 @@ index a782ce8..19d2659 100644
  
  void proc_fork_connector(struct task_struct *task)
 -- 
-2.7.4
+1.9.1
 

@@ -1,7 +1,7 @@
-From 75b59b568a3a47f80113b5359bc5211d0c7a052a Mon Sep 17 00:00:00 2001
+From 0a9ab099d1063f56bf1c6d09a655ae207229f3e0 Mon Sep 17 00:00:00 2001
 From: "Yadi.hu" <yadi.hu@windriver.com>
 Date: Wed, 10 Dec 2014 10:32:09 +0800
-Subject: [PATCH 255/352] ARM: enable irq in translation/section permission
+Subject: [PATCH 255/369] ARM: enable irq in translation/section permission
  fault handlers
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
@@ -69,7 +69,7 @@ diff --git a/arch/arm/mm/fault.c b/arch/arm/mm/fault.c
 index d6c9dee..4539678 100644
 --- a/arch/arm/mm/fault.c
 +++ b/arch/arm/mm/fault.c
-@@ -436,6 +436,9 @@ do_translation_fault(unsigned long addr, unsigned int fsr,
+@@ -436,6 +436,9 @@ static inline bool access_error(unsigned int fsr, struct vm_area_struct *vma)
  	if (addr < TASK_SIZE)
  		return do_page_fault(addr, fsr, regs);
  
@@ -79,7 +79,7 @@ index d6c9dee..4539678 100644
  	if (user_mode(regs))
  		goto bad_area;
  
-@@ -503,6 +506,9 @@ do_translation_fault(unsigned long addr, unsigned int fsr,
+@@ -503,6 +506,9 @@ static inline bool access_error(unsigned int fsr, struct vm_area_struct *vma)
  static int
  do_sect_fault(unsigned long addr, unsigned int fsr, struct pt_regs *regs)
  {
@@ -90,5 +90,5 @@ index d6c9dee..4539678 100644
  	return 0;
  }
 -- 
-2.7.4
+1.9.1
 

@@ -1,7 +1,7 @@
-From d7e9a2a6e1c5b102ce88250be4abcf332b998a86 Mon Sep 17 00:00:00 2001
+From 18dfffc2ab690aa740035dc8e4885ad7d3731ec8 Mon Sep 17 00:00:00 2001
 From: Benedikt Spranger <b.spranger@linutronix.de>
 Date: Mon, 8 Mar 2010 18:57:04 +0100
-Subject: [PATCH 058/352] clocksource: TCLIB: Allow higher clock rates for
+Subject: [PATCH 058/369] clocksource: TCLIB: Allow higher clock rates for
  clock events
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
@@ -77,7 +77,7 @@ index ed1ae44..5b6f57f 100644
  
  	/* Enable clock and interrupts on RC compare */
  	__raw_writel(ATMEL_TC_CPCS, regs + ATMEL_TC_REG(2, IER));
-@@ -191,7 +184,11 @@ static struct tc_clkevt_device clkevt = {
+@@ -191,7 +184,11 @@ static int tc_next_event(unsigned long delta, struct clock_event_device *d)
  		.features		= CLOCK_EVT_FEAT_PERIODIC |
  					  CLOCK_EVT_FEAT_ONESHOT,
  		/* Should be lower than at91rm9200's system timer */
@@ -165,5 +165,5 @@ index e403ad6..8236b8c 100644
  	tristate "Dummy IRQ handler"
  	default n
 -- 
-2.7.4
+1.9.1
 

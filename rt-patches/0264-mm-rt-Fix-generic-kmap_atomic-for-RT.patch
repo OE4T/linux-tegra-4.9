@@ -1,7 +1,7 @@
-From 6b9dad81828a5d55cd91fbf22245f7eb25ba7601 Mon Sep 17 00:00:00 2001
+From 6b6e0d26c66034bac3af56f16d7cf7d38d031302 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Sat, 19 Sep 2015 10:15:00 +0200
-Subject: [PATCH 264/352] mm: rt: Fix generic kmap_atomic for RT
+Subject: [PATCH 264/369] mm: rt: Fix generic kmap_atomic for RT
 
 The update to 4.1 brought in the mainline variant of the pagefault
 disable distangling from preempt count. That introduced a
@@ -42,5 +42,5 @@ index 396d5c4..2f56829 100644
  
  #define kmap_atomic_pfn(pfn)	kmap_atomic(pfn_to_page(pfn))
 -- 
-2.7.4
+1.9.1
 

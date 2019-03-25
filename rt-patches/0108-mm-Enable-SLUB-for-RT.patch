@@ -1,7 +1,7 @@
-From e46f8d12311b7469cb32534d1b55f46fa9b5e1d4 Mon Sep 17 00:00:00 2001
+From aceb10512e7881a08ea4b3933abe0afc6f2ed812 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Thu, 25 Oct 2012 10:32:35 +0100
-Subject: [PATCH 108/352] mm: Enable SLUB for RT
+Subject: [PATCH 108/369] mm: Enable SLUB for RT
 
 Make SLUB RT aware by converting locks to raw and using free lists to
 move the freeing out of the lock held region.
@@ -357,7 +357,7 @@ index 131dee8..6cd5c83 100644
  
  	/* Clear memory outside IRQ disabled fastpath loop */
  	if (unlikely(flags & __GFP_ZERO)) {
-@@ -3278,7 +3343,7 @@ static void
+@@ -3278,7 +3343,7 @@ static inline int calculate_order(int size, int reserved)
  init_kmem_cache_node(struct kmem_cache_node *n)
  {
  	n->nr_partial = 0;
@@ -468,5 +468,5 @@ index 131dee8..6cd5c83 100644
  
  	for (i = 0; i < t.count; i++) {
 -- 
-2.7.4
+1.9.1
 

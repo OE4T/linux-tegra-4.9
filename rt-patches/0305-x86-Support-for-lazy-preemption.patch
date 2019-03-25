@@ -1,7 +1,7 @@
-From 6385f9c7726c91abbc00d0bc4fdd9619c95b73c8 Mon Sep 17 00:00:00 2001
+From e4d27e6a87a0d1d7a5e18f53db8c4aeeabd73e41 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Thu, 1 Nov 2012 11:03:47 +0100
-Subject: [PATCH 305/352] x86: Support for lazy preemption
+Subject: [PATCH 305/369] x86: Support for lazy preemption
 
 Implement the x86 pieces for lazy preempt.
 
@@ -164,7 +164,7 @@ diff --git a/arch/x86/include/asm/thread_info.h b/arch/x86/include/asm/thread_in
 index 2d8788a..51b0c65 100644
 --- a/arch/x86/include/asm/thread_info.h
 +++ b/arch/x86/include/asm/thread_info.h
-@@ -54,12 +54,15 @@ struct task_struct;
+@@ -54,12 +54,15 @@
  
  struct thread_info {
  	unsigned long		flags;		/* low level flags */
@@ -235,5 +235,5 @@ index c62e015..0cc71257 100644
 +	DEFINE(_PREEMPT_ENABLED, PREEMPT_ENABLED);
  }
 -- 
-2.7.4
+1.9.1
 

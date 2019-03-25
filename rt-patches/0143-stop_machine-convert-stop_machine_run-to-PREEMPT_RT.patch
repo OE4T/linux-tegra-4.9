@@ -1,7 +1,7 @@
-From ff26a3a928fbd7f311cb9ac751c6e4eb87ff88e7 Mon Sep 17 00:00:00 2001
+From 48aef81b502cf654718f94aef452d3a2672fe7b1 Mon Sep 17 00:00:00 2001
 From: Ingo Molnar <mingo@elte.hu>
 Date: Fri, 3 Jul 2009 08:30:27 -0500
-Subject: [PATCH 143/352] stop_machine: convert stop_machine_run() to
+Subject: [PATCH 143/369] stop_machine: convert stop_machine_run() to
  PREEMPT_RT
 
 Instead of playing with non-preemption, introduce explicit
@@ -37,5 +37,5 @@ index 9b8cd7e..ca834ec 100644
  		preempt_count_inc();
  		ret = fn(arg);
 -- 
-2.7.4
+1.9.1
 

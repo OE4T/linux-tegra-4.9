@@ -1,7 +1,7 @@
-From 9305b24de3151982f04f0bf8b4d9e8ee80640420 Mon Sep 17 00:00:00 2001
+From f3b15df1920ac5f9f81887261fe9a7ba6cadf634 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Thu, 28 Jul 2011 13:32:57 +0200
-Subject: [PATCH 190/352] tty/serial/omap: Make the locking RT aware
+Subject: [PATCH 190/369] tty/serial/omap: Make the locking RT aware
 
 The lock is a sleeping lock and local_irq_save() is not the
 optimsation we are looking for. Redo it to make it work on -RT and
@@ -16,7 +16,7 @@ diff --git a/drivers/tty/serial/omap-serial.c b/drivers/tty/serial/omap-serial.c
 index 472ba3c..e654cb4 100644
 --- a/drivers/tty/serial/omap-serial.c
 +++ b/drivers/tty/serial/omap-serial.c
-@@ -1257,13 +1257,10 @@ serial_omap_console_write(struct console *co, const char *s,
+@@ -1257,13 +1257,10 @@ static void serial_omap_console_putchar(struct uart_port *port, int ch)
  
  	pm_runtime_get_sync(up->dev);
  
@@ -33,7 +33,7 @@ index 472ba3c..e654cb4 100644
  
  	/*
  	 * First save the IER then disable the interrupts
-@@ -1292,8 +1289,7 @@ serial_omap_console_write(struct console *co, const char *s,
+@@ -1292,8 +1289,7 @@ static void serial_omap_console_putchar(struct uart_port *port, int ch)
  	pm_runtime_mark_last_busy(up->dev);
  	pm_runtime_put_autosuspend(up->dev);
  	if (locked)
@@ -44,5 +44,5 @@ index 472ba3c..e654cb4 100644
  
  static int __init
 -- 
-2.7.4
+1.9.1
 

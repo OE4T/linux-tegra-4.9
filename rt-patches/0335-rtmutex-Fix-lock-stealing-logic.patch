@@ -1,7 +1,7 @@
-From 03374011b547c5f9e9b1c91cf5d33abab2d9e159 Mon Sep 17 00:00:00 2001
+From 922770cff9b77056d203840dd034c535fb82dfc6 Mon Sep 17 00:00:00 2001
 From: Mike Galbraith <efault@gmx.de>
 Date: Fri, 23 Jun 2017 09:37:14 +0200
-Subject: [PATCH 335/352] rtmutex: Fix lock stealing logic
+Subject: [PATCH 335/369] rtmutex: Fix lock stealing logic
 
 1. When trying to acquire an rtmutex, we first try to grab it without
 queueing the waiter, and explicitly check for that initial attempt
@@ -58,7 +58,7 @@ index b73cd7c..5dbf678 100644
  
  	/*
  	 * If both waiters have dl_prio(), we check the deadlines of the
-@@ -286,6 +279,27 @@ rt_mutex_waiter_equal(struct rt_mutex_waiter *left,
+@@ -286,6 +279,27 @@ static inline bool unlock_rt_mutex_safe(struct rt_mutex *lock,
  	return 1;
  }
  
@@ -86,7 +86,7 @@ index b73cd7c..5dbf678 100644
  static void
  rt_mutex_enqueue(struct rt_mutex *lock, struct rt_mutex_waiter *waiter)
  {
-@@ -297,7 +311,7 @@ rt_mutex_enqueue(struct rt_mutex *lock, struct rt_mutex_waiter *waiter)
+@@ -297,7 +311,7 @@ static inline bool unlock_rt_mutex_safe(struct rt_mutex *lock,
  	while (*link) {
  		parent = *link;
  		entry = rb_entry(parent, struct rt_mutex_waiter, tree_entry);
@@ -95,7 +95,7 @@ index b73cd7c..5dbf678 100644
  			link = &parent->rb_left;
  		} else {
  			link = &parent->rb_right;
-@@ -336,7 +350,7 @@ rt_mutex_enqueue_pi(struct task_struct *task, struct rt_mutex_waiter *waiter)
+@@ -336,7 +350,7 @@ static inline bool unlock_rt_mutex_safe(struct rt_mutex *lock,
  	while (*link) {
  		parent = *link;
  		entry = rb_entry(parent, struct rt_mutex_waiter, pi_tree_entry);
@@ -161,5 +161,5 @@ index b73cd7c..5dbf678 100644
  			/*
  			 * The current top waiter stays enqueued. We
 -- 
-2.7.4
+1.9.1
 

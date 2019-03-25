@@ -1,7 +1,7 @@
-From 41dc89eb8db8a13671d1e21071bce95810dd6831 Mon Sep 17 00:00:00 2001
+From 4064072ed3101c015575938aa5fae17ba84dff4e Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Wed, 22 Jun 2011 19:47:03 +0200
-Subject: [PATCH 227/352] sched: Distangle worker accounting from rqlock
+Subject: [PATCH 227/369] sched: Distangle worker accounting from rqlock
 
 The worker accounting for cpu bound workers is plugged into the core
 scheduler code and the wakeup code. This is not a hard requirement and
@@ -16,6 +16,7 @@ woken immediately after switching away. There is also no harm from
 updating nr_running when the task returns from scheduling instead of
 accounting it in the wakeup code.
 
+Change-Id: I632344391f46aae21cf7873aed2838b53d8c6aed
 Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
 Cc: Peter Zijlstra <peterz@infradead.org>
 Cc: Tejun Heo <tj@kernel.org>
@@ -30,7 +31,7 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  3 files changed, 41 insertions(+), 102 deletions(-)
 
 diff --git a/kernel/sched/core.c b/kernel/sched/core.c
-index e61c6d30..b7b61c3 100644
+index 73bfb25..57bc1b7 100644
 --- a/kernel/sched/core.c
 +++ b/kernel/sched/core.c
 @@ -1745,10 +1745,6 @@ static inline void ttwu_activate(struct rq *rq, struct task_struct *p, int en_fl
@@ -44,7 +45,7 @@ index e61c6d30..b7b61c3 100644
  }
  
  /*
-@@ -2200,58 +2196,6 @@ try_to_wake_up(struct task_struct *p, unsigned int state, int wake_flags)
+@@ -2200,58 +2196,6 @@ static void ttwu_queue(struct task_struct *p, int cpu, int wake_flags)
  }
  
  /**
@@ -279,5 +280,5 @@ index 29fa81f..42d1e39 100644
  
  #endif /* _KERNEL_WORKQUEUE_INTERNAL_H */
 -- 
-2.7.4
+1.9.1
 

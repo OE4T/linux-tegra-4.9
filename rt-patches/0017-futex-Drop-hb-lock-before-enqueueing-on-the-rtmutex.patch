@@ -1,7 +1,7 @@
-From 580d4c412d1da92290b4b32da0264b1805443fe0 Mon Sep 17 00:00:00 2001
+From 55d80e92eae3ceb96ba39f76cbdee7181e2f7950 Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Wed, 22 Mar 2017 11:36:00 +0100
-Subject: [PATCH 017/352] futex: Drop hb->lock before enqueueing on the rtmutex
+Subject: [PATCH 017/369] futex: Drop hb->lock before enqueueing on the rtmutex
 
 Upstream commit 56222b212e8edb1cf51f5dd73ff645809b082b40
 
@@ -54,7 +54,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  3 files changed, 52 insertions(+), 30 deletions(-)
 
 diff --git a/kernel/futex.c b/kernel/futex.c
-index 80aa878..5a0cec3 100644
+index 80aa878d..5a0cec3 100644
 --- a/kernel/futex.c
 +++ b/kernel/futex.c
 @@ -2703,20 +2703,33 @@ static int futex_lock_pi(u32 __user *uaddr, unsigned int flags,
@@ -211,5 +211,5 @@ index b620aaf..f4c34c4 100644
  				     struct rt_mutex_waiter *waiter,
  				     struct task_struct *task);
 -- 
-2.7.4
+1.9.1
 

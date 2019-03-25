@@ -1,7 +1,7 @@
-From ee8b1f2794d1ce3b7cfc1cd5622eb661fa493c98 Mon Sep 17 00:00:00 2001
+From 5fc22d09a4b694b857f2f05590ce261e2df7a008 Mon Sep 17 00:00:00 2001
 From: Steven Rostedt <rostedt@goodmis.org>
 Date: Fri, 2 Mar 2012 10:36:57 -0500
-Subject: [PATCH 280/352] cpu: Make hotplug.lock a "sleeping" spinlock on RT
+Subject: [PATCH 280/369] cpu: Make hotplug.lock a "sleeping" spinlock on RT
 
 Tasks can block on hotplug.lock in pin_current_cpu(), but their state
 might be != RUNNING. So the mutex wakeup will set the state
@@ -27,7 +27,7 @@ diff --git a/kernel/cpu.c b/kernel/cpu.c
 index 3b026a1..41cc8ae 100644
 --- a/kernel/cpu.c
 +++ b/kernel/cpu.c
-@@ -217,10 +217,16 @@ static int cpu_hotplug_disabled;
+@@ -217,10 +217,16 @@ void cpu_maps_update_done(void)
  
  static struct {
  	struct task_struct *active_writer;
@@ -44,7 +44,7 @@ index 3b026a1..41cc8ae 100644
  	/*
  	 * Also blocks the new readers during
  	 * an ongoing cpu hotplug operation.
-@@ -233,12 +239,24 @@ static struct {
+@@ -233,12 +239,24 @@ void cpu_maps_update_done(void)
  } cpu_hotplug = {
  	.active_writer = NULL,
  	.wq = __WAIT_QUEUE_HEAD_INITIALIZER(cpu_hotplug.wq),
@@ -116,5 +116,5 @@ index 3b026a1..41cc8ae 100644
  }
  
 -- 
-2.7.4
+1.9.1
 

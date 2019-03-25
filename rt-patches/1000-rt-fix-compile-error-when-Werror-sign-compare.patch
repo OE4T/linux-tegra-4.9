@@ -1,0 +1,26 @@
+From 5c4e0910ea7a1e4b3aa146ed4248334815776d6f Mon Sep 17 00:00:00 2001
+From: Vincent Zhang <xunz@nvidia.com>
+Date: Tue, 26 Mar 2019 00:02:31 +0800
+Subject: [PATCH 369/369] rt: fix compile error when -Werror=sign-compare
+
+Change-Id: I77f3b04362c849d334c56d4f6018e3d49a81b1fa
+---
+ include/linux/rwsem_rt.h | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/include/linux/rwsem_rt.h b/include/linux/rwsem_rt.h
+index 2ffbf09..f457054 100644
+--- a/include/linux/rwsem_rt.h
++++ b/include/linux/rwsem_rt.h
+@@ -47,7 +47,7 @@ extern void  __rwsem_init(struct rw_semaphore *rwsem, const char *name,
+ 
+ static inline int rwsem_is_locked(struct rw_semaphore *sem)
+ {
+-	return atomic_read(&sem->readers) != READER_BIAS;
++	return (unsigned)atomic_read(&sem->readers) != READER_BIAS;
+ }
+ 
+ static inline int rwsem_is_contended(struct rw_semaphore *sem)
+-- 
+1.9.1
+

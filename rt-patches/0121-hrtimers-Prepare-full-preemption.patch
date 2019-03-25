@@ -1,7 +1,7 @@
-From 723b31033a5d814d811e488c8e70190a428871de Mon Sep 17 00:00:00 2001
+From 8d49aaddca5f86ad2e668ea1e4de6259b97ec3a5 Mon Sep 17 00:00:00 2001
 From: Ingo Molnar <mingo@elte.hu>
 Date: Fri, 3 Jul 2009 08:29:34 -0500
-Subject: [PATCH 121/352] hrtimers: Prepare full preemption
+Subject: [PATCH 121/369] hrtimers: Prepare full preemption
 
 Make cancellation of a running callback in softirq context safe
 against preemption.
@@ -133,7 +133,7 @@ diff --git a/kernel/time/posix-timers.c b/kernel/time/posix-timers.c
 index 06ef7e4..558e420 100644
 --- a/kernel/time/posix-timers.c
 +++ b/kernel/time/posix-timers.c
-@@ -842,6 +842,20 @@ SYSCALL_DEFINE1(timer_getoverrun, timer_t, timer_id)
+@@ -842,6 +842,20 @@ static struct k_itimer *__lock_timer(timer_t timer_id, unsigned long *flags)
  	return overrun;
  }
  
@@ -154,7 +154,7 @@ index 06ef7e4..558e420 100644
  /* Set a POSIX.1b interval timer. */
  /* timr->it_lock is taken. */
  static int
-@@ -919,6 +933,7 @@ SYSCALL_DEFINE4(timer_settime, timer_t, timer_id, int, flags,
+@@ -919,6 +933,7 @@ static struct k_itimer *__lock_timer(timer_t timer_id, unsigned long *flags)
  	if (!timr)
  		return -EINVAL;
  
@@ -162,7 +162,7 @@ index 06ef7e4..558e420 100644
  	kc = clockid_to_kclock(timr->it_clock);
  	if (WARN_ON_ONCE(!kc || !kc->timer_set))
  		error = -EINVAL;
-@@ -927,9 +942,12 @@ SYSCALL_DEFINE4(timer_settime, timer_t, timer_id, int, flags,
+@@ -927,9 +942,12 @@ static struct k_itimer *__lock_timer(timer_t timer_id, unsigned long *flags)
  
  	unlock_timer(timr, flag);
  	if (error == TIMER_RETRY) {
@@ -175,7 +175,7 @@ index 06ef7e4..558e420 100644
  
  	if (old_setting && !error &&
  	    copy_to_user(old_setting, &old_spec, sizeof (old_spec)))
-@@ -967,10 +985,15 @@ SYSCALL_DEFINE1(timer_delete, timer_t, timer_id)
+@@ -967,10 +985,15 @@ static inline int timer_delete_hook(struct k_itimer *timer)
  	if (!timer)
  		return -EINVAL;
  
@@ -211,5 +211,5 @@ index 06ef7e4..558e420 100644
  	}
  	list_del(&timer->list);
 -- 
-2.7.4
+1.9.1
 

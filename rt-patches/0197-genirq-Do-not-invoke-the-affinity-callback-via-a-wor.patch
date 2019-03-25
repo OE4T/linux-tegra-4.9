@@ -1,7 +1,7 @@
-From ff07733a36176136b0801b4735f896043f9df114 Mon Sep 17 00:00:00 2001
+From 81d2011dc2742f95bbdf6e35c75befd1e1ca6087 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Wed, 21 Aug 2013 17:48:46 +0200
-Subject: [PATCH 197/352] genirq: Do not invoke the affinity callback via a
+Subject: [PATCH 197/369] genirq: Do not invoke the affinity callback via a
  workqueue on RT
 
 Joe Korty reported, that __irq_set_affinity_locked() schedules a
@@ -20,7 +20,7 @@ diff --git a/drivers/scsi/qla2xxx/qla_isr.c b/drivers/scsi/qla2xxx/qla_isr.c
 index 73c99f2..4130ea2 100644
 --- a/drivers/scsi/qla2xxx/qla_isr.c
 +++ b/drivers/scsi/qla2xxx/qla_isr.c
-@@ -3131,7 +3131,11 @@ qla24xx_enable_msix(struct qla_hw_data *ha, struct rsp_que *rsp)
+@@ -3131,7 +3131,11 @@ struct qla_init_msix_entry {
  		* kref_put().
  		*/
  		kref_get(&qentry->irq_notify.kref);
@@ -44,7 +44,7 @@ index 807d3f6..4917b62 100644
  
  #include <linux/atomic.h>
  #include <asm/ptrace.h>
-@@ -219,6 +220,7 @@ extern void resume_device_irqs(void);
+@@ -219,6 +220,7 @@ struct irqaction {
   * struct irq_affinity_notify - context for notification of IRQ affinity changes
   * @irq:		Interrupt to which notification applies
   * @kref:		Reference count, for internal use
@@ -52,7 +52,7 @@ index 807d3f6..4917b62 100644
   * @work:		Work item, for internal use
   * @notify:		Function to be called on change.  This will be
   *			called in process context.
-@@ -230,7 +232,11 @@ extern void resume_device_irqs(void);
+@@ -230,7 +232,11 @@ struct irqaction {
  struct irq_affinity_notify {
  	unsigned int irq;
  	struct kref kref;
@@ -129,7 +129,7 @@ index 18c90de..973ba13 100644
  /**
   *	irq_set_affinity_notifier - control notification of IRQ affinity changes
   *	@irq:		Interrupt for which to enable/disable notification
-@@ -326,7 +358,12 @@ irq_set_affinity_notifier(unsigned int irq, struct irq_affinity_notify *notify)
+@@ -326,7 +358,12 @@ static void irq_affinity_notify(struct work_struct *work)
  	if (notify) {
  		notify->irq = irq;
  		kref_init(&notify->kref);
@@ -143,5 +143,5 @@ index 18c90de..973ba13 100644
  
  	raw_spin_lock_irqsave(&desc->lock, flags);
 -- 
-2.7.4
+1.9.1
 

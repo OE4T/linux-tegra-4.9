@@ -1,7 +1,7 @@
-From 01e4c7ed76c4d48686bd3c7b1eea97778cdd7d72 Mon Sep 17 00:00:00 2001
+From 75560dfd6e0498037ea71e6ef53259f70226800b Mon Sep 17 00:00:00 2001
 From: Ingo Molnar <mingo@elte.hu>
 Date: Fri, 3 Jul 2009 08:29:51 -0500
-Subject: [PATCH 102/352] mm/swap: Convert to percpu locked
+Subject: [PATCH 102/369] mm/swap: Convert to percpu locked
 
 Replace global locks (get_cpu + local_irq_save) with "local_locks()".
 Currently there is one of for "rotate" and one for "swap".
@@ -19,7 +19,7 @@ diff --git a/include/linux/swap.h b/include/linux/swap.h
 index e8d2c44..b228818 100644
 --- a/include/linux/swap.h
 +++ b/include/linux/swap.h
-@@ -312,6 +312,7 @@ extern unsigned long nr_free_pagecache_pages(void);
+@@ -312,6 +312,7 @@ static inline void workingset_node_shadows_dec(struct radix_tree_node *node)
  
  
  /* linux/mm/swap.c */
@@ -47,10 +47,10 @@ index af19210..8627c9c 100644
  				cc->last_migrated_pfn = 0;
  			}
 diff --git a/mm/page_alloc.c b/mm/page_alloc.c
-index 022eea4..6d9b7e2 100644
+index 34b5c67..27e53c6 100644
 --- a/mm/page_alloc.c
 +++ b/mm/page_alloc.c
-@@ -6638,7 +6638,9 @@ static int page_alloc_cpu_notify(struct notifier_block *self,
+@@ -6628,7 +6628,9 @@ static int page_alloc_cpu_notify(struct notifier_block *self,
  	int cpu = (unsigned long)hcpu;
  
  	if (action == CPU_DEAD || action == CPU_DEAD_FROZEN) {
@@ -72,7 +72,7 @@ index adea901..796f366 100644
  #include <linux/hugetlb.h>
  #include <linux/page_idle.h>
  
-@@ -50,6 +51,8 @@ static DEFINE_PER_CPU(struct pagevec, lru_deactivate_pvecs);
+@@ -50,6 +51,8 @@
  #ifdef CONFIG_SMP
  static DEFINE_PER_CPU(struct pagevec, activate_page_pvecs);
  #endif
@@ -129,7 +129,7 @@ index adea901..796f366 100644
  }
  
  /*
-@@ -390,12 +394,12 @@ EXPORT_SYMBOL(mark_page_accessed);
+@@ -390,12 +394,12 @@ void mark_page_accessed(struct page *page)
  
  static void __lru_cache_add(struct page *page)
  {
@@ -197,5 +197,5 @@ index adea901..796f366 100644
  
  static void lru_add_drain_per_cpu(struct work_struct *dummy)
 -- 
-2.7.4
+1.9.1
 

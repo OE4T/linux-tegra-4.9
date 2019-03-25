@@ -1,7 +1,7 @@
-From d2b1068b3dc383a5e0711fdcb6ab5998838610a3 Mon Sep 17 00:00:00 2001
+From 6401891b3d445882370e060fafe811052750d466 Mon Sep 17 00:00:00 2001
 From: Yong Zhang <yong.zhang0@gmail.com>
 Date: Tue, 15 May 2012 13:53:56 +0800
-Subject: [PATCH 201/352] mm: Protect activate_mm() by
+Subject: [PATCH 201/369] mm: Protect activate_mm() by
  preempt_[disable&enable]_rt()
 
 User preempt_*_rt instead of local_irq_*_rt or otherwise there will be
@@ -76,5 +76,5 @@ index 6f4d27c..5cd25c7 100644
  #ifdef finish_arch_post_lock_switch
  	finish_arch_post_lock_switch();
 -- 
-2.7.4
+1.9.1
 

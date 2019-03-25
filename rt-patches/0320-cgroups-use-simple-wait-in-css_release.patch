@@ -1,7 +1,7 @@
-From a7ad7eaeb7ff508bdce1b6d3a49bef38e6a51caa Mon Sep 17 00:00:00 2001
+From 6f5f75781692b411d6705084cc86d07c4c53e334 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Fri, 13 Feb 2015 15:52:24 +0100
-Subject: [PATCH 320/352] cgroups: use simple wait in css_release()
+Subject: [PATCH 320/369] cgroups: use simple wait in css_release()
 
 To avoid:
 |BUG: sleeping function called from invalid context at kernel/locking/rtmutex.c:914
@@ -27,6 +27,7 @@ To avoid:
 | [<ffffffff810948d8>] kthread+0xe8/0x100
 | [<ffffffff815b9c3c>] ret_from_fork+0x7c/0xb0
 
+Change-Id: Id5ec8b579497ffe26b3eef51c4b42e56be4fd466
 Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 ---
  include/linux/cgroup-defs.h | 2 ++
@@ -34,17 +35,17 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  2 files changed, 7 insertions(+), 4 deletions(-)
 
 diff --git a/include/linux/cgroup-defs.h b/include/linux/cgroup-defs.h
-index 9c72b21..80780ec 100644
+index 9c72b21..0049a7e 100644
 --- a/include/linux/cgroup-defs.h
 +++ b/include/linux/cgroup-defs.h
-@@ -16,6 +16,7 @@
- #include <linux/percpu-refcount.h>
+@@ -17,6 +17,7 @@
  #include <linux/percpu-rwsem.h>
  #include <linux/workqueue.h>
-+#include <linux/swork.h>
  #include <linux/bpf-cgroup.h>
++#include <linux/swork.h>
  
  #ifdef CONFIG_CGROUPS
+ 
 @@ -139,6 +140,7 @@ struct cgroup_subsys_state {
  	/* percpu_ref killing and RCU release */
  	struct rcu_head rcu_head;
@@ -90,5 +91,5 @@ index 215c88e..0938b8a 100644
  	/*
  	 * Used to destroy pidlists and separate to serve as flush domain.
 -- 
-2.7.4
+1.9.1
 

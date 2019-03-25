@@ -1,7 +1,7 @@
-From 49dbbf2c38341092cf4877bc0f3785be8364e3a0 Mon Sep 17 00:00:00 2001
+From 5266383a69eb75d85b9f76e9593876432daf2fbf Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Wed, 22 Mar 2017 11:35:49 +0100
-Subject: [PATCH 006/352] futex: Use smp_store_release() in mark_wake_futex()
+Subject: [PATCH 006/369] futex: Use smp_store_release() in mark_wake_futex()
 
 Upstream commit  1b367ece0d7e696cab1c8501bab282cc6a538b3f
 
@@ -40,5 +40,5 @@ index 7f058e1..55bd7e3 100644
  
  static int wake_futex_pi(u32 __user *uaddr, u32 uval, struct futex_q *top_waiter,
 -- 
-2.7.4
+1.9.1
 

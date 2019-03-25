@@ -1,7 +1,7 @@
-From 4333f0fdaad238a71e17dc40c50a892829f183ff Mon Sep 17 00:00:00 2001
+From 3c9e081feeea754e5b80b2177c407dcebec05a34 Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Thu, 28 Jul 2011 10:43:51 +0200
-Subject: [PATCH 263/352] mm, rt: kmap_atomic scheduling
+Subject: [PATCH 263/369] mm, rt: kmap_atomic scheduling
 
 In fact, with migrate_disable() existing one could play games with
 kmap_atomic. You could save/restore the kmap_atomic slots on context
@@ -41,7 +41,7 @@ index bd7be8e..b3b0a7f 100644
  
  #include <asm/pgtable.h>
  #include <asm/ldt.h>
-@@ -195,6 +196,35 @@ start_thread(struct pt_regs *regs, unsigned long new_ip, unsigned long new_sp)
+@@ -195,6 +196,35 @@ int copy_thread_tls(unsigned long clone_flags, unsigned long sp,
  }
  EXPORT_SYMBOL_GPL(start_thread);
  
@@ -77,7 +77,7 @@ index bd7be8e..b3b0a7f 100644
  
  /*
   *	switch_to(x,y) should switch tasks from x to y.
-@@ -271,6 +301,8 @@ __switch_to(struct task_struct *prev_p, struct task_struct *next_p)
+@@ -271,6 +301,8 @@ int copy_thread_tls(unsigned long clone_flags, unsigned long sp,
  		     task_thread_info(next_p)->flags & _TIF_WORK_CTXSW_NEXT))
  		__switch_to_xtra(prev_p, next_p, tss);
  
@@ -90,7 +90,7 @@ diff --git a/arch/x86/mm/highmem_32.c b/arch/x86/mm/highmem_32.c
 index 6d18b70..f752724 100644
 --- a/arch/x86/mm/highmem_32.c
 +++ b/arch/x86/mm/highmem_32.c
-@@ -32,10 +32,11 @@ EXPORT_SYMBOL(kunmap);
+@@ -32,10 +32,11 @@ void kunmap(struct page *page)
   */
  void *kmap_atomic_prot(struct page *page, pgprot_t prot)
  {
@@ -138,7 +138,7 @@ diff --git a/arch/x86/mm/iomap_32.c b/arch/x86/mm/iomap_32.c
 index ada98b3..2620fb5 100644
 --- a/arch/x86/mm/iomap_32.c
 +++ b/arch/x86/mm/iomap_32.c
-@@ -56,6 +56,7 @@ EXPORT_SYMBOL_GPL(iomap_free);
+@@ -56,6 +56,7 @@ void iomap_free(resource_size_t base, unsigned long size)
  
  void *kmap_atomic_prot_pfn(unsigned long pfn, pgprot_t prot)
  {
@@ -158,7 +158,7 @@ index ada98b3..2620fb5 100644
  	arch_flush_lazy_mmu_mode();
  
  	return (void *)vaddr;
-@@ -113,6 +117,9 @@ iounmap_atomic(void __iomem *kvaddr)
+@@ -113,6 +117,9 @@ void *kmap_atomic_prot_pfn(unsigned long pfn, pgprot_t prot)
  		 * is a bad idea also, in case the page changes cacheability
  		 * attributes or becomes a protected page in a hypervisor.
  		 */
@@ -229,7 +229,7 @@ index b76e9cc..396d5c4 100644
  }
  
 diff --git a/include/linux/sched.h b/include/linux/sched.h
-index 93ae84c..2961350a 100644
+index 778f0591..97f57f0 100644
 --- a/include/linux/sched.h
 +++ b/include/linux/sched.h
 @@ -26,6 +26,7 @@ struct sched_param {
@@ -254,10 +254,10 @@ index 93ae84c..2961350a 100644
  	unsigned long	task_state_change;
  #endif
 diff --git a/include/linux/uaccess.h b/include/linux/uaccess.h
-index f30c187..83bf0f7 100644
+index 9442423..e507cea 100644
 --- a/include/linux/uaccess.h
 +++ b/include/linux/uaccess.h
-@@ -24,6 +24,7 @@ static __always_inline void pagefault_disabled_dec(void)
+@@ -27,6 +27,7 @@ static __always_inline void pagefault_disabled_dec(void)
   */
  static inline void pagefault_disable(void)
  {
@@ -265,7 +265,7 @@ index f30c187..83bf0f7 100644
  	pagefault_disabled_inc();
  	/*
  	 * make sure to have issued the store before a pagefault
-@@ -40,6 +41,7 @@ static inline void pagefault_enable(void)
+@@ -43,6 +44,7 @@ static inline void pagefault_enable(void)
  	 */
  	barrier();
  	pagefault_disabled_dec();
@@ -302,5 +302,5 @@ index 50b4ca6..77518a3 100644
  unsigned int nr_free_highpages (void)
  {
 -- 
-2.7.4
+1.9.1
 

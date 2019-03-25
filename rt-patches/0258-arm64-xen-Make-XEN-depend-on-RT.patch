@@ -1,7 +1,7 @@
-From b27c1d8aa729362928c51420bf591f015e077fb8 Mon Sep 17 00:00:00 2001
+From d9fc77ea3873a874b7346207530a369fc457b263 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Mon, 12 Oct 2015 11:18:40 +0200
-Subject: [PATCH 258/352] arm64/xen: Make XEN depend on !RT
+Subject: [PATCH 258/369] arm64/xen: Make XEN depend on !RT
 
 It's not ready and probably never will be, unless xen folks have a
 look at it.
@@ -25,5 +25,5 @@ index 04fa01f..b532015 100644
  	select PARAVIRT
  	help
 -- 
-2.7.4
+1.9.1
 

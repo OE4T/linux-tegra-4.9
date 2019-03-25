@@ -1,7 +1,7 @@
-From 6ddac63235f92b83a751eab111deacb9bdd09366 Mon Sep 17 00:00:00 2001
+From f0564dbcfe1ed08fd5fd18b43fce4ee80d3c649e Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Wed, 22 Mar 2017 11:35:58 +0100
-Subject: [PATCH 015/352] futex: Rework futex_lock_pi() to use
+Subject: [PATCH 015/369] futex: Rework futex_lock_pi() to use
  rt_mutex_*_proxy_lock()
 
 Upstream commit cfafcd117da0216520568c195cb2f6cd1980c4bb
@@ -91,7 +91,7 @@ diff --git a/kernel/futex.c b/kernel/futex.c
 index 469ecb8..60221e5 100644
 --- a/kernel/futex.c
 +++ b/kernel/futex.c
-@@ -2148,20 +2148,7 @@ queue_unlock(struct futex_hash_bucket *hb)
+@@ -2148,20 +2148,7 @@ static inline struct futex_hash_bucket *queue_lock(struct futex_q *q)
  	hb_waiters_dec(hb);
  }
  
@@ -271,5 +271,5 @@ index 8e81b17..b620aaf 100644
  
  extern void rt_mutex_futex_unlock(struct rt_mutex *lock);
 -- 
-2.7.4
+1.9.1
 

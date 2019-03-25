@@ -1,7 +1,7 @@
-From 542f288d162bdb96927c05aa7c9e6f04dccdd6da Mon Sep 17 00:00:00 2001
+From 0d25bb6cda7a443081a9b471f95a26ee1a02613b Mon Sep 17 00:00:00 2001
 From: Mike Galbraith <umgwanakikbuti@gmail.com>
 Date: Thu, 20 Oct 2016 11:15:22 +0200
-Subject: [PATCH 315/352] drivers/zram: Don't disable preemption in
+Subject: [PATCH 315/369] drivers/zram: Don't disable preemption in
  zcomp_stream_get/put()
 
 In v4.7, the driver switched to percpu compression streams, disabling
@@ -66,7 +66,7 @@ index 478cac2..f7a6efd 100644
  
  /* dynamic per-device compression frontend */
 diff --git a/drivers/block/zram/zram_drv.c b/drivers/block/zram/zram_drv.c
-index 2200918..47d033b 100644
+index c864ad5..a9765ff 100644
 --- a/drivers/block/zram/zram_drv.c
 +++ b/drivers/block/zram/zram_drv.c
 @@ -577,6 +577,7 @@ static int zram_decompress_page(struct zram *zram, char *mem, u32 index)
@@ -97,5 +97,5 @@ index 2200918..47d033b 100644
  
  	/* Should NEVER happen. Return bio error if it does. */
 -- 
-2.7.4
+1.9.1
 

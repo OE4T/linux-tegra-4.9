@@ -1,7 +1,7 @@
-From a6537ef3a4046d22c31f10d572bc1e2d88ab0913 Mon Sep 17 00:00:00 2001
+From 6a500d25fde484d5824b79ff095d2540ffe5b549 Mon Sep 17 00:00:00 2001
 From: Anna-Maria Gleixner <anna-maria@linutronix.de>
 Date: Fri, 26 May 2017 19:16:07 +0200
-Subject: [PATCH 162/352] Revert "timers: Don't wake ktimersoftd on every tick"
+Subject: [PATCH 162/369] Revert "timers: Don't wake ktimersoftd on every tick"
 
 This reverts commit 032f93cae150a ("timers: Don't wake ktimersoftd on
 every tick").
@@ -18,11 +18,11 @@ canceled the removal operation will result in a hlist corruption.
 Signed-off-by: Anna-Maria Gleixner <anna-maria@linutronix.de>
 Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 ---
- kernel/time/timer.c | 95 ++++++++++++++++-------------------------------------
- 1 file changed, 28 insertions(+), 67 deletions(-)
+ kernel/time/timer.c | 96 ++++++++++++++++-------------------------------------
+ 1 file changed, 29 insertions(+), 67 deletions(-)
 
 diff --git a/kernel/time/timer.c b/kernel/time/timer.c
-index c1b88e0..f90e684 100644
+index c1b88e0..a416cee 100644
 --- a/kernel/time/timer.c
 +++ b/kernel/time/timer.c
 @@ -207,8 +207,6 @@ struct timer_base {
@@ -174,23 +174,24 @@ index c1b88e0..f90e684 100644
  	raw_spin_lock_irq(&base->lock);
  
  	/*
-@@ -1739,9 +1698,13 @@ static inline void __run_timers(struct timer_base *base)
+@@ -1739,9 +1698,14 @@ static inline void __run_timers(struct timer_base *base)
  	 */
  	base->must_forward_clk = false;
  
 -	while (find_expired_timers(base))
 -		expire_timers(base);
 +	while (time_after_eq(jiffies, base->clk)) {
- 
++
 +		levels = collect_expired_timers(base, heads);
 +		base->clk++;
+ 
 +		while (levels--)
 +			expire_timers(base, heads + levels);
 +	}
  	raw_spin_unlock_irq(&base->lock);
  	wakeup_timer_waiters(base);
  }
-@@ -1767,12 +1730,12 @@ void run_local_timers(void)
+@@ -1767,12 +1731,12 @@ void run_local_timers(void)
  
  	hrtimer_run_queues();
  	/* Raise the softirq only if required. */
@@ -205,7 +206,7 @@ index c1b88e0..f90e684 100644
  			return;
  	}
  	raise_softirq(TIMER_SOFTIRQ);
-@@ -1963,7 +1926,6 @@ int timers_dead_cpu(unsigned int cpu)
+@@ -1963,7 +1927,6 @@ int timers_dead_cpu(unsigned int cpu)
  		forward_timer_base(new_base);
  
  		BUG_ON(old_base->running_timer);
@@ -213,7 +214,7 @@ index c1b88e0..f90e684 100644
  
  		for (i = 0; i < WHEEL_SIZE; i++)
  			migrate_timer_list(new_base, old_base->vectors + i);
-@@ -1990,7 +1952,6 @@ static void __init init_timer_cpu(int cpu)
+@@ -1990,7 +1953,6 @@ static void __init init_timer_cpu(int cpu)
  #ifdef CONFIG_PREEMPT_RT_FULL
  		init_swait_queue_head(&base->wait_for_running_timer);
  #endif
@@ -222,5 +223,5 @@ index c1b88e0..f90e684 100644
  }
  
 -- 
-2.7.4
+1.9.1
 

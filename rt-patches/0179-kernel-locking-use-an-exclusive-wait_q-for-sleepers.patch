@@ -1,7 +1,7 @@
-From fd5aac6a91bf4501d9a076ed24af038d8ab3d81d Mon Sep 17 00:00:00 2001
+From 50b81b19ff1fc0f838966d2f546a5a3364570daf Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Thu, 22 Jun 2017 17:53:34 +0200
-Subject: [PATCH 179/352] kernel/locking: use an exclusive wait_q for sleepers
+Subject: [PATCH 179/369] kernel/locking: use an exclusive wait_q for sleepers
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
@@ -43,7 +43,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  4 files changed, 33 insertions(+), 7 deletions(-)
 
 diff --git a/include/linux/sched.h b/include/linux/sched.h
-index c703b06..8ca7318 100644
+index cd04534..95ea92a 100644
 --- a/include/linux/sched.h
 +++ b/include/linux/sched.h
 @@ -1046,8 +1046,20 @@ struct wake_q_head {
@@ -78,7 +78,7 @@ index c703b06..8ca7318 100644
  #ifdef CONFIG_RT_MUTEXES
  	/* PI waiters blocked on a rt_mutex held by this task */
 diff --git a/kernel/fork.c b/kernel/fork.c
-index 1b4d8fd..519ffc7 100644
+index a037a73..30bd111 100644
 --- a/kernel/fork.c
 +++ b/kernel/fork.c
 @@ -572,6 +572,7 @@ static struct task_struct *dup_task_struct(struct task_struct *orig, int node)
@@ -103,7 +103,7 @@ index b99ddf3..c1a3b9f 100644
  		wake_q_add(wake_q, waiter->task);
  	raw_spin_unlock(&current->pi_lock);
 diff --git a/kernel/sched/core.c b/kernel/sched/core.c
-index 7782270..17fd92e 100644
+index 28fcb35..9f8d698 100644
 --- a/kernel/sched/core.c
 +++ b/kernel/sched/core.c
 @@ -445,9 +445,15 @@ static bool set_nr_if_polling(struct task_struct *p)
@@ -145,5 +145,5 @@ index 7782270..17fd92e 100644
  		/*
  		 * wake_up_process() implies a wmb() to pair with the queueing
 -- 
-2.7.4
+1.9.1
 

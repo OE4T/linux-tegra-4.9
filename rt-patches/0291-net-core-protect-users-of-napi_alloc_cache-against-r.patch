@@ -1,7 +1,7 @@
-From 6da47f075b748f21fa1ec96ba67c12f66575188f Mon Sep 17 00:00:00 2001
+From 2e455849fb474fe5d6142d40632300184bcb0b34 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Fri, 15 Jan 2016 16:33:34 +0100
-Subject: [PATCH 291/352] net/core: protect users of napi_alloc_cache against
+Subject: [PATCH 291/369] net/core: protect users of napi_alloc_cache against
  reentrance
 
 On -RT the code running in BH can not be moved to another CPU so CPU
@@ -17,7 +17,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  1 file changed, 19 insertions(+), 6 deletions(-)
 
 diff --git a/net/core/skbuff.c b/net/core/skbuff.c
-index de66b9f8..cebba4e 100644
+index 09c22f2..2334c9c 100644
 --- a/net/core/skbuff.c
 +++ b/net/core/skbuff.c
 @@ -362,6 +362,7 @@ struct napi_alloc_cache {
@@ -28,7 +28,7 @@ index de66b9f8..cebba4e 100644
  
  static void *__netdev_alloc_frag(unsigned int fragsz, gfp_t gfp_mask)
  {
-@@ -391,9 +392,13 @@ EXPORT_SYMBOL(netdev_alloc_frag);
+@@ -391,9 +392,13 @@ void *netdev_alloc_frag(unsigned int fragsz)
  
  static void *__napi_alloc_frag(unsigned int fragsz, gfp_t gfp_mask)
  {
@@ -44,7 +44,7 @@ index de66b9f8..cebba4e 100644
  }
  
  void *napi_alloc_frag(unsigned int fragsz)
-@@ -487,9 +492,10 @@ EXPORT_SYMBOL(__netdev_alloc_skb);
+@@ -487,9 +492,10 @@ struct sk_buff *__netdev_alloc_skb(struct net_device *dev, unsigned int len,
  struct sk_buff *__napi_alloc_skb(struct napi_struct *napi, unsigned int len,
  				 gfp_t gfp_mask)
  {
@@ -76,7 +76,7 @@ index de66b9f8..cebba4e 100644
  		skb->pfmemalloc = 1;
  	skb->head_frag = 1;
  
-@@ -762,23 +771,26 @@ EXPORT_SYMBOL(consume_skb);
+@@ -762,23 +771,26 @@ void consume_skb(struct sk_buff *skb)
  
  void __kfree_skb_flush(void)
  {
@@ -114,5 +114,5 @@ index de66b9f8..cebba4e 100644
  void __kfree_skb_defer(struct sk_buff *skb)
  {
 -- 
-2.7.4
+1.9.1
 

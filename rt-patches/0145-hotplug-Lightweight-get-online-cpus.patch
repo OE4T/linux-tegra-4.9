@@ -1,7 +1,7 @@
-From 315bba17a4c1c779ce1214c9eeec1f78b5ebc6df Mon Sep 17 00:00:00 2001
+From 5a0b29815d8e831824447a1750df8013e3a20cc0 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Wed, 15 Jun 2011 12:36:06 +0200
-Subject: [PATCH 145/352] hotplug: Lightweight get online cpus
+Subject: [PATCH 145/369] hotplug: Lightweight get online cpus
 
 get_online_cpus() is a heavy weight function which involves a global
 mutex. migrate_disable() wants a simpler construct which prevents only
@@ -31,7 +31,7 @@ index 041fee3..a4cfc26 100644
  #ifdef CONFIG_HOTPLUG_CPU
  /* Stop CPUs going up and down. */
  
-@@ -196,6 +193,8 @@ extern void get_online_cpus(void);
+@@ -196,6 +193,8 @@ static inline void unpin_current_cpu(void) { }
  extern void put_online_cpus(void);
  extern void cpu_hotplug_disable(void);
  extern void cpu_hotplug_enable(void);
@@ -53,7 +53,7 @@ diff --git a/kernel/cpu.c b/kernel/cpu.c
 index 8364a44..b09a1ba 100644
 --- a/kernel/cpu.c
 +++ b/kernel/cpu.c
-@@ -246,6 +246,100 @@ static struct {
+@@ -246,6 +246,100 @@ void cpu_maps_update_done(void)
  #define cpuhp_lock_acquire()      lock_map_acquire(&cpu_hotplug.dep_map)
  #define cpuhp_lock_release()      lock_map_release(&cpu_hotplug.dep_map)
  
@@ -201,5 +201,5 @@ index 8364a44..b09a1ba 100644
  	/* This post dead nonsense must die */
  	if (!ret && hasdied)
 -- 
-2.7.4
+1.9.1
 

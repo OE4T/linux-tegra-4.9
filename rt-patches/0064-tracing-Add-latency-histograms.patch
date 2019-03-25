@@ -1,7 +1,7 @@
-From dcd742b729bca5cd70110158e49e2bc912f563f1 Mon Sep 17 00:00:00 2001
+From bed5e892514b1505ed1dc9e326385be17098ec9e Mon Sep 17 00:00:00 2001
 From: Carsten Emde <C.Emde@osadl.org>
 Date: Tue, 19 Jul 2011 14:03:41 +0100
-Subject: [PATCH 064/352] tracing: Add latency histograms
+Subject: [PATCH 064/369] tracing: Add latency histograms
 
 This patch provides a recording mechanism to store data of potential
 sources of system latencies. The recordings separately determine the
@@ -1757,7 +1757,7 @@ index 0000000..66a69eb
 +
 +device_initcall(latency_hist_init);
 diff --git a/kernel/trace/trace_irqsoff.c b/kernel/trace/trace_irqsoff.c
-index c180fe5..3a03bf0 100644
+index c180fe5..3a03bf08 100644
 --- a/kernel/trace/trace_irqsoff.c
 +++ b/kernel/trace/trace_irqsoff.c
 @@ -13,6 +13,7 @@
@@ -1782,7 +1782,7 @@ index c180fe5..3a03bf0 100644
  	if (preempt_trace() || irq_trace())
  		stop_critical_timing(CALLER_ADDR0, CALLER_ADDR1);
  }
-@@ -442,6 +445,7 @@ EXPORT_SYMBOL_GPL(stop_critical_timings);
+@@ -442,6 +445,7 @@ void stop_critical_timings(void)
  #ifdef CONFIG_PROVE_LOCKING
  void time_hardirqs_on(unsigned long a0, unsigned long a1)
  {
@@ -1843,5 +1843,5 @@ index c180fe5..3a03bf0 100644
  		start_critical_timing(a0, a1);
  }
 -- 
-2.7.4
+1.9.1
 

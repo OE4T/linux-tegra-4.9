@@ -1,7 +1,7 @@
-From 49289fa785180dba432a7aa48cc7b0fd2de2c267 Mon Sep 17 00:00:00 2001
+From 7372fc549b1f406683e7df652b07a9eb77ef6928 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Sat, 25 Jun 2011 09:21:04 +0200
-Subject: [PATCH 133/352] sched: Add saved_state for tasks blocked on sleeping
+Subject: [PATCH 133/369] sched: Add saved_state for tasks blocked on sleeping
  locks
 
 Spinlocks are state preserving in !RT. RT changes the state when a
@@ -18,7 +18,7 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  3 files changed, 33 insertions(+), 1 deletion(-)
 
 diff --git a/include/linux/sched.h b/include/linux/sched.h
-index 1f416c1..922b6e7 100644
+index f1a50a6..307c217 100644
 --- a/include/linux/sched.h
 +++ b/include/linux/sched.h
 @@ -1641,6 +1641,7 @@ struct task_struct {
@@ -29,7 +29,7 @@ index 1f416c1..922b6e7 100644
  	void *stack;
  	atomic_t usage;
  	unsigned int flags;	/* per process flags, defined below */
-@@ -2891,6 +2892,7 @@ extern void xtime_update(unsigned long ticks);
+@@ -2891,6 +2892,7 @@ static inline struct user_struct *get_uid(struct user_struct *u)
  
  extern int wake_up_state(struct task_struct *tsk, unsigned int state);
  extern int wake_up_process(struct task_struct *tsk);
@@ -38,10 +38,10 @@ index 1f416c1..922b6e7 100644
  #ifdef CONFIG_SMP
   extern void kick_process(struct task_struct *tsk);
 diff --git a/kernel/sched/core.c b/kernel/sched/core.c
-index 4860a2e..6390d48 100644
+index 4846993..4ecc7c3 100644
 --- a/kernel/sched/core.c
 +++ b/kernel/sched/core.c
-@@ -2059,8 +2059,25 @@ try_to_wake_up(struct task_struct *p, unsigned int state, int wake_flags)
+@@ -2059,8 +2059,25 @@ static void ttwu_queue(struct task_struct *p, int cpu, int wake_flags)
  	 */
  	smp_mb__before_spinlock();
  	raw_spin_lock_irqsave(&p->pi_lock, flags);
@@ -100,5 +100,5 @@ index a2e94a0..0c6e005 100644
  /*
   * To aid in avoiding the subversion of "niceness" due to uneven distribution
 -- 
-2.7.4
+1.9.1
 

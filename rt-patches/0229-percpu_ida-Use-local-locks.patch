@@ -1,7 +1,7 @@
-From e7bd6a855a63dd6faecd76f1e216d7e95d82a880 Mon Sep 17 00:00:00 2001
+From 9936e052ac699399a9383e45b3ce9c7a49a18b43 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Wed, 9 Apr 2014 11:58:17 +0200
-Subject: [PATCH 229/352] percpu_ida: Use local locks
+Subject: [PATCH 229/369] percpu_ida: Use local locks
 
 the local_irq_save() + spin_lock() does not work that well on -RT
 
@@ -103,5 +103,5 @@ index 6d40944..822a2c0 100644
  }
  EXPORT_SYMBOL_GPL(percpu_ida_for_each_free);
 -- 
-2.7.4
+1.9.1
 

@@ -1,7 +1,7 @@
-From 717dd917548acfcd6c01637850a84b405ad055df Mon Sep 17 00:00:00 2001
+From eb1edd60177e293fac3b63ab7794b483dfc8dd69 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Tue, 23 Jun 2015 15:32:51 +0200
-Subject: [PATCH 244/352] irqwork: push most work into softirq context
+Subject: [PATCH 244/369] irqwork: push most work into softirq context
 
 Initially we defered all irqwork into softirq because we didn't want the
 latency spikes if perf or another user was busy and delayed the RT task.
@@ -74,7 +74,7 @@ index bcf107c..0ddaf1e 100644
  		arch_send_call_function_single_ipi(cpu);
  
  	return true;
-@@ -86,6 +94,9 @@ EXPORT_SYMBOL_GPL(irq_work_queue_on);
+@@ -86,6 +94,9 @@ bool irq_work_queue_on(struct irq_work *work, int cpu)
  /* Enqueue the irq work @work on the current CPU */
  bool irq_work_queue(struct irq_work *work)
  {
@@ -147,10 +147,10 @@ index bcf107c..0ddaf1e 100644
  EXPORT_SYMBOL_GPL(irq_work_run);
  
 diff --git a/kernel/sched/core.c b/kernel/sched/core.c
-index b7b61c3..224b95a 100644
+index 57bc1b7..f39ef52 100644
 --- a/kernel/sched/core.c
 +++ b/kernel/sched/core.c
-@@ -6148,6 +6148,7 @@ static int init_rootdomain(struct root_domain *rd)
+@@ -6149,6 +6149,7 @@ static int init_rootdomain(struct root_domain *rd)
  	rd->rto_cpu = -1;
  	raw_spin_lock_init(&rd->rto_lock);
  	init_irq_work(&rd->rto_push_work, rto_push_irq_work_func);
@@ -171,7 +171,7 @@ index 943d0f77..c82ddc7 100644
  
  /*
 diff --git a/kernel/time/timer.c b/kernel/time/timer.c
-index f90e684..8e81884 100644
+index a416cee..e345117 100644
 --- a/kernel/time/timer.c
 +++ b/kernel/time/timer.c
 @@ -1661,7 +1661,7 @@ void update_process_times(int user_tick)
@@ -183,7 +183,7 @@ index f90e684..8e81884 100644
  	if (in_irq())
  		irq_work_tick();
  #endif
-@@ -1716,6 +1716,10 @@ static __latent_entropy void run_timer_softirq(struct softirq_action *h)
+@@ -1717,6 +1717,10 @@ static __latent_entropy void run_timer_softirq(struct softirq_action *h)
  {
  	struct timer_base *base = this_cpu_ptr(&timer_bases[BASE_STD]);
  
@@ -195,5 +195,5 @@ index f90e684..8e81884 100644
  	if (IS_ENABLED(CONFIG_NO_HZ_COMMON))
  		__run_timers(this_cpu_ptr(&timer_bases[BASE_DEF]));
 -- 
-2.7.4
+1.9.1
 

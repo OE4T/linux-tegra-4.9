@@ -1,7 +1,7 @@
-From ef4c1e949f08dab6a7a1390a95b7908bf2f5c343 Mon Sep 17 00:00:00 2001
+From 19642d4c4f0fd52c98bd567379ac09882ac47eb4 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Sat, 1 May 2010 18:29:35 +0200
-Subject: [PATCH 253/352] ARM: at91: tclib: Default to tclib timer for RT
+Subject: [PATCH 253/369] ARM: at91: tclib: Default to tclib timer for RT
 
 RT is not too happy about the shared timer interrupt in AT91
 devices. Default to tclib timer for RT.
@@ -33,5 +33,5 @@ index 8236b8c..e8390f3 100644
  	  Select this to use 32 KiHz base clock rate as TC block clock
  	  source for clock events.
 -- 
-2.7.4
+1.9.1
 

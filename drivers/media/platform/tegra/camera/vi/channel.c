@@ -173,6 +173,10 @@ static void tegra_channel_fmt_align(struct tegra_channel *chan,
 	numerator = (!bpp->numerator) ? 1 : bpp->numerator;
 
 	bpl = (*width * numerator) / denominator;
+	/* Align stride */
+	if (chan->vi->fops->vi_stride_align)
+		chan->vi->fops->vi_stride_align(&bpl);
+
 	if (!*bytesperline)
 		*bytesperline = bpl;
 
@@ -212,6 +216,10 @@ static void tegra_channel_update_format(struct tegra_channel *chan,
 	u32 denominator = (!bpp->denominator) ? 1 : bpp->denominator;
 	u32 numerator = (!bpp->numerator) ? 1 : bpp->numerator;
 	u32 bytesperline = (width * numerator / denominator);
+
+	/* Align stride */
+	if (chan->vi->fops->vi_stride_align)
+		chan->vi->fops->vi_stride_align(&bytesperline);
 
 	chan->format.width = width;
 	chan->format.height = height;

@@ -40,22 +40,22 @@
 
 #define CH_REG(reg, id) (reg + (TEGRA_ADMAIF_CHANNEL_REG_STRIDE * (id-1)))
 
-#define REG_DEFAULTS(id, rx_ctrl, tx_ctrl, enable) \
+#define REG_DEFAULTS(id, rx_ctrl, tx_ctrl, tx_base) \
 	{ CH_REG(TEGRA_ADMAIF_XBAR_RX_INT_MASK, id), 0x00000001}, \
 	{ CH_REG(TEGRA_ADMAIF_CHAN_ACIF_RX_CTRL, id), 0x00007700}, \
 	{ CH_REG(TEGRA_ADMAIF_XBAR_RX_FIFO_CTRL, id), rx_ctrl}, \
-	{ CH_REG((enable + TEGRA_ADMAIF_XBAR_TX_INT_MASK), id), 0x00000001}, \
-	{ CH_REG((enable + TEGRA_ADMAIF_CHAN_ACIF_TX_CTRL), id), 0x00007700}, \
-	{ CH_REG((enable + TEGRA_ADMAIF_XBAR_TX_FIFO_CTRL), id), tx_ctrl}
+	{ CH_REG((tx_base + TEGRA_ADMAIF_XBAR_TX_INT_MASK), id), 0x00000001}, \
+	{ CH_REG((tx_base + TEGRA_ADMAIF_CHAN_ACIF_TX_CTRL), id), 0x00007700}, \
+	{ CH_REG((tx_base + TEGRA_ADMAIF_XBAR_TX_FIFO_CTRL), id), tx_ctrl}
 
 #define ADMAIF_REG_DEFAULTS(id, chip) \
 	REG_DEFAULTS(id, \
 		chip ## _ADMAIF_RX ## id ## _FIFO_CTRL_REG_DEFAULT, \
 		chip ## _ADMAIF_TX ## id ## _FIFO_CTRL_REG_DEFAULT, \
-		chip ## _ADMAIF_XBAR_TX_ENABLE)
+		chip ## _ADMAIF_XBAR_TX_BASE)
 
 static const struct reg_default tegra186_admaif_reg_defaults[] = {
-	{(TEGRA_ADMAIF_GLOBAL_CG_0+TEGRA186_ADMAIF_GLOBAL_ENABLE), 0x00000003},
+	{(TEGRA_ADMAIF_GLOBAL_CG_0+TEGRA186_ADMAIF_GLOBAL_BASE), 0x00000003},
 	ADMAIF_REG_DEFAULTS(1, TEGRA186),
 	ADMAIF_REG_DEFAULTS(2, TEGRA186),
 	ADMAIF_REG_DEFAULTS(3, TEGRA186),
@@ -79,7 +79,7 @@ static const struct reg_default tegra186_admaif_reg_defaults[] = {
 };
 
 static const struct reg_default tegra210_admaif_reg_defaults[] = {
-	{(TEGRA_ADMAIF_GLOBAL_CG_0+TEGRA210_ADMAIF_GLOBAL_ENABLE), 0x00000003},
+	{(TEGRA_ADMAIF_GLOBAL_CG_0+TEGRA210_ADMAIF_GLOBAL_BASE), 0x00000003},
 	ADMAIF_REG_DEFAULTS(1, TEGRA210),
 	ADMAIF_REG_DEFAULTS(2, TEGRA210),
 	ADMAIF_REG_DEFAULTS(3, TEGRA210),
@@ -95,69 +95,113 @@ static const struct reg_default tegra210_admaif_reg_defaults[] = {
 static bool tegra_admaif_wr_reg(struct device *dev, unsigned int reg)
 {
 	struct tegra_admaif *admaif = dev_get_drvdata(dev);
-	unsigned int offset_tx_enable = admaif->soc_data->reg_offsets.tx_enable;
+	unsigned int ch_stride = TEGRA_ADMAIF_CHANNEL_REG_STRIDE;
+	unsigned int num_ch = admaif->soc_data->num_ch;
+	unsigned int rx_base = admaif->soc_data->rx_base;
+	unsigned int tx_base = admaif->soc_data->tx_base;
+	unsigned int global_base = admaif->soc_data->global_base;
+	unsigned int reg_max = admaif->soc_data->regmap_conf->max_register;
+	unsigned int rx_max = rx_base + (num_ch * ch_stride);
+	unsigned int tx_max = tx_base + (num_ch * ch_stride);
 
-	reg = reg % TEGRA_ADMAIF_CHANNEL_REG_STRIDE;
-
-	if ((reg == TEGRA_ADMAIF_XBAR_RX_ENABLE) ||
-		(reg == TEGRA_ADMAIF_XBAR_RX_FIFO_CTRL) ||
-		(reg == TEGRA_ADMAIF_XBAR_RX_SOFT_RESET) ||
-		(reg == TEGRA_ADMAIF_CHAN_ACIF_RX_CTRL) ||
-		(reg == offset_tx_enable) ||
-		(reg == (offset_tx_enable+TEGRA_ADMAIF_XBAR_TX_STATUS)) ||
-		(reg == (offset_tx_enable+TEGRA_ADMAIF_XBAR_TX_FIFO_CTRL)) ||
-		(reg == (offset_tx_enable+TEGRA_ADMAIF_XBAR_TX_SOFT_RESET)) ||
-		(reg == (offset_tx_enable+TEGRA_ADMAIF_CHAN_ACIF_TX_CTRL)) ||
-		(reg == admaif->soc_data->reg_offsets.global_enable))
-		return true;
-
+	if ((reg >= rx_base) && (reg < rx_max)) {
+		reg = (reg - rx_base) % ch_stride;
+		if ((reg == TEGRA_ADMAIF_XBAR_RX_ENABLE) ||
+		    (reg == TEGRA_ADMAIF_XBAR_RX_FIFO_CTRL) ||
+		    (reg == TEGRA_ADMAIF_XBAR_RX_SOFT_RESET) ||
+		    (reg == TEGRA_ADMAIF_CHAN_ACIF_RX_CTRL))
+			return true;
+	} else if ((reg >= tx_base) && (reg < tx_max)) {
+		reg = (reg - tx_base) % ch_stride;
+		if ((reg == TEGRA_ADMAIF_XBAR_TX_ENABLE) ||
+		    (reg == TEGRA_ADMAIF_XBAR_TX_FIFO_CTRL) ||
+		    (reg == TEGRA_ADMAIF_XBAR_TX_SOFT_RESET) ||
+		    (reg == TEGRA_ADMAIF_CHAN_ACIF_TX_CTRL))
+			return true;
+	} else if ((reg >= global_base) && (reg < reg_max)) {
+		if (reg == (global_base + TEGRA_ADMAIF_GLOBAL_ENABLE))
+			return true;
+	}
 	return false;
 }
 
 static bool tegra_admaif_rd_reg(struct device *dev, unsigned int reg)
 {
 	struct tegra_admaif *admaif = dev_get_drvdata(dev);
-	unsigned int offset_tx_enable = admaif->soc_data->reg_offsets.tx_enable;
+	unsigned int ch_stride = TEGRA_ADMAIF_CHANNEL_REG_STRIDE;
+	unsigned int num_ch = admaif->soc_data->num_ch;
+	unsigned int rx_base = admaif->soc_data->rx_base;
+	unsigned int tx_base = admaif->soc_data->tx_base;
+	unsigned int global_base = admaif->soc_data->global_base;
+	unsigned int reg_max = admaif->soc_data->regmap_conf->max_register;
+	unsigned int rx_max = rx_base + (num_ch * ch_stride);
+	unsigned int tx_max = tx_base + (num_ch * ch_stride);
 
-	reg = reg % TEGRA_ADMAIF_CHANNEL_REG_STRIDE;
-
-	if ((reg == TEGRA_ADMAIF_XBAR_RX_STATUS) ||
-		(reg == TEGRA_ADMAIF_XBAR_RX_INT_STATUS) ||
-		(reg == TEGRA_ADMAIF_XBAR_RX_ENABLE) ||
-		(reg == TEGRA_ADMAIF_XBAR_RX_SOFT_RESET) ||
-		(reg == TEGRA_ADMAIF_XBAR_RX_FIFO_CTRL) ||
-		(reg == TEGRA_ADMAIF_CHAN_ACIF_RX_CTRL) ||
-		(reg == offset_tx_enable) ||
-		(reg == (offset_tx_enable+TEGRA_ADMAIF_XBAR_TX_STATUS)) ||
-		(reg == (offset_tx_enable+TEGRA_ADMAIF_XBAR_TX_INT_STATUS)) ||
-		(reg == (offset_tx_enable+TEGRA_ADMAIF_XBAR_TX_FIFO_CTRL)) ||
-		(reg == (offset_tx_enable+TEGRA_ADMAIF_XBAR_TX_SOFT_RESET)) ||
-		(reg == (offset_tx_enable+TEGRA_ADMAIF_CHAN_ACIF_TX_CTRL)) ||
-		(reg == admaif->soc_data->reg_offsets.global_enable))
-		return true;
-
+	if ((reg >= rx_base) && (reg < rx_max)) {
+		reg = (reg - rx_base) % ch_stride;
+		if ((reg == TEGRA_ADMAIF_XBAR_RX_ENABLE) ||
+		    (reg == TEGRA_ADMAIF_XBAR_RX_STATUS) ||
+		    (reg == TEGRA_ADMAIF_XBAR_RX_INT_STATUS) ||
+		    (reg == TEGRA_ADMAIF_XBAR_RX_FIFO_CTRL) ||
+		    (reg == TEGRA_ADMAIF_XBAR_RX_SOFT_RESET) ||
+		    (reg == TEGRA_ADMAIF_CHAN_ACIF_RX_CTRL))
+			return true;
+	} else if ((reg >= tx_base) && (reg < tx_max)) {
+		reg = (reg - tx_base) % ch_stride;
+		if ((reg == TEGRA_ADMAIF_XBAR_TX_ENABLE) ||
+		    (reg == TEGRA_ADMAIF_XBAR_TX_STATUS) ||
+		    (reg == TEGRA_ADMAIF_XBAR_TX_INT_STATUS) ||
+		    (reg == TEGRA_ADMAIF_XBAR_TX_FIFO_CTRL) ||
+		    (reg == TEGRA_ADMAIF_XBAR_TX_SOFT_RESET) ||
+		    (reg == TEGRA_ADMAIF_CHAN_ACIF_TX_CTRL))
+			return true;
+	} else if ((reg >= global_base) && (reg < reg_max)) {
+		if ((reg == (global_base + TEGRA_ADMAIF_GLOBAL_ENABLE)) ||
+		    (reg == (global_base + TEGRA_ADMAIF_GLOBAL_CG_0)) ||
+		    (reg == (global_base + TEGRA_ADMAIF_GLOBAL_STATUS)) ||
+		    (reg == (global_base +
+				TEGRA_ADMAIF_GLOBAL_RX_ENABLE_STATUS)) ||
+		    (reg == (global_base +
+				TEGRA_ADMAIF_GLOBAL_TX_ENABLE_STATUS)))
+			return true;
+	}
 	return false;
 }
 
 static bool tegra_admaif_volatile_reg(struct device *dev, unsigned int reg)
 {
 	struct tegra_admaif *admaif = dev_get_drvdata(dev);
-	unsigned int offset_tx_enable = admaif->soc_data->reg_offsets.tx_enable;
+	unsigned int ch_stride = TEGRA_ADMAIF_CHANNEL_REG_STRIDE;
+	unsigned int num_ch = admaif->soc_data->num_ch;
+	unsigned int rx_base = admaif->soc_data->rx_base;
+	unsigned int tx_base = admaif->soc_data->tx_base;
+	unsigned int global_base = admaif->soc_data->global_base;
+	unsigned int reg_max = admaif->soc_data->regmap_conf->max_register;
+	unsigned int rx_max = rx_base + (num_ch * ch_stride);
+	unsigned int tx_max = tx_base + (num_ch * ch_stride);
 
-	if (reg > 0 && (reg < (offset_tx_enable + (admaif->soc_data->num_ch *
-					TEGRA_ADMAIF_CHANNEL_REG_STRIDE))))
-		reg = reg % TEGRA_ADMAIF_CHANNEL_REG_STRIDE;
-
-	if ((reg == TEGRA_ADMAIF_XBAR_RX_ENABLE) ||
-		(reg == TEGRA_ADMAIF_XBAR_RX_STATUS) ||
-		(reg == TEGRA_ADMAIF_XBAR_RX_INT_STATUS) ||
-		(reg == TEGRA_ADMAIF_XBAR_RX_SOFT_RESET) ||
-		(reg == offset_tx_enable) ||
-		(reg == (offset_tx_enable+TEGRA_ADMAIF_XBAR_TX_STATUS)) ||
-		(reg == (offset_tx_enable+TEGRA_ADMAIF_XBAR_TX_INT_STATUS)) ||
-		(reg == (offset_tx_enable+TEGRA_ADMAIF_XBAR_TX_SOFT_RESET)))
-		return true;
-
+	if ((reg >= rx_base) && (reg < rx_max)) {
+		reg = (reg - rx_base) % ch_stride;
+		if ((reg == TEGRA_ADMAIF_XBAR_RX_ENABLE) ||
+		    (reg == TEGRA_ADMAIF_XBAR_RX_STATUS) ||
+		    (reg == TEGRA_ADMAIF_XBAR_RX_INT_STATUS) ||
+		    (reg == TEGRA_ADMAIF_XBAR_RX_SOFT_RESET))
+			return true;
+	} else if ((reg >= tx_base) && (reg < tx_max)) {
+		reg = (reg - tx_base) % ch_stride;
+		if ((reg == TEGRA_ADMAIF_XBAR_TX_ENABLE) ||
+		    (reg == TEGRA_ADMAIF_XBAR_TX_STATUS) ||
+		    (reg == TEGRA_ADMAIF_XBAR_TX_INT_STATUS) ||
+		    (reg == TEGRA_ADMAIF_XBAR_TX_SOFT_RESET))
+			return true;
+	} else if ((reg >= global_base) && (reg < reg_max)) {
+		if ((reg == (global_base + TEGRA_ADMAIF_GLOBAL_STATUS)) ||
+		    (reg == (global_base +
+				TEGRA_ADMAIF_GLOBAL_RX_ENABLE_STATUS)) ||
+		    (reg == (global_base +
+				TEGRA_ADMAIF_GLOBAL_TX_ENABLE_STATUS)))
+			return true;
+	}
 	return false;
 }
 
@@ -195,7 +239,7 @@ static int tegra_admaif_sw_reset(struct snd_soc_dai *dai,
 	int wait = timeout;
 
 	if (direction == SNDRV_PCM_STREAM_PLAYBACK) {
-		sw_reset_reg = admaif->soc_data->reg_offsets.tx_enable +
+		sw_reset_reg = admaif->soc_data->tx_base +
 			TEGRA_ADMAIF_XBAR_TX_SOFT_RESET +
 			(dai->id * TEGRA_ADMAIF_CHANNEL_REG_STRIDE);
 	} else {
@@ -222,7 +266,7 @@ static int tegra_admaif_get_status(struct snd_soc_dai *dai,
 	unsigned int status_reg, val;
 
 	if (direction == SNDRV_PCM_STREAM_PLAYBACK) {
-		status_reg = admaif->soc_data->reg_offsets.tx_enable +
+		status_reg = admaif->soc_data->tx_base +
 			TEGRA_ADMAIF_XBAR_TX_STATUS +
 			(dai->id * TEGRA_ADMAIF_CHANNEL_REG_STRIDE);
 	} else {
@@ -386,7 +430,7 @@ static int tegra_admaif_hw_params(struct snd_pcm_substream *substream,
 	}
 
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
-		reg = admaif->soc_data->reg_offsets.tx_enable +
+		reg = admaif->soc_data->tx_base +
 			TEGRA_ADMAIF_CHAN_ACIF_TX_CTRL +
 			(dai->id * TEGRA_ADMAIF_CHANNEL_REG_STRIDE);
 		/* For playback path, the mono input from client channel
@@ -423,7 +467,8 @@ static void tegra_admaif_start_playback(struct snd_soc_dai *dai)
 	struct tegra_admaif *admaif = snd_soc_dai_get_drvdata(dai);
 	unsigned int reg;
 
-	reg = admaif->soc_data->reg_offsets.tx_enable +
+	reg = admaif->soc_data->tx_base +
+		TEGRA_ADMAIF_XBAR_TX_ENABLE +
 		(dai->id * TEGRA_ADMAIF_CHANNEL_REG_STRIDE);
 	regmap_update_bits(admaif->regmap, reg,
 				TEGRA_ADMAIF_XBAR_TX_ENABLE_MASK,
@@ -437,7 +482,8 @@ static void tegra_admaif_stop_playback(struct snd_soc_dai *dai)
 	unsigned int reg;
 	int dcnt = 10, ret;
 
-	reg = admaif->soc_data->reg_offsets.tx_enable +
+	reg = admaif->soc_data->tx_base +
+		TEGRA_ADMAIF_XBAR_TX_ENABLE +
 		(dai->id * TEGRA_ADMAIF_CHANNEL_REG_STRIDE);
 	regmap_update_bits(admaif->regmap, reg,
 				TEGRA_ADMAIF_XBAR_TX_ENABLE_MASK,
@@ -596,7 +642,7 @@ static void tegra_admaif_reg_dump(struct tegra_admaif *admaif)
 {
 	int i, stride;
 	int ret;
-	int tx_offset = admaif->soc_data->reg_offsets.tx_enable;
+	int tx_offset = admaif->soc_data->tx_base;
 
 	ret = pm_runtime_get_sync(admaif->dev->parent);
 	if (ret < 0) {
@@ -622,7 +668,7 @@ static void tegra_admaif_reg_dump(struct tegra_admaif *admaif)
 				TEGRA_ADMAIF_XBAR_RX_FIFO_CTRL + stride));
 		pr_info("TX%d_Enable	= %#x\n", i+1,
 			readl(admaif->base_addr + tx_offset +
-				stride));
+				TEGRA_ADMAIF_XBAR_TX_ENABLE + stride));
 		pr_info("TX%d_STATUS	= %#x\n", i+1,
 			readl(admaif->base_addr + tx_offset +
 				TEGRA_ADMAIF_XBAR_TX_STATUS + stride));
@@ -1082,10 +1128,9 @@ static struct tegra_admaif_soc_data soc_data_tegra210 = {
 	.codec_dais = tegra210_admaif_codec_dais,
 	.regmap_conf = &tegra210_admaif_regmap_config,
 	.set_audio_cif = tegra210_xbar_set_cif,
-	.reg_offsets = {
-		.global_enable = 0x700,
-		.tx_enable = 0x300,
-	},
+	.global_base = TEGRA210_ADMAIF_GLOBAL_BASE,
+	.tx_base = TEGRA210_ADMAIF_XBAR_TX_BASE,
+	.rx_base = TEGRA210_ADMAIF_XBAR_RX_BASE,
 	.is_isomgr_client = false,
 };
 
@@ -1095,10 +1140,9 @@ static struct tegra_admaif_soc_data soc_data_tegra186 = {
 	.codec_dais = tegra186_admaif_codec_dais,
 	.regmap_conf = &tegra186_admaif_regmap_config,
 	.set_audio_cif = tegra210_xbar_set_cif,
-	.reg_offsets	= {
-		.global_enable = 0xd00,
-		.tx_enable = 0x500,
-	},
+	.global_base = TEGRA186_ADMAIF_GLOBAL_BASE,
+	.tx_base = TEGRA186_ADMAIF_XBAR_TX_BASE,
+	.rx_base = TEGRA186_ADMAIF_XBAR_RX_BASE,
 	.is_isomgr_client = true,
 };
 
@@ -1222,7 +1266,7 @@ static int tegra_admaif_probe(struct platform_device *pdev)
 
 	for (i = 0; i < admaif->soc_data->num_ch; i++) {
 		admaif->playback_dma_data[i].addr = res->start +
-				admaif->soc_data->reg_offsets.tx_enable +
+				admaif->soc_data->tx_base +
 				TEGRA_ADMAIF_XBAR_TX_FIFO_WRITE +
 				(i * TEGRA_ADMAIF_CHANNEL_REG_STRIDE);
 
@@ -1300,8 +1344,8 @@ static int tegra_admaif_probe(struct platform_device *pdev)
 		goto err_unregister_codec;
 	}
 
-	regmap_update_bits(admaif->regmap,
-			admaif->soc_data->reg_offsets.global_enable, 1, 1);
+	regmap_update_bits(admaif->regmap, admaif->soc_data->global_base +
+					TEGRA_ADMAIF_GLOBAL_ENABLE, 1, 1);
 
 	return 0;
 

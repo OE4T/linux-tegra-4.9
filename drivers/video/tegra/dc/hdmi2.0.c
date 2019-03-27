@@ -2847,8 +2847,9 @@ static int tegra_hdmi_controller_enable(struct tegra_hdmi *hdmi)
 	else
 		tegra_dc_enable_disp_ctrl_mode(dc);
 
-	/* enable hdcp */
-	if (hdmi->edid_src == EDID_SRC_PANEL && !hdmi->dc->vedid)
+	/* enable hdcp only if valid edid */
+	if (hdmi->edid_src == EDID_SRC_PANEL && !hdmi->dc->vedid &&
+		(tegra_edid_get_monspecs(hdmi->edid, &hdmi->mon_spec) == 0))
 		tegra_nvhdcp_set_plug(hdmi->nvhdcp, true);
 
 	if (hdmi->dpaux)

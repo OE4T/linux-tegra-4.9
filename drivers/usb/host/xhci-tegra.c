@@ -3718,7 +3718,8 @@ static int tegra_xusb_remove(struct platform_device *pdev)
 	if (tegra->soc->handle_oc)
 		cancel_work_sync(&tegra->oc_work);
 
-	cancel_work_sync(&tegra->ivc_work);
+	if (tegra->soc->is_xhci_vf)
+		cancel_work_sync(&tegra->ivc_work);
 
 	if (tegra->cpu_boost_enabled)
 		tegra_xusb_boost_cpu_deinit(tegra);
@@ -4352,7 +4353,9 @@ static int tegra_xusb_suspend(struct device *dev)
 	if (tegra->soc->handle_oc)
 		flush_work(&tegra->oc_work);
 
-	flush_work(&tegra->ivc_work);
+	if (tegra->soc->is_xhci_vf)
+		flush_work(&tegra->ivc_work);
+
 	mutex_lock(&tegra->lock);
 
 	if (pm_runtime_suspended(dev)) {

@@ -393,8 +393,8 @@ int te_open_trusted_session_tlk(u32 *ta_uuid, u32 uuid_size,
 	do_smc(request, &tlk_dev);
 
 	if (request->result) {
-		pr_err("%s: error opening session: 0x%08x\n",
-		__func__, request->result);
+		pr_err("%s: error opening session: 0x%08x, 0x%08x\n",
+		__func__, request->result, request->result_origin);
 		goto error;
 	}
 
@@ -451,8 +451,8 @@ void te_close_trusted_session_tlk(u32 session_id, u32 *ta_uuid,
 	do_smc(request, &tlk_dev);
 
 	if (request->result) {
-		pr_err("%s: error closing session: 0x%08x\n",
-		__func__, request->result);
+		pr_err("%s: error closing session: 0x%08x, 0x%08x\n",
+		__func__, request->result, request->result_origin);
 		goto error;
 	}
 
@@ -524,8 +524,8 @@ int te_launch_trusted_oper_tlk(u8 *buf_ptr, u32 buf_len, u32 session_id,
 	do_smc(request, &tlk_dev);
 
 	if (request->result) {
-		pr_err("%s: error launching session: 0x%08x\n",
-		__func__, request->result);
+		pr_err("%s: error launching session: 0x%08x, 0x%08x\n",
+		__func__, request->result, request->result_origin);
 		goto error;
 	} else {
 		if (cmd_desc)

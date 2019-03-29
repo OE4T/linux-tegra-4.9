@@ -517,8 +517,11 @@ static int tegra210_i2s_startup(struct snd_pcm_substream *substream,
 		if (!IS_ERR(i2s->pin_default_state)) {
 			ret = pinctrl_select_state(i2s->pinctrl,
 						i2s->pin_default_state);
-			if (ret < 0)
-				dev_err(dev, "setting dap pinctrl default state failed\n");
+			if (ret < 0) {
+				dev_err(dev,
+				"setting i2s pinctrl default state failed\n");
+				return -EINVAL;
+			}
 		}
 
 		if (i2s->num_supplies > 0) {
@@ -1276,11 +1279,6 @@ static int tegra210_i2s_platform_probe(struct platform_device *pdev)
 			goto err_dap;
 		}
 
-		ret = pinctrl_select_state(i2s->pinctrl, i2s->pin_idle_state);
-		if (ret < 0) {
-			dev_err(&pdev->dev, "setting state failed\n");
-			goto err_dap;
-		}
 	}
 err_dap:
 	pm_runtime_enable(&pdev->dev);

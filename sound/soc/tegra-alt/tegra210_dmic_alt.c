@@ -241,12 +241,13 @@ static int tegra210_dmic_startup(struct snd_pcm_substream *substream,
 	}
 
 	if (!(tegra_platform_is_unit_fpga() || tegra_platform_is_fpga())) {
-		if (!IS_ERR(dmic->pin_active_state) && dmic->is_pinctrl) {
+		if (!IS_ERR(dmic->pin_active_state)) {
 			ret = pinctrl_select_state(dmic->pinctrl,
 						dmic->pin_active_state);
 			if (ret < 0) {
 				dev_err(dev,
-				"setting dap pinctrl active state failed\n");
+				"setting dmic pinctrl active state failed\n");
+				return -EINVAL;
 			}
 		}
 	}
@@ -261,7 +262,7 @@ static void tegra210_dmic_shutdown(struct snd_pcm_substream *substream,
 	int ret;
 
 	if (!(tegra_platform_is_unit_fpga() || tegra_platform_is_fpga())) {
-		if (!IS_ERR(dmic->pin_idle_state) && dmic->is_pinctrl) {
+		if (!IS_ERR(dmic->pin_idle_state)) {
 			ret = pinctrl_select_state(
 				dmic->pinctrl, dmic->pin_idle_state);
 			if (ret < 0)
@@ -816,36 +817,24 @@ static int tegra210_dmic_platform_probe(struct platform_device *pdev)
 					dmic->prod_name);
 	}
 
-	if (of_property_read_u32(np, "nvidia,is-pinctrl",
-				&dmic->is_pinctrl) < 0)
-		dmic->is_pinctrl = 0;
+	dmic->pinctrl = devm_pinctrl_get(&pdev->dev);
+	if (IS_ERR(dmic->pinctrl)) {
+		dev_warn(&pdev->dev, "Missing pinctrl device\n");
+		goto err_dap;
+	}
 
-	if (dmic->is_pinctrl) {
-		dmic->pinctrl = devm_pinctrl_get(&pdev->dev);
-		if (IS_ERR(dmic->pinctrl)) {
-			dev_warn(&pdev->dev, "Missing pinctrl device\n");
-			goto err_dap;
-		}
+	dmic->pin_active_state = pinctrl_lookup_state(dmic->pinctrl,
+								"dap_active");
+	if (IS_ERR(dmic->pin_active_state)) {
+		dev_dbg(&pdev->dev, "Missing dap-active state\n");
+		goto err_dap;
+	}
 
-		dmic->pin_active_state = pinctrl_lookup_state(dmic->pinctrl,
-									"dap_active");
-		if (IS_ERR(dmic->pin_active_state)) {
-			dev_dbg(&pdev->dev, "Missing dap-active state\n");
-			goto err_dap;
-		}
-
-		dmic->pin_idle_state = pinctrl_lookup_state(dmic->pinctrl,
-								"dap_inactive");
-		if (IS_ERR(dmic->pin_idle_state)) {
-			dev_dbg(&pdev->dev, "Missing dap-inactive state\n");
-			goto err_dap;
-		}
-
-		ret = pinctrl_select_state(dmic->pinctrl, dmic->pin_idle_state);
-		if (ret < 0) {
-			dev_err(&pdev->dev, "setting state failed\n");
-			goto err_dap;
-		}
+	dmic->pin_idle_state = pinctrl_lookup_state(dmic->pinctrl,
+							"dap_inactive");
+	if (IS_ERR(dmic->pin_idle_state)) {
+		dev_dbg(&pdev->dev, "Missing dap-inactive state\n");
+		goto err_dap;
 	}
 
 err_dap:

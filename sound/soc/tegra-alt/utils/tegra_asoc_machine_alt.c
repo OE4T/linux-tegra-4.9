@@ -1,7 +1,7 @@
 /*
  * tegra_asoc_machine_alt.c - Tegra xbar dai link for machine drivers
  *
- * Copyright (c) 2014-2019 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2018 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -1006,60 +1006,6 @@ static struct snd_soc_dai_link
 		.ignore_pmdown_time = 1,
 	},
 #endif
-};
-
-enum tegra210_min_xbar_dai_link {
-	TEGRA210_MIN_DAI_LINK_ADMAIF1,
-	TEGRA210_MIN_DAI_LINK_ADMAIF2,
-	TEGRA210_MIN_DAI_LINK_ADMAIF1_CODEC,
-	TEGRA210_MIN_DAI_LINK_ADMAIF2_CODEC,
-	TEGRA210_MIN_XBAR_DAI_LINKS,
-};
-
-static struct snd_soc_dai_link
-	tegra210_min_xbar_dai_links[TEGRA210_MIN_XBAR_DAI_LINKS] = {
-	[TEGRA210_MIN_DAI_LINK_ADMAIF1] = {
-		.name = "ADMAIF1 CIF",
-		.stream_name = "ADMAIF1 CIF",
-		.cpu_dai_name = "ADMAIF1",
-		.codec_dai_name = "ADMAIF1",
-		.cpu_name = "tegra210-admaif",
-		.codec_name = "tegra210-axbar",
-		.platform_name = "tegra210-admaif",
-		.ignore_pmdown_time = 1,
-	},
-	[TEGRA210_MIN_DAI_LINK_ADMAIF2] = {
-		.name = "ADMAIF2 CIF",
-		.stream_name = "ADMAIF2 CIF",
-		.cpu_dai_name = "ADMAIF2",
-		.codec_dai_name = "ADMAIF2",
-		.cpu_name = "tegra210-admaif",
-		.codec_name = "tegra210-axbar",
-		.platform_name = "tegra210-admaif",
-		.ignore_pmdown_time = 1,
-	},
-	[TEGRA210_MIN_DAI_LINK_ADMAIF1_CODEC] = {
-		.name = "ADMAIF1 CODEC",
-		.stream_name = "ADMAIF1 CODEC",
-		.cpu_dai_name = "ADMAIF1 CIF",
-		.codec_dai_name = "ADMAIF1",
-		.cpu_name = "tegra210-admaif",
-		.codec_name = "tegra210-axbar",
-		.platform_name = "tegra210-admaif",
-		.ignore_pmdown_time = 1,
-		.params = &default_link_params,
-	},
-	[TEGRA210_MIN_DAI_LINK_ADMAIF2_CODEC] = {
-		.name = "ADMAIF2 CODEC",
-		.stream_name = "ADMAIF2 CODEC",
-		.cpu_dai_name = "ADMAIF2 CIF",
-		.codec_dai_name = "ADMAIF2",
-		.cpu_name = "tegra210-admaif",
-		.codec_name = "tegra210-axbar",
-		.platform_name = "tegra210-admaif",
-		.ignore_pmdown_time = 1,
-		.params = &default_link_params,
-	},
 };
 
 static struct snd_soc_codec_conf
@@ -2951,23 +2897,6 @@ static struct snd_soc_codec_conf
 	},
 };
 
-bool is_darcy(void)
-{
-	struct device_node *node;
-
-	node = of_find_compatible_node(NULL, NULL,
-		"nvidia,tegra-audio-t210ref-mobile-rt565x");
-
-	if (node && of_device_is_available(node) &&
-		(of_machine_is_compatible("nvidia,foster-e") ||
-		of_machine_is_compatible("nvidia,darcy") ||
-		of_machine_is_compatible("nvidia,sif"))) {
-		return true;
-	}
-
-	return false;
-}
-
 void tegra_machine_set_machine_links(
 	struct snd_soc_dai_link *links)
 {
@@ -3003,11 +2932,6 @@ struct snd_soc_dai_link *tegra_machine_get_dai_link(void)
 		of_machine_is_compatible("nvidia,tegra210b01")) {
 		link = tegra210_xbar_dai_links;
 		size = TEGRA210_XBAR_DAI_LINKS;
-	}
-
-	if (is_darcy()) {
-		link = tegra210_min_xbar_dai_links;
-		size = TEGRA210_MIN_XBAR_DAI_LINKS;
 	}
 
 	if (tegra_asoc_machine_links)
@@ -3046,10 +2970,6 @@ int tegra_machine_append_dai_link(struct snd_soc_dai_link *link,
 			of_machine_is_compatible("nvidia,tegra210b01")) ?
 			TEGRA210_XBAR_DAI_LINKS : 0;
 	unsigned int size2 = link_size;
-
-	if (size1 && is_darcy()) {
-		size1 = TEGRA210_MIN_XBAR_DAI_LINKS;
-	}
 
 	if (!tegra_asoc_machine_links) {
 		if (link) {
@@ -3475,9 +3395,6 @@ unsigned int tegra_machine_get_codec_dai_link_idx(const char *codec_name)
 			of_machine_is_compatible("nvidia,tegra210b01")) ?
 			TEGRA210_XBAR_DAI_LINKS : 0;
 
-	if (idx && is_darcy())
-		idx = TEGRA210_MIN_XBAR_DAI_LINKS;
-
 	if (num_dai_links <= idx)
 		goto err;
 
@@ -3500,7 +3417,6 @@ int tegra_machine_get_bclk_ratio(struct snd_soc_pcm_runtime *rtd,
 	struct snd_soc_dai_link *codec_dai_link = rtd->dai_link;
 	char *codec_name = (char *)codec_dai_link->name;
 	unsigned int idx = tegra_machine_get_codec_dai_link_idx(codec_name);
-	unsigned int idx2 = idx;
 
 	if (idx == -EINVAL || !ratio || !bclk_ratio)
 		return -EINVAL;
@@ -3508,9 +3424,6 @@ int tegra_machine_get_bclk_ratio(struct snd_soc_pcm_runtime *rtd,
 	idx = idx - ((of_machine_is_compatible("nvidia,tegra210") ||
 			of_machine_is_compatible("nvidia,tegra210b01")) ?
 			TEGRA210_XBAR_DAI_LINKS : 0);
-
-	if (idx && is_darcy())
-		idx = idx2 - TEGRA210_MIN_XBAR_DAI_LINKS;
 
 	*ratio = bclk_ratio[idx];
 
@@ -3525,7 +3438,6 @@ unsigned int tegra_machine_get_rx_mask(
 	char *codec_name = (char *)codec_dai_link->name;
 	unsigned int idx =
 		tegra_machine_get_codec_dai_link_idx(codec_name);
-	unsigned int idx2 = idx;
 
 	if (idx == -EINVAL)
 		goto err;
@@ -3536,9 +3448,6 @@ unsigned int tegra_machine_get_rx_mask(
 	idx = idx - ((of_machine_is_compatible("nvidia,tegra210") ||
 			of_machine_is_compatible("nvidia,tegra210b01")) ?
 			TEGRA210_XBAR_DAI_LINKS : 0);
-
-	if (idx && is_darcy())
-		idx = idx2 - TEGRA210_MIN_XBAR_DAI_LINKS;
 
 	return rx_mask[idx];
 
@@ -3554,7 +3463,6 @@ unsigned int tegra_machine_get_tx_mask(
 	char *codec_name = (char *)codec_dai_link->name;
 	unsigned int idx =
 		tegra_machine_get_codec_dai_link_idx(codec_name);
-	unsigned int idx2 = idx;
 
 	if (idx == -EINVAL)
 		goto err;
@@ -3565,9 +3473,6 @@ unsigned int tegra_machine_get_tx_mask(
 	idx = idx - ((of_machine_is_compatible("nvidia,tegra210")   ||
 			of_machine_is_compatible("nvidia,tegra210b01")) ?
 			TEGRA210_XBAR_DAI_LINKS : 0);
-
-	if (idx && is_darcy())
-		idx = idx2 - TEGRA210_MIN_XBAR_DAI_LINKS;
 
 	return tx_mask[idx];
 

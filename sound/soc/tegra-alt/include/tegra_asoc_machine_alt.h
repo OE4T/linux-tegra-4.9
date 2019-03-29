@@ -430,8 +430,6 @@ unsigned int *tegra_machine_get_bclk_ratio_array(void);
 unsigned int *tegra_machine_get_rx_mask_array(void);
 unsigned int *tegra_machine_get_tx_mask_array(void);
 
-bool is_darcy(void);
-
 /* t18x specifc APIs */
 struct snd_soc_dai_link *tegra_machine_get_dai_link_t18x(void);
 

@@ -260,6 +260,8 @@ struct tegra_channel {
 	int is_interlaced;
 	enum interlaced_type interlace_type;
 	int interlace_bplfactor;
+
+	atomic_t syncpt_depth;
 };
 
 #define to_tegra_channel(vdev) \

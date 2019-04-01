@@ -293,6 +293,10 @@ static void tegra_channel_vi_csi_recover(struct tegra_channel *chan)
 					SYNCPT_FIFO_DEPTH;
 		}
 	}
+
+	/* reset syncpt depth to 0 */
+	atomic_set(&chan->syncpt_depth, 0);
+
 	/* clear FIFO error status */
 	tegra_channel_write(chan,
 		TEGRA_VI_CFG_VI_INCR_SYNCPT_ERROR, error_val);
@@ -491,6 +495,18 @@ static int tegra_channel_capture_frame_multi_thread(
 	if (!is_streaming)
 		tegra_channel_ec_recover(chan);
 
+	/* The fifo depth of PP_FRAME_START and MW_ACK_DONE is 2 */
+	if (atomic_read(&chan->syncpt_depth) < SYNCPT_FIFO_DEPTH) {
+		atomic_inc(&chan->syncpt_depth);
+	} else {
+		/* requeue this vb2buf */
+		buf->state = VB2_BUF_STATE_REQUEUEING;
+		release_buffer(chan, buf);
+		/* sleep, waiting for the programmed syncpt being handled */
+		usleep_range(1000, 1010);
+		return 0;
+	}
+
 	/* Init registers related to each frames */
 	for (index = 0; index < valid_ports; index++) {
 		/* Program buffer address by using surface 0 */
@@ -521,28 +537,21 @@ static int tegra_channel_capture_frame_multi_thread(
 		/* Program syncpoints */
 		thresh[index] = nvhost_syncpt_incr_max_ext(chan->vi->ndev,
 					chan->syncpt[index][0], 1);
-		/* Do not arm sync points if FIFO had entries before */
-		if (!chan->syncpoint_fifo[index][0]) {
-			frame_start = VI_CSI_PP_FRAME_START(chan->port[index]);
-			val = VI_CFG_VI_INCR_SYNCPT_COND(frame_start) |
-				chan->syncpt[index][0];
-			tegra_channel_write(chan,
-				TEGRA_VI_CFG_VI_INCR_SYNCPT, val);
-		} else
-			chan->syncpoint_fifo[index][0]--;
+
+		frame_start = VI_CSI_PP_FRAME_START(chan->port[index]);
+		val = VI_CFG_VI_INCR_SYNCPT_COND(frame_start) |
+			chan->syncpt[index][0];
+		tegra_channel_write(chan,
+			TEGRA_VI_CFG_VI_INCR_SYNCPT, val);
 
 		release_thresh[index] =
 			nvhost_syncpt_incr_max_ext(chan->vi->ndev,
 					chan->syncpt[index][1], 1);
-		/* Do not arm sync points if FIFO had entries before */
-		if (!chan->syncpoint_fifo[index][1]) {
-			mw_ack_done = VI_CSI_MW_ACK_DONE(chan->port[index]);
-			val = VI_CFG_VI_INCR_SYNCPT_COND(mw_ack_done) |
-				chan->syncpt[index][1];
-			tegra_channel_write(chan,
-				TEGRA_VI_CFG_VI_INCR_SYNCPT, val);
-		} else
-			chan->syncpoint_fifo[index][1]--;
+		mw_ack_done = VI_CSI_MW_ACK_DONE(chan->port[index]);
+		val = VI_CFG_VI_INCR_SYNCPT_COND(mw_ack_done) |
+			chan->syncpt[index][1];
+		tegra_channel_write(chan,
+			TEGRA_VI_CFG_VI_INCR_SYNCPT, val);
 
 		memcpy(&buf->thresh[0], &release_thresh[0],
 			TEGRA_CSI_BLOCKS * sizeof(u32));
@@ -620,6 +629,7 @@ static int tegra_channel_capture_frame_multi_thread(
 		buf->version = chan->capture_version;
 		enqueue_inflight(chan, buf);
 	} else {
+		buf->state = VB2_BUF_STATE_REQUEUEING;
 		release_buffer(chan, buf);
 		atomic_inc(&chan->restart_version);
 	}
@@ -679,6 +689,7 @@ static void tegra_channel_release_frame(struct tegra_channel *chan,
 				__func__, buf);
 	}
 
+	atomic_dec(&chan->syncpt_depth);
 	release_buffer(chan, buf);
 }
 

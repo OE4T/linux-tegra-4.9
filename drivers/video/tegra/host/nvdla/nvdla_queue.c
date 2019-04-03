@@ -503,8 +503,7 @@ fail_to_pin_mem:
 	return err;
 }
 
-static int nvdla_get_gos(struct platform_device *pdev, u32 syncpt_id,
-			u32 *gos_id, u32 *gos_offset)
+static int nvdla_update_gos(struct platform_device *pdev)
 {
 	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
 	struct nvdla_device *nvdla_dev = pdata->private_data;
@@ -538,8 +537,20 @@ static int nvdla_get_gos(struct platform_device *pdev, u32 syncpt_id,
 		nvhost_module_idle(pdev);
 	}
 
+fail_to_send_gos:
+fail_to_poweron:
+	return err;
+}
+
+static int nvdla_get_gos(struct platform_device *pdev, u32 syncpt_id,
+			u32 *gos_id, u32 *gos_offset)
+{
+	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
+	struct nvdla_device *nvdla_dev = pdata->private_data;
+	int err = 0;
+
 	if (!nvdla_dev->is_gos_enabled) {
-		nvdla_dbg_err(pdev, "GoS is not enabled\n");
+		nvdla_dbg_info(pdev, "GoS is not enabled\n");
 		err = -EINVAL;
 		goto gos_disabled;
 	}
@@ -551,8 +562,6 @@ static int nvdla_get_gos(struct platform_device *pdev, u32 syncpt_id,
 	}
 
 gos_disabled:
-fail_to_send_gos:
-fail_to_poweron:
 	return err;
 }
 
@@ -970,6 +979,8 @@ int nvdla_fill_task_desc(struct nvdla_task *task)
 	task_desc->preactions = sizeof(struct dla_task_descriptor);
 	task_desc->postactions = task_desc->preactions +
 					sizeof(struct dla_action_list);
+
+	nvdla_update_gos(pdev);
 
 	/* fill pre actions */
 	nvdla_fill_preactions(task);

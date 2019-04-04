@@ -2169,7 +2169,7 @@ static void tegra_hdmi_avi_infoframe_update(struct tegra_hdmi *hdmi)
 		avi->ext_colorimetry = HDMI_AVI_EXT_COLORIMETRY_BT2020_YCC_RGB;
 		break;
 	case TEGRA_DC_EXT_AVI_COLORIMETRY_xvYCC709:
-		avi->colorimetry = HDMI_AVI_COLORIMETRY_DEFAULT;
+		avi->colorimetry = HDMI_AVI_COLORIMETRY_EXTENDED_VALID;
 		avi->ext_colorimetry = HDMI_AVI_EXT_COLORIMETRY_xvYCC709;
 		break;
 	default:

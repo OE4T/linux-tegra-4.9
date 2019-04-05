@@ -390,7 +390,7 @@
 		nvidia,xbar = <&tegra_axbar>;
 		mclk-fs = <256>;
 
-		i2s_dai_link1: nvidia,dai-link-1 {
+		hdr40_snd_link_i2s: i2s_dai_link1: nvidia,dai-link-1 {
 			link-name = "spdif-dit-0";
 			cpu-dai = <&tegra_i2s4>;
 			codec-dai = <&spdif_dit0>;
@@ -745,11 +745,14 @@
 		#cooling-cells = <2>; /* min followed by max */
 	};
 
-	i2c@7000c000 {
+	hdr40_i2c0: i2c@7000c000 {
 		tegra_nct72: temp-sensor@4c {
 			status = "disabled";
 		};
 	};
+
+	hdr40_i2c1: i2c@7000c400 { };
+
 	clock@70110000 {
 		status = "okay";
 		vdd-cpu-supply = <&cpu_ovr_reg>;

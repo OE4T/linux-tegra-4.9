@@ -4755,23 +4755,11 @@ static void tegra210_adsp_audio_platform_shutdown(
 	adsp->is_shutdown = true;
 }
 
-#ifdef CONFIG_PM_SLEEP
-static int tegra_adsp_pm_suspend(struct device *dev)
-{
-	return pm_runtime_force_suspend(dev);
-}
-
-static int tegra_adsp_pm_resume(struct device *dev)
-{
-	return pm_runtime_force_resume(dev);
-}
-#endif
-
 static const struct dev_pm_ops tegra210_adsp_pm_ops = {
 	SET_RUNTIME_PM_OPS(tegra210_adsp_runtime_suspend,
 			   tegra210_adsp_runtime_resume, NULL)
-	SET_LATE_SYSTEM_SLEEP_PM_OPS(tegra_adsp_pm_suspend,
-			tegra_adsp_pm_resume)
+	SET_LATE_SYSTEM_SLEEP_PM_OPS(pm_runtime_force_suspend,
+				     pm_runtime_force_resume)
 
 };
 

@@ -250,24 +250,6 @@ static int tegra210_i2s_runtime_resume(struct device *dev)
 	return 0;
 }
 
-#ifdef CONFIG_PM_SLEEP
-static int tegra210_i2s_suspend(struct device *dev)
-{
-	if (pm_runtime_status_suspended(dev))
-		return 0;
-
-	return tegra210_i2s_runtime_suspend(dev);
-}
-
-static int tegra210_i2s_resume(struct device *dev)
-{
-	if (pm_runtime_status_suspended(dev))
-		return 0;
-
-	return tegra210_i2s_runtime_resume(dev);
-}
-#endif
-
 static void tegra210_i2s_set_data_offset(struct tegra210_i2s *i2s,
 					 unsigned int data_offset)
 {
@@ -1328,7 +1310,8 @@ static int tegra210_i2s_platform_remove(struct platform_device *pdev)
 static const struct dev_pm_ops tegra210_i2s_pm_ops = {
 	SET_RUNTIME_PM_OPS(tegra210_i2s_runtime_suspend,
 			   tegra210_i2s_runtime_resume, NULL)
-	SET_LATE_SYSTEM_SLEEP_PM_OPS(tegra210_i2s_suspend, tegra210_i2s_resume)
+	SET_LATE_SYSTEM_SLEEP_PM_OPS(pm_runtime_force_suspend,
+				     pm_runtime_force_resume)
 };
 
 static struct platform_driver tegra210_i2s_driver = {

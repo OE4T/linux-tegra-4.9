@@ -156,16 +156,17 @@
 					status = "disabled";
 				};
 
-				max77620_ldo6: ldo6 { /* ldo6 not used in t210 porg */
-					regulator-name = "vdd-ldo6";
+				max77620_ldo6: ldo6 {
+					regulator-name = "vddio-sdmmc3-ap";
 					maxim,active-fps-source = <MAX77620_FPS_SRC_NONE>;
 					maxim,active-fps-power-up-slot = <0>;
 					maxim,active-fps-power-down-slot = <7>;
+					regulator-min-microvolt = <1800000>;
+					regulator-max-microvolt = <3300000>;
 					regulator-enable-ramp-delay = <36>;
 					regulator-disable-ramp-delay = <674>;
 					regulator-ramp-delay = <100000>;
 					regulator-ramp-delay-scale = <200>;
-					status = "disabled";
 				};
 
 				max77620_ldo7: ldo7 {

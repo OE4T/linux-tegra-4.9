@@ -155,5 +155,15 @@
                                 };
                         };
                 };
+
+		fragement@9 {
+			ids = "<3448-0000-300";
+			override@0 {
+				target = <&max77620_ldo6>;
+				_overlay_ {
+                                        status = "disabled";
+				};
+			};
+		};
 	};
 };

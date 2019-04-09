@@ -4,7 +4,7 @@
  *
  * Support for Tegra Security Engine hardware crypto algorithms.
  *
- * Copyright (c) 2011-2018, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2019, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -2844,7 +2844,7 @@ static struct rng_alg rng_algs[] = {
 	.base = {
 		.cra_name = "rng_drbg",
 		.cra_driver_name = "rng_drbg-aes-tegra",
-		.cra_priority = 100,
+		.cra_priority = 300,
 		.cra_flags = CRYPTO_ALG_TYPE_RNG,
 		.cra_ctxsize = sizeof(struct tegra_se_rng_context),
 		.cra_module = THIS_MODULE,
@@ -2858,7 +2858,7 @@ static struct crypto_alg aes_algs[] = {
 	{
 		.cra_name = "cbc(aes)",
 		.cra_driver_name = "cbc-aes-tegra",
-		.cra_priority = 100,
+		.cra_priority = 300,
 		.cra_flags = CRYPTO_ALG_TYPE_ABLKCIPHER | CRYPTO_ALG_ASYNC,
 		.cra_blocksize = TEGRA_SE_AES_BLOCK_SIZE,
 		.cra_ctxsize  = sizeof(struct tegra_se_aes_context),
@@ -2878,7 +2878,7 @@ static struct crypto_alg aes_algs[] = {
 	}, {
 		.cra_name = "ecb(aes)",
 		.cra_driver_name = "ecb-aes-tegra",
-		.cra_priority = 100,
+		.cra_priority = 300,
 		.cra_flags = CRYPTO_ALG_TYPE_ABLKCIPHER | CRYPTO_ALG_ASYNC,
 		.cra_blocksize = TEGRA_SE_AES_BLOCK_SIZE,
 		.cra_ctxsize  = sizeof(struct tegra_se_aes_context),
@@ -2898,7 +2898,7 @@ static struct crypto_alg aes_algs[] = {
 	}, {
 		.cra_name = "ctr(aes)",
 		.cra_driver_name = "ctr-aes-tegra",
-		.cra_priority = 100,
+		.cra_priority = 300,
 		.cra_flags = CRYPTO_ALG_TYPE_ABLKCIPHER | CRYPTO_ALG_ASYNC,
 		.cra_blocksize = TEGRA_SE_AES_BLOCK_SIZE,
 		.cra_ctxsize  = sizeof(struct tegra_se_aes_context),
@@ -2919,7 +2919,7 @@ static struct crypto_alg aes_algs[] = {
 	}, {
 		.cra_name = "ofb(aes)",
 		.cra_driver_name = "ofb-aes-tegra",
-		.cra_priority = 100,
+		.cra_priority = 300,
 		.cra_flags = CRYPTO_ALG_TYPE_ABLKCIPHER | CRYPTO_ALG_ASYNC,
 		.cra_blocksize = TEGRA_SE_AES_BLOCK_SIZE,
 		.cra_ctxsize  = sizeof(struct tegra_se_aes_context),
@@ -3076,7 +3076,7 @@ static struct shash_alg shash_algs[] = {
 		.base = {
 			.cra_name = "sha1",
 			.cra_driver_name = "tegra-se-sha1-shash",
-			.cra_priority = 100,
+			.cra_priority = 300,
 			.cra_flags = CRYPTO_ALG_TYPE_SHASH,
 			.cra_blocksize = SHA1_BLOCK_SIZE,
 			.cra_ctxsize = sizeof(struct tegra_se_sha_context),
@@ -3095,7 +3095,7 @@ static struct shash_alg shash_algs[] = {
 		.base = {
 			.cra_name = "sha224",
 			.cra_driver_name = "tegra-se-sha224-shash",
-			.cra_priority = 100,
+			.cra_priority = 300,
 			.cra_flags = CRYPTO_ALG_TYPE_SHASH,
 			.cra_blocksize = SHA224_DIGEST_SIZE,
 			.cra_ctxsize = sizeof(struct tegra_se_sha_context),
@@ -3114,7 +3114,7 @@ static struct shash_alg shash_algs[] = {
 		.base = {
 			.cra_name = "sha256",
 			.cra_driver_name = "tegra-se-sha256-shash",
-			.cra_priority = 100,
+			.cra_priority = 300,
 			.cra_flags = CRYPTO_ALG_TYPE_SHASH,
 			.cra_blocksize = SHA256_BLOCK_SIZE,
 			.cra_ctxsize = sizeof(struct tegra_se_sha_context),
@@ -3133,7 +3133,7 @@ static struct shash_alg shash_algs[] = {
 		.base = {
 			.cra_name = "sha384",
 			.cra_driver_name = "tegra-se-sha384-shash",
-			.cra_priority = 100,
+			.cra_priority = 300,
 			.cra_flags = CRYPTO_ALG_TYPE_SHASH,
 			.cra_blocksize = SHA384_BLOCK_SIZE,
 			.cra_ctxsize = sizeof(struct tegra_se_sha_context),
@@ -3152,7 +3152,7 @@ static struct shash_alg shash_algs[] = {
 		.base = {
 			.cra_name = "sha512",
 			.cra_driver_name = "tegra-se-sha512-shash",
-			.cra_priority = 100,
+			.cra_priority = 300,
 			.cra_flags = CRYPTO_ALG_TYPE_SHASH,
 			.cra_blocksize = SHA512_BLOCK_SIZE,
 			.cra_ctxsize = sizeof(struct tegra_se_sha_context),

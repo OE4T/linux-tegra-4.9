@@ -3485,7 +3485,18 @@ rtl8168_check_link_status(struct net_device *dev)
 
         if (netif_carrier_ok(dev) != link_status_on) {
                 if (link_status_on) {
-                        rtl8168_hw_config(dev);
+			/*
+			 * rtl8168_hw_config() is called in rtl8168_open(),
+			 * so skip it if this first linkup attempt after
+			 * interface up. This flag doesn't need synchronization
+			 * because the link_status timer starts at the end of
+			 * rtl8168_open() and timer is destroyed in
+			 * rtl8168_down().
+			 */
+			if (!tp->first_link_up)
+				rtl8168_hw_config(dev);
+			else
+				tp->first_link_up = false;
 
                         if (tp->mcfg == CFG_METHOD_18 || tp->mcfg == CFG_METHOD_19 || tp->mcfg == CFG_METHOD_20) {
                                 if (RTL_R8(PHYstatus) & _1000bpsF) {
@@ -25376,6 +25387,8 @@ static int rtl8168_open(struct net_device *dev)
         retval = request_irq(dev->irq, rtl8168_interrupt, (tp->features & RTL_FEATURE_MSI) ? 0 : SA_SHIRQ, dev->name, dev);
         if (retval<0)
                 goto err_free_all_allocated_mem;
+
+	tp->first_link_up = true;
 
         if (tp->esd_flag == 0)
                 rtl8168_request_esd_timer(dev);

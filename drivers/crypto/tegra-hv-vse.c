@@ -359,9 +359,10 @@ struct tegra_virtual_se_req_context {
 	u8 mode; /* SHA operation mode */
 	bool is_first; /* Represents first block */
 	bool req_context_initialized;
-	u8 *sha_buf[2]; /* Buffer to store residual data */
-	u8 hash_result[128]; /* Intermediate hash result */
-	dma_addr_t sha_buf_addr[2];	/* DMA address to residual data */
+	u8 *sha_buf; /* Buffer to store residual data */
+	dma_addr_t sha_buf_addr;	/* DMA address to residual data */
+	u8 *hash_result; /* Intermediate hash result */
+	dma_addr_t hash_result_addr; /* Intermediate hash result dma address*/
 	u32 total_count; /* Total bytes in all the requests */
 	u32 residual_bytes; /* Residual byte count */
 	u32 blk_size; /* SHA block size */
@@ -651,7 +652,7 @@ static void tegra_hv_vse_sha_copy_residual_data(
 	sg_miter_start(&miter, req->src, num_sgs, sg_flags);
 	local_irq_save(flags);
 
-	temp_buffer = req_ctx->sha_buf[0];
+	temp_buffer = req_ctx->sha_buf;
 	while (sg_miter_next(&miter) && total < req->nbytes) {
 		unsigned int len;
 
@@ -757,20 +758,13 @@ exit:
 	return err;
 }
 
-static int tegra_hv_vse_sha_process_buf(struct ahash_request *req, bool is_last,
-				    bool process_cur_req)
+static int tegra_hv_vse_sha_send_one(struct ahash_request *req, bool islast)
 {
 	struct tegra_virtual_se_dev *se_dev = g_virtual_se_dev[VIRTUAL_SE_SHA];
-	u32 current_total = 0, num_sgs, bytes_process_in_req = 0, num_blks;
 	struct tegra_virtual_se_ivc_msg_t *ivc_req_msg;
 	struct tegra_virtual_se_ivc_tx_msg_t *ivc_tx = NULL;
 	struct tegra_virtual_se_addr *src_addr = NULL;
 	struct tegra_virtual_se_req_context *req_ctx = ahash_request_ctx(req);
-	u32 num_mapped_sgs = 0;
-	u32 num_lists = 0;
-	struct scatterlist *sg;
-	dma_addr_t dst_buf_addr;
-	bool dst_mapped = false;
 	int err = 0;
 
 	ivc_req_msg = devm_kzalloc(se_dev->dev, sizeof(*ivc_req_msg),
@@ -781,17 +775,128 @@ static int tegra_hv_vse_sha_process_buf(struct ahash_request *req, bool is_last,
 	ivc_tx = &ivc_req_msg->d[0].tx;
 	src_addr = ivc_tx->args.sha.op_hash1.src.addr;
 
-	if (is_last) {
-		/* Prepare buf for residual and current data */
-		if (req_ctx->residual_bytes) {
-			src_addr->lo = req_ctx->sha_buf_addr[0];
-			src_addr->hi = req_ctx->residual_bytes;
-			src_addr++;
-			num_lists++;
+	src_addr[0].lo = req_ctx->sha_buf_addr;
+	src_addr[0].hi = req_ctx->residual_bytes;
+
+	ivc_tx->args.sha.op_hash1.src.number = 1;
+	ivc_tx->args.sha.op_hash1.dst = (u64)req_ctx->hash_result_addr;
+	memcpy(ivc_tx->args.sha.op_hash1.hash, req_ctx->hash_result,
+		req_ctx->digest_size);
+
+	err = tegra_hv_vse_send_sha_data(se_dev, req, ivc_req_msg,
+				req_ctx->residual_bytes, islast);
+
+	if (err) {
+		dev_err(se_dev->dev, "%s error %d\n", __func__, err);
+		goto exit;
+	}
+
+	req_ctx->residual_bytes = 0;
+exit:
+	devm_kfree(se_dev->dev, ivc_req_msg);
+	return err;
+}
+
+static int tegra_hv_vse_sha_process_buf(struct ahash_request *req, bool is_last,
+					bool process_cur_req)
+{
+	struct tegra_virtual_se_dev *se_dev = g_virtual_se_dev[VIRTUAL_SE_SHA];
+	u32 bytes_process_in_req = 0, num_blks;
+	struct tegra_virtual_se_ivc_msg_t *ivc_req_msg;
+	struct tegra_virtual_se_ivc_tx_msg_t *ivc_tx = NULL;
+	struct tegra_virtual_se_addr *src_addr = NULL;
+	struct tegra_virtual_se_req_context *req_ctx = ahash_request_ctx(req);
+	u32 num_mapped_sgs = 0;
+	u32 num_lists = 0;
+	struct scatterlist *sg;
+	int err = 0;
+	u32 num_pages = 0, bytes_in_page = 0;
+	u32 nbytes_in_req = req->nbytes;
+
+	/* process_cur_req  is_last :
+	 *     false         false  : update()                   -> hash
+	 *     true          true   : finup(), digest()          -> hash
+	 *                   true   : finup(), digest(), final() -> result
+	 */
+	if ((process_cur_req == false && is_last == false) ||
+		(process_cur_req == true && is_last == true)) {
+		/* When calling update(), if req->nbytes is aligned with
+		 * PAGE_SIZE, reduce req->nbytes with
+		 * TEGRA_HV_VSE_SHA_MAX_BLOCK_SIZE to avoid hashing zero
+		 * length input at the end.
+		 * Using tegra_get_chip_id() can be considered later.
+		 */
+		if (req_ctx->residual_bytes
+			== TEGRA_HV_VSE_SHA_MAX_BLOCK_SIZE) {
+			err = tegra_hv_vse_sha_send_one(req, false);
+			if (err) {
+				dev_err(se_dev->dev,
+					"%s: failed to send residual data%u\n",
+					__func__, req_ctx->residual_bytes);
+				return err;
+			}
 		}
 
-		if (process_cur_req) {
-			bytes_process_in_req = req->nbytes;
+		num_pages = nbytes_in_req / PAGE_SIZE;
+		bytes_in_page = nbytes_in_req - (num_pages * PAGE_SIZE);
+
+		dev_dbg(se_dev->dev, "%s: num_pages %u bytes_in_page %u\n",
+			__func__, num_pages, bytes_in_page);
+
+		if (bytes_in_page == 0) {
+			/* page aligned. reduce size and handle it in next
+			 * call to avoid zero length hash at the end.
+			 */
+			req_ctx->residual_bytes
+				= TEGRA_HV_VSE_SHA_MAX_BLOCK_SIZE;
+			tegra_hv_vse_sha_copy_residual_data(req, req_ctx,
+				req_ctx->residual_bytes);
+			req_ctx->total_count += req_ctx->residual_bytes;
+
+			nbytes_in_req -= req_ctx->residual_bytes;
+			num_blks = nbytes_in_req / req_ctx->blk_size;
+		} else {
+			/* not page aligned.
+			 * This means that the request has last data
+			 */
+			num_blks = nbytes_in_req / req_ctx->blk_size;
+			req_ctx->residual_bytes =
+				nbytes_in_req - (num_blks * req_ctx->blk_size);
+			if (num_blks > 0 && req_ctx->residual_bytes == 0) {
+				/* blk_size aligned. reduce size with one
+				 * blk and handle it in next sequence.
+				 */
+				req_ctx->residual_bytes = req_ctx->blk_size;
+				tegra_hv_vse_sha_copy_residual_data(req,
+					req_ctx, req_ctx->residual_bytes);
+				req_ctx->total_count += req_ctx->residual_bytes;
+				num_blks--;
+			} else {
+				/* not aligned at all */
+				tegra_hv_vse_sha_copy_residual_data(req,
+					req_ctx, req_ctx->residual_bytes);
+				req_ctx->total_count += req_ctx->residual_bytes;
+			}
+			nbytes_in_req -= req_ctx->residual_bytes;
+		}
+
+		dev_dbg(se_dev->dev, "%s: req_ctx->residual_bytes %u\n",
+			__func__, req_ctx->residual_bytes);
+
+		if (num_blks > 0) {
+			ivc_req_msg = devm_kzalloc(se_dev->dev,
+				sizeof(*ivc_req_msg), GFP_KERNEL);
+			if (!ivc_req_msg)
+				return -ENOMEM;
+
+			ivc_tx = &ivc_req_msg->d[0].tx;
+			src_addr = ivc_tx->args.sha.op_hash1.src.addr;
+
+			/* bytes to be processed from given request */
+			bytes_process_in_req = num_blks * req_ctx->blk_size;
+			dev_dbg(se_dev->dev, "%s: bytes_process_in_req %u\n",
+				__func__, bytes_process_in_req);
+
 			err = tegra_hv_vse_prepare_ivc_linked_list(se_dev,
 					req->src, bytes_process_in_req,
 					(TEGRA_HV_VSE_SHA_MAX_LL_NUM_1 -
@@ -800,105 +905,61 @@ static int tegra_hv_vse_sha_process_buf(struct ahash_request *req, bool is_last,
 					src_addr,
 					&num_lists,
 					DMA_TO_DEVICE, &num_mapped_sgs);
-			if (err)
-				goto exit;
+			if (err) {
+				dev_err(se_dev->dev, "%s: ll error %d\n",
+					__func__, err);
+				goto unmap;
+			}
 
-			current_total = req->nbytes + req_ctx->residual_bytes;
-			req_ctx->total_count += current_total;
+			dev_dbg(se_dev->dev, "%s: num_lists %u\n",
+				__func__, num_lists);
+
 			ivc_tx->args.sha.op_hash1.src.number = num_lists;
+			ivc_tx->args.sha.op_hash1.dst
+				= (u64)req_ctx->hash_result_addr;
+			memcpy(ivc_tx->args.sha.op_hash1.hash,
+				req_ctx->hash_result, req_ctx->digest_size);
+
+			req_ctx->total_count += bytes_process_in_req;
+
+			err = tegra_hv_vse_send_sha_data(se_dev, req,
+				ivc_req_msg, bytes_process_in_req, false);
+			if (err) {
+				dev_err(se_dev->dev, "%s error %d\n",
+					__func__, err);
+				goto unmap;
+			}
+unmap:
+			sg = req->src;
+			while (sg && num_mapped_sgs--) {
+				dma_unmap_sg(se_dev->dev, sg, 1, DMA_TO_DEVICE);
+				sg = sg_next(sg);
+			}
+			devm_kfree(se_dev->dev, ivc_req_msg);
+		}
+	}
+
+	req_ctx->is_first = false;
+	if (is_last) {
+		/* handle the last data in finup() , digest(), final() */
+		if (req_ctx->residual_bytes > 0) {
+			err = tegra_hv_vse_sha_send_one(req, true);
+			if (err) {
+				dev_err(se_dev->dev,
+					"%s: failed to send last data%u\n",
+					__func__, req_ctx->residual_bytes);
+				return err;
+			}
+		}
+
+		if (req->result) {
+			memcpy(req->result, req_ctx->hash_result,
+				req_ctx->digest_size);
 		} else {
-			current_total = req_ctx->residual_bytes;
-			req_ctx->total_count += current_total;
-			if (!current_total)
-				goto exit;
-			ivc_tx->args.sha.op_hash1.src.number = 1;
+			dev_err(se_dev->dev, "Invalid clinet result buffer\n");
 		}
-	} else {
-		current_total = req->nbytes + req_ctx->residual_bytes;
-		num_blks = current_total / req_ctx->blk_size;
-
-		/* If total bytes are less than or equal to one blk,
-		 * copy to residual and return.
-		 */
-		if (num_blks <= 1) {
-			num_sgs = tegra_hv_vse_count_sgs(req->src, req->nbytes);
-			sg_copy_to_buffer(req->src, num_sgs,
-					req_ctx->sha_buf[0] +
-					req_ctx->residual_bytes, req->nbytes);
-			req_ctx->residual_bytes += req->nbytes;
-			goto exit;
-		}
-		/* Number of bytes to be processed from given request buffers */
-		bytes_process_in_req = (num_blks * req_ctx->blk_size) -
-			req_ctx->residual_bytes;
-		req_ctx->total_count += bytes_process_in_req;
-
-		/* Fill sgs entries */
-		/* If residual bytes are present copy it to second buffer */
-		if (req_ctx->residual_bytes)
-			memcpy(req_ctx->sha_buf[1], req_ctx->sha_buf[0],
-				req_ctx->residual_bytes);
-		req_ctx->total_count += req_ctx->residual_bytes;
-
-		if (req_ctx->residual_bytes) {
-			src_addr->lo = req_ctx->sha_buf_addr[1];
-			src_addr->hi = req_ctx->residual_bytes;
-			src_addr++;
-			num_lists++;
-		}
-
-		err = tegra_hv_vse_prepare_ivc_linked_list(se_dev,
-				req->src, bytes_process_in_req,
-				(TEGRA_HV_VSE_SHA_MAX_LL_NUM_1 - num_lists),
-				req_ctx->blk_size,
-				src_addr,
-				&num_lists,
-				DMA_TO_DEVICE, &num_mapped_sgs);
-		if (err)
-			goto exit;
-
-		ivc_tx->args.sha.op_hash1.src.number = num_lists;
-		/* Copy residual data */
-		req_ctx->residual_bytes = current_total - (num_blks *
-					req_ctx->blk_size);
-		tegra_hv_vse_sha_copy_residual_data(req, req_ctx,
-					req_ctx->residual_bytes);
-
-		/* Total bytes to be processed */
-		current_total = (num_blks * req_ctx->blk_size);
-	}
-	dst_buf_addr = dma_map_single(se_dev->dev,
-					req->result,
-					req_ctx->digest_size,
-					DMA_FROM_DEVICE);
-	if (dma_mapping_error(se_dev->dev, dst_buf_addr)) {
-		dev_err(se_dev->dev, "unable to map destination buffer\n");
-		err = -EINVAL;
-		goto exit;
 	}
 
-	dst_mapped = true;
-	ivc_tx->args.sha.op_hash1.dst = (u64)dst_buf_addr;
-	memcpy(ivc_tx->args.sha.op_hash1.hash, req_ctx->hash_result,
-		req_ctx->digest_size);
-
-	err = tegra_hv_vse_send_sha_data(se_dev, req, ivc_req_msg,
-				current_total, is_last);
-	if (!err) {
-		req_ctx->is_first = false;
-		memcpy(req_ctx->hash_result, req->result, req_ctx->digest_size);
-	}
-exit:
-	sg = req->src;
-	while (sg && num_mapped_sgs--) {
-		dma_unmap_sg(se_dev->dev, sg, 1, DMA_TO_DEVICE);
-		sg = sg_next(sg);
-	}
-	if (dst_mapped)
-		dma_unmap_single(se_dev->dev,
-			dst_buf_addr, req_ctx->digest_size, DMA_FROM_DEVICE);
-
-	devm_kfree(se_dev->dev, ivc_req_msg);
 	return err;
 }
 
@@ -947,29 +1008,20 @@ static int tegra_hv_vse_sha_op(struct ahash_request *req, bool is_last,
 		}
 	};
 
-	/* If the request length is zero, */
-	if (!req->nbytes) {
-		if (req_ctx->total_count)
-			return 0; /* allow empty packets */
-		if (is_last) {
-			/* If this is the last packet SW WAR for zero
-			 * length SHA operation since SE HW can't accept
-			 * zero length SHA operation.
-			 */
-			if (req_ctx->mode == VIRTUAL_SE_OP_MODE_SHA1)
-				mode = VIRTUAL_SE_OP_MODE_SHA1;
-			else
-				mode = req_ctx->mode -
-					VIRTUAL_SE_OP_MODE_SHA224 + 1;
-			memcpy(req->result,
-				zero_vec[mode].digest,
-				zero_vec[mode].size);
-		}
+	if (req->nbytes == 0 && req_ctx->total_count == 0 && is_last) {
+		/* If the request length is zero, SW WAR for zero length SHA
+		 * operation since SE HW can't accept zero length SHA operation
+		 */
+		if (req_ctx->mode == VIRTUAL_SE_OP_MODE_SHA1)
+			mode = VIRTUAL_SE_OP_MODE_SHA1;
+		else
+			mode = req_ctx->mode - VIRTUAL_SE_OP_MODE_SHA224 + 1;
+		memcpy(req->result,
+			zero_vec[mode].digest, zero_vec[mode].size);
 		return 0;
 	}
 
 	ret = tegra_hv_vse_sha_process_buf(req, is_last, process_cur_req);
-
 	return ret;
 }
 
@@ -989,9 +1041,10 @@ static int tegra_hv_vse_sha_init(struct ahash_request *req)
 		return -ENODEV;
 
 	req_ctx = ahash_request_ctx(req);
-
-	if (req_ctx->req_context_initialized)
-		return 0;
+	if (!req_ctx) {
+		dev_err(se_dev->dev, "SHA req_ctx not valid\n");
+		return -EINVAL;
+	}
 
 	tfm = crypto_ahash_reqtfm(req);
 	if (!tfm) {
@@ -1026,25 +1079,25 @@ static int tegra_hv_vse_sha_init(struct ahash_request *req)
 	default:
 		return -EINVAL;
 	}
-	req_ctx->sha_buf[0] = dma_alloc_coherent(
+	req_ctx->sha_buf = dma_alloc_coherent(
 			se_dev->dev, (TEGRA_HV_VSE_SHA_MAX_BLOCK_SIZE * 2),
-			&req_ctx->sha_buf_addr[0], GFP_KERNEL);
-	if (!req_ctx->sha_buf[0]) {
-		dev_err(se_dev->dev, "Cannot allocate memory to sha_buf[0]\n");
-		return -ENOMEM;
-	}
-	req_ctx->sha_buf[1] = dma_alloc_coherent(
-			se_dev->dev, (TEGRA_HV_VSE_SHA_MAX_BLOCK_SIZE * 2),
-			&req_ctx->sha_buf_addr[1], GFP_KERNEL);
-	if (!req_ctx->sha_buf[1]) {
-		dma_free_coherent(
-			se_dev->dev, (TEGRA_HV_VSE_SHA_MAX_BLOCK_SIZE * 2),
-			req_ctx->sha_buf[0], req_ctx->sha_buf_addr[0]);
-		req_ctx->sha_buf[0] = NULL;
-		dev_err(se_dev->dev, "Cannot allocate memory to sha_buf[1]\n");
+			&req_ctx->sha_buf_addr, GFP_KERNEL);
+	if (!req_ctx->sha_buf) {
+		dev_err(se_dev->dev, "Cannot allocate memory to sha_buf\n");
 		return -ENOMEM;
 	}
 
+	req_ctx->hash_result = dma_alloc_coherent(
+			se_dev->dev, (TEGRA_HV_VSE_SHA_MAX_BLOCK_SIZE * 2),
+			&req_ctx->hash_result_addr, GFP_KERNEL);
+	if (!req_ctx->hash_result) {
+		dma_free_coherent(
+			se_dev->dev, (TEGRA_HV_VSE_SHA_MAX_BLOCK_SIZE * 2),
+			req_ctx->sha_buf, req_ctx->sha_buf_addr);
+		req_ctx->sha_buf = NULL;
+		dev_err(se_dev->dev, "Cannot allocate memory to hash_result\n");
+		return -ENOMEM;
+	}
 	req_ctx->total_count = 0;
 	req_ctx->is_first = true;
 	req_ctx->residual_bytes = 0;
@@ -1057,21 +1110,24 @@ static void tegra_hv_vse_sha_req_deinit(struct ahash_request *req)
 {
 	struct tegra_virtual_se_dev *se_dev = g_virtual_se_dev[VIRTUAL_SE_SHA];
 	struct tegra_virtual_se_req_context *req_ctx = ahash_request_ctx(req);
-	int i;
 
-	for (i = 0; i < 2; i++) {
-		/* dma_free_coherent does not panic if addr is NULL */
-		dma_free_coherent(
-			se_dev->dev, (TEGRA_HV_VSE_SHA_MAX_BLOCK_SIZE * 2),
-			req_ctx->sha_buf[i], req_ctx->sha_buf_addr[i]);
-		req_ctx->sha_buf[i] = NULL;
-	}
+	/* dma_free_coherent does not panic if addr is NULL */
+	dma_free_coherent(
+		se_dev->dev, (TEGRA_HV_VSE_SHA_MAX_BLOCK_SIZE * 2),
+		req_ctx->sha_buf, req_ctx->sha_buf_addr);
+	req_ctx->sha_buf = NULL;
+
+	dma_free_coherent(
+		se_dev->dev, (TEGRA_HV_VSE_SHA_MAX_BLOCK_SIZE * 2),
+		req_ctx->hash_result, req_ctx->hash_result_addr);
+	req_ctx->hash_result = NULL;
 	req_ctx->req_context_initialized = false;
 }
 
 static int tegra_hv_vse_sha_update(struct ahash_request *req)
 {
 	struct tegra_virtual_se_dev *se_dev = g_virtual_se_dev[VIRTUAL_SE_SHA];
+	struct tegra_virtual_se_req_context *req_ctx = ahash_request_ctx(req);
 	int ret = 0;
 
 	if (!req) {
@@ -1083,10 +1139,11 @@ static int tegra_hv_vse_sha_update(struct ahash_request *req)
 	if (atomic_read(&se_dev->se_suspended))
 		return -ENODEV;
 
-	ret = tegra_hv_vse_sha_init(req);
-	if (ret) {
-		dev_err(se_dev->dev, "%s init failed - %d\n", __func__, ret);
-		return ret;
+	req_ctx = ahash_request_ctx(req);
+	if (!req_ctx->req_context_initialized) {
+		dev_err(se_dev->dev,
+			"%s Request ctx not initialized\n", __func__);
+		return -EINVAL;
 	}
 
 	mutex_lock(&se_dev->mtx);
@@ -1103,6 +1160,7 @@ static int tegra_hv_vse_sha_update(struct ahash_request *req)
 static int tegra_hv_vse_sha_finup(struct ahash_request *req)
 {
 	struct tegra_virtual_se_dev *se_dev = g_virtual_se_dev[VIRTUAL_SE_SHA];
+	struct tegra_virtual_se_req_context *req_ctx = ahash_request_ctx(req);
 	int ret = 0;
 
 	if (!req) {
@@ -1114,10 +1172,11 @@ static int tegra_hv_vse_sha_finup(struct ahash_request *req)
 	if (atomic_read(&se_dev->se_suspended))
 		return -ENODEV;
 
-	ret = tegra_hv_vse_sha_init(req);
-	if (ret) {
-		dev_err(se_dev->dev, "%s init failed - %d\n", __func__, ret);
-		return ret;
+	req_ctx = ahash_request_ctx(req);
+	if (!req_ctx->req_context_initialized) {
+		dev_err(se_dev->dev,
+			"%s Request ctx not initialized\n", __func__);
+		return -EINVAL;
 	}
 
 	mutex_lock(&se_dev->mtx);

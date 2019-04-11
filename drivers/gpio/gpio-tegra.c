@@ -762,6 +762,16 @@ static int tegra_gpio_probe(struct platform_device *pdev)
 		}
 	}
 
+	for (i = 0; i < tgi->bank_count; i++) {
+		bank = &tgi->bank_info[i];
+
+		irq_set_chained_handler_and_data(bank->irq,
+				tegra_gpio_irq_handler, bank);
+
+		for (j = 0; j < 4; j++)
+			spin_lock_init(&bank->gpio_lock[j]);
+	}
+
 	ret = devm_gpiochip_add_data(&pdev->dev, &tgi->gc, tgi);
 	if (ret < 0) {
 		irq_domain_remove(tgi->irq_domain);
@@ -777,16 +787,6 @@ static int tegra_gpio_probe(struct platform_device *pdev)
 		irq_set_lockdep_class(irq, &gpio_lock_class);
 		irq_set_chip_data(irq, bank);
 		irq_set_chip_and_handler(irq, &tgi->ic, handle_simple_irq);
-	}
-
-	for (i = 0; i < tgi->bank_count; i++) {
-		bank = &tgi->bank_info[i];
-
-		irq_set_chained_handler_and_data(bank->irq,
-						 tegra_gpio_irq_handler, bank);
-
-		for (j = 0; j < 4; j++)
-			spin_lock_init(&bank->gpio_lock[j]);
 	}
 
 	tegra_gpio_debuginit(tgi);

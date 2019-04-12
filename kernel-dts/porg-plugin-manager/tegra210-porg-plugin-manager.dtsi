@@ -165,5 +165,15 @@
 				};
 			};
 		};
+
+		fragement@10 {
+			ids = ">=3448-0000-300";
+			override@0 {
+				target = <&{/pcie@1003000/pci@2,0}>;
+				_overlay_ {
+					nvidia,plat-gpios = <&gpio TEGRA_GPIO(CC, 7) GPIO_ACTIVE_HIGH>;
+				};
+			};
+		};
 	};
 };

@@ -225,6 +225,12 @@
 		non-removable;
 	};
 
+	sdhci@700b0400 {
+		status = "disabled";
+		/delete-property/ keep-power-in-suspend;
+		/delete-property/ non-removable;
+	};
+
 	sdhci@700b0200 { /* SDMMC2 for Wifi */
 		uhs-mask = <0x8>;
 		power-off-rail;

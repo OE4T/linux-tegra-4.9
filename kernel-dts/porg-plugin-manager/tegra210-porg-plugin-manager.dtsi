@@ -178,6 +178,14 @@
                                         status = "disabled";
 				};
 			};
+			override@1 {
+				target = <&sdhci2>;
+				_overlay_ {
+					keep-power-in-suspend;
+					non-removable;
+				};
+			};
+
 		};
 
 		fragement@10 {
@@ -186,6 +194,19 @@
 				target = <&{/pcie@1003000/pci@2,0}>;
 				_overlay_ {
 					nvidia,plat-gpios = <&gpio TEGRA_GPIO(CC, 7) GPIO_ACTIVE_HIGH>;
+				};
+			};
+			override@1 {
+				target = <&sdhci2>;
+				_overlay_ {
+                                        status = "okay";
+					vmmc-supply = <&max77620_ldo6>;
+					no-sdio;
+					no-mmc;
+					sd-uhs-sdr104;
+					sd-uhs-sdr50;
+					sd-uhs-sdr25;
+					sd-uhs-sdr12;
 				};
 			};
 		};

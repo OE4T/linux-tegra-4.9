@@ -58,6 +58,8 @@
 				FB_VMODE_Y422 | FB_VMODE_Y444)
 #define IS_RGB(yuv_flag) (!(yuv_flag & YUV_MASK))
 
+#define TEGRA_DC_POLL_TIMEOUT_MS       50
+
 extern struct tegra_dc_out_ops tegra_dc_rgb_ops;
 extern struct tegra_dc_out_ops tegra_dc_dsi_ops;
 
@@ -243,7 +245,8 @@ int tegra_dc_cursor_image(struct tegra_dc *dc,
 	enum tegra_dc_cursor_blend_format blendfmt,
 	enum tegra_dc_cursor_size size,
 	u32 fg, u32 bg, dma_addr_t phys_addr,
-	enum tegra_dc_cursor_color_format colorfmt, u32 alpha, u32 flags);
+	enum tegra_dc_cursor_color_format colorfmt, u32 alpha, u32 flags,
+	bool wait_for_activation);
 int tegra_dc_cursor_set(struct tegra_dc *dc, bool enable, int x, int y);
 int tegra_dc_cursor_clip(struct tegra_dc *dc, unsigned clip);
 int tegra_dc_cursor_suspend(struct tegra_dc *dc);

@@ -1262,7 +1262,6 @@ static int tegra_admaif_probe(struct platform_device *pdev)
 				TEGRA_ADMAIF_XBAR_RX_FIFO_READ +
 				(i * TEGRA_ADMAIF_CHANNEL_REG_STRIDE);
 
-		admaif->playback_dma_data[i].wrap = 4;
 		admaif->playback_dma_data[i].width = 32;
 		admaif->playback_dma_data[i].req_sel = i + 1;
 		if (of_property_read_string_index(pdev->dev.of_node,
@@ -1284,7 +1283,6 @@ static int tegra_admaif_probe(struct platform_device *pdev)
 		}
 		admaif->playback_dma_data[i].buffer_size = buffer_size;
 
-		admaif->capture_dma_data[i].wrap = 4;
 		admaif->capture_dma_data[i].width = 32;
 		admaif->capture_dma_data[i].req_sel = i + 1;
 		if (of_property_read_string_index(pdev->dev.of_node,

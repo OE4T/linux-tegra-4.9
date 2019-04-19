@@ -218,6 +218,8 @@ static int binder_update_page_range(struct binder_alloc *alloc, int allocate,
 
 	if (mm) {
 		down_read(&mm->mmap_sem);
+		if (!mmget_stil_valid(mm))
+			goto err_no_vma;
 		vma = alloc->vma;
 	}
 

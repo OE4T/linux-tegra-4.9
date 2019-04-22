@@ -780,6 +780,7 @@ struct tegra_fb_data {
 };
 
 #define TEGRA_FB_FLIP_ON_PROBE		(1 << 0)
+#define TEGRA_FB_WIN_INVALID		-1
 
 struct tegra_dc_platform_data {
 	unsigned long		flags;

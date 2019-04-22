@@ -1573,6 +1573,17 @@ int tegra_nvdisp_init(struct tegra_dc *dc)
 	/* Set the valid windows as per mask */
 	dc->valid_windows = dc->pdata->win_mask;
 
+	/* Assign first valid window as fb window */
+	if (dc->pdata->fb->win == TEGRA_FB_WIN_INVALID) {
+		int i;
+
+		for_each_set_bit(i, &dc->valid_windows,
+				tegra_dc_get_numof_dispwindows()) {
+			dc->pdata->fb->win = i;
+			break;
+		}
+	}
+
 	/* Allocate a syncpoint for vblank on each head */
 	snprintf(syncpt_name, sizeof(syncpt_name), "vblank%u", dc->ctrl_num);
 	dc->vblank_syncpt = nvhost_get_syncpt_client_managed(dc->ndev,

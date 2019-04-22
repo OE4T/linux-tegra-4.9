@@ -6404,25 +6404,30 @@ static int tegra_dc_probe(struct platform_device *ndev)
 			base, ndev->id);
 
 	if (tegra_dc_is_t21x()) {
+		int i;
+		char syncpt_name[25];
+		const char win_name[] = "abcd";
+
 		for (i = 0; i < tegra_dc_get_numof_dispwindows(); i++)
 			dc->windows[i].syncpt.id = NVSYNCPT_INVALID;
 
+		dc->valid_windows = dt_pdata->win_mask;
+
+		for_each_set_bit(i, &dc->valid_windows,
+			tegra_dc_get_numof_dispwindows()) {
+			/* Get syncpt_name like disp0_a */
+			snprintf(syncpt_name, sizeof(syncpt_name),
+				"disp%d_%c", dc->ctrl_num, win_name[i]);
+			dc->windows[i].syncpt.id =
+				nvhost_get_syncpt_client_managed(ndev,
+								syncpt_name);
+			/* Use first valid window as fb window */
+			if (dt_pdata->fb->win == TEGRA_FB_WIN_INVALID)
+				dt_pdata->fb->win = i;
+		}
+
 		if (dc->ctrl_num == 0) {
 			dc->vblank_syncpt = NVSYNCPT_VBLANK0;
-			dc->windows[0].syncpt.id =
-				nvhost_get_syncpt_client_managed(ndev,
-								"disp0_a");
-			dc->windows[1].syncpt.id =
-				nvhost_get_syncpt_client_managed(ndev,
-								"disp0_b");
-			dc->windows[2].syncpt.id =
-				nvhost_get_syncpt_client_managed(ndev,
-								"disp0_c");
-			dc->valid_windows = 0x07;
-			dc->windows[3].syncpt.id =
-				nvhost_get_syncpt_client_managed(ndev,
-								"disp0_d");
-			dc->valid_windows |= 0x08;
 #if IS_ENABLED(CONFIG_PM_GENERIC_DOMAINS)
 			partition_id_disa = tegra_pd_get_powergate_id(
 								tegra_disa_pd);
@@ -6440,16 +6445,6 @@ static int tegra_dc_probe(struct platform_device *ndev)
 #endif
 		} else if (dc->ctrl_num == 1) {
 			dc->vblank_syncpt = NVSYNCPT_VBLANK1;
-			dc->windows[0].syncpt.id =
-				nvhost_get_syncpt_client_managed(ndev,
-								"disp1_a");
-			dc->windows[1].syncpt.id =
-				nvhost_get_syncpt_client_managed(ndev,
-								"disp1_b");
-			dc->windows[2].syncpt.id =
-				nvhost_get_syncpt_client_managed(ndev,
-								"disp1_c");
-			dc->valid_windows = 0x07;
 #if IS_ENABLED(CONFIG_PM_GENERIC_DOMAINS)
 			partition_id_disb = tegra_pd_get_powergate_id(
 								tegra_disb_pd);

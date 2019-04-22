@@ -24,6 +24,7 @@
 #include <linux/semaphore.h>
 #include <linux/debugfs.h>
 #include <linux/platform_device.h>
+#include <linux/list.h>
 
 #include <linux/tegra_nvadsp.h>
 
@@ -31,7 +32,7 @@
 #include "dev.h"
 
 
-#define ADSPFF_MAX_OPEN_FILES	(4)
+#define ADSPFF_MAX_OPEN_FILES	(32)
 
 struct file_struct {
 	struct file *fp;
@@ -39,11 +40,12 @@ struct file_struct {
 	unsigned int flags;
 	unsigned long long wr_offset;
 	unsigned long long rd_offset;
+	struct list_head list;
 };
 
-static struct file_struct adspff_open_files[ADSPFF_MAX_OPEN_FILES];
-
+static struct list_head file_list;
 static spinlock_t adspff_lock;
+static int open_count;
 
 /******************************************************************************
 * Kernel file functions
@@ -160,31 +162,40 @@ void set_flags(union adspff_message_t *m, unsigned int *flags)
 /*
  *	checks if file is already opened
  *	if yes, then returns the struct file_struct for the file
- *	if no, thgen returns first available struct file_struct
- *	if ADSPFF_MAX_OPEN_FILES alreadu open, returns NULL
+ *	if no, then allocates a file_struct and adds to the list
+ *	and returns the pointer to the newly allocated file_struct
+ *	if ADSPFF_MAX_OPEN_FILES already open, returns NULL
  */
 static struct file_struct *check_file_opened(const char *path)
 {
-	struct file_struct *file;
-	int idx;
+	struct file_struct *file = NULL;
+	struct list_head *pos;
 
 	/* assuming files opened by ADSP will
 	 * never be actually closed in kernel
 	 */
-	for (idx = 0; idx < ADSPFF_MAX_OPEN_FILES; idx++) {
-		file = &adspff_open_files[idx];
+	list_for_each(pos, &file_list) {
+		file = list_entry(pos, struct file_struct, list);
 		if (!file->fp)
 			break;
 		if (!strncmp(path, file->file_name,
 					ADSPFF_MAX_FILENAME_SIZE)) {
 			break;
 		}
+		file = NULL;
 	}
 
-	if (idx == ADSPFF_MAX_OPEN_FILES) {
+	if (file != NULL)
+		return file;
+
+	if (open_count == ADSPFF_MAX_OPEN_FILES) {
 		pr_err("adspff: %d files already opened\n",
 			ADSPFF_MAX_OPEN_FILES);
 		file = NULL;
+	} else {
+		file = kzalloc(sizeof(*file), GFP_KERNEL);
+		open_count++;
+		list_add_tail(&file->list, &file_list);
 	}
 	return file;
 }
@@ -240,8 +251,7 @@ void adspff_fopen(void)
 		file->flags = flags;
 	}
 
-	if (!(file->fp)) {
-		kfree(file);
+	if (file && !file->fp) {
 		file = NULL;
 		pr_err("File not found - %s\n",
 			(const char *) message->msg.payload.fopen_msg.fname);
@@ -254,6 +264,12 @@ void adspff_fopen(void)
 			(msgq_message_t *)msg_recv);
 	if (ret < 0) {
 		pr_err("fopen Enqueue failed %d.", ret);
+
+		if (file) {
+			file_close(file->fp);
+			file->fp = NULL;
+		}
+
 		kfree(message);
 		kfree(msg_recv);
 		return;
@@ -267,7 +283,7 @@ void adspff_fopen(void)
 
 static inline unsigned int is_read_file(struct file_struct *file)
 {
-	return file->flags & (O_RDONLY | O_RDWR);
+	return ((!file->flags) || (file->flags & O_RDWR));
 }
 
 static inline unsigned int is_write_file(struct file_struct *file)
@@ -579,17 +595,20 @@ static int adspff_msg_handler(uint32_t msg, void *data)
 
 static int adspff_set(void *data, u64 val)
 {
-	int i;
 	struct file_struct *file;
+	struct list_head *pos, *n;
 
 	if (val != 1)
 		return 0;
-	for (i = 0; i < ADSPFF_MAX_OPEN_FILES; i++) {
-		file = &adspff_open_files[i];
+	list_for_each_safe(pos, n, &file_list) {
+		file = list_entry(pos, struct file_struct, list);
+		list_del(pos);
 		if (file->fp)
 			file_close(file->fp);
+		kfree(file);
 	}
-	memset(adspff_open_files, 0, sizeof(adspff_open_files));
+
+	open_count = 0;
 
 	return 0;
 }
@@ -643,13 +662,12 @@ int adspff_init(struct platform_device *pdev)
 
 	spin_lock_init(&adspff_lock);
 
-	memset(&adspff_open_files, 0, sizeof(adspff_open_files));
-
 	ret = adspff_debugfs_init(drv);
 	if (ret)
 		pr_warn("adspff: failed to create debugfs entry\n");
 
 	INIT_LIST_HEAD(&adspff_kthread_msgq_head);
+	INIT_LIST_HEAD(&file_list);
 	sema_init(&adspff_kthread_sema, 0);
 
 	adspff_kthread = kthread_create(adspff_kthread_fn,

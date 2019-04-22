@@ -57,7 +57,7 @@ enum adspff_mbx_cmd {
 /* supported message payloads */
 struct fopen_msg_t {
 	uint8_t fname[ADSPFF_MAX_FILENAME_SIZE];
-	uint8_t modes[2];
+	uint8_t modes[3];
 };
 
 struct fwrite_msg_t {

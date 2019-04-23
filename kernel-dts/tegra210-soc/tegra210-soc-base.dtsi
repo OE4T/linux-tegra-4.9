@@ -1,7 +1,7 @@
 /*
  * tegra210-soc-base.dtsi: SOC specific DTSI file with all node disabled.
  *
- * Copyright (c) 2013-2018, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013-2019, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -1117,6 +1117,8 @@
 			aux-device-name = "tegradc.0";
 			reg = <0x0 0x54200000 0x0 0x00040000>;
 			interrupts = <0 73 0x04>;
+			win-mask = <0xf>;
+			nvidia,fb-win = <0>;
 			iommus = <&smmu TEGRA_SWGROUP_DC>,
 				 <&smmu TEGRA_SWGROUP_DC12>;
 			clocks = <&tegra_car TEGRA210_CLK_DISP1>,
@@ -1154,6 +1156,8 @@
 			aux-device-name = "tegradc.1";
 			reg = <0x0 0x54240000 0x0 0x00040000>;
 			interrupts = <0 74 0x04>;
+			win-mask = <0x7>;
+			nvidia,fb-win = <0>;
 			iommus = <&smmu TEGRA_SWGROUP_DCB>;
 			status = "disabled";
 			nvidia,dc-ctrlnum = <1>;

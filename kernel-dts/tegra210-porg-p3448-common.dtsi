@@ -637,6 +637,16 @@
 		status = "okay";
 	};
 
+	i2c@7000d000 {
+		clock-frequency = <1000000>;
+	};
+
+	dfll-max77621@70110000 {
+		dfll-max77621-integration {
+			i2c-fs-rate = <1000000>;
+		};
+	};
+
 	nvs_dsm {
 		compatible = "nvidia,nvs_dsm";
 		status = "okay";

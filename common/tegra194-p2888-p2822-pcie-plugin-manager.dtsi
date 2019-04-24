@@ -32,23 +32,6 @@
 					nvidia,disable-aspm-states = <0xf>;
 				};
 			};
-			override@1 {
-				target = <&{/pcie@141a0000}>;
-				_overlay_ {
-					delete-target-property = "nvidia,plat-gpios";
-				};
-			};
-			override@2 {
-				target = <&{/gpio@2200000}>;
-				_overlay_ {
-					pcie-3v3-enable {
-						status = "disabled";
-					};
-					pcie-12v-enable {
-						status = "disabled";
-					};
-				};
-			};
 		};
 
 		fragment-disable-uphy-rx-idle {

@@ -363,7 +363,7 @@ struct tegra_virtual_se_req_context {
 	dma_addr_t sha_buf_addr;	/* DMA address to residual data */
 	u8 *hash_result; /* Intermediate hash result */
 	dma_addr_t hash_result_addr; /* Intermediate hash result dma address*/
-	u32 total_count; /* Total bytes in all the requests */
+	u64 total_count; /* Total bytes in all the requests */
 	u32 residual_bytes; /* Residual byte count */
 	u32 blk_size; /* SHA block size */
 };
@@ -705,7 +705,7 @@ static int tegra_hv_vse_send_sha_data(struct tegra_virtual_se_dev *se_dev,
 	ivc_tx->cmd = VIRTUAL_SE_CMD_SHA_HASH_1;
 	ivc_tx->args.sha.op_hash1.streamid = se_dev->stream_id;
 	ivc_tx->args.sha.op_hash1.mode = req_ctx->mode;
-	ivc_tx->args.sha.op_hash1.msg_total_length0 = req_ctx->total_count;
+	ivc_tx->args.sha.op_hash1.msg_total_length0 = count;
 	ivc_tx->args.sha.op_hash1.msg_total_length1 = 0;
 	ivc_tx->args.sha.op_hash1.msg_total_length2 = 0;
 	ivc_tx->args.sha.op_hash1.msg_total_length3 = 0;
@@ -723,6 +723,13 @@ static int tegra_hv_vse_send_sha_data(struct tegra_virtual_se_dev *se_dev,
 	if (!req_ctx->is_first && !islast) {
 		ivc_tx->args.sha.op_hash1.msg_total_length0 = (count + 16);
 		ivc_tx->args.sha.op_hash1.msg_left_length0 = (count + 8);
+	}
+
+	if (islast) {
+		ivc_tx->args.sha.op_hash1.msg_total_length0 =
+					(req_ctx->total_count & 0xFFFFFFFF);
+		ivc_tx->args.sha.op_hash1.msg_total_length1 =
+					(req_ctx->total_count >> 32);
 	}
 
 	ivc_req_msg->hdr.num_reqs = 1;

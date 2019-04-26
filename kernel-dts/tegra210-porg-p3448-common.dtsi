@@ -692,6 +692,19 @@
 	soft_wdt: soft_watchdog {
 		status = "okay";
 	};
+
+	gpio: gpio@6000d000 {
+		suspend_gpio: system-suspend-gpio {
+			status = "okay";
+			gpio-hog;
+			output-high;
+			gpio-suspend;
+			suspend-output-low;
+			gpios = <
+				TEGRA_GPIO(A, 6) 0
+				>;
+		};
+	};
 };
 
 #if LINUX_VERSION >= 414

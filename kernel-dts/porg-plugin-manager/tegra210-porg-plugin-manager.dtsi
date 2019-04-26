@@ -209,6 +209,19 @@
 					sd-uhs-sdr12;
 				};
 			};
+			override@2 {
+				target = <&throttle_oc1>;
+				_overlay_ {
+					nvidia,priority = <50>;
+					nvidia,polarity-active-low = <1>;
+					nvidia,count-threshold = <1>;
+					nvidia,alarm-filter = <5100000>;
+					nvidia,alarm-period = <0>;
+					nvidia,cpu-throt-percent = <75>;
+					nvidia,gpu-throt-level =
+						<TEGRA_SOCTHERM_THROT_LEVEL_LOW>;
+				};
+			};
 		};
 	};
 };

@@ -592,9 +592,19 @@
 			regulator-max-microvolt = <1323400>;
 		};
 	};
+
 	soctherm@0x700E2000 {
 		throttle-cfgs {
-			/delete-node/ oc1;
+			throttle_oc1: oc1 {
+				nvidia,priority = <0>;
+				nvidia,polarity-active-low = <0>;
+				nvidia,count-threshold = <0>;
+				nvidia,alarm-filter = <0>;
+				nvidia,alarm-period = <0>;
+				nvidia,cpu-throt-percent = <0>;
+				nvidia,gpu-throt-level =
+					<TEGRA_SOCTHERM_THROT_LEVEL_NONE>;
+			};
 		};
 	};
 

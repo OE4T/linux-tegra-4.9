@@ -1044,6 +1044,9 @@ static int tegra_adma_runtime_suspend(struct device *dev)
 			struct tegra_adma_chan_regs *ch_reg = &tdc->ch_regs;
 
 			ch_reg->cmd = tdma_ch_read(tdc, ADMA_CH_CMD);
+			/* skip if channel is not active */
+			if (!ch_reg->cmd)
+				continue;
 			ch_reg->tc = tdma_ch_read(tdc, ADMA_CH_TC);
 			ch_reg->src_addr =
 				tdma_ch_read(tdc, ADMA_CH_LOWER_SRC_ADDR);
@@ -1094,9 +1097,9 @@ static int tegra_adma_runtime_resume(struct device *dev)
 			struct tegra_adma_chan *tdc = &tdma->channels[i];
 			struct tegra_adma_chan_regs *ch_reg = &tdc->ch_regs;
 
-			if (tdma_ch_read(tdc, ADMA_CH_CMD))
+			/* skip if channel was not active earlier */
+			if (!ch_reg->cmd)
 				continue;
-
 			tdma_ch_write(tdc, ADMA_CH_TC, ch_reg->tc);
 			tdma_ch_write(tdc, ADMA_CH_LOWER_SRC_ADDR,
 					ch_reg->src_addr);

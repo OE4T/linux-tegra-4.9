@@ -199,7 +199,6 @@
 			override@1 {
 				target = <&sdhci2>;
 				_overlay_ {
-                                        status = "okay";
 					vmmc-supply = <&max77620_ldo6>;
 					no-sdio;
 					no-mmc;

@@ -755,13 +755,14 @@ static void tegra_adma_issue_pending(struct dma_chan *dc)
 	raw_spin_unlock_irqrestore(&tdc->vc.lock, flags);
 }
 
-static int tegra_adma_is_paused(struct tegra_adma_chan *tdc)
+static bool tegra_adma_is_paused(struct tegra_adma_chan *tdc)
 {
 	u32 csts;
 
 	csts = tdma_ch_read(tdc, ADMA_CH_STATUS);
 	csts &= ADMA_CH_STATUS_XFER_PAUSED;
-	return csts;
+
+	return csts ? true : false;
 }
 
 static int tegra_adma_pause(struct dma_chan *dc)
@@ -769,18 +770,19 @@ static int tegra_adma_pause(struct dma_chan *dc)
 	struct tegra_adma_chan *tdc = to_tegra_adma_chan(dc);
 	struct tegra_adma_desc *desc = tdc->desc;
 	struct tegra_adma_chan_regs *ch_regs = &desc->ch_regs;
-	u32 dcnt = 10;
+	int dcnt = 10;
 
 	ch_regs->ctrl = tdma_ch_read(tdc, ADMA_CH_CTRL);
 	ch_regs->ctrl |= (1 << ADMA_CH_CTRL_XFER_PAUSE_SHIFT);
 	tdma_ch_write(tdc, ADMA_CH_CTRL, ch_regs->ctrl);
 
-	while (tegra_adma_is_paused(tdc) &&
-	       dcnt--)
+	while (dcnt-- && !tegra_adma_is_paused(tdc))
 		udelay(TEGRA_ADMA_BURST_COMPLETE_TIME);
 
-	if (!dcnt)
+	if (dcnt < 0) {
 		dev_err(tdc2dev(tdc), "unable to pause DMA channel\n");
+		return -EBUSY;
+	}
 
 	return 0;
 }

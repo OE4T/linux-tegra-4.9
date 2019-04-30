@@ -1943,14 +1943,42 @@ void gk20a_fifo_recover_ch(struct gk20a *g, struct channel_gk20a *ch,
 void gk20a_fifo_recover_tsg(struct gk20a *g, struct tsg_gk20a *tsg,
 			 bool verbose, u32 rc_type)
 {
-	u32 engines;
+	u32 engines = 0U;
+	int err;
 
 	/* stop context switching to prevent engine assignments from
 	   changing until TSG is recovered */
 	nvgpu_mutex_acquire(&g->dbg_sessions_lock);
-	gr_gk20a_disable_ctxsw(g);
 
-	engines = gk20a_fifo_engines_on_id(g, tsg->tsgid, true);
+	/* disable tsg so that it does not get scheduled again */
+	g->ops.fifo.disable_tsg(tsg);
+
+	/*
+	 * stop context switching to prevent engine assignments from
+	 * changing until engine status is checked to make sure tsg
+	 * being recovered is not loaded on the engines
+	 */
+	err = gr_gk20a_disable_ctxsw(g);
+
+	if (err != 0) {
+		/* if failed to disable ctxsw, just abort tsg */
+		nvgpu_err(g, "failed to disable ctxsw");
+	} else {
+		/* recover engines if tsg is loaded on the engines */
+		engines = gk20a_fifo_engines_on_id(g, tsg->tsgid, true);
+
+		/*
+		 * it is ok to enable ctxsw before tsg is recovered. If engines
+		 * is 0, no engine recovery is needed and if it is  non zero,
+		 * gk20a_fifo_recover will call get_engines_mask_on_id again.
+		 * By that time if tsg is not on the engine, engine need not
+		 * be reset.
+		 */
+		err = gr_gk20a_enable_ctxsw(g);
+		if (err != 0) {
+			nvgpu_err(g, "failed to enable ctxsw");
+		}
+	}
 
 	if (engines) {
 		gk20a_fifo_recover(g, engines, tsg->tsgid, true, true, verbose,
@@ -1963,7 +1991,6 @@ void gk20a_fifo_recover_tsg(struct gk20a *g, struct tsg_gk20a *tsg,
 		gk20a_fifo_abort_tsg(g, tsg, false);
 	}
 
-	gr_gk20a_enable_ctxsw(g);
 	nvgpu_mutex_release(&g->dbg_sessions_lock);
 }
 

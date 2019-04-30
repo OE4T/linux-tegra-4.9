@@ -1490,6 +1490,7 @@ struct gk20a {
 	u32 max_timeslice_us;
 	bool runlist_interleave;
 
+	struct nvgpu_mutex cg_pg_lock;
 	bool slcg_enabled;
 	bool blcg_enabled;
 	bool elcg_enabled;

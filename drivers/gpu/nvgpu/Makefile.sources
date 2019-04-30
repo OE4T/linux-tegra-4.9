@@ -116,6 +116,9 @@ srcs :=	os/posix/nvgpu.c \
 	common/mc/mc_gp10b.c  \
 	common/mc/mc_gv11b.c  \
 	common/mc/mc_gv100.c \
+	common/power_features/power_features.c \
+	common/power_features/cg/cg.c \
+	common/power_features/pg/pg.c \
 	boardobj/boardobj.c \
 	boardobj/boardobjgrp.c \
 	boardobj/boardobjgrpmask.c \

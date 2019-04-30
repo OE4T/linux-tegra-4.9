@@ -69,6 +69,7 @@ static void vgpu_init_vars(struct gk20a *g, struct gk20a_platform *platform)
 	nvgpu_mutex_init(&g->power_lock);
 	nvgpu_mutex_init(&g->ctxsw_disable_lock);
 	nvgpu_mutex_init(&g->clk_arb_enable_lock);
+	nvgpu_mutex_init(&g->cg_pg_lock);
 
 	nvgpu_mutex_init(&priv->vgpu_clk_get_freq_lock);
 

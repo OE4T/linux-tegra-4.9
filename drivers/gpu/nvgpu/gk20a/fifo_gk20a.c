@@ -45,6 +45,8 @@
 #include <nvgpu/utils.h>
 #include <nvgpu/channel.h>
 #include <nvgpu/unit.h>
+#include <nvgpu/power_features/power_features.h>
+#include <nvgpu/power_features/cg.h>
 
 #include "gk20a.h"
 #include "mm_gk20a.h"
@@ -824,14 +826,9 @@ int gk20a_init_fifo_reset_enable_hw(struct gk20a *g)
 	/* enable pmc pfifo */
 	g->ops.mc.reset(g, g->ops.mc.reset_mask(g, NVGPU_UNIT_FIFO));
 
-	if (g->ops.clock_gating.slcg_fifo_load_gating_prod) {
-		g->ops.clock_gating.slcg_fifo_load_gating_prod(g,
-				g->slcg_enabled);
-	}
-	if (g->ops.clock_gating.blcg_fifo_load_gating_prod) {
-		g->ops.clock_gating.blcg_fifo_load_gating_prod(g,
-				g->blcg_enabled);
-	}
+	nvgpu_cg_slcg_fifo_load_enable(g);
+
+	nvgpu_cg_blcg_fifo_load_enable(g);
 
 	timeout = gk20a_readl(g, fifo_fb_timeout_r());
 	timeout = set_field(timeout, fifo_fb_timeout_period_m(),
@@ -1361,8 +1358,8 @@ void gk20a_fifo_reset_engine(struct gk20a *g, u32 engine_id)
 	}
 
 	if (engine_enum == ENGINE_GR_GK20A) {
-		if (g->support_pmu && g->can_elpg) {
-			if (nvgpu_pmu_disable_elpg(g)) {
+		if (g->support_pmu) {
+			if (nvgpu_pg_elpg_disable(g) != 0 ) {
 				nvgpu_err(g, "failed to set disable elpg");
 			}
 		}
@@ -1391,8 +1388,10 @@ void gk20a_fifo_reset_engine(struct gk20a *g, u32 engine_id)
 				"HALT gr pipe not supported and "
 				"gr cannot be reset without halting gr pipe");
 		}
-		if (g->support_pmu && g->can_elpg) {
-			nvgpu_pmu_enable_elpg(g);
+		if (g->support_pmu) {
+			if (nvgpu_pg_elpg_enable(g) != 0 ) {
+				nvgpu_err(g, "failed to set enable elpg");
+			}
 		}
 	}
 	if ((engine_enum == ENGINE_GRCE_GK20A) ||
@@ -1638,25 +1637,11 @@ static bool gk20a_fifo_handle_mmu_fault_locked(
 	g->fifo.deferred_reset_pending = false;
 
 	/* Disable power management */
-	if (g->support_pmu && g->can_elpg) {
-		if (nvgpu_pmu_disable_elpg(g)) {
-			nvgpu_err(g, "failed to set disable elpg");
+	if (g->support_pmu) {
+		if (nvgpu_cg_pg_disable(g) != 0) {
+			nvgpu_warn(g, "fail to disable power mgmt");
 		}
 	}
-	if (g->ops.clock_gating.slcg_gr_load_gating_prod) {
-		g->ops.clock_gating.slcg_gr_load_gating_prod(g,
-				false);
-	}
-	if (g->ops.clock_gating.slcg_perf_load_gating_prod) {
-		g->ops.clock_gating.slcg_perf_load_gating_prod(g,
-				false);
-	}
-	if (g->ops.clock_gating.slcg_ltc_load_gating_prod) {
-		g->ops.clock_gating.slcg_ltc_load_gating_prod(g,
-				false);
-	}
-
-	gr_gk20a_init_cg_mode(g, ELCG_MODE, ELCG_RUN);
 
 	/* Disable fifo access */
 	grfifo_ctl = gk20a_readl(g, gr_gpfifo_ctl_r());
@@ -1842,8 +1827,10 @@ static bool gk20a_fifo_handle_mmu_fault_locked(
 		     gr_gpfifo_ctl_semaphore_access_enabled_f());
 
 	/* It is safe to enable ELPG again. */
-	if (g->support_pmu && g->can_elpg) {
-		nvgpu_pmu_enable_elpg(g);
+	if (g->support_pmu) {
+		if (nvgpu_cg_pg_enable(g) != 0) {
+			nvgpu_warn(g, "fail to enable power mgmt");
+		}
 	}
 
 	return verbose;

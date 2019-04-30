@@ -51,8 +51,10 @@ nvgpu-y += common/bus/bus_gk20a.o \
 	common/mc/mc_gp10b.o  \
 	common/mc/mc_gv11b.o  \
 	common/mc/mc_gv100.o \
-	common/sync/channel_sync.o
-
+	common/sync/channel_sync.o \
+	common/power_features/power_features.o \
+	common/power_features/cg/cg.o \
+	common/power_features/pg/pg.o
 # Linux specific parts of nvgpu.
 nvgpu-y += \
 	os/linux/os_ops.o \

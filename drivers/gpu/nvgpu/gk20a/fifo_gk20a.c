@@ -910,9 +910,9 @@ int gk20a_init_fifo_setup_sw_common(struct gk20a *g)
 		return err;
 	}
 
-	err = nvgpu_mutex_init(&f->gr_reset_mutex);
+	err = nvgpu_mutex_init(&f->engines_reset_mutex);
 	if (err) {
-		nvgpu_err(g, "failed to init gr_reset_mutex");
+		nvgpu_err(g, "failed to init engines_reset_mutex");
 		return err;
 	}
 
@@ -1581,13 +1581,21 @@ int gk20a_fifo_deferred_reset(struct gk20a *g, struct channel_gk20a *ch)
 {
 	unsigned long engine_id, engines = 0U;
 	struct tsg_gk20a *tsg;
+	bool deferred_reset_pending;
+	struct fifo_gk20a *f = &g->fifo;
 
 	nvgpu_mutex_acquire(&g->dbg_sessions_lock);
-	gr_gk20a_disable_ctxsw(g);
 
-	if (!g->fifo.deferred_reset_pending) {
-		goto clean_up;
+	nvgpu_mutex_acquire(&f->deferred_reset_mutex);
+	deferred_reset_pending = g->fifo.deferred_reset_pending;
+	nvgpu_mutex_release(&f->deferred_reset_mutex);
+
+	if (!deferred_reset_pending) {
+		nvgpu_mutex_release(&g->dbg_sessions_lock);
+		return 0;
 	}
+
+	gr_gk20a_disable_ctxsw(g);
 
 	tsg = tsg_gk20a_from_ch(ch);
 	if (tsg != NULL) {
@@ -1610,8 +1618,10 @@ int gk20a_fifo_deferred_reset(struct gk20a *g, struct channel_gk20a *ch)
 		}
 	}
 
+	nvgpu_mutex_acquire(&f->deferred_reset_mutex);
 	g->fifo.deferred_fault_engines = 0;
 	g->fifo.deferred_reset_pending = false;
+	nvgpu_mutex_release(&f->deferred_reset_mutex);
 
 clean_up:
 	gr_gk20a_enable_ctxsw(g);
@@ -1632,9 +1642,10 @@ static bool gk20a_fifo_handle_mmu_fault_locked(
 	bool verbose = true;
 	u32 grfifo_ctl;
 
-	nvgpu_log_fn(g, " ");
+	bool deferred_reset_pending = false;
+	struct fifo_gk20a *f = &g->fifo;
 
-	g->fifo.deferred_reset_pending = false;
+	nvgpu_log_fn(g, " ");
 
 	/* Disable power management */
 	if (g->support_pmu) {
@@ -1661,6 +1672,9 @@ static bool gk20a_fifo_handle_mmu_fault_locked(
 		gk20a_debug_dump(g);
 	}
 
+	nvgpu_mutex_acquire(&f->deferred_reset_mutex);
+	g->fifo.deferred_reset_pending = false;
+	nvgpu_mutex_release(&f->deferred_reset_mutex);
 
 	/* go through all faulted engines */
 	for_each_set_bit(engine_mmu_fault_id, &fault_id, 32) {
@@ -1761,17 +1775,17 @@ static bool gk20a_fifo_handle_mmu_fault_locked(
 				g->fifo.deferred_fault_engines |= BIT(engine_id);
 
 				/* handled during channel free */
+				nvgpu_mutex_acquire(&f->deferred_reset_mutex);
 				g->fifo.deferred_reset_pending = true;
+				nvgpu_mutex_release(&f->deferred_reset_mutex);
+
+				deferred_reset_pending = true;
+
 				nvgpu_log(g, gpu_dbg_intr | gpu_dbg_gpu_dbg,
 					   "sm debugger attached,"
 					   " deferring channel recovery to channel free");
 			} else {
-				/* if lock is already taken, a reset is taking place
-				so no need to repeat */
-				if (nvgpu_mutex_tryacquire(&g->fifo.gr_reset_mutex)) {
-					gk20a_fifo_reset_engine(g, engine_id);
-					nvgpu_mutex_release(&g->fifo.gr_reset_mutex);
-				}
+				gk20a_fifo_reset_engine(g, engine_id);
 			}
 		}
 
@@ -1784,7 +1798,7 @@ static bool gk20a_fifo_handle_mmu_fault_locked(
 		 * Disable the channel/TSG from hw and increment syncpoints.
 		 */
 		if (tsg) {
-			if (g->fifo.deferred_reset_pending) {
+			if (deferred_reset_pending) {
 				gk20a_disable_tsg(tsg);
 			} else {
 				if (!fake_fault) {
@@ -1847,6 +1861,9 @@ static bool gk20a_fifo_handle_mmu_fault(
 
 	nvgpu_log_fn(g, " ");
 
+	nvgpu_log_info(g, "acquire engines_reset_mutex");
+	nvgpu_mutex_acquire(&g->fifo.engines_reset_mutex);
+
 	nvgpu_log_info(g, "acquire runlist_lock for all runlists");
 	for (rlid = 0; rlid < g->fifo.max_runlists; rlid++) {
 		nvgpu_mutex_acquire(&g->fifo.runlist_info[rlid].runlist_lock);
@@ -1859,6 +1876,10 @@ static bool gk20a_fifo_handle_mmu_fault(
 	for (rlid = 0; rlid < g->fifo.max_runlists; rlid++) {
 		nvgpu_mutex_release(&g->fifo.runlist_info[rlid].runlist_lock);
 	}
+
+	nvgpu_log_info(g, "release engines_reset_mutex");
+	nvgpu_mutex_release(&g->fifo.engines_reset_mutex);
+
 	return verbose;
 }
 
@@ -1954,6 +1975,16 @@ void gk20a_fifo_recover_tsg(struct gk20a *g, struct tsg_gk20a *tsg,
 	g->ops.fifo.disable_tsg(tsg);
 
 	/*
+	 * On hitting engine reset, h/w drops the ctxsw_status to INVALID in
+	 * fifo_engine_status register. Also while the engine is held in reset
+	 * h/w passes busy/idle straight through. fifo_engine_status registers
+	 * are correct in that there is no context switch outstanding
+	 * as the CTXSW is aborted when reset is asserted.
+	*/
+	nvgpu_log_info(g, "acquire engines_reset_mutex");
+	nvgpu_mutex_acquire(&g->fifo.engines_reset_mutex);
+
+	/*
 	 * stop context switching to prevent engine assignments from
 	 * changing until engine status is checked to make sure tsg
 	 * being recovered is not loaded on the engines
@@ -1979,6 +2010,9 @@ void gk20a_fifo_recover_tsg(struct gk20a *g, struct tsg_gk20a *tsg,
 			nvgpu_err(g, "failed to enable ctxsw");
 		}
 	}
+
+	nvgpu_log_info(g, "release engines_reset_mutex");
+	nvgpu_mutex_release(&g->fifo.engines_reset_mutex);
 
 	if (engines) {
 		gk20a_fifo_recover(g, engines, tsg->tsgid, true, true, verbose,
@@ -2029,6 +2063,9 @@ void gk20a_fifo_teardown_ch_tsg(struct gk20a *g, u32 __engine_ids,
 	bool id_is_known = (id_type != ID_TYPE_UNKNOWN) ? true : false;
 	bool id_is_tsg = (id_type == ID_TYPE_TSG) ? true : false;
 	u32 rlid;
+
+	nvgpu_log_info(g, "acquire engines_reset_mutex");
+	nvgpu_mutex_acquire(&g->fifo.engines_reset_mutex);
 
 	nvgpu_log_info(g, "acquire runlist_lock for all runlists");
 	for (rlid = 0; rlid < g->fifo.max_runlists; rlid++) {
@@ -2094,6 +2131,9 @@ void gk20a_fifo_teardown_ch_tsg(struct gk20a *g, u32 __engine_ids,
 	for (rlid = 0; rlid < g->fifo.max_runlists; rlid++) {
 		nvgpu_mutex_release(&g->fifo.runlist_info[rlid].runlist_lock);
 	}
+
+	nvgpu_log_info(g, "release engines_reset_mutex");
+	nvgpu_mutex_release(&g->fifo.engines_reset_mutex);
 }
 
 void gk20a_fifo_recover(struct gk20a *g, u32 __engine_ids,

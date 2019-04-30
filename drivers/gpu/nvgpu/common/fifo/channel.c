@@ -308,6 +308,7 @@ static void gk20a_free_channel(struct channel_gk20a *ch, bool force)
 	struct dbg_session_data *session_data, *tmp_s;
 	struct dbg_session_channel_data *ch_data, *tmp;
 	int err;
+	bool deferred_reset_pending;
 
 	nvgpu_log_fn(g, " ");
 
@@ -381,17 +382,17 @@ static void gk20a_free_channel(struct channel_gk20a *ch, bool force)
 
 	/* if engine reset was deferred, perform it now */
 	nvgpu_mutex_acquire(&f->deferred_reset_mutex);
-	if (g->fifo.deferred_reset_pending) {
-		nvgpu_log(g, gpu_dbg_intr | gpu_dbg_gpu_dbg, "engine reset was"
-			   " deferred, running now");
-		/* if lock is already taken, a reset is taking place
-		so no need to repeat */
-		if (nvgpu_mutex_tryacquire(&g->fifo.gr_reset_mutex)) {
-			gk20a_fifo_deferred_reset(g, ch);
-			nvgpu_mutex_release(&g->fifo.gr_reset_mutex);
-		}
-	}
+	deferred_reset_pending = g->fifo.deferred_reset_pending;
 	nvgpu_mutex_release(&f->deferred_reset_mutex);
+
+	if (deferred_reset_pending) {
+		nvgpu_log(g, gpu_dbg_intr | gpu_dbg_gpu_dbg, "engine reset was"
+				" deferred, running now");
+		nvgpu_mutex_acquire(&g->fifo.engines_reset_mutex);
+		gk20a_fifo_deferred_reset(g, ch);
+		nvgpu_mutex_release(&g->fifo.engines_reset_mutex);
+	}
+
 
 	if (!gk20a_channel_as_bound(ch)) {
 		goto unbind;

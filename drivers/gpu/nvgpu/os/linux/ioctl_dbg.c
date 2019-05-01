@@ -1091,7 +1091,8 @@ static int nvgpu_dbg_gpu_ioctl_set_mmu_debug_mode(
 		return -EINVAL;
 	}
 
-	if (g->ops.gr.set_mmu_debug_mode == NULL) {
+	if ((g->ops.fb.set_mmu_debug_mode == NULL) &&
+		(g->ops.gr.set_mmu_debug_mode == NULL)) {
 		return -ENOSYS;
 	}
 

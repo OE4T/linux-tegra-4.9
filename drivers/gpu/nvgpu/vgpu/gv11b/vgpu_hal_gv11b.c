@@ -291,6 +291,7 @@ static const struct gpu_ops vgpu_gv11b_ops = {
 		.read_wpr_info = NULL,
 		.is_debug_mode_enabled = NULL,
 		.set_debug_mode = vgpu_mm_mmu_set_debug_mode,
+		.set_mmu_debug_mode = NULL,
 		.tlb_invalidate = vgpu_mm_tlb_invalidate,
 		.hub_isr = gv11b_fb_hub_isr,
 		.enable_hub_intr = gv11b_fb_enable_hub_intr,

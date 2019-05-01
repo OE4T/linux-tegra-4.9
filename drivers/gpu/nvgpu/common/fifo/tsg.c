@@ -452,13 +452,15 @@ int nvgpu_tsg_set_mmu_debug_mode(struct tsg_gk20a *tsg,
 	struct gk20a *g;
 	int err = 0;
 	u32 tsg_refcnt;
+	u32 fb_refcnt;
 
 	if ((ch == NULL) || (tsg == NULL)) {
 		return -EINVAL;
 	}
 	g = ch->g;
 
-	if (g->ops.gr.set_mmu_debug_mode == NULL) {
+	if ((g->ops.fb.set_mmu_debug_mode == NULL) &&
+		(g->ops.gr.set_mmu_debug_mode == NULL)) {
 		return -ENOSYS;
 	}
 
@@ -468,26 +470,39 @@ int nvgpu_tsg_set_mmu_debug_mode(struct tsg_gk20a *tsg,
 			return 0;
 		}
 		tsg_refcnt = tsg->mmu_debug_mode_refcnt + 1U;
+		fb_refcnt = g->mmu_debug_mode_refcnt + 1U;
 	} else {
 		if (!ch->mmu_debug_mode_enabled) {
 			/* already disabled for this channel */
 			return 0;
 		}
 		tsg_refcnt = tsg->mmu_debug_mode_refcnt - 1U;
+		fb_refcnt = g->mmu_debug_mode_refcnt - 1U;
 	}
 
-	/*
-	 * enable GPC MMU debug mode if it was requested for at
-	 * least one channel in the TSG
-	 */
-	err = g->ops.gr.set_mmu_debug_mode(g, ch, tsg_refcnt > 0U);
-	if (err != 0) {
-		nvgpu_err(g, "set mmu debug mode failed, err=%d", err);
-		return err;
+	if (g->ops.gr.set_mmu_debug_mode != NULL) {
+		/*
+		 * enable GPC MMU debug mode if it was requested for at
+		 * least one channel in the TSG
+		 */
+		err = g->ops.gr.set_mmu_debug_mode(g, ch, tsg_refcnt > 0U);
+		if (err != 0) {
+			nvgpu_err(g, "set mmu debug mode failed, err=%d", err);
+			return err;
+		}
+	}
+
+	if (g->ops.fb.set_mmu_debug_mode != NULL) {
+		/*
+		 * enable FB/HS MMU debug mode if it was requested for
+		 * at least one TSG
+		 */
+		g->ops.fb.set_mmu_debug_mode(g, fb_refcnt > 0U);
 	}
 
 	ch->mmu_debug_mode_enabled = enable;
 	tsg->mmu_debug_mode_refcnt = tsg_refcnt;
+	g->mmu_debug_mode_refcnt = fb_refcnt;
 
 	return err;
 }

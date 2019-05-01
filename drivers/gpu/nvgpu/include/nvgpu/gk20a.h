@@ -570,6 +570,7 @@ struct gpu_ops {
 				struct wpr_carveout_info *inf);
 		bool (*is_debug_mode_enabled)(struct gk20a *g);
 		void (*set_debug_mode)(struct gk20a *g, bool enable);
+		void (*set_mmu_debug_mode)(struct gk20a *g, bool enable);
 		int (*tlb_invalidate)(struct gk20a *g, struct nvgpu_mem *pdb);
 		void (*hub_isr)(struct gk20a *g);
 		void (*handle_replayable_fault)(struct gk20a *g);
@@ -1623,6 +1624,7 @@ struct gk20a {
 	struct gk20a_fecs_trace *fecs_trace;
 
 	bool mmu_debug_ctrl;
+	u32 mmu_debug_mode_refcnt;
 
 	u32 tpc_fs_mask_user;
 

@@ -473,6 +473,7 @@ static const struct gpu_ops gv11b_ops = {
 		.read_wpr_info = gm20b_fb_read_wpr_info,
 		.is_debug_mode_enabled = gm20b_fb_debug_mode_enabled,
 		.set_debug_mode = gm20b_fb_set_debug_mode,
+		.set_mmu_debug_mode = gm20b_fb_set_mmu_debug_mode,
 		.tlb_invalidate = gm20b_fb_tlb_invalidate,
 		.hub_isr = gv11b_fb_hub_isr,
 		.handle_replayable_fault = gv11b_fb_handle_replayable_mmu_fault,

@@ -166,6 +166,8 @@ struct nvgpu_gpu_zbc_query_table_args {
 #define NVGPU_GPU_FLAGS_CAN_RAILGATE			(1ULL << 29)
 /* Usermode submit is available */
 #define NVGPU_GPU_FLAGS_SUPPORT_USERMODE_SUBMIT		(1ULL << 30)
+/* Set MMU debug mode is available */
+#define NVGPU_GPU_FLAGS_SUPPORT_SET_CTX_MMU_DEBUG_MODE	(1ULL << 32)
 /* SM LRF ECC is enabled */
 #define NVGPU_GPU_FLAGS_ECC_ENABLED_SM_LRF	(1ULL << 60)
 /* SM SHM ECC is enabled */
@@ -1414,8 +1416,20 @@ struct nvgpu_dbg_gpu_set_sm_exception_type_mask_args {
 	_IOW(NVGPU_DBG_GPU_IOCTL_MAGIC, 23, \
 			struct nvgpu_dbg_gpu_set_sm_exception_type_mask_args)
 
+/* MMU Debug Mode */
+#define NVGPU_DBG_GPU_CTX_MMU_DEBUG_MODE_DISABLED	0
+#define NVGPU_DBG_GPU_CTX_MMU_DEBUG_MODE_ENABLED	1
+
+struct nvgpu_dbg_gpu_set_ctx_mmu_debug_mode_args {
+	__u32 mode;
+	__u32 reserved;
+};
+#define NVGPU_DBG_GPU_IOCTL_SET_CTX_MMU_DEBUG_MODE	\
+	_IOW(NVGPU_DBG_GPU_IOCTL_MAGIC, 26, \
+	struct nvgpu_dbg_gpu_set_ctx_mmu_debug_mode_args)
+
 #define NVGPU_DBG_GPU_IOCTL_LAST		\
-	_IOC_NR(NVGPU_DBG_GPU_IOCTL_SET_SM_EXCEPTION_TYPE_MASK)
+	_IOC_NR(NVGPU_DBG_GPU_IOCTL_SET_CTX_MMU_DEBUG_MODE)
 
 #define NVGPU_DBG_GPU_IOCTL_MAX_ARG_SIZE		\
 	sizeof(struct nvgpu_dbg_gpu_access_fb_memory_args)

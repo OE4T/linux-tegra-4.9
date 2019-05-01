@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2020, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -189,6 +189,7 @@ static const struct gpu_ops vgpu_gv11b_ops = {
 		.get_hw_accessor_stream_out_mode =
 			gr_gv100_get_hw_accessor_stream_out_mode,
 		.update_hwpm_ctxsw_mode = vgpu_gr_update_hwpm_ctxsw_mode,
+		.set_mmu_debug_mode = NULL,
 		.record_sm_error_state = gv11b_gr_record_sm_error_state,
 		.clear_sm_error_state = vgpu_gr_clear_sm_error_state,
 		.suspend_contexts = vgpu_gr_suspend_contexts,

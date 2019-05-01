@@ -356,6 +356,7 @@ static const struct gpu_ops gv11b_ops = {
 		.get_num_hwpm_perfmon = gr_gv100_get_num_hwpm_perfmon,
 		.set_pmm_register = gr_gv100_set_pmm_register,
 		.update_hwpm_ctxsw_mode = gr_gk20a_update_hwpm_ctxsw_mode,
+		.set_mmu_debug_mode = gm20b_gr_set_mmu_debug_mode,
 		.init_hwpm_pmm_register = gr_gv100_init_hwpm_pmm_register,
 		.record_sm_error_state = gv11b_gr_record_sm_error_state,
 		.clear_sm_error_state = gv11b_gr_clear_sm_error_state,
@@ -955,6 +956,7 @@ int gv11b_init_hal(struct gk20a *g)
 	__nvgpu_set_enabled(g, NVGPU_PMU_FECS_BOOTSTRAP_DONE, false);
 	__nvgpu_set_enabled(g, NVGPU_FECS_TRACE_VA, true);
 	__nvgpu_set_enabled(g, NVGPU_FECS_TRACE_FEATURE_CONTROL, true);
+	__nvgpu_set_enabled(g, NVGPU_SUPPORT_SET_CTX_MMU_DEBUG_MODE, false);
 
 	__nvgpu_set_enabled(g, NVGPU_SUPPORT_MULTIPLE_WPR, false);
 	__nvgpu_set_enabled(g, NVGPU_SUPPORT_PLATFORM_ATOMIC, true);

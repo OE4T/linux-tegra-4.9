@@ -529,6 +529,8 @@ struct gpu_ops {
 			u32 num_ppcs, u32 reg_list_ppc_count,
 			u32 *__offset_in_segment);
 		void (*set_debug_mode)(struct gk20a *g, bool enable);
+		int (*set_mmu_debug_mode)(struct gk20a *g,
+			struct channel_gk20a *ch, bool enable);
 	} gr;
 	struct {
 		void (*init_hw)(struct gk20a *g);

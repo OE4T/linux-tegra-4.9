@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2020, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -234,6 +234,7 @@ static const struct gpu_ops vgpu_gp10b_ops = {
 		.get_offset_in_gpccs_segment =
 			gr_gk20a_get_offset_in_gpccs_segment,
 		.set_debug_mode = gm20b_gr_set_debug_mode,
+		.set_mmu_debug_mode = NULL,
 	},
 	.fb = {
 		.init_hw = NULL,

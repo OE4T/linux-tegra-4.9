@@ -1,7 +1,7 @@
 /*
  * GP10B Tegra HAL interface
  *
- * Copyright (c) 2014-2019, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2020, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -295,6 +295,7 @@ static const struct gpu_ops gp10b_ops = {
 		.get_lrf_tex_ltc_dram_override = get_ecc_override_val,
 		.update_smpc_ctxsw_mode = gr_gk20a_update_smpc_ctxsw_mode,
 		.update_hwpm_ctxsw_mode = gr_gk20a_update_hwpm_ctxsw_mode,
+		.set_mmu_debug_mode = NULL,
 		.record_sm_error_state = gm20b_gr_record_sm_error_state,
 		.clear_sm_error_state = gm20b_gr_clear_sm_error_state,
 		.suspend_contexts = gr_gp10b_suspend_contexts,
@@ -783,6 +784,7 @@ int gp10b_init_hal(struct gk20a *g)
 	__nvgpu_set_enabled(g, NVGPU_PMU_PSTATE, false);
 	__nvgpu_set_enabled(g, NVGPU_FECS_TRACE_VA, false);
 	__nvgpu_set_enabled(g, NVGPU_FECS_TRACE_FEATURE_CONTROL, false);
+	__nvgpu_set_enabled(g, NVGPU_SUPPORT_SET_CTX_MMU_DEBUG_MODE, false);
 
 	/* Read fuses to check if gpu needs to boot in secure/non-secure mode */
 	if (gops->fuse.check_priv_security(g)) {

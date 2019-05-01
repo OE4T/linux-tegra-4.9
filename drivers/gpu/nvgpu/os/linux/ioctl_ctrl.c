@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2018, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2011-2020, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -224,6 +224,8 @@ static struct nvgpu_flags_mapping flags_mapping[] = {
 		NVGPU_SUPPORT_SCG},
 	{NVGPU_GPU_FLAGS_SUPPORT_VPR,
 		NVGPU_SUPPORT_VPR},
+	{NVGPU_GPU_FLAGS_SUPPORT_SET_CTX_MMU_DEBUG_MODE,
+		NVGPU_SUPPORT_SET_CTX_MMU_DEBUG_MODE},
 };
 
 static u64 nvgpu_ctrl_ioctl_gpu_characteristics_flags(struct gk20a *g)

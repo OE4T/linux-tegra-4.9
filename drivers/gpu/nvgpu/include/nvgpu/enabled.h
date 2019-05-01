@@ -181,10 +181,13 @@ struct gk20a;
 /* PLATFORM_ATOMIC support */
 #define NVGPU_SUPPORT_PLATFORM_ATOMIC		71
 
+/* NVGPU_GPU_IOCTL_SET_MMU_DEBUG_MODE is available */
+#define NVGPU_SUPPORT_SET_CTX_MMU_DEBUG_MODE	72
+
 /*
  * Must be greater than the largest bit offset in the above list.
  */
-#define NVGPU_MAX_ENABLED_BITS			72
+#define NVGPU_MAX_ENABLED_BITS			73U
 
 /**
  * nvgpu_is_enabled - Check if the passed flag is enabled.

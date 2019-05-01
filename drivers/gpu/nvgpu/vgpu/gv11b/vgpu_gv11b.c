@@ -44,6 +44,7 @@ int vgpu_gv11b_init_gpu_characteristics(struct gk20a *g)
 	__nvgpu_set_enabled(g, NVGPU_SUPPORT_SYNCPOINT_ADDRESS, true);
 	__nvgpu_set_enabled(g, NVGPU_SUPPORT_USER_SYNCPOINT, true);
 	__nvgpu_set_enabled(g, NVGPU_SUPPORT_PLATFORM_ATOMIC, true);
+	__nvgpu_set_enabled(g, NVGPU_SUPPORT_SET_CTX_MMU_DEBUG_MODE, false);
 
 	return 0;
 }

@@ -1107,10 +1107,11 @@ static int nvgpu_dbg_gpu_ioctl_set_mmu_debug_mode(
 	ch = nvgpu_dbg_gpu_get_session_channel(dbg_s);
 	if (!ch) {
 		nvgpu_err(g, "no bound channel for mmu debug mode");
+		err = -EINVAL;
 		goto clean_up;
 	}
 
-	err = g->ops.gr.set_mmu_debug_mode(g, ch, enable);
+	err = nvgpu_tsg_set_mmu_debug_mode(tsg_gk20a_from_ch(ch), ch, enable);
 	if (err) {
 		nvgpu_err(g, "set mmu debug mode failed, err=%d", err);
 	}

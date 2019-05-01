@@ -1468,10 +1468,15 @@ int gm20b_gr_set_mmu_debug_mode(struct gk20a *g,
 			gr_gpcs_pri_mmu_debug_ctrl_debug_disabled_f(),
 	};
 	int err;
+	struct tsg_gk20a *tsg = tsg_gk20a_from_ch(ch);
+
+	if (tsg == NULL) {
+		return enable ? -EINVAL : 0;
+	}
 
 	err = gr_gk20a_exec_ctx_ops(ch, &ctx_ops, 1, 1, 0, NULL);
 	if (err != 0) {
-		nvgpu_err(g, "Failed to access register");
+		nvgpu_err(g, "update MMU debug mode failed");
 	}
 	return err;
 }

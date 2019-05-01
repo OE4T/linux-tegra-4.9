@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2019, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2020, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -444,4 +444,50 @@ void gk20a_tsg_update_sm_error_state_locked(struct tsg_gk20a *tsg,
 			sm_error_state->hww_global_esr_report_mask;
 	tsg_sm_error_states->hww_warp_esr_report_mask =
 			sm_error_state->hww_warp_esr_report_mask;
+}
+
+int nvgpu_tsg_set_mmu_debug_mode(struct tsg_gk20a *tsg,
+		struct channel_gk20a *ch, bool enable)
+{
+	struct gk20a *g;
+	int err = 0;
+	u32 tsg_refcnt;
+
+	if ((ch == NULL) || (tsg == NULL)) {
+		return -EINVAL;
+	}
+	g = ch->g;
+
+	if (g->ops.gr.set_mmu_debug_mode == NULL) {
+		return -ENOSYS;
+	}
+
+	if (enable) {
+		if (ch->mmu_debug_mode_enabled) {
+			/* already enabled for this channel */
+			return 0;
+		}
+		tsg_refcnt = tsg->mmu_debug_mode_refcnt + 1U;
+	} else {
+		if (!ch->mmu_debug_mode_enabled) {
+			/* already disabled for this channel */
+			return 0;
+		}
+		tsg_refcnt = tsg->mmu_debug_mode_refcnt - 1U;
+	}
+
+	/*
+	 * enable GPC MMU debug mode if it was requested for at
+	 * least one channel in the TSG
+	 */
+	err = g->ops.gr.set_mmu_debug_mode(g, ch, tsg_refcnt > 0U);
+	if (err != 0) {
+		nvgpu_err(g, "set mmu debug mode failed, err=%d", err);
+		return err;
+	}
+
+	ch->mmu_debug_mode_enabled = enable;
+	tsg->mmu_debug_mode_refcnt = tsg_refcnt;
+
+	return err;
 }

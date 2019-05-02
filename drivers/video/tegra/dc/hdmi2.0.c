@@ -35,7 +35,7 @@
 #include <linux/of_address.h>
 #include <linux/of_gpio.h>
 #include <soc/tegra/tegra_powergate.h>
-#include <video/tegra_dc_ext.h>
+#include <uapi/video/tegra_dc_ext.h>
 
 #include "dc.h"
 #include "dc_reg.h"

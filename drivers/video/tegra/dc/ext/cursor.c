@@ -16,7 +16,7 @@
  * more details.
  */
 
-#include <video/tegra_dc_ext.h>
+#include <uapi/video/tegra_dc_ext.h>
 #include "tegra_dc_ext_priv.h"
 
 /* ugh */

@@ -34,7 +34,7 @@
 #include <linux/trusty/trusty_ipc.h>
 #include <linux/ote_protocol.h>
 
-#include <video/nvhdcp.h>
+#include <uapi/video/nvhdcp.h>
 
 #include "dc.h"
 #include "dc_reg.h"

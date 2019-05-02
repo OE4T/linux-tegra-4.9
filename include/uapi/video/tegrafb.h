@@ -4,7 +4,7 @@
  * Copyright (C) 2010 Google, Inc.
  * Author: Erik Gilling <konkers@android.com>
  *
- * Copyright (c) 2014-2017 NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2014-2018 NVIDIA CORPORATION. All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -17,8 +17,8 @@
  *
  */
 
-#ifndef _LINUX_TEGRAFB_H_
-#define _LINUX_TEGRAFB_H_
+#ifndef __UAPI_LINUX_TEGRAFB_H_
+#define __UAPI_LINUX_TEGRAFB_H_
 
 #include <linux/fb.h>
 #include <linux/types.h>

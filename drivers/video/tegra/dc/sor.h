@@ -23,7 +23,7 @@
 #include <soc/tegra/tegra_bpmp.h>
 #include <linux/rwsem.h>
 #include <linux/delay.h>
-#include <video/tegra_dc_ext.h>
+#include <uapi/video/tegra_dc_ext.h>
 #include "dc_priv.h"
 #include "sor_regs.h"
 

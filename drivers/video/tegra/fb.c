@@ -39,8 +39,8 @@
 #include <linux/iommu.h>
 
 #include <asm/atomic.h>
-#include <video/tegrafb.h>
-#include <video/tegra_dc_ext.h>
+#include <uapi/video/tegrafb.h>
+#include <uapi/video/tegra_dc_ext.h>
 
 #include "dc/dc.h"
 #include "dc/dc_priv.h"

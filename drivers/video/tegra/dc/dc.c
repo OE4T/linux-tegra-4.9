@@ -41,7 +41,7 @@
 #include <linux/nvhost.h>
 #include <linux/clk/tegra.h>
 #include <linux/platform/tegra/emc_bwmgr.h>
-#include <video/tegrafb.h>
+#include <uapi/video/tegrafb.h>
 #include <drm/drm_fixed.h>
 #include <linux/dma-buf.h>
 #include <linux/extcon/extcon-disp.h>
@@ -69,7 +69,7 @@ EXPORT_TRACEPOINT_SYMBOL(display_readl);
 #include <linux/platform/tegra/latency_allowance.h>
 #include <linux/platform/tegra/mc.h>
 #include <soc/tegra/tegra_bpmp.h>
-#include <video/tegra_dc_ext.h>
+#include <uapi/video/tegra_dc_ext.h>
 
 #include "dc.h"
 #include "dc_reg.h"

@@ -1,7 +1,7 @@
 /*
  * nvhdcp.h: tegra dc hdcp declarations.
  *
- * Copyright (c) 2010-2017, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2010-2019, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -14,12 +14,12 @@
  *
  */
 
-#ifndef _LINUX_NVHDCP_H_
-#define _LINUX_NVHDCP_H_
+#ifndef __UAPI_LINUX_NVHDCP_H_
+#define __UAPI_LINUX_NVHDCP_H_
 
-#include <linux/fb.h>
-#include <linux/types.h>
-#include <asm/ioctl.h>
+#include <uapi/linux/fb.h>
+#include <uapi/linux/types.h>
+#include <uapi/asm-generic/ioctl.h>
 
 /* maximum receivers and repeaters connected at a time */
 #define TEGRA_NVHDCP_MAX_DEVS	127

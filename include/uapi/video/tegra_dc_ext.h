@@ -18,10 +18,10 @@
  * more details.
  */
 
-#ifndef __TEGRA_DC_EXT_H
-#define __TEGRA_DC_EXT_H
+#ifndef __UAPI_TEGRA_DC_EXT_H
+#define __UAPI_TEGRA_DC_EXT_H
 
-#include <linux/types.h>
+#include <uapi/linux/types.h>
 #include <linux/ioctl.h>
 #if defined(__KERNEL__)
 # include <linux/time.h>
@@ -1685,4 +1685,4 @@ struct tegra_dc_ext_crc_arg {
 #define TEGRA_DC_EXT_CONTROL_GET_CAP_INFO \
 	_IOWR('C', 0x09, struct tegra_dc_ext_get_cap_info)
 
-#endif /* __TEGRA_DC_EXT_H */
+#endif /* __UAPI_TEGRA_DC_EXT_H */

@@ -39,7 +39,7 @@
 #include <crypto/akcipher.h>
 #include <crypto/internal/skcipher.h>
 
-#include "tegra-cryptodev.h"
+#include <uapi/misc/tegra-cryptodev.h>
 #include <asm/barrier.h>
 
 #define NBUFS 2

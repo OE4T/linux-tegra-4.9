@@ -16,16 +16,16 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-#ifndef __TEGRA_CRYPTODEV_H
-#define __TEGRA_CRYPTODEV_H
+#ifndef __UAPI_TEGRA_CRYPTODEV_H
+#define __UAPI_TEGRA_CRYPTODEV_H
 
-#include <crypto/aes.h>
-
-#include <asm-generic/ioctl.h>
+#include <uapi/asm-generic/ioctl.h>
 
 /* ioctl arg = 1 if you want to use ssk. arg = 0 to use normal key */
 #define TEGRA_CRYPTO_IOCTL_NEED_SSK		_IOWR(0x98, 100, int)
 
+#define AES_BLOCK_SIZE		16
+#define AES_KEYSIZE_128		16
 #define TEGRA_CRYPTO_MAX_KEY_SIZE	TEGRA_CRYPTO_KEY_512_SIZE
 #define RSA_KEY_SIZE		512
 #define TEGRA_CRYPTO_IV_SIZE	AES_BLOCK_SIZE
@@ -85,10 +85,10 @@ enum sha_algo {
 
 struct tegra_se_rng1_request {
 	unsigned int size;
-	u32 *rdata;
-	u32 *rdata1;
-	u32 *rdata2;
-	u32 *rdata3;
+	__u32 *rdata;
+	__u32 *rdata1;
+	__u32 *rdata2;
+	__u32 *rdata3;
 	bool test_full_cmd_flow;
 	bool adv_state_on;
 };
@@ -158,8 +158,8 @@ struct tegra_crypt_req {
 	unsigned int keylen;
 	char iv[TEGRA_CRYPTO_IV_SIZE];
 	unsigned int ivlen;
-	u8 *plaintext;
-	u8 *result;
+	__u8 *plaintext;
+	__u8 *result;
 	unsigned int plaintext_sz;
 	unsigned int skip_key;
 	unsigned int skip_iv;
@@ -191,8 +191,8 @@ struct tegra_crypt_req_32 {
  * TEGRA_CRYPTO_IOCTL_GET_RANDOM
  */
 struct tegra_rng_req {
-	u8 seed[TEGRA_CRYPTO_RNG_SEED_SIZE];
-	u8 *rdata; /* random generated data */
+	__u8 seed[TEGRA_CRYPTO_RNG_SEED_SIZE];
+	__u8 *rdata; /* random generated data */
 	unsigned int nbytes; /* random data length */
 	unsigned int type;
 };
@@ -203,7 +203,7 @@ struct tegra_rng_req {
 
 #ifdef CONFIG_COMPAT
 struct tegra_rng_req_32 {
-	u8 seed[TEGRA_CRYPTO_RNG_SEED_SIZE];
+	__u8 seed[TEGRA_CRYPTO_RNG_SEED_SIZE];
 	__u64 rdata; /* random generated data */
 	unsigned int nbytes; /* random data length */
 	unsigned int type;

@@ -369,7 +369,10 @@ static void nvhost_scale_emc_debug_init(struct devfreq *df)
 	podgov->debugdir = debugfs_create_dir(dirname, NULL);
 	if (!podgov->debugdir) {
 		pr_err("podgov: can\'t create debugfs directory\n");
-		dump_stack();
+		f = debugfs_lookup(dirname, NULL);
+		if (f)
+			pr_err("%s debugfs already created\n", dirname);
+		panic("nvhost_scale_emc_debug_init");
 		return;
 	}
 

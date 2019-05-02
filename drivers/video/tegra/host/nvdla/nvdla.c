@@ -1,7 +1,7 @@
 /*
  * NVDLA driver for T194
  *
- * Copyright (c) 2016-2018, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2016-2019, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -41,7 +41,7 @@
 
 #include "nvdla/nvdla.h"
 #include "nvdla/nvdla_debug.h"
-#include <linux/nvhost_nvdla_ioctl.h>
+#include <uapi/linux/nvhost_nvdla_ioctl.h>
 #include "dla_fw_version.h"
 #include "dla_os_interface.h"
 

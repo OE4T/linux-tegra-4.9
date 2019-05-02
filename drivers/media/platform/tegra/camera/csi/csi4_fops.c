@@ -18,7 +18,7 @@
 #include <media/tegra_camera_core.h>
 #include <media/mc_common.h>
 
-#include "linux/nvhost_ioctl.h"
+#include <uapi/linux/nvhost_ioctl.h>
 #include "mipical/mipi_cal.h"
 #include "nvcsi/nvcsi.h"
 #include "nvhost_acm.h"

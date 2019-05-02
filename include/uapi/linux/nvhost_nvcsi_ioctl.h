@@ -3,7 +3,7 @@
  *
  * Tegra NVCSI Driver
  *
- * Copyright (c) 2015-2018, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2019, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -19,11 +19,11 @@
  * 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#ifndef __LINUX_NVHOST_NVCSI_IOCTL_H
-#define __LINUX_NVHOST_NVCSI_IOCTL_H
+#ifndef __UAPI_LINUX_NVHOST_NVCSI_IOCTL_H
+#define __UAPI_LINUX_NVHOST_NVCSI_IOCTL_H
 
 #include <linux/ioctl.h>
-#include <linux/types.h>
+#include <uapi/linux/types.h>
 
 #if !defined(__KERNEL__)
 #define __user

@@ -36,7 +36,7 @@
 #include <asm/barrier.h>
 
 #include "soc/tegra/camrtc-capture.h"
-#include "linux/nvhost_nvcsi_ioctl.h"
+#include <uapi/linux/nvhost_nvcsi_ioctl.h>
 #include "nvcsi/nvcsi.h"
 #include "nvcsi/deskew.h"
 

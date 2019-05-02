@@ -3,7 +3,7 @@
  *
  * Tegra graphics host driver
  *
- * Copyright (c) 2009-2018, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2009-2019, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,11 +20,11 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-#ifndef __LINUX_NVHOST_IOCTL_H
-#define __LINUX_NVHOST_IOCTL_H
+#ifndef __UAPI_LINUX_NVHOST_IOCTL_H
+#define __UAPI_LINUX_NVHOST_IOCTL_H
 
 #include <linux/ioctl.h>
-#include <linux/types.h>
+#include <uapi/linux/types.h>
 
 #if !defined(__KERNEL__)
 #define __user

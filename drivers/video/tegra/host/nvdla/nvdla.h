@@ -24,7 +24,7 @@
 #include <linux/completion.h>
 #include <linux/mutex.h>
 #include <uapi/linux/nvdev_fence.h>
-#include <linux/nvhost_nvdla_ioctl.h>
+#include <uapi/linux/nvhost_nvdla_ioctl.h>
 #include "nvhost_buffer.h"
 
 #include "dla_os_interface.h"

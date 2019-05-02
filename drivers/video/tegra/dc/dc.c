@@ -64,7 +64,7 @@ EXPORT_TRACEPOINT_SYMBOL(display_writel);
 EXPORT_TRACEPOINT_SYMBOL(display_readl);
 
 #include <linux/nvhost.h>
-#include <linux/nvhost_ioctl.h>
+#include <uapi/linux/nvhost_ioctl.h>
 
 #include <linux/platform/tegra/latency_allowance.h>
 #include <linux/platform/tegra/mc.h>

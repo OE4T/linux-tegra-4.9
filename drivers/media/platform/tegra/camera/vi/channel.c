@@ -44,7 +44,7 @@
 
 #include "mipical/mipi_cal.h"
 
-#include "linux/nvhost_nvcsi_ioctl.h"
+#include <uapi/linux/nvhost_nvcsi_ioctl.h>
 #include "nvcsi/nvcsi.h"
 #include "nvcsi/deskew.h"
 

@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host VI
  *
- * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2019, NVIDIA CORPORATION.  All rights reserved.
  *
  * Author: David Wang <davidw@nvidia.com>
  *
@@ -17,6 +17,7 @@
 #include <linux/of_platform.h>
 #include <linux/printk.h>
 #include <linux/slab.h>
+#include <linux/nospec.h>
 #include <linux/tegra-capture-ivc.h>
 #include <asm/arch_timer.h>
 #include <media/capture.h>
@@ -437,6 +438,7 @@ int vi_capture_setup(struct tegra_vi_channel *chan,
 		dev_dbg(chan->dev, "gos[%d] = 0x%08llx\n",
 			i, (u64)capture->gos_tables[i]);
 	}
+	speculation_barrier(); /* break_spec_#5_1 */
 	config->num_vi_gos_tables = capture->num_gos_tables;
 #endif
 

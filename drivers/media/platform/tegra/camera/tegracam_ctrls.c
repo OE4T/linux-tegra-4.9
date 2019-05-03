@@ -15,6 +15,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+#include <linux/nospec.h>
 #include <linux/types.h>
 #include <media/tegra-v4l2-camera.h>
 #include <media/camera_common.h>
@@ -215,6 +216,7 @@ static int tegracam_setup_string_ctrls(struct tegracam_device *tc_dev,
 				return err;
 		}
 	}
+	speculation_barrier(); /* break_spec_#5_1 */
 
 	return 0;
 }
@@ -515,6 +517,7 @@ int tegracam_init_ctrl_ranges_by_mode(
 			return err;
 		}
 	}
+	speculation_barrier(); /* break spec_p#5_1 */
 
 	return 0;
 }
@@ -550,6 +553,7 @@ int tegracam_init_ctrl_ranges(struct tegracam_ctrl_handler *handler)
 			return err;
 		}
 	}
+	speculation_barrier();
 
 	/* Use mode 0 control ranges as default */
 	if (s_data->sensor_props.num_modes > 0)	{
@@ -614,6 +618,7 @@ int tegracam_ctrl_handler_init(struct tegracam_ctrl_handler *handler)
 		}
 		handler->ctrls[i] = ctrl;
 	};
+	speculation_barrier(); /* break_spec_p#5_1 */
 
 	handler->numctrls = numctrls;
 	err = v4l2_ctrl_handler_setup(&handler->ctrl_handler);

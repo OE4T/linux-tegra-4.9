@@ -23,6 +23,7 @@
 #include <linux/sched.h>
 #include <linux/slab.h>
 #include <linux/semaphore.h>
+#include <linux/nospec.h>
 
 #include <media/v4l2-ctrls.h>
 #include <media/v4l2-event.h>
@@ -1432,6 +1433,8 @@ static int tegra_channel_sensorprops_setup(struct tegra_channel *chan)
 		ptr = ctrl_dvtimings->p_new.p + (i * size);
 		memcpy(ptr, &modes[i].dv_timings, size);
 	}
+	speculation_barrier();
+
 	/* Do not copy memory into p_cur block, reuse p_new */
 	ctrl_signalprops->p_cur.p = ctrl_signalprops->p_new.p;
 	ctrl_imageprops->p_cur.p = ctrl_imageprops->p_new.p;

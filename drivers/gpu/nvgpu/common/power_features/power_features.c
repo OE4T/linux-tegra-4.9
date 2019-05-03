@@ -31,6 +31,8 @@ int nvgpu_cg_pg_disable(struct gk20a *g)
 
 	nvgpu_log_fn(g, " ");
 
+	gk20a_gr_wait_initialized(g);
+
 	/* disable elpg before clock gating */
 	err = nvgpu_pg_elpg_disable(g);
 	if (err != 0) {
@@ -50,6 +52,8 @@ int nvgpu_cg_pg_enable(struct gk20a *g)
 	int err = 0;
 
 	nvgpu_log_fn(g, " ");
+
+	gk20a_gr_wait_initialized(g);
 
 	nvgpu_cg_elcg_enable(g);
 

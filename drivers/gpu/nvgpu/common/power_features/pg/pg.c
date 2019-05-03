@@ -46,6 +46,8 @@ int nvgpu_pg_elpg_enable(struct gk20a *g)
 		return 0;
 	}
 
+	gk20a_gr_wait_initialized(g);
+
 	nvgpu_mutex_acquire(&g->cg_pg_lock);
 	if (g->elpg_enabled) {
 		err = nvgpu_pmu_pg_global_enable(g, true);
@@ -63,6 +65,8 @@ int nvgpu_pg_elpg_disable(struct gk20a *g)
 	if (!g->can_elpg) {
 		return 0;
 	}
+
+	gk20a_gr_wait_initialized(g);
 
 	nvgpu_mutex_acquire(&g->cg_pg_lock);
 	if (g->elpg_enabled) {
@@ -82,6 +86,8 @@ int nvgpu_pg_elpg_set_elpg_enabled(struct gk20a *g, bool enable)
 	if (!g->can_elpg) {
 		return 0;
 	}
+
+	gk20a_gr_wait_initialized(g);
 
 	nvgpu_mutex_acquire(&g->cg_pg_lock);
 	if (enable) {

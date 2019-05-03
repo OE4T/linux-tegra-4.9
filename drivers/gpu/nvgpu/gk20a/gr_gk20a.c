@@ -4679,7 +4679,7 @@ static int gk20a_init_gr_prepare(struct gk20a *g)
 	nvgpu_cg_init_gr_load_gating_prod(g);
 
 	/* Disable elcg until it gets enabled later in the init*/
-	nvgpu_cg_elcg_disable(g);
+	nvgpu_cg_elcg_disable_no_wait(g);
 
 	/* enable fifo access */
 	gk20a_writel(g, gr_gpfifo_ctl_r(),
@@ -4963,6 +4963,8 @@ int gk20a_init_gr_support(struct gk20a *g)
 
 	nvgpu_log_fn(g, " ");
 
+	g->gr.initialized = false;
+
 	/* this is required before gr_gk20a_init_ctx_state */
 	err = nvgpu_mutex_init(&g->gr.fecs_mutex);
 	if (err != 0) {
@@ -4999,7 +5001,7 @@ int gk20a_init_gr_support(struct gk20a *g)
 		}
 	}
 
-	nvgpu_cg_elcg_enable(g);
+	nvgpu_cg_elcg_enable_no_wait(g);
 	/* GR is inialized, signal possible waiters */
 	g->gr.initialized = true;
 	nvgpu_cond_signal(&g->gr.init_wq);
@@ -5091,6 +5093,8 @@ int gk20a_gr_reset(struct gk20a *g)
 	int err;
 	u32 size;
 
+	g->gr.initialized = false;
+
 	nvgpu_mutex_acquire(&g->gr.fecs_mutex);
 
 	err = gk20a_enable_gr_hw(g);
@@ -5143,7 +5147,11 @@ int gk20a_gr_reset(struct gk20a *g)
 	}
 
 	nvgpu_cg_init_gr_load_gating_prod(g);
-	nvgpu_cg_elcg_enable(g);
+	nvgpu_cg_elcg_enable_no_wait(g);
+
+	/* GR is inialized, signal possible waiters */
+	g->gr.initialized = true;
+	nvgpu_cond_signal(&g->gr.init_wq);
 
 	return err;
 }

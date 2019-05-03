@@ -54,6 +54,36 @@ static void nvgpu_cg_set_mode(struct gk20a *g, int cgmode, int mode_config)
 	}
 }
 
+void nvgpu_cg_elcg_enable_no_wait(struct gk20a *g)
+{
+	nvgpu_log_fn(g, " ");
+
+	if (!nvgpu_is_enabled(g, NVGPU_GPU_CAN_ELCG)) {
+		return;
+	}
+
+	nvgpu_mutex_acquire(&g->cg_pg_lock);
+	if (g->elcg_enabled) {
+		nvgpu_cg_set_mode(g, ELCG_MODE, ELCG_AUTO);
+	}
+	nvgpu_mutex_release(&g->cg_pg_lock);
+}
+
+void nvgpu_cg_elcg_disable_no_wait(struct gk20a *g)
+{
+	nvgpu_log_fn(g, " ");
+
+	if (!nvgpu_is_enabled(g, NVGPU_GPU_CAN_ELCG)) {
+		return;
+	}
+
+	nvgpu_mutex_acquire(&g->cg_pg_lock);
+	if (g->elcg_enabled) {
+		nvgpu_cg_set_mode(g, ELCG_MODE, ELCG_RUN);
+	}
+	nvgpu_mutex_release(&g->cg_pg_lock);
+}
+
 void nvgpu_cg_elcg_enable(struct gk20a *g)
 {
 	nvgpu_log_fn(g, " ");
@@ -61,6 +91,8 @@ void nvgpu_cg_elcg_enable(struct gk20a *g)
 	if (!nvgpu_is_enabled(g, NVGPU_GPU_CAN_ELCG)) {
 		return;
 	}
+
+	gk20a_gr_wait_initialized(g);
 
 	nvgpu_mutex_acquire(&g->cg_pg_lock);
 	if (g->elcg_enabled) {
@@ -76,6 +108,8 @@ void nvgpu_cg_elcg_disable(struct gk20a *g)
 	if (!nvgpu_is_enabled(g, NVGPU_GPU_CAN_ELCG)) {
 		return;
 	}
+
+	gk20a_gr_wait_initialized(g);
 
 	nvgpu_mutex_acquire(&g->cg_pg_lock);
 	if (g->elcg_enabled) {
@@ -93,6 +127,8 @@ void nvgpu_cg_blcg_mode_enable(struct gk20a *g)
 		return;
 	}
 
+	gk20a_gr_wait_initialized(g);
+
 	nvgpu_mutex_acquire(&g->cg_pg_lock);
 	if (g->blcg_enabled) {
 		nvgpu_cg_set_mode(g, BLCG_MODE, BLCG_AUTO);
@@ -108,6 +144,8 @@ void nvgpu_cg_blcg_mode_disable(struct gk20a *g)
 	if (!nvgpu_is_enabled(g, NVGPU_GPU_CAN_BLCG)) {
 		return;
 	}
+
+	gk20a_gr_wait_initialized(g);
 
 	nvgpu_mutex_acquire(&g->cg_pg_lock);
 	if (g->blcg_enabled) {
@@ -257,6 +295,9 @@ void nvgpu_cg_slcg_gr_perf_ltc_load_enable(struct gk20a *g)
 	if (!nvgpu_is_enabled(g, NVGPU_GPU_CAN_SLCG)) {
 		return;
 	}
+
+	gk20a_gr_wait_initialized(g);
+
 	nvgpu_mutex_acquire(&g->cg_pg_lock);
 	if (!g->slcg_enabled) {
 		goto done;
@@ -281,6 +322,9 @@ void nvgpu_cg_slcg_gr_perf_ltc_load_disable(struct gk20a *g)
 	if (!nvgpu_is_enabled(g, NVGPU_GPU_CAN_SLCG)) {
 		return;
 	}
+
+	gk20a_gr_wait_initialized(g);
+
 	nvgpu_mutex_acquire(&g->cg_pg_lock);
 	if (!g->slcg_enabled) {
 		goto done;
@@ -421,6 +465,8 @@ void nvgpu_cg_elcg_set_elcg_enabled(struct gk20a *g, bool enable)
 		return;
 	}
 
+	gk20a_gr_wait_initialized(g);
+
 	nvgpu_mutex_release(&g->cg_pg_lock);
 	if (enable) {
 		if (!g->elcg_enabled) {
@@ -445,6 +491,8 @@ void nvgpu_cg_blcg_set_blcg_enabled(struct gk20a *g, bool enable)
 	if (!nvgpu_is_enabled(g, NVGPU_GPU_CAN_BLCG)) {
 		return;
 	}
+
+	gk20a_gr_wait_initialized(g);
 
 	nvgpu_mutex_acquire(&g->cg_pg_lock);
 	if (enable) {
@@ -504,6 +552,8 @@ void nvgpu_cg_slcg_set_slcg_enabled(struct gk20a *g, bool enable)
 	if (!nvgpu_is_enabled(g, NVGPU_GPU_CAN_SLCG)) {
 		return;
 	}
+
+	gk20a_gr_wait_initialized(g);
 
 	nvgpu_mutex_acquire(&g->cg_pg_lock);
 	if (enable) {

@@ -15,7 +15,7 @@
 / {
 	plugin-manager {
 		fragement@0 {
-			ids = ">=3448-0000-100";
+			ids = ">=3448-0000-100", ">=3448-0002-100";
 			override@0 {
 				target = <&ina3221x>;
 				_overlay_ {
@@ -31,7 +31,7 @@
 		};
 
 		fragment@1 {
-			ids = ">=3448-0000-101";
+			ids = ">=3448-0000-101", ">=3448-0002-101";
 			override@0 {
 				target = <&max77620_sd0>;
 				_overlay_ {
@@ -41,7 +41,7 @@
 		};
 
 		fragment@2 {
-			ids = "<3448-0000-200";
+			ids = "<3448-0000-200", "<3448-0002-200";
 			override@0 {
 				target = <&tegra_i2s1>;
 				_overlay_ {
@@ -171,7 +171,7 @@
                 };
 
 		fragement@9 {
-			ids = "<3448-0000-300";
+			ids = "<3448-0000-300", "<3448-0002-300";
 			override@0 {
 				target = <&max77620_ldo6>;
 				_overlay_ {
@@ -189,7 +189,7 @@
 		};
 
 		fragement@10 {
-			ids = ">=3448-0000-300";
+			ids = ">=3448-0000-300", ">=3448-0002-300";
 			override@0 {
 				target = <&{/pcie@1003000/pci@2,0}>;
 				_overlay_ {

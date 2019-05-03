@@ -180,7 +180,7 @@ static int tegra186_m3420_hw_params(struct snd_pcm_substream *substream,
 	}
 
 	return snd_soc_dai_set_sysclk(rtd->codec_dai, 0,
-				      machine->audio_clock.clk_out_rate,
+				      machine->audio_clock.set_clk_out_rate,
 				      SND_SOC_CLOCK_IN);
 }
 

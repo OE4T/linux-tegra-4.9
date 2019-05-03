@@ -523,10 +523,11 @@ static int tegra_machine_dai_init(struct snd_soc_pcm_runtime *runtime,
 	}
 
 	if (machine->soc_data->is_clk_rate_via_dt)
-		clk_out_rate = machine->audio_clock.clk_out_rate;
+		clk_out_rate = machine->audio_clock.set_clk_out_rate;
 
 	pr_debug("pll_a_out0 = %d Hz, aud_mclk = %d Hz, codec rate = %d Hz\n",
-		machine->audio_clock.set_mclk, clk_out_rate, clk_rate);
+		machine->audio_clock.set_mclk,
+		machine->audio_clock.set_clk_out_rate, clk_rate);
 
 	/* TODO: should we pass here clk_rate ? */
 	err = tegra_machine_set_params(card, machine, rate, channels, formats);
@@ -1064,6 +1065,16 @@ static int tegra_machine_driver_probe(struct platform_device *pdev)
 				"nvidia,audio-routing");
 	if (ret)
 		goto err;
+
+	if (of_property_read_u32(np, "nvidia,mclk-rate",
+				&machine->audio_clock.mclk_rate) < 0)
+		dev_dbg(&pdev->dev, "Missing property nvidia,mclk-rate\n");
+
+	if (of_property_read_u32(np, "mclk-fs",
+			&machine->audio_clock.mclk_scale) < 0) {
+		machine->audio_clock.mclk_scale = 256;
+		dev_dbg(&pdev->dev, "Missing property mclk-fs\n");
+	}
 
 	if (machine->soc_data->is_clk_rate_via_dt) {
 		if (of_property_read_u32(np, "nvidia,num-clk",

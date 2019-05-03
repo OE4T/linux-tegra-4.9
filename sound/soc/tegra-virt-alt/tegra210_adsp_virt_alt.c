@@ -189,8 +189,6 @@ struct tegra210_adsp {
 	uint32_t adma_ch_start;
 	uint32_t adma_ch_cnt;
 	struct tegra210_adsp_path {
-		uint32_t fe_reg;
-		uint32_t be_reg;
 		uint32_t channels;
 		uint32_t format;
 		uint32_t rate;
@@ -1045,13 +1043,9 @@ static void tegra210_adsp_manage_plugin(struct tegra210_adsp *adsp,
 					fe_reg, be_reg);
 				tegra210_adsp_send_remove_msg(fe_apm,
 						TEGRA210_ADSP_MSG_FLAG_SEND);
-				adsp->pcm_path[fe_reg][SNDRV_PCM_STREAM_PLAYBACK].fe_reg = 0;
-				adsp->pcm_path[fe_reg][SNDRV_PCM_STREAM_PLAYBACK].be_reg = 0;
 			} else {
 				dev_vdbg(adsp->dev, "Found playback FE %d -- BE %d pair",
 					fe_reg, be_reg);
-				adsp->pcm_path[fe_reg][SNDRV_PCM_STREAM_PLAYBACK].fe_reg = fe_reg;
-				adsp->pcm_path[fe_reg][SNDRV_PCM_STREAM_PLAYBACK].be_reg = be_reg;
 			}
 		}
 	} else if (IS_ADSP_ADMAIF(end_reg)) {
@@ -1070,13 +1064,9 @@ static void tegra210_adsp_manage_plugin(struct tegra210_adsp *adsp,
 					fe_reg, be_reg);
 				tegra210_adsp_send_remove_msg(fe_apm,
 						TEGRA210_ADSP_MSG_FLAG_SEND);
-				adsp->pcm_path[fe_reg][SNDRV_PCM_STREAM_CAPTURE].fe_reg = 0;
-				adsp->pcm_path[fe_reg][SNDRV_PCM_STREAM_CAPTURE].be_reg = 0;
 			} else {
 				dev_vdbg(adsp->dev, "Found playback FE %d -- BE %d pair",
 					fe_reg, be_reg);
-				adsp->pcm_path[fe_reg][SNDRV_PCM_STREAM_CAPTURE].fe_reg = fe_reg;
-				adsp->pcm_path[fe_reg][SNDRV_PCM_STREAM_CAPTURE].be_reg = be_reg;
 			}
 		}
 	}
@@ -1360,6 +1350,66 @@ static int tegra210_adsp_compr_msg_handler(struct tegra210_adsp_app *app,
 	return 0;
 }
 
+static int tegra_adsp_get_connected_be(struct tegra210_adsp *adsp,
+				uint32_t fe_reg,
+				int stream)
+{
+	int sink = fe_reg;
+	int i;
+
+	if (stream == SNDRV_PCM_STREAM_CAPTURE)
+		while ((sink = tegra210_adsp_get_source(adsp, sink)) != 0 &&
+				!(IS_ADSP_ADMAIF(sink) || IS_NULL_SINK(sink)))
+			continue;
+	else {
+		for (i = ADSP_ADMAIF_START; i <= ADSP_ADMAIF_END; i++) {
+			sink = i;
+			while ((sink = tegra210_adsp_get_source(adsp, sink))
+					!= 0 && sink != fe_reg)
+				continue;
+			if (sink == fe_reg)
+				break;
+		}
+		if (i > ADSP_ADMAIF_END)
+			return 0;
+		sink = i;
+	}
+
+	if (IS_ADSP_ADMAIF(sink) || IS_NULL_SINK(sink))
+		return sink;
+	return 0;
+}
+
+static int tegra_adsp_get_connected_fe(struct tegra210_adsp *adsp,
+				uint32_t be_reg,
+				int stream)
+{
+	int src = be_reg;
+	int i;
+
+	if (stream == SNDRV_PCM_STREAM_PLAYBACK)
+		while ((src = tegra210_adsp_get_source(adsp, src)) != 0 &&
+				!(IS_ADSP_FE(src) || IS_ADSP_ADMAIF(src)))
+			continue;
+	else {
+		for (i = ADSP_FE_START; i <= ADSP_FE_END; i++) {
+			src = i;
+			while ((src = tegra210_adsp_get_source(adsp, src)) != 0
+							&& src != be_reg)
+				continue;
+			if (src == be_reg)
+				break;
+		}
+		if (i > ADSP_FE_END)
+			return 0;
+		src = i;
+	}
+
+	if (IS_ADSP_FE(src))
+		return src;
+	return 0;
+}
+
 /* Compress call-back APIs */
 static int tegra210_adsp_compr_open(struct snd_compr_stream *cstream)
 {
@@ -1376,8 +1426,7 @@ static int tegra210_adsp_compr_open(struct snd_compr_stream *cstream)
 	if (!adsp->init_done || adsp->is_shutdown)
 		return -ENODEV;
 
-	if (!adsp->pcm_path[fe_reg][cstream->direction].fe_reg ||
-		!adsp->pcm_path[fe_reg][cstream->direction].be_reg) {
+	if (!tegra_adsp_get_connected_be(adsp, fe_reg, cstream->direction)) {
 		dev_err(adsp->dev, "Broken Path%d - FE not linked to BE", fe_reg);
 		return -EPIPE;
 	}
@@ -1682,19 +1731,6 @@ static struct snd_compr_ops tegra210_adsp_compr_ops = {
 };
 
 /* PCM APIs */
-static int tegra210_get_connected_be(struct tegra210_adsp *adsp, struct tegra210_adsp_app *app)
-{
-
-	uint32_t apm_out =  TEGRA210_ADSP_APM_OUT1 +  (app->reg -TEGRA210_ADSP_APM_IN1), i;
-
-	for (i = TEGRA210_ADSP_ADMAIF1; i < ADSP_NULL_SINK_START; i++)
-		if (tegra210_adsp_get_source(adsp, i) == apm_out)
-			return i;
-	return 0;
-
-
-}
-
 static int tegra210_adsp_pcm_open(struct snd_pcm_substream *substream)
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
@@ -1710,8 +1746,7 @@ static int tegra210_adsp_pcm_open(struct snd_pcm_substream *substream)
 	if (adsp->is_shutdown)
 		return -ENODEV;
 
-	if (!adsp->pcm_path[fe_reg][substream->stream].fe_reg ||
-		!adsp->pcm_path[fe_reg][substream->stream].be_reg) {
+	if (!tegra_adsp_get_connected_be(adsp, fe_reg, substream->stream)) {
 		dev_err(adsp->dev, "Broken Path%d - FE not linked to BE", fe_reg);
 		return -EPIPE;
 	}
@@ -1753,7 +1788,8 @@ static int tegra210_adsp_pcm_open(struct snd_pcm_substream *substream)
 	}
 
 	if ((substream->stream == SNDRV_PCM_STREAM_PLAYBACK) &&
-		tegra210_get_connected_be(adsp, prtd->fe_apm) == 0) {
+		tegra_adsp_get_connected_be(adsp, fe_reg,
+					substream->stream) == 0) {
 		devm_kfree(adsp->dev, prtd);
 		return -ENODEV;
 	}
@@ -1860,45 +1896,6 @@ static int tegra210_adsp_pcm_hw_free(struct snd_pcm_substream *substream)
 {
 	snd_pcm_set_runtime_buffer(substream, NULL);
 	return 0;
-}
-
-static int32_t tegra_adsp_get_admaif_id(
-					struct tegra210_adsp *adsp,
-					uint32_t apm_out_in,
-					int stream)
-{
-	int i;
-	uint32_t src;
-	struct tegra210_adsp_app *app = NULL;
-	int32_t ivc_msg_admaif_id = 0;
-
-	if (stream == SNDRV_PCM_STREAM_PLAYBACK) {
-		src = apm_out_in;
-		src = tegra210_adsp_get_source(adsp, src);
-		i = adsp->apps[src].reg;
-		ivc_msg_admaif_id =
-		adsp->fe_to_admaif_map[i-1][stream] - 1;
-		dev_vdbg(adsp->dev, "%s : playback fe %d admaif %d\n",
-				__func__, i, (ivc_msg_admaif_id + 1));
-	} else {
-		for (i = ADSP_FE_START; i <= ADSP_FE_END; i++) {
-			app = &adsp->apps[i];
-			src = app->reg;
-			while (!IS_APM_OUT(src) && src != 0) {
-				src = tegra210_adsp_get_source(
-							adsp, src);
-			}
-
-			if (src != apm_out_in)
-				continue;
-			ivc_msg_admaif_id =
-			adsp->fe_to_admaif_map[i-1][stream] - 1;
-			dev_vdbg(adsp->dev, "%s : capture fe %d admaif %d\n",
-					__func__, i, (ivc_msg_admaif_id + 1));
-			break;
-		}
-	}
-	return ivc_msg_admaif_id;
 }
 
 static int tegra_ivc_start_playback(
@@ -2123,14 +2120,12 @@ static uint32_t tegra210_adsp_hv_pcm_trigger(
 
 	source = tegra210_adsp_get_source(adsp, apm_out_in);
 	/* return if this is playback request on NULL-SINK */
-	if (IS_NULL_SINK(adsp->pcm_path[source][SNDRV_PCM_STREAM_PLAYBACK]
-			.be_reg))
+	if (IS_NULL_SINK(tegra_adsp_get_connected_be(adsp, source,
+				SNDRV_PCM_STREAM_PLAYBACK)))
 		return 0;
 
-	ivc_msg_admaif_id =
-	tegra_adsp_get_admaif_id(adsp,
-				apm_out_in,
-				stream);
+	ivc_msg_admaif_id = ADSP_BACKEND_TO_ADMAIF(
+		tegra_adsp_get_connected_be(adsp, source, stream));
 
 	switch (cmd) {
 	case SNDRV_PCM_TRIGGER_START:
@@ -2175,10 +2170,10 @@ static uint32_t tegra210_adsp_hv_pcm_trigger(
 	return ret;
 }
 
-
 static int tegra210_adsp_pcm_trigger(struct snd_pcm_substream *substream,
 				     int cmd)
 {
+	struct snd_soc_pcm_runtime *soc_runtime = substream->private_data;
 	struct snd_pcm_runtime *runtime = substream->runtime;
 	struct tegra210_adsp_pcm_rtd *prtd = substream->runtime->private_data;
 	struct tegra210_adsp *adsp = prtd->fe_apm->adsp;
@@ -2191,7 +2186,8 @@ static int tegra210_adsp_pcm_trigger(struct snd_pcm_substream *substream,
 	dev_vdbg(prtd->dev, "%s : state %d", __func__, cmd);
 
 	if ((substream->stream == SNDRV_PCM_STREAM_PLAYBACK) &&
-				tegra210_get_connected_be(adsp, apm) == 0) {
+			tegra_adsp_get_connected_be(adsp,
+			soc_runtime->codec_dai->id, substream->stream) == 0) {
 		runtime->status->state = SNDRV_PCM_STATE_DISCONNECTED;
 		return -EBADF;
 	}
@@ -2386,19 +2382,6 @@ static void tegra210_adsp_pcm_free(struct snd_pcm *pcm)
 	}
 }
 
-static int tegra_adsp_get_connected_fe(struct tegra210_adsp *adsp,
-				uint32_t be_reg,
-				int stream)
-{
-	int val;
-
-	for (val = 1; val < (ADSP_FE_COUNT); val++) {
-		if (adsp->pcm_path[val][stream].be_reg == be_reg)
-			break;
-	}
-	return val;
-}
-
 static void tegra_adsp_set_admaif_id(
 				struct tegra210_adsp *adsp,
 				uint32_t admaif_id,
@@ -2538,7 +2521,7 @@ static int tegra_adsp_admaif_ivc_set_cif(struct tegra210_adsp *adsp,
 	if (stream == SNDRV_PCM_STREAM_CAPTURE) {
 		ret = tegra_adsp_get_connected_fe(adsp, be_reg,
 					SNDRV_PCM_STREAM_PLAYBACK);
-		if (ret != ADSP_FE_COUNT) {
+		if (ret != TEGRA210_ADSP_NONE) {
 			format = adsp->pcm_path
 				[ret][SNDRV_PCM_STREAM_PLAYBACK].format;
 			channels = adsp->pcm_path
@@ -2564,7 +2547,7 @@ static int tegra_adsp_admaif_ivc_set_cif(struct tegra210_adsp *adsp,
 	} else {
 		ret = tegra_adsp_get_connected_fe(adsp, be_reg,
 					SNDRV_PCM_STREAM_CAPTURE);
-		if (ret != ADSP_FE_COUNT) {
+		if (ret != TEGRA210_ADSP_NONE) {
 			format = adsp->pcm_path
 				[ret][SNDRV_PCM_STREAM_CAPTURE].format;
 			channels = adsp->pcm_path
@@ -2725,7 +2708,7 @@ static int tegra210_adsp_switch_active_fe(struct tegra210_adsp *adsp,
 
 	ret = tegra_adsp_get_connected_fe(adsp, be_reg,
 				SNDRV_PCM_STREAM_PLAYBACK);
-	if (ret != ADSP_FE_COUNT) {
+	if (ret != TEGRA210_ADSP_NONE) {
 		for (i = 0; i < MAX_ADSP_SWITCHES; i++) {
 			if (sch->active_fe == ret)
 				return sch->admaif_id;
@@ -2782,7 +2765,7 @@ static int tegra210_adsp_null_sink_hw_params(struct snd_soc_dapm_widget *w,
 
 	ret = tegra_adsp_get_connected_fe(adsp, be_reg,
 				SNDRV_PCM_STREAM_PLAYBACK);
-	if (ret != ADSP_FE_COUNT) {
+	if (ret != TEGRA210_ADSP_NONE) {
 		format = adsp->pcm_path
 			[ret][SNDRV_PCM_STREAM_PLAYBACK].format;
 		channels = adsp->pcm_path
@@ -4693,8 +4676,8 @@ static int tegra210_adsp_set_switch(struct snd_kcontrol *kcontrol,
 	}
 
 	admaif_id = sch->admaif_id;
-	be_reg = adsp->pcm_path[fe_reg]
-			[SNDRV_PCM_STREAM_PLAYBACK].be_reg;
+	be_reg = tegra_adsp_get_connected_be(adsp, fe_reg,
+					SNDRV_PCM_STREAM_PLAYBACK);
 
 	/* request to move all switch input to drain mode */
 	if (fe_reg == 0)
@@ -4768,8 +4751,8 @@ static int tegra210_adsp_set_switch(struct snd_kcontrol *kcontrol,
 
 stop_playback:
 	if (sch->active_fe && (sch->active_fe != fe_reg)) {
-		active_be_reg = adsp->pcm_path[sch->active_fe]
-			[SNDRV_PCM_STREAM_PLAYBACK].be_reg;
+		active_be_reg = tegra_adsp_get_connected_be(adsp,
+			sch->active_fe, SNDRV_PCM_STREAM_PLAYBACK);
 		if (!IS_NULL_SINK(active_be_reg))
 			dev_err(adsp->dev, "%s : fe ---> be path incomplete",
 					__func__);
@@ -5242,14 +5225,12 @@ static int fe_get_status(struct snd_kcontrol *kcontrol,
 	if (!apm_in_reg || !apm_out_reg)
 		goto end;
 
-	if (stream == SNDRV_PCM_STREAM_PLAYBACK) {
-		admaif_id = tegra210_get_connected_be(adsp,
-						&adsp->apps[apm_in_reg]);
+	if (stream == SNDRV_PCM_STREAM_PLAYBACK)
 		fe_apm = &adsp->apps[apm_in_reg];
-	} else {
-		admaif_id = tegra210_adsp_get_source(adsp, apm_in_reg);
+	else
 		fe_apm = &adsp->apps[apm_out_reg];
-	}
+
+	admaif_id = tegra_adsp_get_connected_be(adsp, fe_reg, stream);
 
 	if (admaif_id != 0)
 		status = fe_status_connected_not_running;

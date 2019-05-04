@@ -1254,6 +1254,7 @@ int extcon_dev_register(struct extcon_dev *edev)
 		char buf[10];
 		char *str;
 		struct extcon_cable *cable;
+		int namelen;
 
 		edev->cables = kzalloc(sizeof(struct extcon_cable) *
 				       edev->max_supported, GFP_KERNEL);
@@ -1264,8 +1265,8 @@ int extcon_dev_register(struct extcon_dev *edev)
 		for (index = 0; index < edev->max_supported; index++) {
 			cable = &edev->cables[index];
 
-			snprintf(buf, 10, "cable.%d", index);
-			str = kzalloc(sizeof(char) * (strlen(buf) + 1),
+			namelen = scnprintf(buf, 10, "cable.%d", index);
+			str = kzalloc(sizeof(char) * (namelen + 1),
 				      GFP_KERNEL);
 			if (!str) {
 				for (index--; index >= 0; index--) {
@@ -1276,7 +1277,7 @@ int extcon_dev_register(struct extcon_dev *edev)
 
 				goto err_alloc_cables;
 			}
-			strncpy(str, buf, strlen(buf));
+			memcpy(str, buf, namelen);
 
 			cable->edev = edev;
 			cable->cable_index = index;
@@ -1301,6 +1302,7 @@ int extcon_dev_register(struct extcon_dev *edev)
 	if (edev->max_supported && edev->mutually_exclusive) {
 		char buf[80];
 		char *name;
+		int namelen;
 
 		/* Count the size of mutually_exclusive array */
 		for (index = 0; edev->mutually_exclusive[index]; index++)
@@ -1322,8 +1324,9 @@ int extcon_dev_register(struct extcon_dev *edev)
 		}
 
 		for (index = 0; edev->mutually_exclusive[index]; index++) {
-			snprintf(buf, sizeof(buf), "0x%x", edev->mutually_exclusive[index]);
-			name = kzalloc(sizeof(char) * (strlen(buf) + 1),
+			namelen = scnprintf(buf, sizeof(buf), "0x%x",
+					    edev->mutually_exclusive[index]);
+			name = kzalloc(sizeof(char) * (namelen + 1),
 				       GFP_KERNEL);
 			if (!name) {
 				for (index--; index >= 0; index--) {
@@ -1335,7 +1338,7 @@ int extcon_dev_register(struct extcon_dev *edev)
 				ret = -ENOMEM;
 				goto err_muex;
 			}
-			strncpy(name, buf, strlen(buf));
+			memcpy(name, buf, namelen);
 			sysfs_attr_init(&edev->d_attrs_muex[index].attr);
 			edev->d_attrs_muex[index].attr.name = name;
 			edev->d_attrs_muex[index].attr.mode = 0000;

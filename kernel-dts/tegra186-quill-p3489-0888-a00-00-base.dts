@@ -422,6 +422,34 @@
 			ti,shunt-resistor-mohm = <10>;
 		 };
 	};
+
+	thermal-zones {
+		Tboard_tegra {
+			trips {
+				trip_critical {
+					temperature = <107000>;
+				};
+			};
+		};
+		Tdiode_tegra {
+			trips {
+				trip_critical {
+					temperature = <107000>;
+				};
+			};
+		};
+	};
+
+	i2c@c250000 {
+		temp-sensor@4c {
+			loc {
+				shutdown-limit = <107>;
+			};
+			ext {
+				shutdown-limit = <107>;
+			};
+		};
+	};
 };
 
 #ifdef KERNEL_VERSION_4_9

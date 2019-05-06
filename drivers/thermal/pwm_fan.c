@@ -1491,24 +1491,11 @@ static int pwm_fan_suspend(struct platform_device *pdev, pm_message_t state)
 
 static int pwm_fan_resume(struct platform_device *pdev)
 {
-	int err;
 	struct fan_dev_data *fan_data = platform_get_drvdata(pdev);
 
 	mutex_lock(&fan_data->fan_state_lock);
 
-	err = regulator_enable(fan_data->fan_reg);
-	if (err < 0) {
-		dev_err(fan_data->dev,
-				"failed to enable vdd-fan, control is off\n");
-		mutex_unlock(&fan_data->fan_state_lock);
-		return err;
-	}
-
-	dev_dbg(fan_data->dev, "Enabled vdd-fan\n");
-	fan_data->is_fan_reg_enabled = true;
-
 	gpio_free(fan_data->pwm_gpio);
-	pwm_enable(fan_data->pwm_dev);
 
 	queue_delayed_work(fan_data->workqueue,
 			&fan_data->fan_ramp_work,

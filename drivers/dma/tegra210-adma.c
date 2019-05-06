@@ -37,14 +37,6 @@
 
 #define ADMA_CH_INT_CLEAR					0x1c
 #define ADMA_CH_CTRL						0x24
-#define T210_ADMA_CH_CTRL_TX_REQ_SEL_SHIFT			28
-#define T210_ADMA_CH_CTRL_REQ_SEL_MASK				0x0f
-#define T210_ADMA_CH_CTRL_REQ_MAX				10
-#define T210_ADMA_CH_CTRL_RX_REQ_SEL_SHIFT			24
-#define T186_ADMA_CH_CTRL_TX_REQ_SEL_SHIFT			27
-#define T186_ADMA_CH_CTRL_REQ_SEL_MASK				0x1f
-#define T186_ADMA_CH_CTRL_REQ_MAX				20
-#define T186_ADMA_CH_CTRL_RX_REQ_SEL_SHIFT			22
 
 #define ADMA_CH_CTRL_DIR(val)				(((val) & 0xf) << 12)
 #define ADMA_CH_CTRL_DIR_AHUB2MEM				2
@@ -63,8 +55,6 @@
 
 #define ADMA_CH_FIFO_CTRL					0x2c
 #define ADMA_CH_FIFO_CTRL_TX_FIFO_SIZE_SHIFT			8
-#define T210_ADMA_CH_FIFO_CTRL_FIFO_SIZE_MASK			0x1f
-#define T186_ADMA_CH_FIFO_CTRL_FIFO_SIZE_MASK			0x3f
 #define ADMA_CH_FIFO_CTRL_RX_FIFO_SIZE_SHIFT			0
 
 #define ADMA_CH_CTRL_XFER_PAUSE_SHIFT				0
@@ -85,10 +75,6 @@
 #define ADMA_GLOBAL_CMD						0x00
 #define ADMA_GLOBAL_SOFT_RESET					0x04
 #define ADMA_GLOBAL_CG						0x08
-#define T210_ADMA_GLOBAL_INT_CLEAR				0x20
-#define T186_ADMA_GLOBAL_INT_CLEAR				0x402c
-#define T210_ADMA_GLOBAL_CTRL					0x24
-#define T186_ADMA_GLOBAL_CTRL					0x20
 
 #define ADMA_CH_REG_FIELD_VAL(val, mask, shift)	(((val) & mask) << shift)
 
@@ -992,16 +978,16 @@ static const struct tegra_adma_chip_data tegra210_chip_data = {
 	.ch_reg_size		= 0x80,
 	.ch_base_offset		= 0,
 	.ch_page_size		= 0xc00,
-	.global_int_clear	= T210_ADMA_GLOBAL_INT_CLEAR,
+	.global_int_clear	= 0x20,
 	.global_reg_offset	= 0xc00,
 	.slave_id		= 2,
 	.outstanding_request	= 0,
 	.adma_get_burst_config  = tegra210_adma_get_burst_config,
-	.ch_fifo_size_mask	= T210_ADMA_CH_FIFO_CTRL_FIFO_SIZE_MASK,
-	.ch_req_tx_shift	= T210_ADMA_CH_CTRL_TX_REQ_SEL_SHIFT,
-	.ch_req_rx_shift	= T210_ADMA_CH_CTRL_RX_REQ_SEL_SHIFT,
-	.ch_req_mask		= T210_ADMA_CH_CTRL_REQ_SEL_MASK,
-	.ch_req_max		= T210_ADMA_CH_CTRL_REQ_MAX,
+	.ch_fifo_size_mask	= 0x1f,
+	.ch_req_tx_shift	= 28,
+	.ch_req_rx_shift	= 24,
+	.ch_req_mask		= 0xf,
+	.ch_req_max		= 10,
 	.adma_war = {
 		.smp_sta_reg		= T210_SHRD_SMP_STA,
 		.smp_sta_set_reg	= T210_SHRD_SMP_STA_SET,
@@ -1015,16 +1001,16 @@ static const struct tegra_adma_chip_data tegra186_chip_data = {
 	.ch_reg_size		= 0x100,
 	.ch_base_offset		= 0x10000,
 	.ch_page_size		= 0x10000,
-	.global_int_clear	= T186_ADMA_GLOBAL_INT_CLEAR,
+	.global_int_clear	= 0x402c,
 	.global_reg_offset	= 0,
 	.slave_id		= 4,
 	.outstanding_request	= (0x8 << 4),
 	.adma_get_burst_config  = tegra186_adma_get_burst_config,
-	.ch_fifo_size_mask	= T186_ADMA_CH_FIFO_CTRL_FIFO_SIZE_MASK,
-	.ch_req_tx_shift	= T186_ADMA_CH_CTRL_TX_REQ_SEL_SHIFT,
-	.ch_req_rx_shift	= T186_ADMA_CH_CTRL_RX_REQ_SEL_SHIFT,
-	.ch_req_mask		= T186_ADMA_CH_CTRL_REQ_SEL_MASK,
-	.ch_req_max		= T186_ADMA_CH_CTRL_REQ_MAX,
+	.ch_fifo_size_mask	= 0x3f,
+	.ch_req_tx_shift	= 27,
+	.ch_req_rx_shift	= 22,
+	.ch_req_mask		= 0x1f,
+	.ch_req_max		= 20,
 	.adma_war = {
 		.smp_sta_reg		= T186_SHRD_SMP_STA,
 		.smp_sta_set_reg	= T186_SHRD_SMP_STA_SET,
@@ -1038,16 +1024,16 @@ static const struct tegra_adma_chip_data tegra194_chip_data = {
 	.ch_reg_size		= 0x100,
 	.ch_base_offset		= 0x10000,
 	.ch_page_size		= 0x10000,
-	.global_int_clear	= T186_ADMA_GLOBAL_INT_CLEAR,
+	.global_int_clear	= 0x402c,
 	.global_reg_offset	= 0,
 	.slave_id		= 4,
 	.outstanding_request	= (0x8 << 4),
 	.adma_get_burst_config  = tegra186_adma_get_burst_config,
-	.ch_fifo_size_mask	= T186_ADMA_CH_FIFO_CTRL_FIFO_SIZE_MASK,
-	.ch_req_tx_shift	= T186_ADMA_CH_CTRL_TX_REQ_SEL_SHIFT,
-	.ch_req_rx_shift	= T186_ADMA_CH_CTRL_RX_REQ_SEL_SHIFT,
-	.ch_req_mask		= T186_ADMA_CH_CTRL_REQ_SEL_MASK,
-	.ch_req_max		= T186_ADMA_CH_CTRL_REQ_MAX,
+	.ch_fifo_size_mask	= 0x3f,
+	.ch_req_tx_shift	= 27,
+	.ch_req_rx_shift	= 22,
+	.ch_req_mask		= 0x1f,
+	.ch_req_max		= 20,
 	.adma_war = {
 		.smp_sta_reg		= T186_SHRD_SMP_STA,
 		.smp_sta_set_reg	= T186_SHRD_SMP_STA_SET,

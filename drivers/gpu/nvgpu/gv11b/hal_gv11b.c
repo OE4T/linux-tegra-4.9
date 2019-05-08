@@ -956,7 +956,7 @@ int gv11b_init_hal(struct gk20a *g)
 	__nvgpu_set_enabled(g, NVGPU_PMU_FECS_BOOTSTRAP_DONE, false);
 	__nvgpu_set_enabled(g, NVGPU_FECS_TRACE_VA, true);
 	__nvgpu_set_enabled(g, NVGPU_FECS_TRACE_FEATURE_CONTROL, true);
-	__nvgpu_set_enabled(g, NVGPU_SUPPORT_SET_CTX_MMU_DEBUG_MODE, false);
+	__nvgpu_set_enabled(g, NVGPU_SUPPORT_SET_CTX_MMU_DEBUG_MODE, true);
 
 	__nvgpu_set_enabled(g, NVGPU_SUPPORT_MULTIPLE_WPR, false);
 	__nvgpu_set_enabled(g, NVGPU_SUPPORT_PLATFORM_ATOMIC, true);

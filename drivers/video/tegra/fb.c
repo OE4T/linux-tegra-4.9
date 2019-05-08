@@ -168,7 +168,7 @@ static int tegra_fb_check_var(struct fb_var_screeninfo *var,
 		(var->yres * var->xres * var->bits_per_pixel / 8 * 2) >
 		info->screen_size) {
 		dev_err(&tegra_fb->ndev->dev,
-			"FB %lu is NOT enough for %dx%d %dbpp!\n",
+			"FB %lu is NOT enough for %ux%u %ubpp!\n",
 			info->screen_size, var->xres, var->yres,
 			var->bits_per_pixel);
 		return -EINVAL;

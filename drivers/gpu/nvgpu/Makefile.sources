@@ -172,6 +172,7 @@ srcs :=	os/posix/nvgpu.c \
 	gm20b/pmu_gm20b.c \
 	gm20b/mm_gm20b.c \
 	gm20b/regops_gm20b.c \
+	gm20b/fecs_trace_gm20b.c \
 	gp10b/gr_gp10b.c  \
 	gp10b/gr_ctx_gp10b.c  \
 	gp10b/ce_gp10b.c \
@@ -181,7 +182,6 @@ srcs :=	os/posix/nvgpu.c \
 	gp10b/hal_gp10b.c \
 	gp10b/regops_gp10b.c \
 	gp10b/clk_arb_gp10b.c \
-	gp10b/fecs_trace_gp10b.c \
 	gp10b/gp10b.c \
 	gp10b/ecc_gp10b.c \
 	gv11b/gv11b.c  \

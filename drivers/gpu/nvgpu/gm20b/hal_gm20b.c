@@ -29,6 +29,7 @@
 #include <nvgpu/gk20a.h>
 #include <nvgpu/channel.h>
 #include <nvgpu/tsg.h>
+#include <nvgpu/ctxsw_trace.h>
 
 #include "common/clock_gating/gm20b_gating_reglist.h"
 #include "common/bus/bus_gm20b.h"
@@ -51,6 +52,8 @@
 #include "gk20a/regops_gk20a.h"
 #include "gk20a/pmu_gk20a.h"
 #include "gk20a/gr_gk20a.h"
+#include "gk20a/fecs_trace_gk20a.h"
+#include "gm20b/fecs_trace_gm20b.h"
 
 #include "gr_gm20b.h"
 #include "fifo_gm20b.h"
@@ -484,6 +487,24 @@ static const struct gpu_ops gm20b_ops = {
 		.get_netlist_name = gr_gm20b_get_netlist_name,
 		.is_fw_defined = gr_gm20b_is_firmware_defined,
 	},
+#ifdef CONFIG_GK20A_CTXSW_TRACE
+	.fecs_trace = {
+		.alloc_user_buffer = gk20a_ctxsw_dev_ring_alloc,
+		.free_user_buffer = gk20a_ctxsw_dev_ring_free,
+		.mmap_user_buffer = gk20a_ctxsw_dev_mmap_buffer,
+		.init = gk20a_fecs_trace_init,
+		.deinit = gk20a_fecs_trace_deinit,
+		.enable = gk20a_fecs_trace_enable,
+		.disable = gk20a_fecs_trace_disable,
+		.is_enabled = gk20a_fecs_trace_is_enabled,
+		.reset = gk20a_fecs_trace_reset,
+		.flush = gm20b_fecs_trace_flush,
+		.poll = gk20a_fecs_trace_poll,
+		.bind_channel = gk20a_fecs_trace_bind_channel,
+		.unbind_channel = gk20a_fecs_trace_unbind_channel,
+		.max_entries = gk20a_gr_max_entries,
+	},
+#endif /* CONFIG_GK20A_CTXSW_TRACE */
 	.mm = {
 		.support_sparse = gm20b_mm_support_sparse,
 		.gmmu_map = gk20a_locked_gmmu_map,

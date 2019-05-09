@@ -54,7 +54,6 @@
 #include "gk20a/gr_gk20a.h"
 
 #include "gp10b/gr_gp10b.h"
-#include "gp10b/fecs_trace_gp10b.h"
 #include "gp10b/mm_gp10b.h"
 #include "gp10b/ce_gp10b.h"
 #include "gp10b/regops_gp10b.h"
@@ -71,6 +70,7 @@
 #include "gm20b/pmu_gm20b.h"
 #include "gm20b/acr_gm20b.h"
 #include "gm20b/gr_gm20b.h"
+#include "gm20b/fecs_trace_gm20b.h"
 
 #include "gp106/acr_gp106.h"
 #include "gp106/sec2_gp106.h"
@@ -570,7 +570,7 @@ static const struct gpu_ops gp106_ops = {
 		.disable = gk20a_fecs_trace_disable,
 		.is_enabled = gk20a_fecs_trace_is_enabled,
 		.reset = gk20a_fecs_trace_reset,
-		.flush = gp10b_fecs_trace_flush,
+		.flush = gm20b_fecs_trace_flush,
 		.poll = gk20a_fecs_trace_poll,
 		.bind_channel = gk20a_fecs_trace_bind_channel,
 		.unbind_channel = gk20a_fecs_trace_unbind_channel,

@@ -256,6 +256,7 @@ nvgpu-y += \
 	gm20b/pmu_gm20b.o \
 	gm20b/mm_gm20b.o \
 	gm20b/regops_gm20b.o \
+	gm20b/fecs_trace_gm20b.o \
 	boardobj/boardobj.o \
 	boardobj/boardobjgrp.o \
 	boardobj/boardobjgrpmask.o \
@@ -302,7 +303,6 @@ nvgpu-y += \
 	gp10b/pmu_gp10b.o \
 	gp10b/hal_gp10b.o \
 	gp10b/regops_gp10b.o \
-	gp10b/fecs_trace_gp10b.o \
 	gp10b/gp10b.o \
 	gp10b/ecc_gp10b.o \
 	gp106/hal_gp106.o \

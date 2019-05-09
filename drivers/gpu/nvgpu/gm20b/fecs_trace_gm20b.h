@@ -1,5 +1,5 @@
 /*
- * GP10B GPU FECS traces
+ * GM20B GPU FECS traces
  *
  * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
  *
@@ -22,35 +22,11 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#include <nvgpu/gk20a.h>
+#ifndef NVGPU_FECS_TRACE_GM20B_H
+#define NVGPU_FECS_TRACE_GM20B_H
 
-#include "gk20a/fecs_trace_gk20a.h"
+struct gk20a;
 
-#include "fecs_trace_gp10b.h"
+int gm20b_fecs_trace_flush(struct gk20a *g);
 
-#include <nvgpu/hw/gp10b/hw_ctxsw_prog_gp10b.h>
-#include <nvgpu/hw/gp10b/hw_gr_gp10b.h>
-
-#ifdef CONFIG_GK20A_CTXSW_TRACE
-int gp10b_fecs_trace_flush(struct gk20a *g)
-{
-	struct fecs_method_op_gk20a op = {
-		.mailbox = { .id = 0, .data = 0,
-			.clr = ~0, .ok = 0, .fail = 0},
-		.method.addr = gr_fecs_method_push_adr_write_timestamp_record_v(),
-		.method.data = 0,
-		.cond.ok = GR_IS_UCODE_OP_NOT_EQUAL,
-		.cond.fail = GR_IS_UCODE_OP_SKIP,
-	};
-	int err;
-
-	nvgpu_log(g, gpu_dbg_fn|gpu_dbg_ctxsw, " ");
-
-	err = gr_gk20a_elpg_protected_call(g,
-			gr_gk20a_submit_fecs_method_op(g, op, false));
-	if (err)
-		nvgpu_err(g, "write timestamp record failed");
-
-	return err;
-}
-#endif /* CONFIG_GK20A_CTXSW_TRACE */
+#endif /* NVGPU_FECS_TRACE_GM20B_H */

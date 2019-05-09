@@ -66,6 +66,7 @@
 #include "gm20b/mm_gm20b.h"
 #include "gm20b/pmu_gm20b.h"
 #include "gm20b/acr_gm20b.h"
+#include "gm20b/fecs_trace_gm20b.h"
 
 #include "gp106/clk_arb_gp106.h"
 #include "gp106/pmu_gp106.h"
@@ -77,7 +78,6 @@
 #include "gp10b/gr_gp10b.h"
 #include "gp10b/ce_gp10b.h"
 #include "gp10b/fifo_gp10b.h"
-#include "gp10b/fecs_trace_gp10b.h"
 #include "gp10b/mm_gp10b.h"
 #include "gp10b/pmu_gp10b.h"
 

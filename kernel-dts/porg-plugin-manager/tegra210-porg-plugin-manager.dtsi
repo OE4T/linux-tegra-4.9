@@ -218,7 +218,7 @@
 					nvidia,alarm-period = <0>;
 					nvidia,cpu-throt-percent = <75>;
 					nvidia,gpu-throt-level =
-						<TEGRA_SOCTHERM_THROT_LEVEL_LOW>;
+						<TEGRA_SOCTHERM_THROT_LEVEL_HIGH>;
 				};
 			};
 			override@3 {

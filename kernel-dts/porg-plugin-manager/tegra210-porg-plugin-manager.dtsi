@@ -221,6 +221,12 @@
 						<TEGRA_SOCTHERM_THROT_LEVEL_LOW>;
 				};
 			};
+			override@3 {
+				target = <&{/leds}>;
+				_overlay_ {
+					status = "okay";
+				};
+			};
 		};
 	};
 };

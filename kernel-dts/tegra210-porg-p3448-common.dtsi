@@ -715,6 +715,16 @@
 				>;
 		};
 	};
+
+	leds {
+		compatible = "gpio-leds";
+		status = "disabled";
+		pwr {
+			gpios = <&gpio TEGRA_GPIO(I, 1) GPIO_ACTIVE_HIGH>;
+			default-state = "on";
+		};
+	};
+
 };
 
 #if LINUX_VERSION >= 414

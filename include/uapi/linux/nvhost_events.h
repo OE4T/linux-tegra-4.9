@@ -28,109 +28,109 @@ enum {
 /* Marks that the task is submitted to hardware */
 struct nvhost_task_submit {
 	/* Engine class ID */
-	u32 class_id;
+	__u32 class_id;
 
 	/* Syncpoint ID */
-	u32 syncpt_id;
+	__u32 syncpt_id;
 
 	/* Threshold for task completion */
-	u32 syncpt_thresh;
+	__u32 syncpt_thresh;
 
 	/* PID */
-	u32 pid;
+	__u32 pid;
 
 	/* TID */
-	u32 tid;
+	__u32 tid;
 } __packed;
 
 /* Marks that the task is moving to execution */
 struct nvhost_task_begin {
 	/* Engine class ID */
-	u32 class_id;
+	__u32 class_id;
 
 	/* Syncpoint ID */
-	u32 syncpt_id;
+	__u32 syncpt_id;
 
 	/* Threshold for task completion */
-	u32 syncpt_thresh;
+	__u32 syncpt_thresh;
 } __packed;
 
 /* Marks that the task is completed */
 struct nvhost_task_end {
 	/* Engine class ID */
-	u32 class_id;
+	__u32 class_id;
 
 	/* Syncpoint ID */
-	u32 syncpt_id;
+	__u32 syncpt_id;
 
 	/* Threshold for task completion */
-	u32 syncpt_thresh;
+	__u32 syncpt_thresh;
 } __packed;
 
 struct nvhost_vpu_perf_counter {
 	/* Engine class ID */
-	u32 class_id;
+	__u32 class_id;
 
 	/* Syncpoint ID */
-	u32 syncpt_id;
+	__u32 syncpt_id;
 
 	/* Threshold for task completion */
-	u32 syncpt_thresh;
+	__u32 syncpt_thresh;
 
 	/* Identifier for the R5/VPU algorithm executed */
-	u32 operation;
+	__u32 operation;
 
 	/* Algorithm specific identifying tag for the perf counter */
-	u32 tag;
+	__u32 tag;
 
-	u32 count;
-	u32 average;
-	u64 variance;
-	u32 minimum;
-	u32 maximum;
+	__u32 count;
+	__u32 average;
+	__u64 variance;
+	__u32 minimum;
+	__u32 maximum;
 } __packed;
 
 /* Marks the pre/postfence associated with the task */
 struct nvhost_task_fence {
 	/* Engine class ID */
-	u32 class_id;
+	__u32 class_id;
 
 	/* Kind (prefence or postfence) */
-	u32 kind;
+	__u32 kind;
 
 	/* Fence-specific type (see nvdev_fence.h) */
-	u32 fence_type;
+	__u32 fence_type;
 
 	/* Valid for NVDEV_FENCE_TYPE_SYNCPT only */
-	u32 syncpt_id;
-	u32 syncpt_thresh;
+	__u32 syncpt_id;
+	__u32 syncpt_thresh;
 
 	/* The task this fence is associated with */
-	u32 task_syncpt_id;
-	u32 task_syncpt_thresh;
+	__u32 task_syncpt_id;
+	__u32 task_syncpt_thresh;
 
 	/* Valid for NVDEV_FENCE_TYPE_SYNC_FD only */
-	u32 sync_fd;
+	__u32 sync_fd;
 
 	/* Valid for NVDEV_FENCE_TYPE_SEMAPHORE
 	   and NVDEV_FENCE_TYPE_SEMAPHORE_TS */
-	u32 semaphore_handle;
-	u32 semaphore_offset;
-	u32 semaphore_value;
+	__u32 semaphore_handle;
+	__u32 semaphore_offset;
+	__u32 semaphore_value;
 } __packed;
 
 struct nvhost_pva_task_state {
 	/* Engine class ID */
-	u32 class_id;
+	__u32 class_id;
 
 	/* Syncpoint ID */
-	u32 syncpt_id;
+	__u32 syncpt_id;
 
 	/* Threshold for task completion */
-	u32 syncpt_thresh;
+	__u32 syncpt_thresh;
 
 	/* Identifier for the R5/VPU algorithm executed */
-	u32 operation;
+	__u32 operation;
 } __packed;
 
 enum {

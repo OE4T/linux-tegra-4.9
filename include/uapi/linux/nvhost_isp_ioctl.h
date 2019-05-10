@@ -41,7 +41,7 @@ struct isp_emc {
 
 struct isp_la_bw {
 	/* Total ISP write BW in MBps, either ISO peak BW or non-ISO avg BW */
-	u32 isp_la_bw;
+	__u32 isp_la_bw;
 	/* is ISO or non-ISO */
 	bool is_iso;
 };

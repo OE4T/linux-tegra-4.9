@@ -26,8 +26,8 @@ struct eqos_ape_cmd {
 };
 
 struct eqos_ape_sync_cmd {
-	u64 drift_num;
-	u64 drift_den;
+	__u64 drift_num;
+	__u64 drift_den;
 };
 
 struct rate_to_time_period {

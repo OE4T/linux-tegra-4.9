@@ -35,11 +35,11 @@
 #define IMX219_GAIN_ADDR			0x0157
 
 struct imx219_flash_control {
-	u8 enable;
-	u8 edge_trig_en;
-	u8 start_edge;
-	u8 repeat;
-	u16 delay_frm;
+	__u8 enable;
+	__u8 edge_trig_en;
+	__u8 start_edge;
+	__u8 repeat;
+	__u16 delay_frm;
 };
 
 struct imx219_mode {

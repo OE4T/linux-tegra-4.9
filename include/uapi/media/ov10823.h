@@ -55,11 +55,11 @@ struct ov10823_grouphold {
 };
 
 struct ov10823_flash_control {
-	u8 enable;
-	u8 edge_trig_en;
-	u8 start_edge;
-	u8 repeat;
-	u16 delay_frm;
+	__u8 enable;
+	__u8 edge_trig_en;
+	__u8 start_edge;
+	__u8 repeat;
+	__u16 delay_frm;
 };
 
 #endif /* __UAPI_OV10823_H__ */

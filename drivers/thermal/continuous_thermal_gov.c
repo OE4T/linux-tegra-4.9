@@ -36,7 +36,7 @@
 #define IIR_MIN (IIR_GAIN_QP / 100)
 #define IIR_MAX (IIR_GAIN_QP * 1)
 
-#define MAX_ACTIVE_STATES	10
+#define FAN_TURN_ON_NUM (1)
 
 #define ABS(x, y) ((x > y)?(x - y):(y - x))
 
@@ -83,14 +83,10 @@ struct continuous_thermal_governor {
 	struct continuous_thermal_gov_params pm;
 
 	int trip;
-	int trip_level;
-	int target_pwm;
 	int prelta;
 	int newlta;
-
-	int pwm_tbl[MAX_ACTIVE_STATES];
-	s32 active_trip_temps[MAX_ACTIVE_STATES];
-	s32 active_hysteresis[MAX_ACTIVE_STATES];
+	int target_pwm;
+	bool is_fan_on;
 
 	/* params used to debug */
 	int rawtemp;
@@ -101,6 +97,9 @@ struct continuous_thermal_governor {
 
 #define tz_to_gov(t)		\
 	(t->governor_data)
+
+#define gov_to_tz(g)		\
+	container_of((void *)g, struct thermal_zone_device, governor_data)
 
 #define kobj_to_gov(k)		\
 	container_of(k, struct continuous_thermal_governor, kobj)
@@ -239,15 +238,17 @@ static struct continuous_thermal_gov_attribute gov_param_attr =
 static ssize_t trip_temps_show(struct kobject *kobj, struct attribute *attr,
 					char *buf)
 {
-	int ret = 0, trip;
+	int ret = 0, trip, trip_temp;
 	struct continuous_thermal_governor *gov = kobj_to_gov(kobj);
+	struct thermal_zone_device *tz = gov_to_tz(gov);
 
-	if (!gov)
+	if (!gov || !tz || !tz->ops || !tz->ops->get_trip_temp)
 		return -ENODEV;
 
 	for (trip = 0; trip < gov->trip; trip++) {
+		tz->ops->get_trip_temp(tz, trip, &trip_temp);
 		ret += sprintf(buf + ret, "[%d]:%d ",
-			trip, gov->active_trip_temps[trip]);
+			trip, trip_temp);
 	}
 	ret += sprintf(buf + ret, "\n");
 
@@ -260,15 +261,16 @@ static struct continuous_thermal_gov_attribute trip_temps_attr =
 static ssize_t trip_hyst_show(struct kobject *kobj, struct attribute *attr,
 			   char *buf)
 {
-	int ret = 0, trip;
+	int ret = 0, trip, hyst;
 	struct continuous_thermal_governor *gov = kobj_to_gov(kobj);
+	struct thermal_zone_device *tz = gov_to_tz(gov);
 
-	if (!gov)
+	if (!gov || !tz || !tz->ops || !tz->ops->get_trip_hyst)
 		return -ENODEV;
 
 	for (trip = 0; trip < gov->trip; trip++) {
-		ret += sprintf(buf + ret, "[%d]:%d ",
-				trip, gov->active_hysteresis[trip]);
+		tz->ops->get_trip_hyst(tz, trip, &hyst);
+		ret += sprintf(buf + ret, "[%d]:%d ", trip, hyst);
 	}
 	ret += sprintf(buf + ret, "\n");
 
@@ -282,14 +284,21 @@ static ssize_t pwm_table_show(struct kobject *kobj, struct attribute *attr,
 			   char *buf)
 {
 	int ret = 0, trip;
+	struct thermal_instance *instance;
 	struct continuous_thermal_governor *gov = kobj_to_gov(kobj);
+	struct thermal_zone_device *tz = gov_to_tz(gov);
 
-	if (!gov)
+	if (!gov || !tz || !fetch_trip_pwm)
 		return -ENODEV;
 
 	for (trip = 0; trip < gov->trip; trip++) {
-		ret += sprintf(buf + ret, "[%d]:%d ",
-				trip, gov->pwm_tbl[trip]);
+		list_for_each_entry(instance, &tz->thermal_instances, tz_node) {
+			if (instance->trip != trip)
+				continue;
+
+			ret += sprintf(buf + ret, "[%d]:%d ",
+					trip, fetch_trip_pwm(instance->cdev, trip));
+		}
 	}
 	ret += sprintf(buf + ret, "\n");
 
@@ -347,7 +356,7 @@ static int continuous_thermal_gov_bind(struct thermal_zone_device *tz)
 {
 	struct continuous_thermal_governor *gov;
 	struct continuous_thermal_gov_params *params;
-	int ret, trip;
+	int ret;
 
 	gov = kzalloc(sizeof(struct continuous_thermal_governor), GFP_KERNEL);
 	if (!gov) {
@@ -379,12 +388,7 @@ static int continuous_thermal_gov_bind(struct thermal_zone_device *tz)
 
 	gov->trip = tz->trips;
 
-	if (tz->ops && tz->ops->get_trip_temp && tz->ops->get_trip_hyst) {
-		for (trip = 0; trip < tz->trips; trip++) {
-			tz->ops->get_trip_temp(tz, trip, &gov->active_trip_temps[trip]);
-			tz->ops->get_trip_hyst(tz, trip, &gov->active_hysteresis[trip]);
-		}
-	} else
+	if (!tz->ops || !tz->ops->get_trip_temp || !tz->ops->get_trip_hyst)
 		dev_err(&tz->device, "%s: Can't get trip temp and hyst data\n", DRV_NAME);
 
 	tz_to_gov(tz) = gov;
@@ -447,155 +451,118 @@ static long continuous_thermal_gov_get_lta(struct thermal_zone_device *tz,
 }
 
 static unsigned long
-continuous_thermal_gov_get_target_pwm(struct thermal_zone_device *tz,
-				struct continuous_thermal_governor *gov,
-				int index, long lta)
+continuous_thermal_gov_calculate_pwm(struct thermal_zone_device *tz,
+				struct thermal_cooling_device *cdev,
+				struct continuous_thermal_governor *gov, long lta, int index)
 {
 	long long m, b;
 	unsigned long target_pwm = 0;
+	int trip_temp = 0, trip_temp_low = 0, pwm = 0, pwm_low = 0;
 
-	m = (gov->pwm_tbl[index] - gov->pwm_tbl[index - 1]) * QPOINT /
-		(gov->active_trip_temps[index] - gov->active_trip_temps[index - 1]);
-	b = gov->pwm_tbl[index] * QPOINT -
-		m * gov->active_trip_temps[index];
+	tz->ops->get_trip_temp(tz, index, &trip_temp);
+	tz->ops->get_trip_temp(tz, index - 1, &trip_temp_low);
+
+	pwm = fetch_trip_pwm(cdev, index);
+	pwm_low = fetch_trip_pwm(cdev, index - 1);
+
+	m = (pwm - pwm_low) * QPOINT / (trip_temp - trip_temp_low);
+	b = pwm * QPOINT - m * trip_temp;
 
 	pr_debug("GOV m:%lld b:%lld iir_gain:%lld, delttemp:%ld\n"
 			"fan pwm[%d]:%d [%d]:%d \n"
 			"trip temp[%d]:%d [%d]:%d\n"
 			"prev lta:%d cur lta: %ld\n",
 			m, b, gov->iir_gain, gov->delttemp,
-			index, gov->pwm_tbl[index],
-			index - 1, gov->pwm_tbl[index - 1],
-			index, gov->active_trip_temps[index],
-			index - 1, gov->active_trip_temps[index - 1],
+			index, pwm, index - 1, pwm_low,
+			index, trip_temp, index - 1, pwm_low,
 			gov->prelta, lta);
 
-	//check error
-	if ((lta < gov->active_trip_temps[index - 1])
-		|| (lta > gov->active_trip_temps[index])) {
-		pr_err("GOV newLTA:%ld not in scope [%d, %d)\n", lta,
-			gov->active_trip_temps[index - 1],
-			gov->active_trip_temps[index]);
-	}
-
 	target_pwm = (int)(m * lta + b) / QPOINT;
-
-	/*"2" means the actual index begins at 2*/
-	for (index = 2; index < tz->trips; index++) {
-		if (lta == gov->active_trip_temps[index]) {
-			if (!gov->active_hysteresis[index])
-				target_pwm = gov->pwm_tbl[index];
-			break;
-		}
-	}
 
 	return target_pwm;
 }
 
 static unsigned long
 continuous_thermal_gov_get_target(struct thermal_zone_device *tz,
-					struct thermal_cooling_device *cdev,
-					enum thermal_trip_type trip_type,
-					int trip_temp, int hyst, int trip)
+					struct thermal_cooling_device *cdev, int trip)
 {
 	struct continuous_thermal_governor *gov = tz_to_gov(tz);
-	static int last_lta, index;
-	static bool is_fan_on = false;
-	int level = 0, count;
+	int turn_on_temp, trip_temp, hyst = 0, index;
 	long lta = 0;
-	unsigned long target_pwm = 0;
 
 	if (!gov || !trip)
 		return -1;
 
-	gov->active_trip_temps[trip] = trip_temp; /*trip_*_temp updated manually*/
-	gov->active_hysteresis[trip] = hyst;
-	if (fetch_trip_pwm)
-		gov->pwm_tbl[trip] = fetch_trip_pwm(cdev, trip);
-	else {
-		dev_err(&tz->device, "%s: Can't get cdev pwm table\n", DRV_NAME);
-		return -1;
-	}
-
-	for (count = 1; count < tz->trips; count++) {
-		if (!gov->active_trip_temps[count]) {
-			dev_err(&tz->device, "%s: trip temp[%d] is %d\n",
-					DRV_NAME, count, gov->active_trip_temps[count]);
-			return -1;
-		}
-	}
-
-	if (!last_lta) {
-		lta = continuous_thermal_gov_get_lta(tz, gov);
-		last_lta  = lta;
-	} else {
-		lta = last_lta;
-	}
-
-	//fan table lookup
-	if (!is_fan_on) {
-		if (hyst && (lta >= trip_temp))
-			is_fan_on = !!trip;
-	} else if (!hyst
-		&& (lta < trip_temp)
-		&& !index) {
-		index = trip;
-	}
-
 	if (trip < tz->trips - 1)
 		return -1;
 
-	/*"level" means cooling level of cdev*/
-	/*"index" means index of active pwm table*/
-	/*"- 2" means the actual index begins at 2*/
-	level = index - 2;
+	lta = continuous_thermal_gov_get_lta(tz, gov);
 
-	if (level >= tz->trips)
-		level = tz->trips - 1;
-	else if (level < 0) {
-		level = 0;
+	/*
+	* turn_on_temp is active_trip_temps[1],
+	* the condition to turn on the fan
+	*/
+	tz->ops->get_trip_temp(tz, FAN_TURN_ON_NUM, &turn_on_temp);
+	if (!gov->is_fan_on) {
+		if (lta > turn_on_temp)
+			gov->is_fan_on = true;
+	} else {
+		tz->ops->get_trip_hyst(tz, FAN_TURN_ON_NUM, &hyst);
+
+		if (lta < (turn_on_temp - hyst))
+			gov->is_fan_on = false;
 	}
-
-	last_lta = 0;
 
 	//check if doing step based fan control, or smooth ramp
-	if (level) {//level > 0 means fan is ruuning.
-		target_pwm = continuous_thermal_gov_get_target_pwm(tz, gov, index, lta);
+	if (gov->is_fan_on) {
+		//fan table lookup
+		for (index = FAN_TURN_ON_NUM; index < tz->trips; index++) {
+			tz->ops->get_trip_temp(tz, index, &trip_temp);
+			tz->ops->get_trip_hyst(tz, index, &hyst);
+			//index==1,hyst > 0; index > 1,hyst == 0.
+			if (lta < (trip_temp - hyst))
+				break;
+		}
 
-	} else if (lta < (gov->active_trip_temps[1] - gov->active_hysteresis[1])) {
-		target_pwm = 0;
-		level = 0;
-	} else if (gov->trip_level) {//(trip_temp[1] - hyst[1]) < lta < trip_temp[1]
-		target_pwm = gov->pwm_tbl[1];
-		level = 1;
+		if (index >= tz->trips)
+			index = tz->trips - 1;
+		else if (index < 0) {
+			index = 0;
+		}
+
+		//Notice that the backgroud is that active_pwm[1] equal active_pwm[2].
+		gov->target_pwm = continuous_thermal_gov_calculate_pwm(tz, cdev, gov, lta, index);
+
+	} else {
+		gov->target_pwm = 0;
 	}
-
-	index = 0;
-	is_fan_on = !!level;
-	gov->trip_level = level;
-	gov->target_pwm = target_pwm;
 
 	pr_debug("%7d %7d %7d %11d %4lld %5d %5d\n",
 			gov->prelta, gov->rawtemp, gov->newlta,
 			gov->rawtemp - gov->prelta, gov->iir_gain,
 			gov->cur_width, gov->target_pwm);
 
-	return target_pwm;
+	return gov->target_pwm;
 }
 
 static int continuous_thermal_gov_throttle(struct thermal_zone_device *tz, int trip)
 {
 	struct thermal_instance *instance;
-	enum thermal_trip_type trip_type;
-	int trip_temp, hyst = 0;
 	unsigned long target;
-	tz->ops->get_trip_type(tz, trip, &trip_type);
-	tz->ops->get_trip_temp(tz, trip, &trip_temp);
-	if (tz->ops->get_trip_hyst)
-		tz->ops->get_trip_hyst(tz, trip, &hyst);
-	else {
+
+	if (!fetch_trip_pwm) {
+		dev_err(&tz->device, "%s: Can't get cdev pwm value\n", DRV_NAME);
+		return -EINVAL;
+	}
+
+	if (!tz->ops->get_trip_hyst) {
 		dev_err(&tz->device, "%s: Can't get trip hyst data\n", DRV_NAME);
-		return 0;
+		return -EINVAL;
+	}
+
+	if (!tz->ops->get_trip_temp) {
+		dev_err(&tz->device, "%s: Can't get trip temp\n", DRV_NAME);
+		return -EINVAL;
 	}
 
 	mutex_lock(&tz->lock);
@@ -604,8 +571,7 @@ static int continuous_thermal_gov_throttle(struct thermal_zone_device *tz, int t
 		if (instance->trip != trip)
 			continue;
 
-		target = continuous_thermal_gov_get_target(tz, instance->cdev,
-				trip_type, trip_temp, hyst, trip);
+		target = continuous_thermal_gov_get_target(tz, instance->cdev, trip);
 
 		if ((instance->target == target) || (target == -1))
 			continue;

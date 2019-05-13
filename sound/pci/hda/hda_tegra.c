@@ -109,7 +109,6 @@ struct hda_tegra {
 	int partition_id;
 	void __iomem *regs;
 	struct work_struct probe_work;
-	int num_codecs;
 	struct kobject *kobj;
 	struct hda_pcm_devices *hda_pcm_dev;
 };
@@ -783,10 +782,6 @@ static void hda_tegra_probe_work(struct work_struct *work)
 	if (err < 0)
 		goto out_free;
 
-	if (of_property_read_u32(np, "nvidia,max-codec-slot",
-			&hda->num_codecs) < 0)
-		hda->num_codecs = HDA_MAX_CODECS;
-
 	bus->avoid_compact_sdo_bw = of_property_read_bool(np,
 		"nvidia,avoid-compact-sdo-bw");
 
@@ -802,7 +797,7 @@ static void hda_tegra_probe_work(struct work_struct *work)
 		hda_tegra_writel(gsc_id, hda->regs + HDA_GSC_REG);
 
 	/* create codec instances */
-	err = azx_probe_codecs(chip, hda->num_codecs);
+	err = azx_probe_codecs(chip, HDA_MAX_CODECS);
 	if (err < 0)
 		goto out_free;
 

@@ -615,7 +615,6 @@
 		hda,card-name = "tegra-hda-galen-t194";
 		iommus = <&smmu TEGRA_SID_HDA>;
 		reg = <0x0 0x3510000 0x0 0x10000>;
-		nvidia,max-codec-slot = <8>;
 
 		/* WAR: GCAP reg presently shows 2 SDO lines */
 		nvidia,num-sdo-stripe = <4>;

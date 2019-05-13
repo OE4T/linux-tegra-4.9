@@ -218,6 +218,28 @@ static int gv11b_tegra_suspend(struct device *dev)
 	return 0;
 }
 
+static bool is_tpc_mask_valid(struct gk20a_platform *platform, u32 tpc_mask)
+{
+	u32 i;
+	bool valid = false;
+
+	for (i = 0; i < MAX_TPC_PG_CONFIGS; i++) {
+		if (tpc_mask == platform->valid_tpc_mask[i])
+			valid = true;
+	}
+	return valid;
+}
+
+static void gv11b_tegra_set_tpc_pg_mask(struct device *dev, u32 tpc_mask)
+{
+	struct gk20a_platform *platform = gk20a_get_platform(dev);
+	struct gk20a *g = get_gk20a(dev);
+
+	if (is_tpc_mask_valid(platform, tpc_mask)) {
+		g->tpc_pg_mask = tpc_mask;
+	}
+}
+
 struct gk20a_platform gv11b_tegra_platform = {
 	.has_syncpoints = true,
 
@@ -236,6 +258,8 @@ struct gk20a_platform gv11b_tegra_platform = {
 	.valid_tpc_mask[0]      = 0x0,
 	.valid_tpc_mask[1]      = 0x1,
 	.valid_tpc_mask[2]      = 0x5,
+
+	.set_tpc_pg_mask        = gv11b_tegra_set_tpc_pg_mask,
 
 	.can_slcg               = true,
 	.can_blcg               = true,

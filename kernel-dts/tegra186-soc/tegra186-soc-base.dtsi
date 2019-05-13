@@ -2419,7 +2419,6 @@
 		compatible = "nvidia,tegra30-hda";
 		iommus = <&smmu TEGRA_SID_HDA>;
 		reg = <0x0 0x3510000 0x0 0x10000>;
-		nvidia,max-codec-slot = <8>;
 		clocks = <&tegra_car TEGRA186_CLK_PLLP_OUT0>,
 			 <&tegra_car TEGRA186_CLK_MAUD>,
 			 <&tegra_car TEGRA186_CLK_HDA>,

@@ -4064,26 +4064,22 @@ static int tegra_pcie_config_ep(struct tegra_pcie_dw *pcie,
 	return 0;
 }
 
-static int get_slot_regulators(struct tegra_pcie_dw *pcie)
+static void get_slot_regulators(struct tegra_pcie_dw *pcie)
 {
 	if (pcie->cid != CTRL_5)
-		return 0;
+		return;
 
-	pcie->slot_ctl_3v3 = devm_regulator_get(pcie->dev, "vpcie3v3");
-	if (IS_ERR(pcie->slot_ctl_3v3)) {
-		dev_err(pcie->dev, "fail to get 3V slot regulator: %ld\n",
-			PTR_ERR(pcie->slot_ctl_3v3));
-		return PTR_ERR(pcie->slot_ctl_3v3);
-	}
+	pcie->slot_ctl_3v3 = devm_regulator_get_optional(pcie->dev, "vpcie3v3");
+	if (IS_ERR(pcie->slot_ctl_3v3))
+		dev_info(pcie->dev, "Failed to get 3V slot regulator: %ld\n",
+			 PTR_ERR(pcie->slot_ctl_3v3));
 
-	pcie->slot_ctl_12v = devm_regulator_get(pcie->dev, "vpcie12v");
-	if (IS_ERR(pcie->slot_ctl_12v)) {
-		dev_err(pcie->dev, "fail to get 12V slot regulator: %ld\n",
-			PTR_ERR(pcie->slot_ctl_12v));
-		return PTR_ERR(pcie->slot_ctl_12v);
-	}
+	pcie->slot_ctl_12v = devm_regulator_get_optional(pcie->dev, "vpcie12v");
+	if (IS_ERR(pcie->slot_ctl_12v))
+		dev_info(pcie->dev, "Failed to get 12V slot regulator: %ld\n",
+			 PTR_ERR(pcie->slot_ctl_12v));
 
-	return 0;
+	return;
 }
 
 static int enable_slot_regulators(struct tegra_pcie_dw *pcie)
@@ -4093,19 +4089,25 @@ static int enable_slot_regulators(struct tegra_pcie_dw *pcie)
 	if (pcie->cid != CTRL_5)
 		return 0;
 
-	ret = regulator_enable(pcie->slot_ctl_3v3);
-	if (ret < 0) {
-		dev_err(pcie->dev, "Enabling 3V3 supply to slot failed: %d\n",
-			ret);
-		return ret;
+	if (!IS_ERR(pcie->slot_ctl_3v3)) {
+		ret = regulator_enable(pcie->slot_ctl_3v3);
+		if (ret < 0) {
+			dev_err(pcie->dev,
+				"Enabling 3V3 supply to slot failed: %d\n",
+				ret);
+			return ret;
+		}
 	}
 
-	ret = regulator_enable(pcie->slot_ctl_12v);
-	if (ret < 0) {
-		dev_err(pcie->dev, "Enabling 12V supply to slot failed: %d\n",
-			ret);
-		regulator_disable(pcie->slot_ctl_3v3);
-		return ret;
+	if (!IS_ERR(pcie->slot_ctl_12v)) {
+		ret = regulator_enable(pcie->slot_ctl_12v);
+		if (ret < 0) {
+			dev_err(pcie->dev,
+				"Enabling 12V supply to slot failed: %d\n",
+				ret);
+			regulator_disable(pcie->slot_ctl_3v3);
+			return ret;
+		}
 	}
 
 	return 0;
@@ -4116,8 +4118,10 @@ static void disable_slot_regulators(struct tegra_pcie_dw *pcie)
 	if (pcie->cid != CTRL_5)
 		return;
 
-	regulator_disable(pcie->slot_ctl_12v);
-	regulator_disable(pcie->slot_ctl_3v3);
+	if (!IS_ERR(pcie->slot_ctl_3v3))
+		regulator_disable(pcie->slot_ctl_12v);
+	if (!IS_ERR(pcie->slot_ctl_12v))
+		regulator_disable(pcie->slot_ctl_3v3);
 }
 
 static const struct tegra_pcie_of_data tegra_pcie_rc_of_data = {
@@ -4254,9 +4258,7 @@ static int tegra_pcie_dw_probe(struct platform_device *pdev)
 		return PTR_ERR(pcie->pex_ctl_reg);
 	}
 
-	ret = get_slot_regulators(pcie);
-	if (ret)
-		return ret;
+	get_slot_regulators(pcie);
 
 	pcie->core_clk = devm_clk_get(&pdev->dev, "core_clk");
 	if (IS_ERR(pcie->core_clk)) {

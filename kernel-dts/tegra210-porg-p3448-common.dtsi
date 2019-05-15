@@ -245,6 +245,11 @@
 		status = "disabled";
 		bus-width = <8>;
 		non-removable;
+		/delete-property/ nvidia,enable-hs533-mode;
+		no-sdio;
+		no-sd;
+		pll_source = "pll_p", "pll_c4_out2";
+		max-clk-limit = <0xbebc200>;
 	};
 
 	sdhci@700b0400 {

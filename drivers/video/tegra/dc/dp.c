@@ -872,7 +872,7 @@ static void tegra_dc_dp_debugfs_create(struct tegra_dc_dp_data *dp)
 	char debug_dirname[CHAR_BUF_SIZE_MAX];
 
 	snprintf(debug_dirname, sizeof(debug_dirname),
-		"tegra_dp%d", dp->dc->ctrl_num);
+		"tegra_dp%d", dp->dc->ndev->id);
 
 	dp->debugdir = debugfs_create_dir(debug_dirname, NULL);
 	if (!dp->debugdir) {

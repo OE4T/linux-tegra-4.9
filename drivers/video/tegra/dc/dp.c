@@ -1578,8 +1578,12 @@ static void tegra_dp_link_cal(struct tegra_dc_dp_data *dp)
 	prop = dp->sor->link_speeds[key].prod_prop;
 
 	err = tegra_prod_set_by_name(&dp->sor->base, prop, dp->prod_list);
-	if (err)
+	if (err == -ENODEV) {
+		dev_info(&dp->dc->ndev->dev,
+			"DP: no %s prod settings node in device tree\n", prop);
+	} else if (err) {
 		dev_warn(&dp->dc->ndev->dev, "DP : Prod set failed\n");
+	}
 }
 
 static void tegra_dp_irq_evt_worker(struct work_struct *work)

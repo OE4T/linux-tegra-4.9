@@ -187,7 +187,7 @@ static int tegra186_dspk_startup(struct snd_pcm_substream *substream,
 	}
 
 	if (!(tegra_platform_is_unit_fpga() || tegra_platform_is_fpga())) {
-		if (!IS_ERR(dspk->pin_active_state)) {
+		if (!IS_ERR_OR_NULL(dspk->pin_active_state)) {
 			ret = pinctrl_select_state(dspk->pinctrl,
 						dspk->pin_active_state);
 			if (ret < 0) {
@@ -209,7 +209,7 @@ static void tegra186_dspk_shutdown(struct snd_pcm_substream *substream,
 	int ret;
 
 	if (!(tegra_platform_is_unit_fpga() || tegra_platform_is_fpga())) {
-		if (!IS_ERR(dspk->pin_idle_state)) {
+		if (!IS_ERR_OR_NULL(dspk->pin_idle_state)) {
 			ret = pinctrl_select_state(
 				dspk->pinctrl, dspk->pin_idle_state);
 			if (ret < 0) {

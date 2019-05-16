@@ -223,7 +223,7 @@ static int tegra210_dmic_startup(struct snd_pcm_substream *substream,
 	}
 
 	if (!(tegra_platform_is_unit_fpga() || tegra_platform_is_fpga())) {
-		if (!IS_ERR(dmic->pin_active_state)) {
+		if (!IS_ERR_OR_NULL(dmic->pin_active_state)) {
 			ret = pinctrl_select_state(dmic->pinctrl,
 						dmic->pin_active_state);
 			if (ret < 0) {
@@ -244,7 +244,7 @@ static void tegra210_dmic_shutdown(struct snd_pcm_substream *substream,
 	int ret;
 
 	if (!(tegra_platform_is_unit_fpga() || tegra_platform_is_fpga())) {
-		if (!IS_ERR(dmic->pin_idle_state)) {
+		if (!IS_ERR_OR_NULL(dmic->pin_idle_state)) {
 			ret = pinctrl_select_state(
 				dmic->pinctrl, dmic->pin_idle_state);
 			if (ret < 0)

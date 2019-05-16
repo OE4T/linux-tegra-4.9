@@ -496,7 +496,7 @@ static int tegra210_i2s_startup(struct snd_pcm_substream *substream,
 			}
 		}
 
-		if (!IS_ERR(i2s->pin_default_state)) {
+		if (!IS_ERR_OR_NULL(i2s->pin_default_state)) {
 			ret = pinctrl_select_state(i2s->pinctrl,
 						i2s->pin_default_state);
 			if (ret < 0) {
@@ -525,7 +525,7 @@ static void tegra210_i2s_shutdown(struct snd_pcm_substream *substream,
 	int ret;
 
 	if (!(tegra_platform_is_unit_fpga() || tegra_platform_is_fpga())) {
-		if (!IS_ERR(i2s->pin_idle_state)) {
+		if (!IS_ERR_OR_NULL(i2s->pin_idle_state)) {
 			ret = pinctrl_select_state(
 				i2s->pinctrl, i2s->pin_idle_state);
 			if (ret < 0) {

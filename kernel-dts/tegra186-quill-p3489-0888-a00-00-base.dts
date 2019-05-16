@@ -427,14 +427,14 @@
 		Tboard_tegra {
 			trips {
 				trip_critical {
-					temperature = <107000>;
+					temperature = <106500>;
 				};
 			};
 		};
 		Tdiode_tegra {
 			trips {
 				trip_critical {
-					temperature = <107000>;
+					temperature = <106500>;
 				};
 			};
 		};

@@ -888,7 +888,6 @@ void tegra_fb_update_monspecs(struct tegra_fb_info *fb_info,
 	struct fb_event event;
 	int i, b_locked_fb_info = 0;
 	struct tegra_dc *dc = fb_info->win.dc;
-	struct fb_videomode fb_mode;
 
 	if (fb_info == NULL) {
 		pr_err("%s(): invalid operation\n", __func__);
@@ -971,19 +970,26 @@ void tegra_fb_update_monspecs(struct tegra_fb_info *fb_info,
 		dc->out_ops->vrr_update_monspecs(dc,
 			&fb_info->info->modelist);
 
-	if (dc->use_cached_mode) {
-		tegra_dc_to_fb_videomode(&fb_mode, &dc->cached_mode);
-		dc->use_cached_mode = false;
-	} else {
-		if (!dc->out->fbcon_default_mode)
-			memcpy(&fb_mode, &specs->modedb[0],
-				sizeof(struct fb_videomode));
-		else
+	if (tegra_fb_is_console_enabled(dc->pdata)) {
+		struct fb_videomode fb_mode;
+
+		if (dc->use_cached_mode) {
+			tegra_dc_to_fb_videomode(&fb_mode, &dc->cached_mode);
+			dc->use_cached_mode = false;
+		} else if (dc->out->fbcon_default_mode) {
 			memcpy(&fb_mode, dc->out->fbcon_default_mode,
 				sizeof(struct fb_videomode));
-	}
+		} else if (!list_empty(&fb_info->info->modelist)) {
+			struct fb_modelist *modelist;
 
-	if (tegra_fb_is_console_enabled(dc->pdata)) {
+			modelist = list_first_entry(&fb_info->info->modelist,
+						struct fb_modelist, list);
+			fb_mode = modelist->mode;
+		} else {
+			memcpy(&fb_mode, &tegra_dc_vga_mode,
+				sizeof(struct fb_videomode));
+		}
+
 		fb_info->info->state = FBINFO_STATE_RUNNING;
 		tegra_fbcon_set_fb_mode(fb_info, &fb_mode);
 	} else {

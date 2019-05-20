@@ -450,6 +450,10 @@
 			};
 		};
 	};
+
+	tegra_udrm: tegra_udrm {
+		compatible = "nvidia,tegra-udrm";
+	};
 };
 
 #ifdef KERNEL_VERSION_4_9

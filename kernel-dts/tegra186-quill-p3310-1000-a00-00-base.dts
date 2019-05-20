@@ -319,6 +319,10 @@
 			status = "disabled";
 		};
 	};
+
+	tegra_udrm: tegra_udrm {
+		compatible = "nvidia,tegra-udrm";
+	};
 };
 
 #if LINUX_VERSION >= 414

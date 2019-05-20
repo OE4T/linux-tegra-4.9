@@ -1803,9 +1803,19 @@ static int tegra210_adsp_pcm_open(struct snd_pcm_substream *substream)
 
 	/* Ensure period size is multiple of 4 */
 	ret = snd_pcm_hw_constraint_step(substream->runtime, 0,
-		SNDRV_PCM_HW_PARAM_PERIOD_BYTES, 0x4);
+		SNDRV_PCM_HW_PARAM_PERIOD_SIZE, 0x4);
 	if (ret) {
-		dev_err(adsp->dev, "failed to set constraint %d\n", ret);
+		dev_err(adsp->dev,
+			"failed to set period_size constraint %d\n", ret);
+		return ret;
+	}
+
+	/* Ensure buffer size is multiple of 4 */
+	ret = snd_pcm_hw_constraint_step(substream->runtime, 0,
+		SNDRV_PCM_HW_PARAM_BUFFER_SIZE, 0x4);
+	if (ret) {
+		dev_err(adsp->dev,
+			"failed to set buffer_size constraint %d\n", ret);
 		return ret;
 	}
 	substream->runtime->private_data = prtd;

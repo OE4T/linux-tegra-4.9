@@ -373,7 +373,7 @@
 		assigned-clock-rates = <368640000>, <36864000>,
 			<36864000>, <12288000>;
 
-		nvidia,num-codec-link = <6>;
+		nvidia,num-codec-link = <8>;
 
 		nvidia,audio-routing =
 			"x Headphone",		"x OUT",
@@ -386,7 +386,9 @@
 			"s IN",			"s Mic",
 			"w Headphone",		"w OUT",
 			"w IN",			"w Mic",
-			"z IN",			"z Mic";
+			"z IN",			"z Mic",
+			"m IN",			"m Mic",
+			"n IN",			"n Mic";
 
 		nvidia,xbar = <&tegra_axbar>;
 
@@ -493,6 +495,30 @@
 			srate = <48000>;
 			num-channel = <2>;
 			name-prefix = "w";
+		};
+		nvidia,dai-link-7 {
+			link-name = "spdif-dit-6";
+			cpu-dai = <&tegra_dmic1>;
+			codec-dai = <&spdif_dit6>;
+			cpu-dai-name = "DMIC1";
+			codec-dai-name = "dit-hifi";
+			format = "i2s";
+			bit-format = "s16_le";
+			srate = <48000>;
+			num-channel = <2>;
+			name-prefix = "m";
+		};
+		nvidia,dai-link-8 {
+			link-name = "spdif-dit-7";
+			cpu-dai = <&tegra_dmic2>;
+			codec-dai = <&spdif_dit7>;
+			cpu-dai-name = "DMIC2";
+			codec-dai-name = "dit-hifi";
+			format = "i2s";
+			bit-format = "s16_le";
+			srate = <48000>;
+			num-channel = <2>;
+			name-prefix = "n";
 		};
 	};
 

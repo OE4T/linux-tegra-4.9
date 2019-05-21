@@ -662,10 +662,6 @@ static __init int tegra_mce_early_init(void)
 		_tegra_mce_read_l3_cache_ways = tegra19x_mce_read_l3_cache_ways;
 		_tegra_mce_write_l3_cache_ways =
 			tegra19x_mce_write_l3_cache_ways;
-		_tegra_mce_read_uncore_perfmon =
-			tegra19x_mce_read_pmu_reg;
-		_tegra_mce_write_uncore_perfmon =
-			tegra19x_mce_write_pmu_reg;
 		break;
 	default:
 		/* Do not support any other platform */

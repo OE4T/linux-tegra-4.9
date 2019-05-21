@@ -27,8 +27,6 @@ int tegra19x_mce_cc3_ctrl(u32 ndiv, u32 vindex, u8 enable);
 int tegra19x_mce_read_versions(u32 *major, u32 *minor);
 int tegra19x_mce_write_dda_ctrl(u32 index, u64 value);
 int tegra19x_mce_read_dda_ctrl(u32 index, u64 *value);
-int tegra19x_mce_write_pmu_reg(u32 reg_id, u32 value);
-int tegra19x_mce_read_pmu_reg(u32 reg_id, u32 *value);
 
 #ifdef CONFIG_DEBUG_FS
 int tegra19x_mce_features_get(void *data, u64 *val);

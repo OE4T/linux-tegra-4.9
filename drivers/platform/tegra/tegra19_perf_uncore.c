@@ -24,27 +24,48 @@
 */
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 4, 0)
 #include <asm/irq_regs.h>
+#include <asm/sysreg.h>
 
 #include <linux/of.h>
 #include <linux/perf/arm_pmu.h>
 #include <linux/platform_device.h>
-#include <linux/tegra-mce.h>
 
-#include "dmce_perfmon.h"
+#include <soc/tegra/chip-id.h>
 
-#define CARMEL_PMU_MAX_HWEVENTS		8
+// Global registers
+#define SYS_NV_PMSELR_EL0     sys_reg(3, 3, 15, 5, 1)
+
+// Unit registers
+#define SYS_NV_PMCNTENSET_EL0 sys_reg(3, 3, 15, 4, 0)
+#define SYS_NV_PMCNTENCLR_EL0 sys_reg(3, 3, 15, 4, 1)
+#define SYS_NV_PMOVSSET_EL0   sys_reg(3, 3, 15, 4, 2)
+#define SYS_NV_PMOVSCLR_EL0   sys_reg(3, 3, 15, 4, 3)
+#define SYS_NV_PMCR_EL0       sys_reg(3, 3, 15, 4, 4)
+#define SYS_NV_PMINTENSET_EL1 sys_reg(3, 0, 15, 2, 0)
+#define SYS_NV_PMINTENCLR_EL1 sys_reg(3, 0, 15, 2, 1)
+
+// Counter registers
+#define SYS_NV_PMEVCNTR0_EL0  sys_reg(3, 3, 15, 0, 0)
+#define SYS_NV_PMEVCNTR1_EL0  sys_reg(3, 3, 15, 0, 1)
+#define SYS_NV_PMEVTYPER0_EL0 sys_reg(3, 3, 15, 2, 0)
+#define SYS_NV_PMEVTYPER1_EL0 sys_reg(3, 3, 15, 2, 1)
+
+#ifdef PMCDBG
+#define PMCPRINT(msg, ...) pr_err("carmel_pmu %s:%d "msg, __func__, __LINE__, ## __VA_ARGS__)
+#else
+#define PMCPRINT(msg, ...)
+#endif
 
 /*
- * Carmel perf uncore supports two counters
+ * Carmel uncore perfmon supports two counters per unit
  */
 #define CARMEL_MAX_UNCORE_CNTS		2
 
 /*
- * PMXEVTYPER: Event selection reg
+ * NV_PMCR: config reg
  */
-#define ARMV8_EVTYPE_EVENT	0x3ff		/* Mask for EVENT bits */
-#define CARMEL_EVTYPE_MASK	0x00000d00
-#define CARMEL_EVTYPE_EVENT_ID	0x0ff
+#define CARMEL_PMCR_E		(1 << 0) /* Enable all counters */
+#define CARMEL_PMCR_P		(1 << 1) /* Reset all counters */
 
 static DEFINE_PER_CPU(struct pmu_hw_events, cpu_hw_events);
 
@@ -63,80 +84,61 @@ enum carmel_uncore_perf_types {
 	CARMEL_PMU_L3D_CACHE_WB = 0x2C,
 
 	CARMEL_PMU_L2D_CACHE_LD = 0x50,
-	CARMEL_PMU_L2D_CACHE_ST,
-	CARMEL_PMU_L2D_CACHE_REFILL_LD,
-	CARMEL_PMU_L2D_CACHE_REFILL_ST,
-	CARMEL_PMU_L2D_CACHE_WB_VIC_TIM = 0x56
+	CARMEL_PMU_L2D_CACHE_ST = 0x51,
+	CARMEL_PMU_L2D_CACHE_REFILL_LD = 0x52,
+	CARMEL_PMU_L2D_CACHE_REFILL_ST = 0x53,
+	CARMEL_PMU_L2D_CACHE_WB_VIC_TIM = 0x56,
+
+	CARMEL_PMU_EVENT_NV_INT_START = 0x200,
+	CARMEL_PMU_EVENT_NV_INT_END = 0x208,
 
 };
 
-/*
- * Carmel perf tool only support 2 events tracking in one run.
+/**
+ * Data for each uncore perfmon counter
  */
-#define FIRST_TRACKING_EVENT	1
-#define SECOND_TRACKING_EVENT	2
+struct perfmon_cnt_info {
+	uint8_t counter;	/* Event id */
+	uint8_t group;		/* Group selector */
+	uint8_t unit;		/* Unit selector */
+	uint8_t index;		/* Virtual Index */
+	uint8_t idx;		/* Physical Index */
+	uint8_t valid;		/* Valid info */
+};
 
-/*
- * Perf Events' indices
- */
-#define ARMV8_IDX_CYCLE_COUNTER	0
-#define ARMV8_IDX_COUNTER0	1
-#define ARMV8_MAX_COUNTERS	32
-#define ARMV8_COUNTER_MASK	(ARMV8_MAX_COUNTERS - 1)
+static struct perfmon_cnt_info carmel_uncore_event[CARMEL_MAX_UNCORE_CNTS];
 
-/*
- * Perf Event to low level counters mapping
- */
-#define ARMV8_IDX_TO_COUNTER(x) \
-	(((x) - ARMV8_IDX_COUNTER0) & ARMV8_COUNTER_MASK)
 
-/*
- * Per-CPU PMCR: config reg
- */
-#define ARMV8_PMCR_E		(1 << 0) /* Enable all counters */
-#define ARMV8_PMCR_P		(1 << 1) /* Reset all counters */
-#define ARMV8_PMCR_C		(1 << 2) /* Cycle counter reset */
-#define ARMV8_PMCR_D		(1 << 3) /* CCNT counts every 64th cpu cycle */
-#define ARMV8_PMCR_X		(1 << 4) /* Export to ETM */
-#define ARMV8_PMCR_DP		(1 << 5) /* Disable CCNT if non-invasive dbg */
-#define ARMV8_PMCR_N_SHIFT	11	 /* Number of counters supported */
-#define ARMV8_PMCR_N_MASK	0x1f
-#define ARMV8_PMCR_MASK		0x3f	 /* Mask for writable bits */
+static const u32 nv_pmevcntrs[] = { SYS_NV_PMEVCNTR0_EL0, SYS_NV_PMEVCNTR1_EL0 };
+static const u32 nv_pmevtypers[] = { SYS_NV_PMEVTYPER0_EL0, SYS_NV_PMEVTYPER1_EL0 };
 
-/*
- * PMOVSR: counters overflow flag status reg
- */
-#define ARMV8_OVSR_MASK		0xffffffff	/* Mask for writable bits */
-#define ARMV8_OVERFLOWED_MASK	ARMV8_OVSR_MASK
-
-/*
- * Event filters for PMUv3
- */
-#define ARMV8_EXCLUDE_EL1	(1 << 31)
-#define ARMV8_EXCLUDE_EL0	(1 << 30)
-#define ARMV8_INCLUDE_EL2	(1 << 27)
-
-static struct dmce_perfmon_cnt_info carmel_uncore_event[CARMEL_MAX_UNCORE_CNTS];
-
-static u32 mce_perfmon_rw(uint8_t command, carmel_pmc_reg_t reg, u32 *data)
+static void sys_counter_write(u32 reg, u32 val)
 {
-	u32 status = -1;
-
-	if (command == DMCE_PERFMON_COMMAND_WRITE)
-		status = tegra_mce_write_uncore_perfmon(reg, *data);
-	else if (command == DMCE_PERFMON_COMMAND_READ)
-		status = tegra_mce_read_uncore_perfmon(reg, data);
-	else
-		pr_err("perfmon command not recognized");
-
-	if (status != DMCE_PERFMON_STATUS_SUCCESS) {
-		pr_err("perfmon status error: %u", status);
+	switch(reg) {
+		case SYS_NV_PMEVCNTR0_EL0: write_sysreg_s(val, SYS_NV_PMEVCNTR0_EL0); return;
+		case SYS_NV_PMEVCNTR1_EL0: write_sysreg_s(val, SYS_NV_PMEVCNTR1_EL0); return;
+		case SYS_NV_PMEVTYPER0_EL0: write_sysreg_s(val, SYS_NV_PMEVTYPER0_EL0); return;
+		case SYS_NV_PMEVTYPER1_EL0: write_sysreg_s(val, SYS_NV_PMEVTYPER1_EL0); return;
+		default:
+			WARN(1, "Illegal counter write\n");
+			return;
 	}
-
-	return status;
 }
 
-static inline int get_ctr_info(u32 idx, struct dmce_perfmon_cnt_info *info)
+static u32 sys_counter_read(u32 reg)
+{
+	switch(reg) {
+		case SYS_NV_PMEVCNTR0_EL0: return read_sysreg_s(SYS_NV_PMEVCNTR0_EL0);
+		case SYS_NV_PMEVCNTR1_EL0: return read_sysreg_s(SYS_NV_PMEVCNTR1_EL0);
+		case SYS_NV_PMEVTYPER0_EL0: return read_sysreg_s(SYS_NV_PMEVTYPER0_EL0);
+		case SYS_NV_PMEVTYPER1_EL0: return read_sysreg_s(SYS_NV_PMEVTYPER1_EL0);
+		default:
+			WARN(1, "Illegal counter read\n");
+			return 0;
+	}
+}
+
+static inline int get_ctr_info(u32 idx, struct perfmon_cnt_info *info)
 {
 	int i;
 
@@ -153,7 +155,7 @@ static inline int get_ctr_info(u32 idx, struct dmce_perfmon_cnt_info *info)
 static inline int alloc_carmel_ctr(u32 idx, u32 group, u32 event)
 {
 	int i;
-	struct dmce_perfmon_cnt_info info;
+	struct perfmon_cnt_info info;
 
 	if (get_ctr_info(idx, &info) < 0) {
 		for (i = 0; i < CARMEL_MAX_UNCORE_CNTS; i++) {
@@ -169,7 +171,7 @@ static inline int alloc_carmel_ctr(u32 idx, u32 group, u32 event)
 		}
 
 		if (i == CARMEL_MAX_UNCORE_CNTS) {
-			pr_err("Failed to allocate Carmel uncore ctr\n");
+			pr_err("carmel_pmu: failed to allocate Carmel uncore ctr\n");
 			return -1;
 		}
 	}
@@ -191,7 +193,7 @@ static inline int clear_carmel_ctr(u32 idx)
 	return 0;
 }
 
-static inline int get_uncore_group(u32 event, int flag_select_group)
+static inline int get_uncore_group(u32 event, bool set)
 {
 	u32 group = 0x0;//, pre_group;
 	switch (event) {
@@ -214,6 +216,7 @@ static inline int get_uncore_group(u32 event, int flag_select_group)
 		case CARMEL_PMU_L3D_CACHE_REFILL:
 		case CARMEL_PMU_L3D_CACHE:
 		case CARMEL_PMU_L3D_CACHE_WB:
+		case CARMEL_PMU_EVENT_NV_INT_START ... CARMEL_PMU_EVENT_NV_INT_END:
 		{
 			group = 0x0000;
 			break;
@@ -223,57 +226,32 @@ static inline int get_uncore_group(u32 event, int flag_select_group)
 			return -1;
 	}
 
-	pr_err("Perfmon: get_uncore_group The event is 0x%x, the group is 0x%x\n", event, group);
-	if(flag_select_group)
+	if (set)
 	{
-		mce_perfmon_rw(DMCE_PERFMON_COMMAND_WRITE, NV_PMSELR_EL0, &group);
+		write_sysreg_s(group, SYS_NV_PMSELR_EL0);
 	}
 
 	return group;
 }
 
 static inline int carmel_pmu_counter_valid(u32 idx,
-		struct dmce_perfmon_cnt_info *info)
+		struct perfmon_cnt_info *info)
 {
-	int ret, flag_select_group;
-
 	if (get_ctr_info(idx, info) < 0)
 		return 0;
-
-	flag_select_group = 0;
-	ret = get_uncore_group(info->counter, flag_select_group);
-
-	return ret >= 0 ? 1 : 0;
-}
-
-static int
-carmel_pmu_map_raw_event(u32 raw_event_mask, u64 config)
-{
-	int flag_select_group;
-	flag_select_group = 1;
-	if (get_uncore_group(config & CARMEL_EVTYPE_EVENT_ID, flag_select_group) < 0)
-		return -ENOENT;
-	else
-		return (int)(config & raw_event_mask);
-}
-
-static inline int carmel_pmu_has_overflowed(u32 pmovsr)
-{
-	return pmovsr & ARMV8_OVERFLOWED_MASK;
+	return 1;
 }
 
 static inline int carmel_pmu_counter_has_overflowed(u32 pmnc, int idx)
 {
 	int ret = 0;
-	u32 counter;
-	struct dmce_perfmon_cnt_info info;
+	struct perfmon_cnt_info info;
 
 	if (!carmel_pmu_counter_valid(idx, &info)) {
-		pr_err("CPU%u checking wrong counter %d overflow status\n",
+		pr_err("carmel_pmu: CPU%u checking wrong counter %d overflow status\n",
 			smp_processor_id(), idx);
 	} else {
-		counter = ARMV8_IDX_TO_COUNTER(idx);
-		ret = pmnc & BIT(counter);
+		ret = pmnc & BIT(idx);
 	}
 
 	return ret;
@@ -283,22 +261,16 @@ static inline u32 carmel_pmu_read_counter(struct perf_event *event)
 {
 	struct hw_perf_event *hwc = &event->hw;
 	int idx = hwc->idx;
-	struct dmce_perfmon_cnt_info info;
+	struct perfmon_cnt_info info;
 	u32 value = 0;
 
+	PMCPRINT("Read counter %d\n", idx);
+
 	if (carmel_pmu_counter_valid(idx, &info)){
-		//pr_err("\nPerfmon: carmel_pmu_read_counter, idx = %d\n", idx);
-		//pr_err("Perfmon: carmel_pmu_read_counter: Now it is reading 0x%x\n", idx);
-		if(idx == FIRST_TRACKING_EVENT)
-			mce_perfmon_rw(DMCE_PERFMON_COMMAND_READ, NV_PMEVCNTR0_EL0, &value);
-		else if(idx == SECOND_TRACKING_EVENT)
-			mce_perfmon_rw(DMCE_PERFMON_COMMAND_READ, NV_PMEVCNTR1_EL0, &value);
-		else {
-			pr_err("Perfmon: idx is not equal 1 or 2, please check\n");
-		}
+		value = sys_counter_read(nv_pmevcntrs[idx]);
 	}
 	else
-		pr_err("CPU%u reading wrong counter %d\n",
+		pr_err("carmel_pmu: CPU%u reading invalid counter %d\n",
 			smp_processor_id(), idx);
 
 	return value;
@@ -308,60 +280,44 @@ static inline void carmel_pmu_write_counter(struct perf_event *event, u32 value)
 {
 	struct hw_perf_event *hwc = &event->hw;
 	int idx = hwc->idx;
-	struct dmce_perfmon_cnt_info info;
+	struct perfmon_cnt_info info;
 
 	if (carmel_pmu_counter_valid(idx, &info)){
-		pr_err("Perfmon: carmel_pmu_write_counter: Now writing idx = 0x%x, value = 0x%x\n", idx, value);
-		if(idx == FIRST_TRACKING_EVENT)
-			mce_perfmon_rw(DMCE_PERFMON_COMMAND_WRITE, NV_PMEVCNTR0_EL0, &value);
-		else if(idx == SECOND_TRACKING_EVENT)
-			mce_perfmon_rw(DMCE_PERFMON_COMMAND_WRITE, NV_PMEVCNTR1_EL0, &value);
-		else {
-			pr_err("Perfmon: idx is not equal 1 or 2, please check\n");
-		}
+		sys_counter_write(nv_pmevcntrs[idx], value);
 	}
 	else
-		pr_err("CPU%u writing wrong counter %d\n",
+		pr_err("carmel_pmu: CPU%u writing invalid counter %d\n",
 			smp_processor_id(), idx);
 
 }
 
 static inline void carmel_pmu_write_evtype(int idx, u32 val)
 {
-	int group, flag_select_group;
-	struct dmce_perfmon_cnt_info info;
+	int group;
+	struct perfmon_cnt_info info;
 
-	val &= CARMEL_EVTYPE_EVENT_ID;
 	if (carmel_pmu_counter_valid(idx, &info)) {
-		flag_select_group = 1;
-		group = get_uncore_group(val, flag_select_group);
+		group = get_uncore_group(val, true);
 		if(group < 0) {
-			pr_err("Perfmon Error: Try to write an invalid group\n");
+			pr_err("carmel_pmu: Try to write an invalid group\n");
 			return ;
 		}
 
-		pr_err("Perfmon: carmel_pmu_write_evtype: Now it is writing idx = 0x%x, val = 0x%x\n", idx, val);
-		if(idx == FIRST_TRACKING_EVENT)
-			mce_perfmon_rw(DMCE_PERFMON_COMMAND_WRITE, NV_PMEVTYPER0_EL0, &val);
-		else if(idx == SECOND_TRACKING_EVENT)
-			mce_perfmon_rw(DMCE_PERFMON_COMMAND_WRITE, NV_PMEVTYPER1_EL0, &val);
-		else {
-			pr_err("Perfmon: idx is not equal 1 or 2, please check\n");
-		}
+		sys_counter_write(nv_pmevtypers[idx], val);
 	}
 
 }
 
 static inline int carmel_pmu_enable_counter(int idx)
 {
-	struct dmce_perfmon_cnt_info info;
+	struct perfmon_cnt_info info;
 	u32 data = 0;
 
 	if (carmel_pmu_counter_valid(idx, &info)) {
-		data = BIT(ARMV8_IDX_TO_COUNTER(idx));
-		mce_perfmon_rw(DMCE_PERFMON_COMMAND_WRITE, NV_PMCNTENSET_EL0, &data);
+		data = BIT(idx);
+		write_sysreg_s(data, SYS_NV_PMCNTENSET_EL0);
 	} else {
-		pr_err("CPU%u enabling wrong PMNC counter %d\n",
+		pr_err("carmel_pmu: CPU%u enabling wrong PMNC counter %d\n",
 			smp_processor_id(), idx);
 		return -EINVAL;
 	}
@@ -374,10 +330,10 @@ static inline int carmel_pmu_disable_counter(int idx)
 	u32 data = 0;
 
 	if (idx <= CARMEL_MAX_UNCORE_CNTS) {
-		data = BIT(ARMV8_IDX_TO_COUNTER(idx));
-		mce_perfmon_rw(DMCE_PERFMON_COMMAND_WRITE, NV_PMCNTENCLR_EL0, &data);
+		data = BIT(idx);
+		write_sysreg_s(data, SYS_NV_PMCNTENCLR_EL0);
 	} else {
-		pr_err("CPU%u disabling wrong PMNC counter %d\n",
+		pr_err("carmel_pmu: CPU%u disabling wrong PMNC counter %d\n",
 			smp_processor_id(), idx);
 		return -EINVAL;
 	}
@@ -390,10 +346,10 @@ static inline int carmel_pmu_enable_intens(int idx)
 	u32 data = 0;
 
 	if (idx <= CARMEL_MAX_UNCORE_CNTS) {
-		data = BIT(ARMV8_IDX_TO_COUNTER(idx));
-		mce_perfmon_rw(DMCE_PERFMON_COMMAND_WRITE, NV_PMINTENSET_EL1, &data);
+		data = BIT(idx);
+		write_sysreg_s(data, SYS_NV_PMINTENSET_EL1);
 	} else {
-		pr_err("CPU%u enabling wrong PMNC counter enable %d\n",
+		pr_err("carmel_pmu: CPU%u enabling wrong PMNC counter enable %d\n",
 			smp_processor_id(), idx);
 		return -EINVAL;
 	}
@@ -406,11 +362,11 @@ static inline int carmel_pmu_disable_intens(int idx)
 	u32 data = 0;
 
 	if (idx <= CARMEL_MAX_UNCORE_CNTS) {
-		data = BIT(ARMV8_IDX_TO_COUNTER(idx));
-		mce_perfmon_rw(DMCE_PERFMON_COMMAND_WRITE, NV_PMINTENCLR_EL1, &data);
-		mce_perfmon_rw(DMCE_PERFMON_COMMAND_WRITE, NV_PMOVSCLR_EL0, &data);
+		data = BIT(idx);
+		write_sysreg_s(data, SYS_NV_PMINTENCLR_EL1);
+		write_sysreg_s(data, SYS_NV_PMOVSCLR_EL0);
 	} else {
-		pr_err("CPU%u enabling wrong PMNC counter disable %d\n",
+		pr_err("carmel_pmu: CPU%u enabling wrong PMNC counter disable %d\n",
 			smp_processor_id(), idx);
 		return -EINVAL;
 	}
@@ -420,13 +376,26 @@ static inline int carmel_pmu_disable_intens(int idx)
 
 static inline u32 carmel_pmu_getreset_flags(void)
 {
-	u32 data = 0;
+	u32 inten = 0;
+	u32 ovf = 0;
 
-	mce_perfmon_rw(DMCE_PERFMON_COMMAND_READ, NV_PMINTENCLR_EL1, &data);
-	data &= ARMV8_OVSR_MASK;
-	mce_perfmon_rw(DMCE_PERFMON_COMMAND_WRITE, NV_PMOVSCLR_EL0, &data);
+	// find counters with interrupts enabled
+	inten = read_sysreg_s(SYS_NV_PMINTENCLR_EL1);
 
-	return data;
+	// find counters that have overflowed
+	ovf = read_sysreg_s(SYS_NV_PMOVSCLR_EL0);
+
+	// only handle/clear counters with interrupts enable
+	ovf &= inten;
+
+	// clear overflows
+	write_sysreg_s(ovf, SYS_NV_PMOVSCLR_EL0);
+
+	// toggle interrupt enable
+	write_sysreg_s(inten, SYS_NV_PMINTENCLR_EL1);
+	write_sysreg_s(inten, SYS_NV_PMINTENSET_EL1);
+
+	return ovf;
 }
 
 static void carmel_pmu_enable_event(struct perf_event *event)
@@ -437,6 +406,7 @@ static void carmel_pmu_enable_event(struct perf_event *event)
 	struct pmu_hw_events *events = this_cpu_ptr(cpu_pmu->hw_events);
 	int idx = hwc->idx;
 
+	PMCPRINT("Enable counter %d with event %ld\n", idx, hwc->config_base);
 	/*
 	 * Enable counter and interrupt, and set the counter to count
 	 * the event that we're interested in.
@@ -474,6 +444,7 @@ static void carmel_pmu_disable_event(struct perf_event *event)
 	struct pmu_hw_events *events = this_cpu_ptr(uncore_pmu->hw_events);
 	int idx = hwc->idx;
 
+	PMCPRINT("Disable counter %d\n", idx);
 	/*
 	 * Disable counter and interrupt
 	 */
@@ -501,6 +472,8 @@ static irqreturn_t carmel_pmu_handle_irq(int irq_num, void *dev)
 	struct pt_regs *regs;
 	int idx;
 
+	PMCPRINT("Core %u handling IRQ %d\n",smp_processor_id(), irq_num);
+
 	/*
 	 * Get and reset the IRQ flags
 	 */
@@ -509,8 +482,10 @@ static irqreturn_t carmel_pmu_handle_irq(int irq_num, void *dev)
 	/*
 	 * Did an overflow occur?
 	 */
-	if (!carmel_pmu_has_overflowed(pmovsr))
+	if (!pmovsr) {
+		pr_err("carmel_pmu: no ovf detected, not handled\n");
 		return IRQ_NONE;
+	}
 
 	/*
 	 * Handle the counter(s) overflow(s)
@@ -561,12 +536,13 @@ static void carmel_pmu_start(struct arm_pmu *uncore_pmu)
 	struct pmu_hw_events *events = this_cpu_ptr(uncore_pmu->hw_events);
 	u32 value = 0;
 
+	PMCPRINT("Starting Carmel PMU\n");
 
 	raw_spin_lock_irqsave(&events->pmu_lock, flags);
 	/* Enable all counters */
-	mce_perfmon_rw(DMCE_PERFMON_COMMAND_READ, NV_PMCR_EL0, &value);
-	value |= ARMV8_PMCR_E;
-	mce_perfmon_rw(DMCE_PERFMON_COMMAND_WRITE, NV_PMCR_EL0, &value);
+	value = read_sysreg_s(SYS_NV_PMCR_EL0);
+	value |= CARMEL_PMCR_E;
+	write_sysreg_s(value, SYS_NV_PMCR_EL0);
 	raw_spin_unlock_irqrestore(&events->pmu_lock, flags);
 }
 
@@ -576,11 +552,13 @@ static void carmel_pmu_stop(struct arm_pmu *uncore_pmu)
 	struct pmu_hw_events *events = this_cpu_ptr(uncore_pmu->hw_events);
 	u32 value = 0;
 
+	PMCPRINT("Stopping Carmel PMU\n");
+
 	raw_spin_lock_irqsave(&events->pmu_lock, flags);
 	/* Disable all counters */
-	mce_perfmon_rw(DMCE_PERFMON_COMMAND_READ, NV_PMCR_EL0, &value);
-	value &= ~ARMV8_PMCR_E;
-	mce_perfmon_rw(DMCE_PERFMON_COMMAND_WRITE, NV_PMCR_EL0, &value);
+	value = read_sysreg_s(SYS_NV_PMCR_EL0);
+	value &= ~CARMEL_PMCR_E;
+	write_sysreg_s(value, SYS_NV_PMCR_EL0);
 	raw_spin_unlock_irqrestore(&events->pmu_lock, flags);
 }
 
@@ -588,19 +566,15 @@ static int carmel_pmu_get_event_idx(struct pmu_hw_events *cpuc,
 				  struct perf_event *event)
 {
 	int idx;
-	int group, flag_select_group;
+	int group;
 	struct arm_pmu *uncore_pmu = to_arm_pmu(event->pmu);
 
-	/*
-	 * For anything other than a cycle counter, try and use
-	 * the events counters
-	 */
-	for (idx = ARMV8_IDX_COUNTER0; idx < uncore_pmu->num_events; ++idx) {
+	PMCPRINT("Finding counter for event %lld\n", event->attr.config);
+
+	for (idx = 0; idx < uncore_pmu->num_events; ++idx) {
 		if (!test_and_set_bit(idx, cpuc->used_mask)) {
-			pr_err("Go to get_uncore_group: carmel_pmu_get_event_idx");
-			flag_select_group = 1;
-			group = get_uncore_group(event->attr.config & CARMEL_EVTYPE_EVENT_ID, flag_select_group);
-                        alloc_carmel_ctr(idx, group, event->attr.config & CARMEL_EVTYPE_EVENT_ID);
+			group = get_uncore_group(event->attr.config, true);
+			alloc_carmel_ctr(idx, group, event->attr.config);
 			return idx;
 		}
 	}
@@ -609,54 +583,31 @@ static int carmel_pmu_get_event_idx(struct pmu_hw_events *cpuc,
 	return -EAGAIN;
 }
 
-/*
- * Add an event filter to a given event. This will only work for PMUv2 PMUs.
- */
-static int carmel_pmu_set_event_filter(struct hw_perf_event *event,
-				     struct perf_event_attr *attr)
-{
-	unsigned long config_base = 0;
-
-	if (attr->exclude_idle)
-		return -EPERM;
-	if (attr->exclude_user)
-		config_base |= ARMV8_EXCLUDE_EL0;
-	if (attr->exclude_kernel)
-		config_base |= ARMV8_EXCLUDE_EL1;
-	if (!attr->exclude_hv)
-		config_base |= ARMV8_INCLUDE_EL2;
-
-	/*
-	 * Install the filter into config_base as this is used to
-	 * construct the event type.
-	 */
-	event->config_base = config_base;
-
-	return 0;
-}
-
 static void carmel_pmu_reset(void *info)
 {
 	struct arm_pmu *uncore_pmu = (struct arm_pmu *)info;
 	u32 idx, nb_cnt = uncore_pmu->num_events;
 	int value = 0;
 
+	PMCPRINT("Resetting Carmel PMU\n");
+
 	/* The counter and interrupt enable registers are unknown at reset. */
-	for (idx = ARMV8_IDX_CYCLE_COUNTER; idx < nb_cnt; ++idx)
+	for (idx = 0; idx < nb_cnt; ++idx)
 		clear_carmel_ctr(idx);
 
 	/* Initialize & Reset PMNC: C and P bits. */
-	value |= ARMV8_PMCR_P;
-	mce_perfmon_rw(DMCE_PERFMON_COMMAND_WRITE, NV_PMCR_EL0, &value);
+	value |= CARMEL_PMCR_P;
+	write_sysreg_s(value, SYS_NV_PMCR_EL0);
 }
 
 static int carmel_pmu_map_event(struct perf_event *event)
 {
-	if ((event->attr.config & CARMEL_EVTYPE_MASK) == CARMEL_EVTYPE_MASK)
-		return carmel_pmu_map_raw_event(ARMV8_EVTYPE_EVENT,
-					event->attr.config);
+	PMCPRINT("Mapping event %lld\n", event->attr.config);
 
-	return -ENOENT;
+	if (get_uncore_group(event->attr.config, true) < 0)
+		return -ENOENT;
+	else
+		return (int)(event->attr.config);
 }
 
 static int carmel_uncore_pmu_init(struct arm_pmu *uncore_pmu)
@@ -671,10 +622,9 @@ static int carmel_uncore_pmu_init(struct arm_pmu *uncore_pmu)
 	uncore_pmu->stop		= carmel_pmu_stop,
 	uncore_pmu->reset		= carmel_pmu_reset,
 	uncore_pmu->max_period		= (1LLU << 32) - 1,
-	uncore_pmu->set_event_filter	= carmel_pmu_set_event_filter;
 	uncore_pmu->name		= "carmel_uncore_pmu";
 	uncore_pmu->map_event		= carmel_pmu_map_event;
-	uncore_pmu->num_events		= CARMEL_MAX_UNCORE_CNTS + 1;
+	uncore_pmu->num_events		= CARMEL_MAX_UNCORE_CNTS;
 
 	return 0;
 }
@@ -699,7 +649,9 @@ static struct platform_driver carmel_pmu_driver = {
 
 static int __init register_pmu_driver(void)
 {
-	return platform_driver_register(&carmel_pmu_driver);
+	if (tegra_platform_is_silicon())
+		return platform_driver_register(&carmel_pmu_driver);
+	return 0;
 }
 device_initcall(register_pmu_driver);
 #endif

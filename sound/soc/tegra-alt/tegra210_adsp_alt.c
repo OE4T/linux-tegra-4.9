@@ -3966,10 +3966,8 @@ static int tegra210_adsp_tlv_callback(struct snd_kcontrol *kcontrol,
 	}
 
 	tlv_data = devm_kzalloc(adsp->dev, count, GFP_KERNEL);
-	if (!tlv_data) {
-		dev_err(adsp->dev, "Failed to allocate memory for tlv data\n");
+	if (!tlv_data)
 		return -ENOMEM;
-	}
 
 	switch (op_flag) {
 	case SNDRV_CTL_TLV_OP_WRITE:
@@ -4001,14 +3999,6 @@ static int tegra210_adsp_tlv_callback(struct snd_kcontrol *kcontrol,
 			sizeof(apm_msg->msg.fx_raw_data_params.data))) {
 			ret = -EINVAL;
 			devm_kfree(adsp->dev, apm_msg);
-			goto end;
-		}
-
-		if (count != call_params->size) {
-			dev_err(adsp->dev, "tlv length (%d) differs from size (%d)\n",
-					count, call_params->size);
-			devm_kfree(adsp->dev, apm_msg);
-			ret = -EFAULT;
 			goto end;
 		}
 

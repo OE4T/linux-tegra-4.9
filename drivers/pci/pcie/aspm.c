@@ -957,6 +957,73 @@ void pci_disable_link_state(struct pci_dev *pdev, int state)
 }
 EXPORT_SYMBOL(pci_disable_link_state);
 
+static void __pci_enable_link_state(struct pci_dev *pdev, int state, bool sem)
+{
+	struct pci_dev *parent = pdev->bus->self;
+	struct pcie_link_state *link;
+
+	if (!pci_is_pcie(pdev))
+		return;
+
+	if (pdev->has_secondary_link)
+		parent = pdev;
+	if (!parent || !parent->link_state)
+		return;
+
+	/*
+	 * A driver requested that ASPM be enabled on this device, but
+	 * if we don't have permission to manage ASPM (e.g., on ACPI
+	 * systems we have to observe the FADT ACPI_FADT_NO_ASPM bit and
+	 * the _OSC method), we can't honor that request.  Windows has
+	 * a similar mechanism using "PciASPMOptOut", which is also
+	 * ignored in this situation.
+	 */
+	if (aspm_disabled) {
+		dev_warn(&pdev->dev, "can't enable ASPM; OS doesn't have ASPM control\n");
+		return;
+	}
+
+	if (sem)
+		down_read(&pci_bus_sem);
+	mutex_lock(&aspm_lock);
+	link = parent->link_state;
+	if (state & PCIE_LINK_STATE_L0S)
+		link->aspm_disable &= ~ASPM_STATE_L0S;
+	if (state & PCIE_LINK_STATE_L1)
+		link->aspm_disable &= ~ASPM_STATE_L1;
+	if (state & PCIE_LINK_STATE_L1SS)
+		link->aspm_disable &= ~ASPM_STATE_L1SS;
+	pcie_config_aspm_link(link, policy_to_aspm_state(link));
+
+	if (state & PCIE_LINK_STATE_CLKPM) {
+		link->clkpm_capable = 1;
+		pcie_set_clkpm(link, 1);
+	}
+	mutex_unlock(&aspm_lock);
+	if (sem)
+		up_read(&pci_bus_sem);
+}
+
+void pci_enable_link_state_locked(struct pci_dev *pdev, int state)
+{
+	__pci_enable_link_state(pdev, state, false);
+}
+EXPORT_SYMBOL(pci_enable_link_state_locked);
+
+/**
+ * pci_enable_link_state - Enable device's link state, so the link will
+ * enter specific states.  Note that if the BIOS didn't grant ASPM control
+ * to the OS, this does nothing because we can't touch the LNKCTL register.
+ *
+ * @pdev: PCI device
+ * @state: ASPM link state to enable
+ */
+void pci_enable_link_state(struct pci_dev *pdev, int state)
+{
+	__pci_enable_link_state(pdev, state, true);
+}
+EXPORT_SYMBOL(pci_enable_link_state);
+
 static int pcie_aspm_set_policy(const char *val,
 				const struct kernel_param *kp)
 {

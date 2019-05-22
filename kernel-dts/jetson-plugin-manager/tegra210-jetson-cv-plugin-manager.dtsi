@@ -88,7 +88,9 @@
 						"s IN",			"s Mic",
 						"w Headphone",		"w OUT",
 						"w IN",			"w Mic",
-						"z IN",			"z Mic";
+						"z IN",			"z Mic",
+						"m IN",			"m Mic",
+						"n IN",			"n Mic";
 					nvidia,dai-link-1 {
 						codec-dai-name = "rt5659-aif1";
 					};

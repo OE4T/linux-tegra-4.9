@@ -58,7 +58,6 @@
 		stdout-path = "/serial@70006000";
 		nvidia,tegra-always-on-personality;
 		bootargs = "kmemleak=on earlycon=uart8250,mmio32,0x70006000";
-		fastboot-instructions = "Tap on power button to navigate menu options.\nHold down power button for 2 sec and release for selecting an option\n";
 	};
 
 	cpus {
@@ -599,14 +598,46 @@
 
 	pwm_regulators {
 		compatible = "simple-bus";
-		pwm-regulator@0 {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		cpu_ovr_reg: pwm-regulator@0 {
+			status = "okay";
+			reg = <0>;
+			compatible = "pwm-regulator";
+			pwms = <&tegra_pwm_dfll 0 2500>;
+			regulator-name = "vdd-cpu";
 			regulator-min-microvolt = <708000>;
 			regulator-max-microvolt = <1323400>;
+			regulator-always-on;
+			regulator-boot-on;
+			voltage-table =
+				<708000 0>, <727200 1>, <746400 2>,
+				<765600 3>, <784800 4>, <804000 5>,
+				<823200 6>, <842400 7>, <861600 8>,
+				<880800 9>, <900000 10>, <919200 11>,
+				<938400 12>, <957600 13>, <976800 14>,
+				<996000 15>, <1015200 16>, <1034400 17>,
+				<1053600 18>, <1072800 19>, <1092000 20>,
+				<1111200 21>, <1130400 22>, <1149600 23>,
+				<1168800 24>, <1188000 25>, <1207200 26>,
+				<1226400 27>, <1245600 28>, <1264800 29>,
+				<1284000 30>, <1303200 31>, <1322400 32>;
 		};
 
 		pwm-regulator@1 {
+			status = "okay";
+			reg = <1>;
+			compatible = "pwm-regulator";
+			pwms = <&tegra_pwm 1 8000>;
+			regulator-name = "vdd-gpu";
 			regulator-min-microvolt = <708000>;
 			regulator-max-microvolt = <1323400>;
+			regulator-init-microvolt = <1000000>;
+			regulator-n-voltages = <62>;
+			regulator-enable-ramp-delay = <2000>;
+			enable-gpio = <&max77620 6 0>;
+			regulator-settling-time-us = <160>;
 		};
 	};
 
@@ -670,8 +701,22 @@
 	};
 
 	dfll-max77621@70110000 {
-		dfll-max77621-integration {
+		i2c_dfll: dfll-max77621-integration {
 			i2c-fs-rate = <1000000>;
+			pmic-i2c-address = <0x36>;
+			pmic-i2c-voltage-register = <0x01>;
+			sel-conversion-slope = <1>;
+		};
+
+		dfll_max77621_parms: dfll-max77621-board-params {
+			sample-rate = <12500>;
+			fixed-output-forcing;
+			cf = <10>;
+			ci = <0>;
+			cg = <2>;
+			droop-cut-value = <0xf>;
+			droop-restore-ramp = <0x0>;
+			scale-out-ramp = <0x0>;
 		};
 	};
 
@@ -803,6 +848,16 @@
 
 	nvdumper {
 		status = "disabled";
+	};
+
+	cpu_edp {
+		status = "okay";
+		nvidia,edp_limit = <0x61a8>;
+	};
+
+	gpu_edp {
+		status = "okay";
+		nvidia,edp_limit = <0x4e20>;
 	};
 };
 

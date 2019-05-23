@@ -15,7 +15,6 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 #include "tegra210-porg-pmic-p3448-0000-a00.dtsi"
-#include <t210-common-platforms/tegra210-ers-power-dvfs-e2174-1101-a00.dtsi>
 #include "tegra210-porg-fixed-p3448-0000-a00.dtsi"
 
 / {
@@ -381,6 +380,40 @@
 								0x41 0xF8>;
 				};
 			};
+		};
+	};
+
+	dvfs_rails {
+		compatible = "simple-bus";
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		gpu_scaling_cdev: vdd-gpu-scaling-cdev@7 {
+			status = "okay";
+			reg = <7>;
+			cooling-min-state = <0>;
+			cooling-max-state = <5>;
+			#cooling-cells = <2>;
+			compatible = "nvidia,tegra210-rail-scaling-cdev";
+			cdev-type = "gpu_scaling";
+			nvidia,constraint;
+			nvidia,trips = <&gpu_scaling0 950 &gpu_scaling1 0
+					&gpu_scaling2 0 &gpu_scaling3 0
+					&gpu_scaling4 0 &gpu_scaling5 0>;
+		};
+
+		gpu_vmax_cdev: vdd-gpu-vmax-cdev@9 {
+			status = "okay";
+			reg = <9>;
+			cooling-min-state = <0>;
+			cooling-max-state = <1>;
+			#cooling-cells = <2>;
+			compatible = "nvidia,tegra210-rail-vmax-cdev";
+			cdev-type = "GPU-cap";
+			nvidia,constraint-ucm2;
+			nvidia,trips = <&gpu_vmax1 1132 1090>;
+			clocks = <&tegra_car TEGRA210_CLK_CAP_VGPU_GBUS>;
+			clock-names = "cap-clk";
 		};
 	};
 };

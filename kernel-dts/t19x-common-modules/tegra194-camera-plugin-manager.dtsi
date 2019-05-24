@@ -35,38 +35,6 @@
 
 	/* camera plugin-manager */
 	plugin-manager {
-		fragment-p2888@0 {
-			ids = "2888-*";
-			override@0 {
-				target = <&dmic_2904300>;
-				_overlay_ {
-					pinctrl-0 = <>;
-					pinctrl-1 = <>;
-				};
-			};
-			override@1 {
-				target = <&dspk_2905000>;
-				_overlay_ {
-					pinctrl-0 = <>;
-					pinctrl-1 = <>;
-				};
-			};
-			override@2 {
-				target = <&dspk_2905100>;
-				_overlay_ {
-					pinctrl-0 = <>;
-					pinctrl-1 = <>;
-				};
-			};
-			override@3 {
-				target = <&i2s_2901400>;
-				_overlay_ {
-					pinctrl-0 = <>;
-					pinctrl-1 = <>;
-				};
-			};
-		};
-
 		/* IMX390 */
 		fragment-imx390@0 {
 			ids = "LPRD-001";

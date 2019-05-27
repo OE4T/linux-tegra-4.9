@@ -88,26 +88,29 @@ int dw_pcie_msi_init(struct pcie_port *pp)
 	struct device *dev = pci->dev;
 	int err;
 
-	/* Though the PCIe controller can address >32-bit address space, to
-	 * facilitate endpoints that support only 32-bit MSI target address,
-	 * the mask is set to 32-bit to make sure that MSI target address is
-	 * always a 32-bit address
-	 */
-	err = dma_set_coherent_mask(dev, DMA_BIT_MASK(32));
-	if (err < 0) {
-		dev_err(dev, "failed to set DMA coherent mask: %d\n", err);
-		return err;
-	}
-
-	pp->msi_virt_addr = dma_alloc_coherent(dev, PAGE_SIZE,
-					       &pp->msi_target_addr,
-					       GFP_KERNEL);
 	if (!pp->msi_virt_addr) {
-		dev_err(dev, "failed to allocate DMA memory for MSI\n");
-		err = -ENOMEM;
-		return err;
-	}
+		/* Though the PCIe controller can address >32-bit address space,
+		 * to facilitate endpoints that support only 32-bit MSI target
+		 * address, the mask is set to 32-bit to make sure that MSI
+		 * target address is always a 32-bit address
+		 */
+		err = dma_set_coherent_mask(dev, DMA_BIT_MASK(32));
+		if (err < 0) {
+			dev_err(dev, "failed to set DMA coherent mask: %d\n",
+				err);
+			return err;
+		}
 
+		pp->msi_virt_addr = dma_alloc_coherent(dev, PAGE_SIZE,
+						       &pp->msi_target_addr,
+						       GFP_KERNEL);
+		if (!pp->msi_virt_addr) {
+			dev_err(dev,
+				"failed to allocate DMA memory for MSI\n");
+			err = -ENOMEM;
+			return err;
+		}
+	}
 	/* program the msi_data */
 	dw_pcie_wr_own_conf(pp, PCIE_MSI_ADDR_LO, 4,
 			    (u32)(pp->msi_target_addr & 0xffffffff));

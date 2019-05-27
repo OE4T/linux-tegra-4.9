@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014-2017, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (C) 2014-2019, NVIDIA CORPORATION. All rights reserved.
  *
  * Hypervisor interfaces
  *
@@ -46,6 +46,7 @@
 #define HVC_NR_READ_HYP_INFO		9
 #define HVC_NR_GUEST_RESET		10
 #define HVC_NR_SYSINFO_IPA		13
+#define HVC_NR_UART_RELAY_INFO		518
 
 #define GUEST_PRIMARY		0
 #define GUEST_IVC_SERVER	0
@@ -180,6 +181,10 @@ struct hyp_server_page {
 
 #define _X4_X17 "x4", "x5", "x6", "x7", "x8", "x9", "x10", "x11", "x12", \
 "x13", "x14", "x15", "x16", "x17"
+
+#define _X5_X17 "x5", "x6", "x7", "x8", "x9", "x10", "x11", "x12", \
+"x13", "x14", "x15", "x16", "x17"
+
 
 static inline int hyp_read_gid(unsigned int *gid)
 {
@@ -318,6 +323,31 @@ static inline uint64_t hyp_sysinfo_ipa(void)
 		: "x1", "x2", "x3", _X4_X17);
 
 	return r0;
+}
+
+static inline int hyp_read_uart_relay_info(uint64_t *ipa, uint64_t *size,
+					uint64_t *num_channels,
+					uint64_t *max_msg_size)
+{
+	register uint64_t x0 asm("x0");
+	register uint64_t x1 asm("x1");
+	register uint64_t x2 asm("x2");
+	register uint64_t x3 asm("x3");
+	register uint64_t x4 asm("x4");
+
+	asm("hvc %5"
+		: "=r"(x0), "=r"(x1),
+		  "=r"(x2), "=r"(x3),
+		  "=r"(x4)
+		: "i"(HVC_NR_UART_RELAY_INFO)
+		: _X5_X17);
+
+	*ipa = x1;
+	*size = x2;
+	*num_channels = x3;
+	*max_msg_size = x4;
+
+	return (int)x0;
 }
 
 #undef _X3_X17

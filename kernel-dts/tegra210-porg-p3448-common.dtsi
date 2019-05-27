@@ -795,6 +795,10 @@
                 pwm-regulator = <&cpu_ovr_reg>;
                 status = "okay";
         };
+
+	nvdumper {
+		status = "disabled";
+	};
 };
 
 #if LINUX_VERSION >= 414

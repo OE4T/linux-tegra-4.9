@@ -84,5 +84,9 @@
 			     status = "disabled";
 		     };
 	};
+
+	nvdumper {
+		status = "disabled";
+	};
 };
 

@@ -145,7 +145,7 @@ struct fan_dev_data {
 	struct delayed_work fan_ramp_work;
 	struct delayed_work fan_hyst_work;
 	int step_time;
-	int precision_multiplier;
+	long long precision_multiplier;
 	struct mutex fan_state_lock;
 	int pwm_period;
 	int fan_pwm_max;
@@ -181,7 +181,7 @@ struct fan_dev_data {
 };
 
 #define DEBUG 0
-
+#define MULTIQP (100)
 #define DEFERRED_RESUME_TIME 3000
 #define THERMAL_GOV_PID "pid_thermal_gov"
 #define THERMAL_CONTINUOUS_GOV "continuous_therm_gov"

@@ -451,7 +451,7 @@ static void set_pwm_duty_cycle(int pwm, struct fan_dev_data *fan_data)
 				duty = fan_data->fan_pwm_max - pwm;
 			else
 				duty = pwm;
-			duty *= fan_data->precision_multiplier;
+			duty = duty * fan_data->precision_multiplier / MULTIQP;
 		}
 
 		pwm_config(fan_data->pwm_dev,
@@ -1210,7 +1210,7 @@ static int pwm_fan_probe(struct platform_device *pdev)
 	fan_data->fan_cap_pwm = fan_data->fan_pwm[fan_data->fan_state_cap];
 
 	fan_data->precision_multiplier =
-			fan_data->pwm_period / fan_data->fan_pwm_max;
+			(fan_data->pwm_period * MULTIQP) / fan_data->fan_pwm_max;
 	dev_info(&pdev->dev, "cap state:%d, cap pwm:%d\n",
 			fan_data->fan_state_cap, fan_data->fan_cap_pwm);
 

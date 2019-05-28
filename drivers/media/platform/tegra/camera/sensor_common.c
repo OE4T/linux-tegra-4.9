@@ -598,6 +598,17 @@ static int sensor_common_init_i2c_device_config(
 		/* move to i2c bus node */
 		parent = of_get_parent(node);
 		of_node_put(node);
+	} else {
+		/* move to next parent to check
+		 * if it is a gpio based i2c mux
+		 */
+		node = of_get_parent(parent);
+		of_node_put(parent);
+
+		if (of_device_is_compatible(node, "i2c-mux-gpio")) {
+			/* move to i2c bus node */
+			parent = of_parse_phandle(node, "i2c-parent", 0);
+		}
 	}
 
 	/* read parent which is i2c bus */

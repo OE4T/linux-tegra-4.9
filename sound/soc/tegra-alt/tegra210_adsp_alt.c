@@ -2649,12 +2649,9 @@ static int tegra210_adsp_fe_widget_event(struct snd_soc_dapm_widget *w,
 
 		runtime = prtd->substream->runtime;
 		runtime->status->state = SNDRV_PCM_STATE_DISCONNECTED;
-		if (!(prtd->substream->f_flags & O_NONBLOCK)) {
-			if (IS_MMAP_ACCESS(runtime->access))
-				wake_up(&runtime->sleep);
-			else
-				wake_up(&runtime->tsleep);
-		}
+
+		wake_up(&runtime->sleep);
+		wake_up(&runtime->tsleep);
 
 		spin_unlock_irqrestore(&apm->lock, flags);
 

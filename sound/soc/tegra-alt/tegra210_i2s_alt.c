@@ -353,7 +353,6 @@ static int tegra210_i2s_set_fmt(struct snd_soc_dai *dai,
 		return -EINVAL;
 	}
 
-	pm_runtime_get_sync(dai->dev);
 	regmap_update_bits(i2s->regmap, TEGRA210_I2S_CTRL, mask, val);
 	/* FIXME: global enabling */
 	regmap_update_bits(i2s->regmap, TEGRA210_I2S_ENABLE,
@@ -361,7 +360,6 @@ static int tegra210_i2s_set_fmt(struct snd_soc_dai *dai,
 	regmap_update_bits(i2s->regmap, TEGRA210_I2S_CTRL,
 		TEGRA210_I2S_CTRL_FSYNC_WIDTH_MASK,
 		i2s->fsync_width << TEGRA210_I2S_CTRL_FSYNC_WIDTH_SHIFT);
-	pm_runtime_put(dai->dev);
 
 	i2s->format = fmt & SND_SOC_DAIFMT_FORMAT_MASK;
 
@@ -829,11 +827,9 @@ static int tegra210_i2s_loopback_put(struct snd_kcontrol *kcontrol,
 
 	i2s->loopback = ucontrol->value.integer.value[0];
 
-	pm_runtime_get_sync(codec->dev);
 	regmap_update_bits(i2s->regmap, TEGRA210_I2S_CTRL,
 		TEGRA210_I2S_CTRL_LPBK_MASK,
 		i2s->loopback << TEGRA210_I2S_CTRL_LPBK_SHIFT);
-	pm_runtime_put(codec->dev);
 
 	return 0;
 }
@@ -857,12 +853,10 @@ static int tegra210_i2s_fsync_width_put(struct snd_kcontrol *kcontrol,
 
 	i2s->fsync_width = ucontrol->value.integer.value[0];
 
-	pm_runtime_get_sync(codec->dev);
 	regmap_update_bits(i2s->regmap, TEGRA210_I2S_CTRL,
 			   TEGRA210_I2S_CTRL_FSYNC_WIDTH_MASK,
 			   i2s->fsync_width <<
 			   TEGRA210_I2S_CTRL_FSYNC_WIDTH_SHIFT);
-	pm_runtime_put(codec->dev);
 
 	return 0;
 }

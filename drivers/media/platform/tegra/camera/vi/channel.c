@@ -808,7 +808,7 @@ int tegra_channel_write_blobs(struct tegra_channel *chan)
 
 	s_data = to_camera_common_data(sd->dev);
 	if (!s_data)
-		return -EINVAL;
+		return 0;
 
 	if (!is_tvcf_supported(s_data->version))
 		return 0;

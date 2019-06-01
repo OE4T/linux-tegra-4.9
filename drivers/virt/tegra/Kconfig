@@ -50,3 +50,12 @@ config TEGRA_HV_SYSFS
 	  Can be made a module (=m) to save boot time
 	  If unsure, say Y here
 
+config TEGRA_VM_ERR_HANDLER
+	tristate "Nvidia Tegra handler for VM error notifications"
+	depends on TEGRA_VIRTUALIZATION
+	  default y
+	help
+	  Provides a handler that receives VM error notifications
+	  from the Hypervisor.
+	    If unsure, keep Y
+

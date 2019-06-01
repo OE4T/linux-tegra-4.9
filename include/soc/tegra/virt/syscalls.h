@@ -46,6 +46,11 @@
 #define HVC_NR_READ_HYP_INFO		9
 #define HVC_NR_GUEST_RESET		10
 #define HVC_NR_SYSINFO_IPA		13
+#define HVC_NR_ERRINFO_GET		17
+#define HVC_NR_ASYNC_ERR_GUEST_READ_ACK	18
+#define HVC_NR_READ_VCPU_ID		19
+#define HVC_NR_SYNC_ERR_GUEST_READ_ACK	20
+
 #define HVC_NR_UART_RELAY_INFO		518
 #define HVC_NR_NVLOG_WRITER_INFO	519
 #define HVC_NR_NVLOG_READER_INFO	520
@@ -187,6 +192,12 @@ struct hyp_server_page {
 #define _X5_X17 "x5", "x6", "x7", "x8", "x9", "x10", "x11", "x12", \
 "x13", "x14", "x15", "x16", "x17"
 
+#define _X6_X17 "x6", "x7", "x8", "x9", "x10", "x11", "x12", \
+"x13", "x14", "x15", "x16", "x17"
+
+#define _X7_X17 "x7", "x8", "x9", "x10", "x11", "x12", \
+"x13", "x14", "x15", "x16", "x17"
+
 
 static inline int hyp_read_gid(unsigned int *gid)
 {
@@ -200,6 +211,18 @@ static inline int hyp_read_gid(unsigned int *gid)
 
 	*gid = r1;
 	return (int)r0;
+}
+
+static inline uint32_t hyp_read_vcpu_id(void)
+{
+	register uint64_t r0 asm("x0");
+
+	asm("hvc %1"
+		: "=r"(r0)
+		: "i"(HVC_NR_READ_VCPU_ID)
+		: "x1", "x2", "x3", _X4_X17);
+
+	return (uint32_t)r0;
 }
 
 static inline int hyp_read_nguests(unsigned int *nguests)
@@ -397,6 +420,54 @@ static inline int hyp_read_nvlog_writer_info(uint64_t *ipa, uint64_t *size)
 	return (int)x0;
 }
 
+static inline int hyp_read_err_info_get(uint64_t *ipa, uint64_t *buff_size,
+	unsigned int *async_err_arr_items, int *peer_err_irq_id,
+	unsigned int *vcpu_cnt)
+{
+	register uint64_t r0 asm("x0");
+	register uint64_t r1 asm("x1");
+	register uint64_t r2 asm("x2");
+	register uint64_t r3 asm("x3");
+	register uint64_t r4 asm("x4");
+	register uint64_t r5 asm("x5");
+
+	asm volatile("hvc %6"
+		: "=r"(r0), "=r"(r1), "=r"(r2), "=r"(r3), "=r"(r4), "=r"(r5)
+		: "i"(HVC_NR_ERRINFO_GET)
+		: _X6_X17);
+
+	*ipa = r1;
+	*buff_size = r2;
+	*async_err_arr_items = r3;
+	*peer_err_irq_id = (int) r4;
+	*vcpu_cnt = r5;
+
+	return (int)r0;
+}
+
+static inline int hyp_send_async_err_ack(uint64_t local_rd_idx)
+{
+	register uint64_t r0 asm("x0") = local_rd_idx;
+
+	asm volatile("hvc %1"
+		: "+r"(r0)
+		: "i"(HVC_NR_ASYNC_ERR_GUEST_READ_ACK)
+		: "x1", "x2", "x3", _X4_X17);
+
+	return (int)r0;
+}
+
+static inline int hyp_send_sync_err_ack(bool sync_err_ack) ///ToDo: remove param
+{
+	register uint64_t r0 asm("x0") = sync_err_ack;
+
+	asm volatile("hvc %1"
+		: "+r"(r0)
+		: "i"(HVC_NR_SYNC_ERR_GUEST_READ_ACK)
+		: "x1", "x2", "x3", _X4_X17);
+
+	return (int)r0;
+}
 
 #undef _X3_X17
 #undef _X4_X17
@@ -404,12 +475,18 @@ static inline int hyp_read_nvlog_writer_info(uint64_t *ipa, uint64_t *size)
 #else
 
 int hyp_read_gid(unsigned int *gid);
+uint32_t hyp_read_vcpu_id(void);
 int hyp_read_nguests(unsigned int *nguests);
 int hyp_read_ivc_info(uint64_t *ivc_info_page_pa);
 int hyp_read_ipa_pa_info(struct hyp_ipa_pa_info *info, int guestid,
 		uint64_t ipa);
 int hyp_raise_irq(unsigned int irq, unsigned int vmid);
 uint64_t hyp_sysinfo_ipa(void);
+int hyp_read_err_info_get(uint64_t *ipa, uint64_t *buff_size,
+	unsigned int *async_err_arr_size, int *peer_err_irq_id,
+	uint64_t *sync_err_offset, unsigned int  *vcpu_cnt);
+int hyp_send_async_err_ack(uint64_t local_rd_idx);
+int hyp_send_sync_err_ack(bool sync_err_ack);
 
 /* ASM prototypes */
 extern int hvc_read_gid(void *);

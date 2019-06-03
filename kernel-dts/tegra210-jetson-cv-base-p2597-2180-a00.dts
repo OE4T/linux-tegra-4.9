@@ -401,10 +401,6 @@
 			cpu-dai-name = "I2S1";
 			codec-dai-name = "dit-hifi";
 			format = "i2s";
-			bitclock-slave;
-			frame-slave;
-			bitclock-noninversion;
-			frame-noninversion;
 			bit-format = "s16_le";
 			bclk_ratio = <0>;
 			srate = <48000>;
@@ -419,10 +415,7 @@
 			cpu-dai-name = "I2S2";
 			codec-dai-name = "dit-hifi";
 			format = "dsp_a";
-			bitclock-slave;
-			frame-slave;
 			bitclock-inversion;
-			frame-noninversion;
 			bit-format = "s16_le";
 			bclk_ratio = <4>;
 			srate = <8000>;
@@ -450,10 +443,6 @@
 			cpu-dai-name = "I2S3";
 			codec-dai-name = "dit-hifi";
 			format = "i2s";
-			bitclock-slave;
-			frame-slave;
-			bitclock-noninversion;
-			frame-noninversion;
 			bit-format = "s16_le";
 			bclk_ratio = <0>;
 			srate = <48000>;
@@ -468,10 +457,6 @@
 			cpu-dai-name = "I2S4";
 			codec-dai-name = "dit-hifi";
 			format = "i2s";
-			bitclock-slave;
-			frame-slave;
-			bitclock-noninversion;
-			frame-noninversion;
 			bit-format = "s16_le";
 			bclk_ratio = <0>;
 			srate = <48000>;
@@ -486,10 +471,6 @@
 			cpu-dai-name = "I2S5";
 			codec-dai-name = "dit-hifi";
 			format = "i2s";
-			bitclock-slave;
-			frame-slave;
-			bitclock-noninversion;
-			frame-noninversion;
 			bit-format = "s16_le";
 			bclk_ratio = <0>;
 			srate = <48000>;

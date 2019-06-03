@@ -192,7 +192,7 @@
 				* Sensor embedded metadata height in units of rows.
 				* If sensor does not support embedded metadata value should be 0.
 				*/
-				mode0 { /* IMX219_MODE_3280x2464_21FPS */
+				mode0 { /* IMX219_MODE_3264x2464_21FPS */
 					mclk_khz = "24000";
 					num_lanes = "2";
 					tegra_sinterface = "serial_a";
@@ -201,7 +201,7 @@
 					dpcm_enable = "false";
 					cil_settletime = "0";
 
-					active_w = "3280";
+					active_w = "3264";
 					active_h = "2464";
 					pixel_t = "bayer_rggb";
 					readout_orientation = "90";
@@ -230,7 +230,7 @@
 
 					embedded_metadata_height = "2";
 				};
-				mode1 { /* IMX219_MODE_3280x1848_28FPS */
+				mode1 { /* IMX219_MODE_3264x1848_28FPS */
 					mclk_khz = "24000";
 					num_lanes = "2";
 					tegra_sinterface = "serial_a";
@@ -239,7 +239,7 @@
 					dpcm_enable = "false";
 					cil_settletime = "0";
 
-					active_w = "3280";
+					active_w = "3264";
 					active_h = "1848";
 					pixel_t = "bayer_rggb";
 					readout_orientation = "90";
@@ -496,7 +496,7 @@
 				* Sensor embedded metadata height in units of rows.
 				* If sensor does not support embedded metadata value should be 0.
 				*/
-				mode0 { /* IMX219_MODE_3280x2464_21FPS */
+				mode0 { /* IMX219_MODE_3264x2464_21FPS */
 					mclk_khz = "24000";
 					num_lanes = "2";
 					tegra_sinterface = "serial_e";
@@ -505,7 +505,7 @@
 					dpcm_enable = "false";
 					cil_settletime = "0";
 
-					active_w = "3280";
+					active_w = "3264";
 					active_h = "2464";
 					pixel_t = "bayer_rggb";
 					readout_orientation = "90";
@@ -534,7 +534,7 @@
 
 					embedded_metadata_height = "2";
 				};
-				mode1 { /* IMX219_MODE_3280x1848_28FPS */
+				mode1 { /* IMX219_MODE_3264x1848_28FPS */
 					mclk_khz = "24000";
 					num_lanes = "2";
 					tegra_sinterface = "serial_e";
@@ -543,7 +543,7 @@
 					dpcm_enable = "false";
 					cil_settletime = "0";
 
-					active_w = "3280";
+					active_w = "3264";
 					active_h = "1848";
 					pixel_t = "bayer_rggb";
 					readout_orientation = "90";

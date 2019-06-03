@@ -1995,6 +1995,7 @@ static const struct sdhci_tegra_soc_data soc_data_tegra210 = {
 		    NVQUIRK_ENABLE_DDR50 |
 		    NVQUIRK_ENABLE_SDR104 |
 		    NVQUIRK_UPDATE_PIN_CNTRL_REG |
+		    NVQUIRK_HAS_PADCALIB |
 		    SDHCI_MISC_CTRL_ENABLE_SDR50,
 };
 

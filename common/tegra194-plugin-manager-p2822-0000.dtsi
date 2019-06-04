@@ -31,19 +31,12 @@
 			};
 		};
 
-
 		ufs-cd {
 			ids = "<2822-0000-400";
 			override@0 {
 				target = <&{/ufshci@2450000}>;
 				_overlay_ {
-					delete-target-property = "nvidia,cd-gpios";
-				};
-			};
-			override@1 {
-				target = <&{/ufshci@2450000}>;
-				_overlay_ {
-					delete-target-property = "nvidia,cd-wakeup-capable";
+				    status = "disabled";
 				};
 			};
 		};

@@ -314,6 +314,7 @@
 	};
 
 	ufshci@2450000 {
+		status = "disabled";
 		nvidia,enable-hs-mode;
 		nvidia,cd-gpios = <&tegra_aon_gpio TEGRA194_AON_GPIO(EE, 0) GPIO_ACTIVE_HIGH>;
 		nvidia,cd-wakeup-capable;

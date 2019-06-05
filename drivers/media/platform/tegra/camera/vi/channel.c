@@ -148,6 +148,25 @@ static u32 get_aligned_buffer_size(struct tegra_channel *chan,
 	return size;
 }
 
+static void tegra_channel_set_bytesperline(struct tegra_channel *chan,
+				const struct tegra_video_format *vfmt,
+				struct v4l2_pix_format *pix)
+{
+	unsigned int bpl;
+	unsigned int numerator, denominator;
+	unsigned int align, fmt_align;
+	const struct tegra_frac *bpp = &vfmt->bpp;
+
+	denominator = (!bpp->denominator) ? 1 : bpp->denominator;
+	numerator = (!bpp->numerator) ? 1 : bpp->numerator;
+	fmt_align = (denominator == 1) ? numerator : 1;
+	align = lcm(chan->width_align, fmt_align);
+
+	bpl = (pix->width * numerator) / denominator;
+	pix->bytesperline = tegra_core_bytes_per_line(
+		pix->width, align, vfmt);
+}
+
 static void tegra_channel_fmt_align(struct tegra_channel *chan,
 				const struct tegra_video_format *vfmt,
 				u32 *width, u32 *height, u32 *bytesperline)
@@ -1836,6 +1855,7 @@ __tegra_channel_try_format(struct tegra_channel *chan,
 
 	v4l2_fill_pix_format(pix, &fmt.format);
 
+	tegra_channel_set_bytesperline(chan, vfmt, pix);
 	tegra_channel_fmt_align(chan, vfmt,
 				&pix->width, &pix->height, &pix->bytesperline);
 	pix->sizeimage = get_aligned_buffer_size(chan,

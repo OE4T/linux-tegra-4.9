@@ -25,6 +25,7 @@
 #include <linux/io.h>
 #include <linux/irq.h>
 #include <linux/irqdomain.h>
+#include <linux/leds.h>
 #include <linux/module.h>
 #include <linux/of.h>
 #include <linux/platform_device.h>
@@ -1115,6 +1116,7 @@ static irqreturn_t soctherm_edp_isr_thread(int irq, void *arg)
 	/* rate limiting irq message to every one second */
 	if (printk_timed_ratelimit(&j,  1000)) {
 		pr_err("soctherm: OC ALARM 0x%08x\n", ex);
+		ledtrig_throttle_event();
 	}
 
 	if (ex) {

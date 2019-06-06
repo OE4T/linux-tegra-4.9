@@ -20,8 +20,8 @@
 
 / {
 	model = "NVIDIA Jetson AGX Xavier 8GB Developer Kit";
+	compatible = "nvidia,p2822-0000+p2888-0006", "nvidia,p2972-0006", "nvidia,tegra194";
 
-	compatible = "nvidia,p2972-0006", "nvidia,tegra194";
 	pcie@14180000 {
 		nvidia,max-speed = <3>;
 	};

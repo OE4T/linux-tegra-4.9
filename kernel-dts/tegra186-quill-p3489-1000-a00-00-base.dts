@@ -27,7 +27,7 @@
 
 / {
 	model = "storm";
-	compatible = "nvidia,storm", "nvidia,tegra186";
+	compatible = "nvidia,storm", "nvidia,p2597-0000+p3489-0000", "nvidia,tegra186";
 
 	nvidia,dtsfilename = __FILE__;
 	nvidia,boardids = "3489:0000:A0";

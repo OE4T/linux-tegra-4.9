@@ -27,7 +27,7 @@
 
 / {
 	model = "lightning";
-	compatible = "nvidia,lightning", "nvidia,tegra186";
+	compatible = "nvidia,lightning", "nvidia,p2597-0000+p3489-0888", "nvidia,tegra186";
 
 	nvidia,dtsfilename = __FILE__;
 	nvidia,boardids = "3489:0888:A0";

@@ -27,7 +27,7 @@
 
 / {
 	model = "quill";
-	compatible = "nvidia,quill", "nvidia,tegra186";
+	compatible = "nvidia,quill", "nvidia,p2597-0000+p3489-0888", "nvidia,tegra186";
 
 	nvidia,dtsfilename = __FILE__;
 

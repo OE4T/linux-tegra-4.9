@@ -256,6 +256,11 @@
 		status = "disabled";
 		/delete-property/ keep-power-in-suspend;
 		/delete-property/ non-removable;
+		mmc-ddr-1_8v;
+		mmc-ocr-mask = <3>;
+		uhs-mask = <0x0>;
+		max-clk-limit = <400000>;
+		tap-delay = <3>;
 	};
 
 	sdhci@700b0200 { /* SDMMC2 for Wifi */

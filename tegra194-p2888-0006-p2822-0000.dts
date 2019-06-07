@@ -26,4 +26,20 @@
 	gv11b {
 		fuse-overrides = <GV11B_FUSE_OPT_TPC_DISABLE 0x1>;
 	};
+
+	pcie@14180000 {
+		nvidia,max-speed = <3>;
+	};
+
+	pcie@14140000 {
+		nvidia,max-speed = <3>;
+	};
+
+	pcie@141a0000 {
+		nvidia,max-speed = <3>;
+	};
+
+	pcie_ep@141a0000 {
+		nvidia,max-speed = <3>;
+	};
 };

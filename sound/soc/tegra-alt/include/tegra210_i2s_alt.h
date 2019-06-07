@@ -220,7 +220,6 @@ struct tegra210_i2s {
 	struct pinctrl_state *pin_idle_state;
 	const char *prod_name;
 	struct regulator_bulk_data *supplies;
-	struct notifier_block slgc_notifier;
 	int num_supplies;
 	int bclk_ratio;
 	int format_in;

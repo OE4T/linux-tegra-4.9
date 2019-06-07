@@ -251,7 +251,7 @@
 			};
 
 			tegra_i2s1: i2s@2901000 {
-				compatible = "nvidia,tegra186-i2s";
+				compatible = "nvidia,tegra210-i2s";
 				reg = <0x0 0x2901000 0x0 0x100>;
 				nvidia,ahub-i2s-id = <0>;
 				clocks = <&bpmp_clks TEGRA194_CLK_I2S1>,
@@ -266,7 +266,7 @@
 			};
 
 			tegra_i2s2: i2s@2901100 {
-				compatible = "nvidia,tegra186-i2s";
+				compatible = "nvidia,tegra210-i2s";
 				reg = <0x0 0x2901100 0x0 0x100>;
 				nvidia,ahub-i2s-id = <1>;
 				clocks = <&bpmp_clks TEGRA194_CLK_I2S2>,
@@ -281,7 +281,7 @@
 			};
 
 			tegra_i2s3: i2s@2901200 {
-				compatible = "nvidia,tegra186-i2s";
+				compatible = "nvidia,tegra210-i2s";
 				reg = <0x0 0x2901200 0x0 0x100>;
 				nvidia,ahub-i2s-id = <2>;
 				clocks = <&bpmp_clks TEGRA194_CLK_I2S3>,
@@ -296,7 +296,7 @@
 			};
 
 			tegra_i2s4: i2s@2901300 {
-				compatible = "nvidia,tegra186-i2s";
+				compatible = "nvidia,tegra210-i2s";
 				reg = <0x0 0x2901300 0x0 0x100>;
 				nvidia,ahub-i2s-id = <3>;
 				clocks = <&bpmp_clks TEGRA194_CLK_I2S4>,
@@ -311,7 +311,7 @@
 			};
 
 			tegra_i2s5: i2s@2901400 {
-				compatible = "nvidia,tegra186-i2s";
+				compatible = "nvidia,tegra210-i2s";
 				reg = <0x0 0x2901400 0x0 0x100>;
 				nvidia,ahub-i2s-id = <4>;
 				clocks = <&bpmp_clks TEGRA194_CLK_I2S5>,
@@ -326,7 +326,7 @@
 			};
 
 			tegra_i2s6: i2s@2901500 {
-				compatible = "nvidia,tegra186-i2s";
+				compatible = "nvidia,tegra210-i2s";
 				reg = <0x0 0x2901500 0x0 0x100>;
 				nvidia,ahub-i2s-id = <5>;
 				clocks = <&bpmp_clks TEGRA194_CLK_I2S6>,

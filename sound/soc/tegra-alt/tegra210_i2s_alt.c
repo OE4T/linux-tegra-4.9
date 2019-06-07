@@ -1031,7 +1031,6 @@ static const struct regmap_config tegra210_i2s_regmap_config = {
 
 static const struct of_device_id tegra210_i2s_of_match[] = {
 	{ .compatible = "nvidia,tegra210-i2s" },
-	{ .compatible = "nvidia,tegra186-i2s" },
 	{},
 };
 

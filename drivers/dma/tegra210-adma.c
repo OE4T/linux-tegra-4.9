@@ -66,8 +66,6 @@
 #define T210_ADMA_CH_FIFO_CTRL_FIFO_SIZE_MASK			0x1f
 #define T186_ADMA_CH_FIFO_CTRL_FIFO_SIZE_MASK			0x3f
 #define ADMA_CH_FIFO_CTRL_RX_FIFO_SIZE_SHIFT			0
-#define ADMA_CH_FIFO_CTRL_OVRFW_THRES(val)             (((val) & 0xf) << 24)
-#define ADMA_CH_FIFO_CTRL_STARV_THRES(val)             (((val) & 0xf) << 16)
 
 #define ADMA_CH_CTRL_XFER_PAUSE_SHIFT				0
 #define ADMA_CH_CTRL_XFER_PAUSE_MASK	\
@@ -91,9 +89,6 @@
 #define T186_ADMA_GLOBAL_INT_CLEAR				0x402c
 #define T210_ADMA_GLOBAL_CTRL					0x24
 #define T186_ADMA_GLOBAL_CTRL					0x20
-
-#define ADMA_CH_FIFO_CTRL_DEFAULT	(ADMA_CH_FIFO_CTRL_OVRFW_THRES(1) | \
-					 ADMA_CH_FIFO_CTRL_STARV_THRES(1))
 
 #define ADMA_CH_REG_FIELD_VAL(val, mask, shift)	(((val) & mask) << shift)
 
@@ -764,7 +759,6 @@ static int tegra_adma_set_xfer_params(struct tegra_adma_chan *tdc,
 {
 	struct tegra_adma_chan_regs *ch_regs = &desc->ch_regs;
 	const struct tegra_adma_chip_data *chip_data = tdc->tdma->chip_data;
-	unsigned int fifo_ctrl = ADMA_CH_FIFO_CTRL_DEFAULT;
 	unsigned int burst_size, adma_dir, fifo_size_shift, sid;
 
 	if (desc->num_periods > ADMA_CH_CONFIG_MAX_BUFS)
@@ -801,15 +795,15 @@ static int tegra_adma_set_xfer_params(struct tegra_adma_chan *tdc,
 	}
 
 	sid = tdc->sconfig.slave_id > chip_data->slave_id ? 2 : 3;
-	fifo_ctrl |= ADMA_CH_REG_FIELD_VAL(sid, chip_data->ch_fifo_size_mask,
-					   fifo_size_shift);
+	ch_regs->fifo_ctrl = ADMA_CH_REG_FIELD_VAL(sid,
+						   chip_data->ch_fifo_size_mask,
+						   fifo_size_shift);
 	ch_regs->ctrl |= ADMA_CH_CTRL_DIR(adma_dir) |
 			 ADMA_CH_CTRL_MODE_CONTINUOUS |
 			 ADMA_CH_CTRL_FLOWCTRL_EN;
 	ch_regs->config |= chip_data->adma_get_burst_config(burst_size);
 	ch_regs->config |= ADMA_CH_CONFIG_WEIGHT_FOR_WRR(1);
 	ch_regs->config |= chip_data->outstanding_request;
-	ch_regs->fifo_ctrl = fifo_ctrl;
 	ch_regs->tc = desc->period_len & ADMA_CH_TC_COUNT_MASK;
 
 	return tegra_adma_request_alloc(tdc, direction);

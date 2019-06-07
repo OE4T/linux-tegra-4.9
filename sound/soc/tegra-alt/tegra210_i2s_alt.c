@@ -616,8 +616,8 @@ static int tegra210_i2s_hw_params(struct snd_pcm_substream *substream,
 	frame_format = val & TEGRA210_I2S_CTRL_FRAME_FORMAT_MASK;
 
 	if (frame_format == TEGRA210_I2S_CTRL_FRAME_FORMAT_FSYNC_MODE) {
-		i2s->soc_data->set_slot_ctrl(i2s->regmap, channels, tx_mask,
-					     rx_mask);
+		tegra210_i2s_set_slot_ctrl(i2s->regmap, channels, tx_mask,
+					   rx_mask);
 		cif_conf.audio_channels = channels;
 		cif_conf.client_channels = channels;
 	} else {
@@ -695,7 +695,7 @@ static int tegra210_i2s_hw_params(struct snd_pcm_substream *substream,
 		reg = TEGRA210_I2S_AXBAR_TX_CIF_CTRL;
 	}
 
-	i2s->soc_data->set_audio_cif(i2s->regmap, reg, &cif_conf);
+	tegra210_xbar_set_cif(i2s->regmap, reg, &cif_conf);
 
 	if (i2s->format == SND_SOC_DAIFMT_RIGHT_J)
 		tegra210_i2s_set_rjm_offset(i2s, sample_size);
@@ -1029,21 +1029,9 @@ static const struct regmap_config tegra210_i2s_regmap_config = {
 	.cache_type = REGCACHE_FLAT,
 };
 
-static const struct tegra210_i2s_soc_data soc_data_tegra210 = {
-	.set_audio_cif = tegra210_xbar_set_cif,
-	.set_slot_ctrl = tegra210_i2s_set_slot_ctrl,
-	.is_soc_t210 = true,
-};
-
-static const struct tegra210_i2s_soc_data soc_data_tegra186 = {
-	.set_audio_cif = tegra210_xbar_set_cif,
-	.set_slot_ctrl = tegra210_i2s_set_slot_ctrl,
-	.is_soc_t210 = false,
-};
-
 static const struct of_device_id tegra210_i2s_of_match[] = {
-	{ .compatible = "nvidia,tegra210-i2s", .data = &soc_data_tegra210 },
-	{ .compatible = "nvidia,tegra186-i2s", .data = &soc_data_tegra186 },
+	{ .compatible = "nvidia,tegra210-i2s" },
+	{ .compatible = "nvidia,tegra186-i2s" },
 	{},
 };
 
@@ -1051,7 +1039,6 @@ static int tegra210_i2s_platform_probe(struct platform_device *pdev)
 {
 	const struct of_device_id *match;
 	struct device_node *np = pdev->dev.of_node;
-	struct tegra210_i2s_soc_data *soc_data;
 	struct tegra210_i2s *i2s;
 	struct resource *mem, *memregion;
 	struct property *prop;
@@ -1065,7 +1052,6 @@ static int tegra210_i2s_platform_probe(struct platform_device *pdev)
 		ret = -ENODEV;
 		goto err;
 	}
-	soc_data = (struct tegra210_i2s_soc_data *)match->data;
 
 	i2s = devm_kzalloc(&pdev->dev, sizeof(struct tegra210_i2s), GFP_KERNEL);
 	if (!i2s) {
@@ -1074,7 +1060,6 @@ static int tegra210_i2s_platform_probe(struct platform_device *pdev)
 		goto err;
 	}
 
-	i2s->soc_data = soc_data;
 	i2s->tx_mask = i2s->rx_mask = 0xFFFF;
 	i2s->bclk_ratio = 2;
 	i2s->enable_cya = false;

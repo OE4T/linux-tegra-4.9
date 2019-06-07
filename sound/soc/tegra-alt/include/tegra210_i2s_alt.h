@@ -191,17 +191,6 @@
 
 #define TEGRA210_I2S_RX_FIFO_DEPTH			64
 
-struct tegra210_i2s_soc_data {
-	void (*set_audio_cif)(struct regmap *map,
-			unsigned int reg,
-			struct tegra210_xbar_cif_conf *conf);
-	void (*set_slot_ctrl)(struct regmap *map,
-				unsigned int total_slots,
-				unsigned int tx_slot_mask,
-				unsigned int rx_slot_mask);
-	bool is_soc_t210;
-};
-
 enum tegra210_i2s_path {
 	I2S_RX_PATH,
 	I2S_TX_PATH,
@@ -209,7 +198,6 @@ enum tegra210_i2s_path {
 };
 
 struct tegra210_i2s {
-	const struct tegra210_i2s_soc_data *soc_data;
 	struct clk *clk_i2s;
 	struct clk *clk_i2s_sync;
 	struct clk *clk_audio_sync;

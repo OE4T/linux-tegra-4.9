@@ -3221,9 +3221,7 @@ struct snd_soc_dai_link *tegra_machine_new_codec_links(
 			/* special case to handle specifically for dspk, connected to
 			two mono amplifiers */
 			if (!strcmp(tegra_codec_links[i].name, "dspk-playback-r"))
-				tegra_codec_links[i].cpu_dai_name = "DAP Right";
-			else if (!strcmp(tegra_codec_links[i].name, "dspk-playback-l"))
-				tegra_codec_links[i].cpu_dai_name = "DAP Left";
+				tegra_codec_links[i].cpu_dai_name = "DAP2";
 			else
 				tegra_codec_links[i].cpu_dai_name = "DAP";
 
@@ -3289,9 +3287,7 @@ struct snd_soc_dai_link *tegra_machine_new_codec_links(
 			}
 
 			if (!strcmp(tegra_codec_links[i].name, "dspk-playback-r"))
-				tegra_codec_links[j].codec_dai_name = "CIF Right";
-			else if (!strcmp(tegra_codec_links[i].name, "dspk-playback-l"))
-				tegra_codec_links[j].codec_dai_name = "CIF Left";
+				tegra_codec_links[j].codec_dai_name = "CIF2";
 			else
 				tegra_codec_links[j].codec_dai_name = "CIF";
 

@@ -282,70 +282,75 @@ static struct snd_soc_dai_ops tegra186_dspk_dai_ops = {
 	.shutdown	= tegra186_dspk_shutdown,
 };
 
-static struct snd_soc_dai_driver tegra186_dspk_dais[] = {
-	/* for left channel audio */
-	{
-	    .name = "DAP Left",
-	    .capture = {
-		.stream_name = "DSPK Left Transmit",
-		.channels_min = 1,
-		.channels_max = 2,
-		.rates = SNDRV_PCM_RATE_8000_48000,
-		.formats = SNDRV_PCM_FMTBIT_S16_LE,
-	    },
-	    .ops = &tegra186_dspk_dai_ops,
-	    .symmetric_rates = 1,
-	},
-	{
-	    .name = "CIF Right",
-	    .playback = {
-		.stream_name = "DSPK Receive Right",
-		.channels_min = 1,
-		.channels_max = 2,
-		.rates = SNDRV_PCM_RATE_8000_48000,
-		.formats = SNDRV_PCM_FMTBIT_S16_LE,
-	    },
-	    .ops = &tegra186_dspk_dai_ops,
-	    .symmetric_rates = 1,
-	},
+static struct snd_soc_dai_ops tegra186_dspk_dai_ops2 = {
+	.set_bclk_ratio	= tegra186_dspk_set_dai_bclk_ratio,
+};
 
-	/* for right channel audio */
+static struct snd_soc_dai_driver tegra186_dspk_dais[] = {
 	{
-	    .name = "DAP Right",
+	    .name = "DAP",
 	    .capture = {
-		.stream_name = "DSPK Right Transmit",
+		.stream_name = "DAP Transmit",
 		.channels_min = 1,
 		.channels_max = 2,
 		.rates = SNDRV_PCM_RATE_8000_48000,
-		.formats = SNDRV_PCM_FMTBIT_S16_LE,
+		.formats = SNDRV_PCM_FMTBIT_S16_LE |
+			   SNDRV_PCM_FMTBIT_S32_LE,
 	    },
 	    .ops = &tegra186_dspk_dai_ops,
 	    .symmetric_rates = 1,
 	},
 	{
-	    .name = "CIF Left",
+	    .name = "CIF",
 	    .playback = {
-		.stream_name = "DSPK Receive Left",
+		.stream_name = "CIF Receive",
 		.channels_min = 1,
 		.channels_max = 2,
 		.rates = SNDRV_PCM_RATE_8000_48000,
-		.formats = SNDRV_PCM_FMTBIT_S16_LE,
+		.formats = SNDRV_PCM_FMTBIT_S16_LE |
+			   SNDRV_PCM_FMTBIT_S32_LE,
 	    },
-	    .ops = &tegra186_dspk_dai_ops,
+	},
+	/* The second DAI is used when the output of the DSPK is connected
+	 * to two mono codecs. When the output of the DSPK is connected to
+	 * a single stereo codec, then only the first DAI should be used.
+	 */
+	{
+	    .name = "DAP2",
+	    .capture = {
+		.stream_name = "DAP2 Transmit",
+		.channels_min = 1,
+		.channels_max = 2,
+		.rates = SNDRV_PCM_RATE_8000_48000,
+		.formats = SNDRV_PCM_FMTBIT_S16_LE |
+			   SNDRV_PCM_FMTBIT_S32_LE,
+	    },
+	    .ops = &tegra186_dspk_dai_ops2,
 	    .symmetric_rates = 1,
+	},
+	{
+	    .name = "CIF2",
+	    .playback = {
+		.stream_name = "CIF2 Receive",
+		.channels_min = 1,
+		.channels_max = 2,
+		.rates = SNDRV_PCM_RATE_8000_48000,
+		.formats = SNDRV_PCM_FMTBIT_S16_LE |
+			   SNDRV_PCM_FMTBIT_S32_LE,
+	    },
 	}
 };
 
 static const struct snd_soc_dapm_widget tegra186_dspk_widgets[] = {
-	SND_SOC_DAPM_AIF_IN("DSPK TX1", NULL, 0, TEGRA186_DSPK_ENABLE, 0, 0),
-	SND_SOC_DAPM_AIF_IN("DSPK TX2", NULL, 0, TEGRA186_DSPK_ENABLE, 0, 0),
+	SND_SOC_DAPM_AIF_OUT("DAP TX", NULL, 0, TEGRA186_DSPK_ENABLE, 0, 0),
+	SND_SOC_DAPM_AIF_OUT("DAP2 TX", NULL, 0, 0, 0, 0),
 };
 
 static const struct snd_soc_dapm_route tegra186_dspk_routes[] = {
-	{ "DSPK TX1",	   NULL, "DSPK Receive Left" },
-	{ "DSPK Left Transmit", NULL, "DSPK TX1" },
-	{ "DSPK TX2",	   NULL, "DSPK Receive Right" },
-	{ "DSPK Right Transmit", NULL, "DSPK TX2" },
+	{ "DAP TX",	   NULL, "CIF Receive" },
+	{ "DAP Transmit", NULL, "DAP TX" },
+	{ "DAP2 TX", NULL, "CIF2 Receive" },
+	{ "DAP2 Transmit", NULL, "DAP2 TX" },
 };
 
 static const char * const tegra186_dspk_osr_text[] = {

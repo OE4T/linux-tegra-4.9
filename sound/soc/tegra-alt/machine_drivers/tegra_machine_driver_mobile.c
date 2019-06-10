@@ -1,7 +1,7 @@
 /*
  * tegra_machine_driver_mobile.c - Tegra ASoC Machine driver for mobile
  *
- * Copyright (c) 2017-2018 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2019 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -248,6 +248,7 @@ static const struct snd_soc_dapm_widget tegra_machine_dapm_widgets[] = {
 
 	SND_SOC_DAPM_SPK("d1 Headphone", NULL),
 	SND_SOC_DAPM_SPK("d2 Headphone", NULL),
+	SND_SOC_DAPM_SPK("d3 Headphone", NULL),
 
 	SND_SOC_DAPM_HP("w Headphone", NULL),
 	SND_SOC_DAPM_HP("x Headphone", NULL),
@@ -717,22 +718,6 @@ static int tegra_machine_suspend_pre(struct snd_soc_card *card)
 	return 0;
 }
 
-static int tegra_machine_dspk_init(struct snd_soc_pcm_runtime *rtd)
-{
-	struct snd_soc_card *card = rtd->card;
-	struct snd_soc_dapm_context *dapm = &card->dapm;
-	struct tegra_machine *machine = snd_soc_card_get_drvdata(card);
-	int err;
-
-	err = tegra_alt_asoc_utils_set_extern_parent(&machine->audio_clock,
-							"pll_a_out0");
-	if (err < 0)
-		dev_err(card->dev, "Failed to set extern clk parent\n");
-
-	snd_soc_dapm_sync(dapm);
-	return err;
-}
-
 #if IS_ENABLED(CONFIG_SND_SOC_TEGRA210_ADSP_ALT)
 static int tegra_machine_compr_startup(struct snd_compr_stream *cstream)
 {
@@ -811,16 +796,8 @@ static int tegra_machine_fepi_init(struct snd_soc_pcm_runtime *rtd)
 static int tegra_machine_rt565x_init(struct snd_soc_pcm_runtime *rtd)
 {
 	struct snd_soc_card *card = rtd->card;
-	struct tegra_machine *machine = snd_soc_card_get_drvdata(card);
 	struct snd_soc_jack *jack;
 	int err;
-
-	err = tegra_alt_asoc_utils_set_extern_parent(&machine->audio_clock,
-							"pll_a_out0");
-	if (err < 0) {
-		dev_err(card->dev, "Failed to set extern clk parent\n");
-		return err;
-	}
 
 	jack = devm_kzalloc(card->dev, sizeof(struct snd_soc_jack), GFP_KERNEL);
 	if (!jack)
@@ -910,14 +887,6 @@ static void dai_link_setup(struct platform_device *pdev)
 					tegra_machine_codec_links[i].init =
 						tegra_machine_rt565x_init;
 				}
-			} else if (strstr(tegra_machine_codec_links[i].name,
-				"dspk-playback-r")) {
-				tegra_machine_codec_links[i].init =
-					tegra_machine_dspk_init;
-			} else if (strstr(tegra_machine_codec_links[i].name,
-				"dspk-playback-l")) {
-				tegra_machine_codec_links[i].init =
-					tegra_machine_dspk_init;
 			} else if (strstr(tegra_machine_codec_links[i].name,
 				"fe-pi-audio-z-v2")) {
 				tegra_machine_codec_links[i].init =

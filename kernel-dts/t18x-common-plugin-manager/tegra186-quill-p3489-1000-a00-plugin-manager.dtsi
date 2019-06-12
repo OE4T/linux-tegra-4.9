@@ -89,8 +89,9 @@
 #if TEGRA_XUSB_PADCONTROL_VERSION >= DT_VERSION_2
 				_overlay_ {
 					phys = <&{/xusb_padctl@3520000/pads/usb2/lanes/usb2-0}>,
-						<&{/xusb_padctl@3520000/pads/usb2/lanes/usb2-1}>;
-					phy-names = "usb2-0", "usb2-1";
+						<&{/xusb_padctl@3520000/pads/usb2/lanes/usb2-1}>,
+						<&{/xusb_padctl@3520000/pads/usb2/lanes/usb2-2}>;
+					phy-names = "usb2-0", "usb2-1", "usb2-2";
 				};
 #else
 				_overlay_ {

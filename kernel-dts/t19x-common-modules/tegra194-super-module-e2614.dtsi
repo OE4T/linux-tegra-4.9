@@ -224,24 +224,6 @@
 					codec-dai-name = "rt5659-aif1";
 				};
 			};
-			overrides@12 {
-				target = <&dspk_1_dai_link>;
-				_overlay_ {
-					cpu-dai = <&tegra_dspk2>;
-					codec-dai = <&e2614_tas2552_r>;
-					cpu-dai-name = "DSPK2";
-					codec-dai-name = "tas2552-amplifier";
-				};
-			};
-			overrides@13 {
-				target = <&dspk_2_dai_link>;
-				_overlay_ {
-					cpu-dai = <&tegra_dspk2>;
-					codec-dai = <&e2614_tas2552_l>;
-					cpu-dai-name = "DSPK2";
-					codec-dai-name = "tas2552-amplifier";
-				};
-			};
 		};
 
 		fragment-e2614-a00@1 {

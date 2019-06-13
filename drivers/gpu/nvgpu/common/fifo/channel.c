@@ -1,7 +1,7 @@
 /*
  * GK20A Graphics channel
  *
- * Copyright (c) 2011-2018, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2019, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -722,7 +722,8 @@ struct channel_gk20a *gk20a_open_new_channel(struct gk20a *g,
 	/* set gr host default timeout */
 	ch->timeout_ms_max = gk20a_get_gr_idle_timeout(g);
 	ch->timeout_debug_dump = true;
-	ch->ch_timedout = false;
+	/* ch is unserviceable until it is bound to tsg */
+	ch->ch_timedout = true;
 
 	/* init kernel watchdog timeout */
 	ch->timeout.enabled = true;

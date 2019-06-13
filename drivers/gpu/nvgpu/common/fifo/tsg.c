@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2018, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2019, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -134,6 +134,8 @@ int gk20a_tsg_bind_channel(struct tsg_gk20a *tsg,
 	nvgpu_rwsem_down_write(&tsg->ch_list_lock);
 	nvgpu_list_add_tail(&ch->ch_entry, &tsg->ch_list);
 	ch->tsgid = tsg->tsgid;
+	/* channel is serviceable after it is bound to tsg */
+	ch->ch_timedout = false;
 	nvgpu_rwsem_up_write(&tsg->ch_list_lock);
 
 	nvgpu_ref_get(&tsg->refcount);

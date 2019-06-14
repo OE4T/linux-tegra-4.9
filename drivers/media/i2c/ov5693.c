@@ -513,6 +513,7 @@ static int ov5693_set_exposure(struct tegracam_device *tc_dev, s64 val)
 	struct camera_common_data *s_data = tc_dev->s_data;
 	struct device *dev = tc_dev->dev;
 	struct ov5693 *priv = tc_dev->priv;
+	const s32 max_coarse_time = priv->frame_length - OV5693_MAX_COARSE_DIFF;
 	const struct sensor_mode_properties *mode =
 		&s_data->sensor_props.sensor_modes[s_data->mode_prop_idx];
 	ov5693_reg reg_list[3];
@@ -526,6 +527,10 @@ static int ov5693_set_exposure(struct tegracam_device *tc_dev, s64 val)
 	coarse_time = (u32)(((mode->signal_properties.pixel_clock.val*val)
 			/mode->image_properties.line_length)/
 			mode->control_properties.exposure_factor);
+	if (coarse_time < OV5693_MIN_EXPOSURE_COARSE)
+		coarse_time = OV5693_MIN_EXPOSURE_COARSE;
+	else if (coarse_time > max_coarse_time)
+		coarse_time = max_coarse_time;
 	ov5693_get_coarse_time_regs(reg_list, coarse_time);
 	dev_dbg(dev, "%s: val: %d\n", __func__, coarse_time);
 

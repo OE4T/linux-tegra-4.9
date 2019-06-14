@@ -1038,7 +1038,7 @@ static void alloc_ep2h_rx_buf(struct work_struct *work)
 		tvnet_alloc_empty_buffers(tvnet);
 }
 
-static irqreturn_t tvnet_irq(int irq, void *data)
+static irqreturn_t tvnet_irq_ctrl(int irq, void *data)
 {
 	struct net_device *ndev = data;
 	struct tvnet_priv *tvnet = netdev_priv(ndev);
@@ -1053,9 +1053,6 @@ static irqreturn_t tvnet_irq(int irq, void *data)
 	if (!tvnet_ivc_full(ep_cnt, host_cnt, EP2H_EMPTY_BUF))
 		schedule_work(&tvnet->alloc_buf_work);
 
-	if (tvnet_ivc_rd_available(ep_cnt, host_cnt, EP2H_FULL_BUF))
-		schedule_work(&tvnet->ep2h_msg_work);
-
 	if (netif_queue_stopped(ndev)) {
 		if ((tvnet->os_link_state == OS_LINK_STATE_UP) &&
 		    tvnet_ivc_rd_available(ep_cnt, host_cnt, H2EP_EMPTY_BUF) &&
@@ -1064,6 +1061,21 @@ static irqreturn_t tvnet_irq(int irq, void *data)
 			netif_wake_queue(ndev);
 		}
 	}
+
+	return IRQ_HANDLED;
+}
+
+static irqreturn_t tvnet_irq_data(int irq, void *data)
+{
+	struct net_device *ndev = data;
+	struct tvnet_priv *tvnet = netdev_priv(ndev);
+	struct host_ring_buf *host_mem = &tvnet->host_mem;
+	struct host_own_cnt *host_cnt = host_mem->host_cnt;
+	struct ep_ring_buf *ep_mem = &tvnet->ep_mem;
+	struct ep_own_cnt *ep_cnt = ep_mem->ep_cnt;
+
+	if (tvnet_ivc_rd_available(ep_cnt, host_cnt, EP2H_FULL_BUF))
+		schedule_work(&tvnet->ep2h_msg_work);
 
 	return IRQ_HANDLED;
 }
@@ -1152,18 +1164,25 @@ static int tvnet_probe(struct pci_dev *pdev, const struct pci_device_id *pci_id)
 	mutex_init(&tvnet->link_state_lock);
 	init_waitqueue_head(&tvnet->link_state_wq);
 
-	ret = pci_alloc_irq_vectors(pdev, 1, 1, PCI_IRQ_MSIX);
+	ret = pci_alloc_irq_vectors(pdev, 2, 2, PCI_IRQ_MSIX);
 	if (ret <= 0) {
 		dev_err(&pdev->dev, "pci_alloc_irq_vectors() fail: %d\n", ret);
 		ret = -EIO;
 		goto unreg_netdev;
 	}
 
-	ret = request_irq(pci_irq_vector(pdev, 0), tvnet_irq, IRQF_SHARED,
+	ret = request_irq(pci_irq_vector(pdev, 0), tvnet_irq_ctrl, 0,
 			  ndev->name, ndev);
 	if (ret < 0) {
 		dev_err(&pdev->dev, "request_irq() fail: %d\n", ret);
 		goto disable_msi;
+	}
+
+	ret = request_irq(pci_irq_vector(pdev, 1), tvnet_irq_data, 0,
+			  ndev->name, ndev);
+	if (ret < 0) {
+		dev_err(&pdev->dev, "request_irq() fail: %d\n", ret);
+		goto fail_request_irq_ctrl;
 	}
 
 #if ENABLE_DMA
@@ -1178,6 +1197,8 @@ static int tvnet_probe(struct pci_dev *pdev, const struct pci_device_id *pci_id)
 
 	return 0;
 
+fail_request_irq_ctrl:
+	free_irq(pci_irq_vector(pdev, 0), ndev);
 disable_msi:
 	pci_free_irq_vectors(pdev);
 unreg_netdev:

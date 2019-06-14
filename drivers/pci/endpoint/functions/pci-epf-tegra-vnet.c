@@ -859,7 +859,7 @@ static netdev_tx_t tvnet_start_xmit(struct sk_buff *skb,
 
 	/* Check if EP2H_FULL_BUF available to write */
 	if (tvnet_ivc_full(ep_cnt, host_cnt, EP2H_FULL_BUF)) {
-		pci_epc_raise_irq(epc, PCI_EPC_IRQ_MSIX, 0);
+		pci_epc_raise_irq(epc, PCI_EPC_IRQ_MSIX, 1);
 		dev_dbg(fdev, "%s: No EP2H full buf, stop tx\n", __func__);
 		netif_stop_queue(ndev);
 		return NETDEV_TX_BUSY;
@@ -979,7 +979,7 @@ static netdev_tx_t tvnet_start_xmit(struct sk_buff *skb,
 	ep2h_full_msg[wr_idx].u.full_buffer.packet_size = len;
 	ep2h_full_msg[wr_idx].u.full_buffer.pcie_address = dst_iova;
 	tvnet_ivc_advance_wr(ep_cnt, host_cnt, EP2H_FULL_BUF);
-	pci_epc_raise_irq(epc, PCI_EPC_IRQ_MSIX, 0);
+	pci_epc_raise_irq(epc, PCI_EPC_IRQ_MSIX, 1);
 
 	/* Free temp src and skb */
 	pci_epc_unmap_addr(epc, tvnet->tx_dst_pci_addr);

@@ -4074,11 +4074,13 @@ rtl8168_hw_d3_para(struct net_device *dev)
         case CFG_METHOD_30:
         case CFG_METHOD_31:
         case CFG_METHOD_32:
-                RTL_W8(0xF1, RTL_R8(0xF1) & ~BIT_7);
-                rtl8168_enable_cfg9346_write(tp);
-                RTL_W8(Config2, RTL_R8(Config2) & ~BIT_7);
-                RTL_W8(Config5, RTL_R8(Config5) & ~BIT_0);
-                rtl8168_disable_cfg9346_write(tp);
+                if (!aspm) {
+                        RTL_W8(0xF1, RTL_R8(0xF1) & ~BIT_7);
+                        rtl8168_enable_cfg9346_write(tp);
+                        RTL_W8(Config2, RTL_R8(Config2) & ~BIT_7);
+                        RTL_W8(Config5, RTL_R8(Config5) & ~BIT_0);
+                        rtl8168_disable_cfg9346_write(tp);
+                }
                 break;
         }
 

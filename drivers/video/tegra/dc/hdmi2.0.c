@@ -2493,6 +2493,8 @@ static int tegra_hdmi_scdc_read(struct tegra_hdmi *hdmi,
 					u8 offset_data[][2], u32 n_entries)
 {
 	u32 i;
+	int ret = 0;
+	struct i2c_adapter *i2c_adap = i2c_get_adapter(hdmi->dc->out->ddc_bus);
 	struct i2c_msg msg[] = {
 		{
 			.addr = 0x54,
@@ -2512,8 +2514,18 @@ static int tegra_hdmi_scdc_read(struct tegra_hdmi *hdmi,
 	for (i = 0; i < n_entries; i++) {
 		msg[0].buf = offset_data[i];
 		msg[1].buf = &offset_data[i][1];
-		tegra_hdmi_scdc_i2c_xfer(hdmi->dc, msg, ARRAY_SIZE(msg));
+		do {
+			ret = tegra_hdmi_scdc_i2c_xfer(hdmi->dc, msg,
+							ARRAY_SIZE(msg));
+		} while ((ret < 0)  && !tegra_edid_i2c_divide_rate(hdmi->edid));
 	}
+
+	/* Reset ddc i2c clock rate to original rate */
+	ret = tegra_edid_i2c_adap_change_rate(i2c_adap,
+				hdmi->ddc_i2c_original_rate);
+	if (ret < 0)
+		dev_info(&hdmi->dc->ndev->dev,
+			"Failed to reset DDC i2c clock rate for scdc read\n");
 
 	_tegra_hdmi_ddc_disable(hdmi);
 

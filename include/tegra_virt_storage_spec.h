@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2018-2019, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -179,14 +179,30 @@ struct vs_request {
 	};
 };
 
+/* Defines Command Responses of Emmc/Esd as per VSC interface */
+typedef enum {
+	RESP_TYPE_NO_RESP = 0,
+	RESP_TYPE_R1 = 1,
+	RESP_TYPE_R2 = 2,
+	RESP_TYPE_R3 = 3,
+	RESP_TYPE_R4 = 4,
+	RESP_TYPE_R5 = 5,
+	RESP_TYPE_R6 = 6,
+	RESP_TYPE_R7 = 7,
+	RESP_TYPE_R1B = 8,
+	RESP_TYPE_NUM,
+} sdmmc_resp_type;
+
+
 #define VBLK_MMC_MULTI_IOC_ID 0x1000
 struct combo_cmd_t {
 	uint32_t cmd;
 	uint32_t arg;
-	uint32_t write_flag;
 	uint32_t response[4];
 	uint32_t buf_offset;
 	uint32_t data_len;
+	uint32_t write_flag;
+	uint32_t flags;
 };
 
 struct combo_info_t {

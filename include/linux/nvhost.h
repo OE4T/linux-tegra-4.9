@@ -382,6 +382,9 @@ struct nvhost_device_data {
 	/* deliver task timestamps for falcon */
 	void (*enable_timestamps)(struct platform_device *pdev,
 			struct nvhost_cdma *cdma, dma_addr_t timestamp_addr);
+
+	/* don't apply platform dma mask */
+	bool no_platform_dma_mask;
 };
 
 

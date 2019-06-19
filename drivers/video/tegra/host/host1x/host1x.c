@@ -39,6 +39,7 @@
 #include <linux/anon_inodes.h>
 #include <linux/kref.h>
 #include <linux/nospec.h>
+#include <linux/dma-mapping.h>
 
 #include "dev.h"
 #include <trace/events/nvhost.h>
@@ -1168,6 +1169,8 @@ static int nvhost_probe(struct platform_device *dev)
 			sizeof(struct host1x_device_info));
 
 	pdata->pdev = dev;
+
+	dma_set_mask_and_coherent(&dev->dev, host->info.dma_mask);
 
 	/* set common host1x device data */
 	platform_set_drvdata(dev, pdata);

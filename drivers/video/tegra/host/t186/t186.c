@@ -124,6 +124,7 @@ static struct host1x_device_info host1x04_info = {
 	.channel_policy	= MAP_CHANNEL_ON_SUBMIT,
 	.firmware_area_size = SZ_1M,
 	.nb_actmons = 1,
+	.dma_mask	= DMA_BIT_MASK(40),
 };
 
 struct nvhost_device_data t18_host1x_info = {
@@ -164,6 +165,7 @@ static struct host1x_device_info host1xb04_info = {
 	.syncpt_policy	= SYNCPT_PER_CHANNEL_INSTANCE,
 	.channel_policy	= MAP_CHANNEL_ON_SUBMIT,
 	.firmware_area_size = SZ_1M,
+	.dma_mask	= DMA_BIT_MASK(40),
 };
 
 struct nvhost_device_data t18_host1xb_info = {
@@ -239,6 +241,7 @@ struct nvhost_device_data t18_vi_info = {
 				   {0x30000 * 4, true} },
 	.num_ppc			= 8,
 	.aggregate_constraints	= nvhost_vi4_aggregate_constraints,
+	.no_platform_dma_mask	= true,
 };
 #endif
 
@@ -471,6 +474,7 @@ struct nvhost_device_data t18_nvcsi_info = {
 	.keepalive		= true,
 	.serialize		= 1,
 	.push_work_done		= 1,
+	.no_platform_dma_mask	= true,
 };
 #endif
 

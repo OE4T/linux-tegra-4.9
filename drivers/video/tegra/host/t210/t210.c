@@ -70,6 +70,7 @@ static struct host1x_device_info host1x04_info = {
 	.pts_limit	= NV_HOST1X_SYNCPT_NB_PTS,
 	.syncpt_policy	= SYNCPT_PER_CHANNEL,
 	.nb_actmons	= 1,
+	.dma_mask	= DMA_BIT_MASK(34),
 	/* firmware_area_size=0 as no isolate_contexts=y */
 };
 

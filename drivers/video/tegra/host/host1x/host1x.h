@@ -89,6 +89,9 @@ struct host1x_device_info {
 
 	/* cmdfifo only accessible from hypervisor? */
 	bool		secure_cmdfifo;
+
+	/* dma mask for host1x and clients */
+	u64		dma_mask;
 };
 
 struct nvhost_vm_firmware_area {

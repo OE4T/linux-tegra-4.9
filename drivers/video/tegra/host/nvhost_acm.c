@@ -37,6 +37,7 @@
 #include <linux/version.h>
 #include <linux/clk/tegra.h>
 #include <linux/clk-provider.h>
+#include <linux/dma-mapping.h>
 
 #include <linux/platform/tegra/mc.h>
 #if defined(CONFIG_TEGRA_BWMGR)
@@ -636,6 +637,11 @@ int nvhost_module_init(struct platform_device *dev)
 	int i = 0, err = 0;
 	struct kobj_attribute *attr = NULL;
 	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
+	struct nvhost_master *master = nvhost_get_host(dev);
+
+	if (!pdata->no_platform_dma_mask) {
+		dma_set_mask_and_coherent(&dev->dev, master->info.dma_mask);
+	}
 
 	/* initialize clocks to known state (=enabled) */
 	pdata->num_clks = 0;

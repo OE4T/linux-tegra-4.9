@@ -1589,7 +1589,7 @@
 				_overlay_ {
 					status = "okay";
 					port-index = <0>;
-					bus-width = <4>;
+					bus-width = <8>;
 					remote-endpoint = <&e3377_slvs_ec_out0>;
 				};
 			};
@@ -1611,7 +1611,7 @@
 				_overlay_ {
 					status = "okay";
 					port-index = <0>;
-					bus-width = <4>;
+					bus-width = <8>;
 					remote-endpoint = <&e3377_imx204_out0>;
 				};
 			};

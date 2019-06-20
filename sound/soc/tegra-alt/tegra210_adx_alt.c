@@ -304,7 +304,7 @@ static int tegra210_adx_set_audio_cif(struct snd_soc_dai *dai,
 	cif_conf.audio_bits = audio_bits;
 	cif_conf.client_bits = audio_bits;
 
-	adx->soc_data->set_audio_cif(adx->regmap, reg, &cif_conf);
+	tegra210_xbar_set_cif(adx->regmap, reg, &cif_conf);
 
 	return 0;
 }
@@ -799,12 +799,8 @@ static const struct regmap_config tegra210_adx_regmap_config = {
 	.cache_type = REGCACHE_FLAT,
 };
 
-static const struct tegra210_adx_soc_data soc_data_tegra210 = {
-	.set_audio_cif = tegra210_xbar_set_cif
-};
-
 static const struct of_device_id tegra210_adx_of_match[] = {
-	{ .compatible = "nvidia,tegra210-adx", .data = &soc_data_tegra210 },
+	{ .compatible = "nvidia,tegra210-adx" },
 	{},
 };
 
@@ -815,7 +811,6 @@ static int tegra210_adx_platform_probe(struct platform_device *pdev)
 	void __iomem *regs;
 	int ret = 0;
 	const struct of_device_id *match;
-	struct tegra210_adx_soc_data *soc_data;
 
 	match = of_match_device(tegra210_adx_of_match, &pdev->dev);
 	if (!match) {
@@ -823,7 +818,6 @@ static int tegra210_adx_platform_probe(struct platform_device *pdev)
 		ret = -ENODEV;
 		goto err;
 	}
-	soc_data = (struct tegra210_adx_soc_data *)match->data;
 
 	adx = devm_kzalloc(&pdev->dev, sizeof(struct tegra210_adx), GFP_KERNEL);
 	if (!adx) {
@@ -832,7 +826,6 @@ static int tegra210_adx_platform_probe(struct platform_device *pdev)
 		goto err;
 	}
 
-	adx->soc_data = soc_data;
 	adx->is_shutdown = false;
 	dev_set_drvdata(&pdev->dev, adx);
 

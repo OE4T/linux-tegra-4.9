@@ -106,7 +106,7 @@ static int tegra210_iqc_set_audio_cif(struct tegra210_iqc *iqc,
 	cif_conf.audio_bits = audio_bits;
 	cif_conf.client_bits = audio_bits;
 
-	iqc->soc_data->set_audio_cif(iqc->regmap, reg, &cif_conf);
+	tegra210_xbar_set_cif(iqc->regmap, reg, &cif_conf);
 
 	return 0;
 }
@@ -295,12 +295,8 @@ static const struct regmap_config tegra210_iqc_regmap_config = {
 	.cache_type = REGCACHE_FLAT,
 };
 
-static const struct tegra210_iqc_soc_data soc_data_tegra210 = {
-	.set_audio_cif = tegra210_xbar_set_cif,
-};
-
 static const struct of_device_id tegra210_iqc_of_match[] = {
-	{ .compatible = "nvidia,tegra210-iqc", .data = &soc_data_tegra210 },
+	{ .compatible = "nvidia,tegra210-iqc" },
 	{},
 };
 
@@ -311,7 +307,6 @@ static int tegra210_iqc_platform_probe(struct platform_device *pdev)
 	void __iomem *regs;
 	int ret = 0;
 	const struct of_device_id *match;
-	struct tegra210_iqc_soc_data *soc_data;
 
 	match = of_match_device(tegra210_iqc_of_match, &pdev->dev);
 	if (!match) {
@@ -319,7 +314,6 @@ static int tegra210_iqc_platform_probe(struct platform_device *pdev)
 		ret = -ENODEV;
 		goto err;
 	}
-	soc_data = (struct tegra210_iqc_soc_data *)match->data;
 
 	iqc = devm_kzalloc(&pdev->dev, sizeof(struct tegra210_iqc), GFP_KERNEL);
 	if (!iqc) {
@@ -328,7 +322,6 @@ static int tegra210_iqc_platform_probe(struct platform_device *pdev)
 		goto err;
 	}
 
-	iqc->soc_data = soc_data;
 	dev_set_drvdata(&pdev->dev, iqc);
 
 	if (!(tegra_platform_is_unit_fpga() || tegra_platform_is_fpga())) {

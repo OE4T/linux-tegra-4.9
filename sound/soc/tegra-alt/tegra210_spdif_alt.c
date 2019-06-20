@@ -235,13 +235,13 @@ static int tegra210_spdif_hw_params(struct snd_pcm_substream *substream,
 
 	/* As a CODEC DAI, CAPTURE is transmit */
 	if (substream->stream == SNDRV_PCM_STREAM_CAPTURE) {
-		spdif->soc_data->set_audio_cif(spdif->regmap,
-					TEGRA210_SPDIF_CIF_TXD_CTRL,
-					&cif_conf);
+		tegra210_xbar_set_cif(spdif->regmap,
+				      TEGRA210_SPDIF_CIF_TXD_CTRL,
+				      &cif_conf);
 	} else {
-		spdif->soc_data->set_audio_cif(spdif->regmap,
-					TEGRA210_SPDIF_CIF_RXD_CTRL,
-					&cif_conf);
+		tegra210_xbar_set_cif(spdif->regmap,
+				      TEGRA210_SPDIF_CIF_RXD_CTRL,
+				      &cif_conf);
 	}
 
 	return 0;
@@ -423,12 +423,8 @@ static const struct regmap_config tegra210_spdif_regmap_config = {
 	.cache_type = REGCACHE_FLAT,
 };
 
-static const struct tegra210_spdif_soc_data soc_data_tegra210 = {
-	.set_audio_cif = tegra210_xbar_set_cif,
-};
-
 static const struct of_device_id tegra210_spdif_of_match[] = {
-	{ .compatible = "nvidia,tegra210-spdif", .data = &soc_data_tegra210 },
+	{ .compatible = "nvidia,tegra210-spdif" },
 	{},
 };
 
@@ -439,7 +435,6 @@ static int tegra210_spdif_platform_probe(struct platform_device *pdev)
 	struct resource *mem, *memregion;
 	void __iomem *regs;
 	const struct of_device_id *match;
-	struct tegra210_spdif_soc_data *soc_data;
 	const char *prod_name;
 	int ret;
 
@@ -449,7 +444,6 @@ static int tegra210_spdif_platform_probe(struct platform_device *pdev)
 		ret = -ENODEV;
 		goto err;
 	}
-	soc_data = (struct tegra210_spdif_soc_data *)match->data;
 
 	spdif = devm_kzalloc(&pdev->dev, sizeof(struct tegra210_spdif),
 				GFP_KERNEL);
@@ -459,7 +453,6 @@ static int tegra210_spdif_platform_probe(struct platform_device *pdev)
 		goto err;
 	}
 
-	spdif->soc_data = soc_data;
 	spdif->is_shutdown = false;
 	dev_set_drvdata(&pdev->dev, spdif);
 

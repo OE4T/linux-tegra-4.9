@@ -160,9 +160,8 @@ static int tegra186_dspk_set_audio_cif(struct tegra186_dspk *dspk,
 		return -EINVAL;
 	}
 
-	dspk->soc_data->set_audio_cif(dspk->regmap,
-			TEGRA186_DSPK_AXBAR_RX_CIF_CTRL,
-			&cif_conf);
+	tegra210_xbar_set_cif(dspk->regmap, TEGRA186_DSPK_AXBAR_RX_CIF_CTRL,
+			      &cif_conf);
 	return 0;
 }
 
@@ -458,12 +457,8 @@ static const struct regmap_config tegra186_dspk_regmap_config = {
 	.cache_type = REGCACHE_FLAT,
 };
 
-static const struct tegra186_dspk_soc_data soc_data_tegra186 = {
-	.set_audio_cif = tegra210_xbar_set_cif,
-};
-
 static const struct of_device_id tegra186_dspk_of_match[] = {
-	{ .compatible = "nvidia,tegra186-dspk", .data = &soc_data_tegra186 },
+	{ .compatible = "nvidia,tegra186-dspk" },
 	{},
 };
 
@@ -475,7 +470,6 @@ static int tegra186_dspk_platform_probe(struct platform_device *pdev)
 	void __iomem *regs;
 	int ret = 0;
 	const struct of_device_id *match;
-	struct tegra186_dspk_soc_data *soc_data;
 
 	match = of_match_device(tegra186_dspk_of_match, &pdev->dev);
 	if (!match) {
@@ -483,7 +477,6 @@ static int tegra186_dspk_platform_probe(struct platform_device *pdev)
 		ret = -ENODEV;
 		goto err;
 	}
-	soc_data = (struct tegra186_dspk_soc_data *)match->data;
 
 	dspk = devm_kzalloc(&pdev->dev, sizeof(struct tegra186_dspk),
 			GFP_KERNEL);
@@ -493,7 +486,6 @@ static int tegra186_dspk_platform_probe(struct platform_device *pdev)
 		goto err;
 	}
 
-	dspk->soc_data = soc_data;
 	dspk->is_shutdown = false;
 	dspk->prod_name = NULL;
 

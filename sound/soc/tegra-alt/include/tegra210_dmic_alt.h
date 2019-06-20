@@ -114,17 +114,11 @@ enum tegra_dmic_ch_select {
 	DMIC_CH_SELECT_RIGHT,
 	DMIC_CH_SELECT_STEREO,
 };
-struct tegra210_dmic_soc_data {
-	void (*set_audio_cif)(struct regmap *map,
-			unsigned int reg,
-			struct tegra210_xbar_cif_conf *conf);
-};
 
 struct tegra210_dmic {
 	struct clk *clk_dmic;
 	struct clk *clk_pll_a_out0;
 	struct regmap *regmap;
-	const struct tegra210_dmic_soc_data *soc_data;
 	struct pinctrl *pinctrl;
 	struct pinctrl_state *pin_active_state;
 	struct pinctrl_state *pin_idle_state;

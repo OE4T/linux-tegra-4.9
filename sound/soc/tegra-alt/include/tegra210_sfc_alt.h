@@ -1,7 +1,7 @@
 /*
  * tegra210_sfc_alt.h - Definitions for Tegra210 SFC driver
  *
- * Copyright (c) 2014-2017 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2019 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -92,12 +92,6 @@
 /* SRC coefficients */
 #define TEGRA210_SFC_COEF_RAM_DEPTH		64
 
-struct tegra210_sfc_soc_data {
-	void (*set_audio_cif)(struct regmap *map,
-			unsigned int reg,
-			struct tegra210_xbar_cif_conf *conf);
-};
-
 struct tegra210_sfc {
 	int srate_in;
 	int srate_out;
@@ -108,7 +102,6 @@ struct tegra210_sfc {
 	struct snd_pcm_hw_params out_hw_params;
 	int stereo_conv_input;
 	int mono_conv_output;
-	const struct tegra210_sfc_soc_data *soc_data;
 	unsigned int channels_via_control;
 	bool is_shutdown;
 };

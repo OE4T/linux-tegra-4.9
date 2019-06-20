@@ -1,7 +1,7 @@
 /*
  * tegra210_ope_alt.h - Definitions for Tegra210 OPE driver
  *
- * Copyright (c) 2014-2018 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2019 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -77,9 +77,6 @@ struct tegra210_ope_module_soc_data {
 };
 
 struct tegra210_ope_soc_data {
-	void (*set_audio_cif)(struct regmap *map,
-			unsigned int reg,
-			struct tegra210_xbar_cif_conf *conf);
 	struct tegra210_ope_module_soc_data peq_soc_data;
 	struct tegra210_ope_module_soc_data mbdrc_soc_data;
 };

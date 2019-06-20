@@ -35,7 +35,6 @@
 #include <linux/version.h>
 
 #include "tegra186_asrc_alt.h"
-#include "tegra210_xbar_alt.h"
 #include "tegra186_arad_alt.h"
 
 #define DRV_NAME "tegra186-arad"
@@ -676,12 +675,8 @@ static const struct regmap_config tegra186_arad_regmap_config = {
 	.cache_type = REGCACHE_FLAT,
 };
 
-static const struct tegra186_arad_soc_data soc_data_tegra186 = {
-	.set_audio_cif = tegra210_xbar_set_cif,
-};
-
 static const struct of_device_id tegra186_arad_of_match[] = {
-	{ .compatible = "nvidia,tegra186-arad", .data = &soc_data_tegra186 },
+	{ .compatible = "nvidia,tegra186-arad" },
 	{},
 };
 
@@ -764,7 +759,6 @@ static int tegra186_arad_platform_probe(struct platform_device *pdev)
 	void __iomem *regs;
 	int ret = 0;
 	const struct of_device_id *match;
-	struct tegra186_arad_soc_data *soc_data;
 
 	match = of_match_device(tegra186_arad_of_match, &pdev->dev);
 	if (!match) {
@@ -772,7 +766,6 @@ static int tegra186_arad_platform_probe(struct platform_device *pdev)
 		ret = -ENODEV;
 		goto err;
 	}
-	soc_data = (struct tegra186_arad_soc_data *)match->data;
 
 	arad = devm_kzalloc(&pdev->dev,
 		sizeof(struct tegra186_arad), GFP_KERNEL);
@@ -783,7 +776,6 @@ static int tegra186_arad_platform_probe(struct platform_device *pdev)
 	}
 
 	arad_dev = &pdev->dev;
-	arad->soc_data = soc_data;
 	dev_set_drvdata(&pdev->dev, arad);
 
 	mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);

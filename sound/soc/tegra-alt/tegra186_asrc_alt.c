@@ -255,7 +255,7 @@ static int tegra186_asrc_set_audio_cif(struct tegra186_asrc *asrc,
 	cif_conf.client_channels = channels;
 	cif_conf.audio_bits = audio_bits;
 	cif_conf.client_bits = audio_bits;
-	asrc->soc_data->set_audio_cif(asrc->regmap, reg, &cif_conf);
+	tegra210_xbar_set_cif(asrc->regmap, reg, &cif_conf);
 
 	return 0;
 }
@@ -1088,12 +1088,8 @@ static void tegra186_asrc_ahc_cb(void *data)
 }
 #endif
 
-static const struct tegra186_asrc_soc_data soc_data_tegra186 = {
-	.set_audio_cif = tegra210_xbar_set_cif,
-};
-
 static const struct of_device_id tegra186_asrc_of_match[] = {
-	{ .compatible = "nvidia,tegra186-asrc", .data = &soc_data_tegra186 },
+	{ .compatible = "nvidia,tegra186-asrc" },
 	{},
 };
 static int tegra186_asrc_platform_probe(struct platform_device *pdev)
@@ -1103,7 +1099,6 @@ static int tegra186_asrc_platform_probe(struct platform_device *pdev)
 	void __iomem *regs;
 	int ret = 0;
 	const struct of_device_id *match;
-	struct tegra186_asrc_soc_data *soc_data;
 	unsigned int i = 0;
 
 	match = of_match_device(tegra186_asrc_of_match, &pdev->dev);
@@ -1112,7 +1107,6 @@ static int tegra186_asrc_platform_probe(struct platform_device *pdev)
 		ret = -ENODEV;
 		goto err;
 	}
-	soc_data = (struct tegra186_asrc_soc_data *)match->data;
 	asrc_dev = &pdev->dev;
 	asrc = devm_kzalloc(&pdev->dev,
 		sizeof(struct tegra186_asrc), GFP_KERNEL);
@@ -1122,7 +1116,6 @@ static int tegra186_asrc_platform_probe(struct platform_device *pdev)
 		goto err;
 	}
 
-	asrc->soc_data = soc_data;
 	asrc->is_shutdown = false;
 	dev_set_drvdata(&pdev->dev, asrc);
 

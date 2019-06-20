@@ -161,9 +161,6 @@ struct tegra_admaif_soc_data {
 	struct snd_soc_dai_driver *codec_dais;
 	struct snd_soc_codec_driver *admaif_codec;
 	const struct regmap_config *regmap_conf;
-	void (*set_audio_cif)(struct regmap *map,
-			unsigned int reg,
-			struct tegra210_xbar_cif_conf *cif_conf);
 	bool is_isomgr_client;
 	unsigned int global_base;
 	unsigned int tx_base;

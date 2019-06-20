@@ -109,7 +109,7 @@ static int tegra210_ope_set_audio_cif(struct tegra210_ope *ope,
 	cif_conf.audio_bits = audio_bits;
 	cif_conf.client_bits = audio_bits;
 
-	ope->soc_data->set_audio_cif(ope->regmap, reg, &cif_conf);
+	tegra210_xbar_set_cif(ope->regmap, reg, &cif_conf);
 
 	return 0;
 }
@@ -313,7 +313,6 @@ static const struct regmap_config tegra210_ope_regmap_config = {
 };
 
 static const struct tegra210_ope_soc_data soc_data_tegra210 = {
-	.set_audio_cif = tegra210_xbar_set_cif,
 	.peq_soc_data = {
 		.init = tegra210_peq_init,
 		.codec_init = tegra210_peq_codec_init,

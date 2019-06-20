@@ -445,7 +445,7 @@ static int tegra_admaif_hw_params(struct snd_pcm_substream *substream,
 	}
 
 	tegra_admaif_set_pack_mode(admaif->regmap, reg, valid_bit);
-	admaif->soc_data->set_audio_cif(admaif->regmap, reg, &cif_conf);
+	tegra210_xbar_set_cif(admaif->regmap, reg, &cif_conf);
 
 	return 0;
 }
@@ -1115,7 +1115,6 @@ static struct tegra_admaif_soc_data soc_data_tegra210 = {
 	.admaif_codec = &tegra210_admaif_codec,
 	.codec_dais = tegra210_admaif_codec_dais,
 	.regmap_conf = &tegra210_admaif_regmap_config,
-	.set_audio_cif = tegra210_xbar_set_cif,
 	.global_base = TEGRA210_ADMAIF_GLOBAL_BASE,
 	.tx_base = TEGRA210_ADMAIF_XBAR_TX_BASE,
 	.rx_base = TEGRA210_ADMAIF_XBAR_RX_BASE,
@@ -1127,7 +1126,6 @@ static struct tegra_admaif_soc_data soc_data_tegra186 = {
 	.admaif_codec = &tegra186_admaif_codec,
 	.codec_dais = tegra186_admaif_codec_dais,
 	.regmap_conf = &tegra186_admaif_regmap_config,
-	.set_audio_cif = tegra210_xbar_set_cif,
 	.global_base = TEGRA186_ADMAIF_GLOBAL_BASE,
 	.tx_base = TEGRA186_ADMAIF_XBAR_TX_BASE,
 	.rx_base = TEGRA186_ADMAIF_XBAR_RX_BASE,

@@ -248,7 +248,7 @@ static int tegra210_mixer_set_audio_cif(struct tegra210_mixer *mixer,
 	cif_conf.audio_bits = audio_bits;
 	cif_conf.client_bits = audio_bits;
 
-	mixer->soc_data->set_audio_cif(mixer->regmap, reg, &cif_conf);
+	tegra210_xbar_set_cif(mixer->regmap, reg, &cif_conf);
 	return 0;
 }
 
@@ -682,12 +682,8 @@ static const struct regmap_config tegra210_mixer_regmap_config = {
 	.cache_type = REGCACHE_FLAT,
 };
 
-static const struct tegra210_mixer_soc_data soc_data_tegra210 = {
-	.set_audio_cif = tegra210_xbar_set_cif
-};
-
 static const struct of_device_id tegra210_mixer_of_match[] = {
-	{ .compatible = "nvidia,tegra210-amixer", .data = &soc_data_tegra210 },
+	{ .compatible = "nvidia,tegra210-amixer" },
 	{},
 };
 
@@ -698,7 +694,6 @@ static int tegra210_mixer_platform_probe(struct platform_device *pdev)
 	void __iomem *regs;
 	int ret, i;
 	const struct of_device_id *match;
-	struct tegra210_mixer_soc_data *soc_data;
 
 	match = of_match_device(tegra210_mixer_of_match, &pdev->dev);
 	if (!match) {
@@ -706,7 +701,6 @@ static int tegra210_mixer_platform_probe(struct platform_device *pdev)
 		ret = -ENODEV;
 		goto err;
 	}
-	soc_data = (struct tegra210_mixer_soc_data *)match->data;
 
 	mixer = devm_kzalloc(&pdev->dev,
 		sizeof(struct tegra210_mixer), GFP_KERNEL);
@@ -716,7 +710,6 @@ static int tegra210_mixer_platform_probe(struct platform_device *pdev)
 		goto err;
 	}
 
-	mixer->soc_data = soc_data;
 	mixer->is_shutdown = false;
 	mixer->gain_coeff[0] = 0;
 	mixer->gain_coeff[1] = 0;

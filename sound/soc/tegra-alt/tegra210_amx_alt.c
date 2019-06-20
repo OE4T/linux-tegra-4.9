@@ -341,7 +341,7 @@ static int tegra210_amx_set_audio_cif(struct snd_soc_dai *dai,
 	cif_conf.audio_bits = audio_bits;
 	cif_conf.client_bits = audio_bits;
 
-	amx->soc_data->set_audio_cif(amx->regmap, reg, &cif_conf);
+	tegra210_xbar_set_cif(amx->regmap, reg, &cif_conf);
 
 	return 0;
 }
@@ -869,13 +869,11 @@ static const struct regmap_config tegra194_amx_regmap_config = {
 };
 
 static const struct tegra210_amx_soc_data soc_data_tegra210 = {
-	.set_audio_cif = tegra210_xbar_set_cif,
 	.regmap_conf = &tegra210_amx_regmap_config,
 	.is_auto_disable_supported = false,
 };
 
 static const struct tegra210_amx_soc_data soc_data_tegra194 = {
-	.set_audio_cif = tegra210_xbar_set_cif,
 	.regmap_conf = &tegra194_amx_regmap_config,
 	.is_auto_disable_supported = true,
 };

@@ -14,6 +14,11 @@ __headers:
 include scripts/Kbuild.include
 
 srcdir        := $(srctree)/$(obj)
+define set_srcdir_overlay
+  oname := $(lastword $(subst /, ,$(overlay)))
+  srcdir.$(oname) := $(srctree.$(oname))/$(obj)
+endef
+$(foreach overlay,$(KERNEL_OVERLAYS),$(eval $(value set_srcdir_overlay)))
 
 # When make is run under a fakechroot environment, the function
 # $(wildcard $(srcdir)/*/.) doesn't only return directories, but also regular
@@ -22,6 +27,13 @@ srcdir        := $(srctree)/$(obj)
 subdirs       := $(patsubst $(srcdir)/%/,%,\
 		 $(filter-out $(srcdir)/,\
 		 $(sort $(dir $(wildcard $(srcdir)/*/)))))
+define set_subdirs_overlay
+  oname := $(lastword $(subst /, ,$(overlay)))
+  subdirs += $(patsubst $(srcdir.$(oname))/%/,%,\
+		 $(filter-out $(srcdir.$(oname))/,\
+		 $(sort $(dir $(wildcard $(srcdir.$(oname))/*/)))))
+endef
+$(foreach overlay,$(KERNEL_OVERLAYS),$(eval $(value set_subdirs_overlay)))
 
 # Recursion
 __headers: $(subdirs)
@@ -39,6 +51,7 @@ ifeq ($(skip-inst),)
 # Kbuild file is optional
 kbuild-file := $(srctree)/$(obj)/Kbuild
 -include $(kbuild-file)
+include $(srctree)/scripts/Makefile.tegra
 
 old-kbuild-file := $(srctree)/$(subst uapi/,,$(obj))/Kbuild
 ifneq ($(wildcard $(old-kbuild-file)),)
@@ -50,6 +63,13 @@ gendir        := $(objtree)/$(subst include/,include/generated/,$(obj))
 header-files  := $(notdir $(wildcard $(srcdir)/*.h))
 header-files  += $(notdir $(wildcard $(srcdir)/*.agh))
 header-files  := $(filter-out $(no-export-headers), $(header-files))
+define set_header_files_overlay
+  oname := $(lastword $(subst /, ,$(overlay)))
+  header-files.$(oname) := $(notdir $(wildcard $(srcdir.$(oname))/*.h))
+  header-files.$(oname) += $(notdir $(wildcard $(srcdir.$(oname))/*.agh))
+  header-files.$(oname) := $(filter-out $(no-export-headers), $(header-files.$(oname)))
+endef
+$(foreach overlay,$(KERNEL_OVERLAYS),$(eval $(value set_header_files_overlay)))
 genhdr-files  := $(notdir $(wildcard $(gendir)/*.h))
 genhdr-files  := $(filter-out $(header-files), $(genhdr-files))
 
@@ -65,6 +85,11 @@ wrapper-files := $(filter-out $(header-files), $(wrapper-files))
 
 # all headers files for this dir
 all-files     := $(header-files) $(genhdr-files) $(wrapper-files)
+define set_all_files_overlay
+  oname := $(lastword $(subst /, ,$(overlay)))
+  all-files += header-files.$(oname)
+endef
+$(foreach overlay,$(KERNEL_OVERLAYS),$(eval $(value set_all_files_overlay)))
 output-files  := $(addprefix $(installdir)/, $(all-files))
 
 ifneq ($(mandatory-y),)
@@ -83,6 +108,15 @@ unwanted-file := $(addprefix $(installdir)/, $(unwanted))
 
 printdir = $(patsubst $(INSTALL_HDR_PATH)/%/,%,$(dir $@))
 
+cmd_install_overlays :=
+define set_cmd_install_overlay
+  oname := $(lastword $(subst /, ,$(overlay)))
+  ifneq ($(header-files.$(oname)),)
+    cmd_install_overlays += $(CONFIG_SHELL) $(srctree)/scripts/headers_install.sh $(installdir) $(srcdir.$(oname)) $(header-files.$(oname));
+  endif
+endef
+$(foreach overlay,$(KERNEL_OVERLAYS),$(eval $(value set_cmd_install_overlay)))
+
 quiet_cmd_install = INSTALL $(printdir) ($(words $(all-files))\
                             file$(if $(word 2, $(all-files)),s))
       cmd_install = \
@@ -91,6 +125,7 @@ quiet_cmd_install = INSTALL $(printdir) ($(words $(all-files))\
         for F in $(wrapper-files); do                                   \
                 echo "\#include <asm-generic/$$F>" > $(installdir)/$$F;    \
         done;                                                           \
+        $(cmd_install_overlays) \
         touch $@
 
 quiet_cmd_remove = REMOVE  $(unwanted)
@@ -110,10 +145,16 @@ ifndef HDRCHECK
 __headers: $(install-file)
 	@:
 
+install_file_deps := $(addprefix $(srcdir)/,$(header-files)) 
+install_file_deps += $(addprefix $(gendir)/,$(genhdr-files))
+define set_install_file_deps_overlay
+  oname := $(lastword $(subst /, ,$(overlay)))
+  install_file_deps += $(addprefix $(srcdir.$(oname))/,$(header-files.$(oname))) 
+endef
+$(foreach overlay,$(KERNEL_OVERLAYS),$(eval $(value set_install_file_deps_overlay)))
+
 targets += $(install-file)
-$(install-file): scripts/headers_install.sh \
-		 $(addprefix $(srcdir)/,$(header-files)) \
-		 $(addprefix $(gendir)/,$(genhdr-files)) FORCE
+$(install-file): scripts/headers_install.sh $(install_file_deps) FORCE
 	$(if $(unwanted),$(call cmd,remove),)
 	$(if $(wildcard $(dir $@)),,$(shell mkdir -p $(dir $@)))
 	$(call if_changed,install)

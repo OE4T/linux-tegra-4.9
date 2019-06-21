@@ -70,22 +70,10 @@
 #define TEGRA210_PEQ_IORESOURCE_MEM 1
 #define TEGRA210_MBDRC_IORESOURCE_MEM 2
 
-struct tegra210_ope_module_soc_data {
-	int (*init)(struct platform_device *pdev, int id);
-	int (*codec_init)(struct snd_soc_codec *codec);
-	int (*hw_params)(struct snd_soc_codec *codec);
-};
-
-struct tegra210_ope_soc_data {
-	struct tegra210_ope_module_soc_data peq_soc_data;
-	struct tegra210_ope_module_soc_data mbdrc_soc_data;
-};
-
 struct tegra210_ope {
 	struct regmap *regmap;
 	struct regmap *peq_regmap;
 	struct regmap *mbdrc_regmap;
-	const struct tegra210_ope_soc_data *soc_data;
 	u32 peq_biquad_gains[TEGRA210_PEQ_GAIN_PARAM_SIZE_PER_CH];
 	u32 peq_biquad_shifts[TEGRA210_PEQ_SHIFT_PARAM_SIZE_PER_CH];
 	bool is_shutdown;

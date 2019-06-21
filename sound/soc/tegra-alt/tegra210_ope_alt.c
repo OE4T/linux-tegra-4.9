@@ -137,7 +137,7 @@ static int tegra210_ope_hw_params(struct snd_pcm_substream *substream,
 		return ret;
 	}
 
-	ope->soc_data->mbdrc_soc_data.hw_params(dai->codec);
+	tegra210_mbdrc_hw_params(dai->codec);
 
 	return ret;
 }
@@ -148,8 +148,8 @@ static int tegra210_ope_codec_probe(struct snd_soc_codec *codec)
 
 	codec->control_data = ope->regmap;
 
-	ope->soc_data->peq_soc_data.codec_init(codec);
-	ope->soc_data->mbdrc_soc_data.codec_init(codec);
+	tegra210_peq_codec_init(codec);
+	tegra210_mbdrc_codec_init(codec);
 
 	return 0;
 }
@@ -312,20 +312,8 @@ static const struct regmap_config tegra210_ope_regmap_config = {
 	.cache_type = REGCACHE_FLAT,
 };
 
-static const struct tegra210_ope_soc_data soc_data_tegra210 = {
-	.peq_soc_data = {
-		.init = tegra210_peq_init,
-		.codec_init = tegra210_peq_codec_init,
-	},
-	.mbdrc_soc_data = {
-		.init = tegra210_mbdrc_init,
-		.codec_init = tegra210_mbdrc_codec_init,
-		.hw_params = tegra210_mbdrc_hw_params,
-	},
-};
-
 static const struct of_device_id tegra210_ope_of_match[] = {
-	{ .compatible = "nvidia,tegra210-ope", .data = &soc_data_tegra210 },
+	{ .compatible = "nvidia,tegra210-ope" },
 	{},
 };
 
@@ -336,7 +324,6 @@ static int tegra210_ope_platform_probe(struct platform_device *pdev)
 	void __iomem *regs;
 	int ret = 0;
 	const struct of_device_id *match;
-	struct tegra210_ope_soc_data *soc_data;
 
 	pr_info("OPE platform probe\n");
 
@@ -346,7 +333,6 @@ static int tegra210_ope_platform_probe(struct platform_device *pdev)
 		ret = -ENODEV;
 		goto err;
 	}
-	soc_data = (struct tegra210_ope_soc_data *)match->data;
 
 	ope = devm_kzalloc(&pdev->dev, sizeof(struct tegra210_ope), GFP_KERNEL);
 	if (!ope) {
@@ -355,7 +341,6 @@ static int tegra210_ope_platform_probe(struct platform_device *pdev)
 		goto err;
 	}
 
-	ope->soc_data = soc_data;
 	ope->is_shutdown = false;
 
 	mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
@@ -391,16 +376,14 @@ static int tegra210_ope_platform_probe(struct platform_device *pdev)
 
 	dev_set_drvdata(&pdev->dev, ope);
 
-	ret = ope->soc_data->peq_soc_data.init(pdev,
-				TEGRA210_PEQ_IORESOURCE_MEM);
+	ret = tegra210_peq_init(pdev, TEGRA210_PEQ_IORESOURCE_MEM);
 	if (ret < 0) {
 		dev_err(&pdev->dev, "peq init failed\n");
 		goto err;
 	}
 	regcache_cache_only(ope->peq_regmap, true);
 
-	ret = ope->soc_data->mbdrc_soc_data.init(pdev,
-				TEGRA210_MBDRC_IORESOURCE_MEM);
+	ret = tegra210_mbdrc_init(pdev, TEGRA210_MBDRC_IORESOURCE_MEM);
 	if (ret < 0) {
 		dev_err(&pdev->dev, "mbdrc init failed\n");
 		goto err;

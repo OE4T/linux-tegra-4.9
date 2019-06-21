@@ -693,98 +693,104 @@ static int vi5_channel_start_streaming(struct vb2_queue *vq, u32 count)
 		goto error_pipeline_start;
 #endif
 
+	/* Skip in bypass mode */
+	if (!chan->bypass) {
+		chan->tegra_vi_channel = vi_channel_open_ex(chan->id, false);
+		if (IS_ERR(chan->tegra_vi_channel))
+			return PTR_ERR(chan);
+
+		spin_lock_irqsave(&chan->capture_state_lock, flags);
+		chan->capture_state = CAPTURE_IDLE;
+		spin_unlock_irqrestore(&chan->capture_state_lock, flags);
+
+		if (!chan->pg_mode) {
+			sd = chan->subdev_on_csi;
+			node = sd->dev->of_node;
+			s_data = to_camera_common_data(sd->dev);
+
+			/* get sensor properties from DT */
+			if (s_data != NULL && node != NULL) {
+				int idx = s_data->mode_prop_idx;
+
+				emb_buf_size = 0;
+				if (idx < s_data->sensor_props.num_modes) {
+					sensor_mode =
+						&s_data->sensor_props.\
+						sensor_modes[idx];
+
+					chan->embedded_data_width =
+						sensor_mode->image_properties.\
+						width;
+					chan->embedded_data_height =
+						sensor_mode->image_properties.\
+						embedded_metadata_height;
+					/* rounding up to page size */
+					emb_buf_size =
+						round_up(chan->\
+						embedded_data_width *
+							chan->\
+							embedded_data_height *
+							BPP_MEM,
+							PAGE_SIZE);
+				}
+			}
+
+			/* Allocate buffer for Embedded Data if need to*/
+			if (emb_buf_size > chan->vi->emb_buf_size) {
+				/*
+				 * if old buffer is smaller than what we need,
+				 * release the old buffer and re-allocate a
+				 * bigger one below.
+				 */
+				if (chan->vi->emb_buf_size > 0) {
+					dma_free_coherent(chan->vi->dev,
+						chan->vi->emb_buf_size,
+						chan->vi->emb_buf_addr,
+						chan->vi->emb_buf);
+					chan->vi->emb_buf_size = 0;
+				}
+
+				chan->vi->emb_buf_addr =
+					dma_alloc_coherent(chan->vi->dev,
+						emb_buf_size,
+						&chan->vi->emb_buf, GFP_KERNEL);
+				if (!chan->vi->emb_buf_addr) {
+					dev_err(&chan->video.dev,
+							"Can't allocate memory"
+							"for embedded data\n");
+					goto error;
+				}
+				chan->vi->emb_buf_size = emb_buf_size;
+			}
+		}
+
+		ret = tegra_channel_capture_setup(chan);
+		if (ret < 0)
+			goto error;
+
+		chan->sequence = 0;
+		tegra_channel_init_ring_buffer(chan);
+
+		ret = vi5_channel_start_kthreads(chan);
+		if (ret != 0)
+			goto error;
+	}
+
+	/* csi stream/sensor devices should be streamon post vi channel setup */
 	ret = tegra_channel_set_stream(chan, true);
 	if (ret < 0)
-		goto error_media_pipe;
+		goto error;
 
 	ret = tegra_channel_write_blobs(chan);
 	if (ret < 0)
 		goto error_stream;
 
-	if (chan->bypass)
-		return 0;
-
-	chan->tegra_vi_channel = vi_channel_open_ex(chan->id, false);
-	if (IS_ERR(chan->tegra_vi_channel))
-		return PTR_ERR(chan);
-
-	spin_lock_irqsave(&chan->capture_state_lock, flags);
-	chan->capture_state = CAPTURE_IDLE;
-	spin_unlock_irqrestore(&chan->capture_state_lock, flags);
-
-	if (!chan->pg_mode) {
-		sd = chan->subdev_on_csi;
-		node = sd->dev->of_node;
-		s_data = to_camera_common_data(sd->dev);
-
-		/* get sensor properties from DT */
-		if (s_data != NULL && node != NULL) {
-			int idx = s_data->mode_prop_idx;
-
-			emb_buf_size = 0;
-			if (idx < s_data->sensor_props.num_modes) {
-				sensor_mode =
-					&s_data->sensor_props.sensor_modes[idx];
-
-				chan->embedded_data_width =
-					sensor_mode->image_properties.width;
-				chan->embedded_data_height =
-					sensor_mode->image_properties.\
-					embedded_metadata_height;
-				/* rounding up to page size */
-				emb_buf_size =
-					round_up(chan->embedded_data_width *
-						chan->embedded_data_height *
-						BPP_MEM,
-						PAGE_SIZE);
-			}
-		}
-
-		/* Allocate buffer for Embedded Data if need to*/
-		if (emb_buf_size > chan->vi->emb_buf_size) {
-			/*
-			 * if old buffer is smaller than what we need,
-			 * release the old buffer and re-allocate a bigger
-			 * one below
-			 */
-			if (chan->vi->emb_buf_size > 0) {
-				dma_free_coherent(chan->vi->dev,
-					chan->vi->emb_buf_size,
-					chan->vi->emb_buf_addr, chan->vi->emb_buf);
-				chan->vi->emb_buf_size = 0;
-			}
-
-			chan->vi->emb_buf_addr =
-				dma_alloc_coherent(chan->vi->dev,
-					emb_buf_size,
-					&chan->vi->emb_buf, GFP_KERNEL);
-			if (!chan->vi->emb_buf_addr) {
-				dev_err(&chan->video.dev,
-						"Can't allocate memory for embedded data\n");
-				goto error;
-			}
-			chan->vi->emb_buf_size = emb_buf_size;
-		}
-	}
-
-	ret = tegra_channel_capture_setup(chan);
-	if (ret < 0)
-		goto error;
-
-	chan->sequence = 0;
-	tegra_channel_init_ring_buffer(chan);
-
-	ret = vi5_channel_start_kthreads(chan);
-	if (ret != 0)
-		goto error;
-
 	return 0;
 
-error:
-	vi5_channel_stop_kthreads(chan);
 error_stream:
 	tegra_channel_set_stream(chan, false);
-error_media_pipe:
+error:
+	vi5_channel_stop_kthreads(chan);
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
 	media_entity_pipeline_stop(&chan->video.entity);
 error_pipeline_start:
@@ -800,13 +806,9 @@ static int vi5_channel_stop_streaming(struct vb2_queue *vq)
 	struct tegra_channel *chan = vb2_get_drv_priv(vq);
 	long err;
 
-	if (!chan->bypass)
+	if (!chan->bypass) {
 		vi5_channel_stop_kthreads(chan);
 
-	/* csi stream/sensor(s) devices to be closed before vi channel */
-	tegra_channel_set_stream(chan, false);
-
-	if (!chan->bypass) {
 		err = vi_capture_release(chan->tegra_vi_channel, 0);
 		if (err)
 			dev_err(&chan->video.dev,
@@ -817,6 +819,9 @@ static int vi5_channel_stop_streaming(struct vb2_queue *vq)
 		/* release all remaining buffers to v4l2 */
 		tegra_channel_queued_buf_done(chan, VB2_BUF_STATE_ERROR, false);
 	}
+
+	/* csi stream/sensor should be streamoff after vi channel close */
+	tegra_channel_set_stream(chan, false);
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
 	media_entity_pipeline_stop(&chan->video.entity);

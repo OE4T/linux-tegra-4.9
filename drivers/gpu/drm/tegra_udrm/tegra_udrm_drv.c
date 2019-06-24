@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2018-2019, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -17,6 +17,7 @@
 #include <drm/drmP.h>
 #include <linux/dma-buf.h>
 #include <linux/shmem_fs.h>
+#include <linux/extcon.h>
 
 #include <uapi/drm/tegra_udrm.h>
 
@@ -41,6 +42,8 @@ module_param_named(modeset, tegra_udrm_modeset_module_param, bool, 0400);
 
 struct tegra_udrm_private {
 	struct drm_device *drm;
+	struct notifier_block hdmi_nb;
+	struct notifier_block dp_nb;
 };
 
 struct tegra_udrm_device {
@@ -449,6 +452,7 @@ static int tegra_udrm_load(struct drm_device *drm)
 	if (private == NULL)
 		return -ENOMEM;
 
+	private->drm = drm;
 	drm->dev_private = private;
 
 	platform_set_drvdata(pdev, drm);
@@ -463,10 +467,34 @@ static int tegra_udrm_unload(struct drm_device *drm)
 	return 0;
 }
 
+static int tegra_udrm_hdmi_notifier(struct notifier_block *nb,
+		unsigned long event, void *unused)
+{
+	struct tegra_udrm_private *priv = container_of(nb,
+			struct tegra_udrm_private, hdmi_nb);
+
+	drm_sysfs_hotplug_event(priv->drm);
+
+	return NOTIFY_DONE;
+}
+
+static int tegra_udrm_dp_notifier(struct notifier_block *nb,
+		unsigned long event, void *unused)
+{
+	struct tegra_udrm_private *priv = container_of(nb,
+			struct tegra_udrm_private, dp_nb);
+
+	drm_sysfs_hotplug_event(priv->drm);
+
+	return NOTIFY_DONE;
+}
+
 static int tegra_udrm_probe(struct platform_device *pdev)
 {
 	struct drm_driver *driver = &tegra_udrm_driver;
 	struct drm_device *drm;
+	struct tegra_udrm_private *priv;
+	struct extcon_dev *edev;
 	int ret;
 
 	drm = drm_dev_alloc(driver, &pdev->dev);
@@ -484,6 +512,25 @@ static int tegra_udrm_probe(struct platform_device *pdev)
 	DRM_INFO("Initialized %s %d.%d.%d %s on minor %d\n", driver->name,
 		driver->major, driver->minor, driver->patchlevel,
 		driver->date, drm->primary->index);
+
+	/* Register hotplug notifiers */
+	priv = drm->dev_private;
+	edev = extcon_get_extcon_dev("external-connection:disp-state");
+	if (!IS_ERR(edev)) {
+		priv->hdmi_nb.notifier_call = tegra_udrm_hdmi_notifier;
+		ret = devm_extcon_register_notifier(drm->dev, edev,
+				EXTCON_DISP_HDMI, &priv->hdmi_nb);
+		if (!ret)
+			dev_warn(drm->dev, "HDMI HOTPLUG event is not supported\n");
+
+		priv->dp_nb.notifier_call = tegra_udrm_dp_notifier;
+		ret = devm_extcon_register_notifier(drm->dev, edev,
+				EXTCON_DISP_DP, &priv->dp_nb);
+		if (!ret)
+			dev_warn(drm->dev, "DP HOTPLUG event is not supported\n");
+	} else {
+		dev_warn(drm->dev, "HDMI/DP HOTPLUG event is not supported\n");
+	}
 
 	return 0;
 

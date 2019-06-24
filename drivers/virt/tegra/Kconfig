@@ -5,6 +5,17 @@ config TEGRA_HV_PM_CTL
 	  Nvidia Tegra hypervisor PM control driver handles power state
 	  transition commands over IVC channel.
 
+config TEGRA_HV_WDT_HANDLER
+	tristate "Nvidia Tegra driver to handle Non privilege guest WDT expiry"
+	select NV_TEGRA_IVC
+	default n
+	help
+	  NVIDIA Tegra WDT Expiry handler provides user interface for
+	  querying non-privileged guest WDT expiry. User application
+	  can take necessary action on receiving guest WDT expiry
+	  message. Expiry of the  privileged guest needs to be handled
+	  outside Tegra.
+
 config TEGRA_HV_MANAGER
 	bool "Nvidia Tegra hypervisor management & IVC"
 	depends on TEGRA_VIRTUALIZATION

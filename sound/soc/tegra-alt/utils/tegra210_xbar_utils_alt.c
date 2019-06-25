@@ -87,8 +87,7 @@ void tegra210_xbar_write_ahubram(struct regmap *regmap, unsigned int reg_ctrl,
 	unsigned int val = 0;
 	int i = 0;
 
-	val = (ram_offset << TEGRA210_AHUBRAMCTL_CTRL_RAM_ADDR_SHIFT) &
-		TEGRA210_AHUBRAMCTL_CTRL_RAM_ADDR_MASK;
+	val = ram_offset & TEGRA210_AHUBRAMCTL_CTRL_RAM_ADDR_MASK;
 	val |= TEGRA210_AHUBRAMCTL_CTRL_ADDR_INIT_EN;
 	val |= TEGRA210_AHUBRAMCTL_CTRL_SEQ_ACCESS_EN;
 	val |= TEGRA210_AHUBRAMCTL_CTRL_RW_WRITE;
@@ -108,8 +107,7 @@ void tegra210_xbar_read_ahubram(struct regmap *regmap, unsigned int reg_ctrl,
 	unsigned int val = 0;
 	int i = 0;
 
-	val = (ram_offset << TEGRA210_AHUBRAMCTL_CTRL_RAM_ADDR_SHIFT) &
-		TEGRA210_AHUBRAMCTL_CTRL_RAM_ADDR_MASK;
+	val = ram_offset & TEGRA210_AHUBRAMCTL_CTRL_RAM_ADDR_MASK;
 	val |= TEGRA210_AHUBRAMCTL_CTRL_ADDR_INIT_EN;
 	val |= TEGRA210_AHUBRAMCTL_CTRL_SEQ_ACCESS_EN;
 	val |= TEGRA210_AHUBRAMCTL_CTRL_RW_READ;

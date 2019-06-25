@@ -14,6 +14,7 @@
  *****************************************************************************/
 
 #include "mp_precomp.h"
+#define	ODM_WIN		0x08	/*BIT(3)*/
 #if (DM_ODM_SUPPORT_TYPE == ODM_WIN)
 #if RT_PLATFORM == PLATFORM_MACOSX
 #include "phydm_precomp.h"

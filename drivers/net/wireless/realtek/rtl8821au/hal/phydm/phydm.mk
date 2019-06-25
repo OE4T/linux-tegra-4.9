@@ -1,4 +1,4 @@
-EXTRA_CFLAGS += -I$(src)/hal/phydm
+EXTRA_CFLAGS += -I$(srctree)/../nvidia/drivers/net/wireless/realtek/rtl8821au/hal/phydm
 
 _PHYDM_FILES := hal/phydm/phydm_debug.o	\
 								hal/phydm/phydm_antdiv.o\
@@ -184,6 +184,7 @@ _PHYDM_FILES +=	hal/phydm/$(RTL871X)/halhwimg8821c_bb.o \
 								hal/phydm/halrf/$(RTL871X)/halrf_8821c.o\
 								hal/phydm/halrf/$(RTL871X)/halrf_iqk_8821c.o
 endif
+
 ifeq ($(CONFIG_RTL8192F), y)
 RTL871X = rtl8192f
 _PHYDM_FILES += hal/phydm/$(RTL871X)/halhwimg8192f_bb.o\

@@ -10122,7 +10122,9 @@ int rtw_cfg80211_ndev_res_alloc(_adapter *adapter)
 	}
 #endif
 
+#if !defined(RTW_SINGLE_WIPHY)
 exit:
+#endif
 	return ret;
 }
 
@@ -10153,7 +10155,9 @@ int rtw_cfg80211_ndev_res_register(_adapter *adapter)
 
 	ret = _SUCCESS;
 
+#if !defined(RTW_SINGLE_WIPHY)
 exit:
+#endif
 	return ret;
 }
 

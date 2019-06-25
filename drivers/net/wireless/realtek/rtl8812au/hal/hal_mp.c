@@ -972,6 +972,7 @@ mpt_SetSingleTone_8814A(
 #if	defined(CONFIG_RTL8812A) || defined(CONFIG_RTL8821A)
 void mpt_SetRFPath_8812A(PADAPTER pAdapter)
 {
+	u32 reg0xC50 = 0;
 	HAL_DATA_TYPE	*pHalData = GET_HAL_DATA(pAdapter);
 	PMPT_CONTEXT	pMptCtx = &pAdapter->mppriv.mpt_ctx;
 	struct mp_priv *pmp = &pAdapter->mppriv;
@@ -1009,7 +1010,6 @@ void mpt_SetRFPath_8812A(PADAPTER pAdapter)
 	}
 
 	switch (ulAntennaRx) {
-		u32 reg0xC50 = 0;
 	case ANTENNA_A:
 		phy_set_bb_reg(pAdapter, rRxPath_Jaguar, bMaskByte0, 0x11);
 		phy_set_rf_reg(pAdapter, RF_PATH_B, RF_AC_Jaguar, 0xF0000, 0x1); /*/ RF_B_0x0[19:16] = 1, Standby mode*/

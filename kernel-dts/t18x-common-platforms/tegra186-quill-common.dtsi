@@ -664,28 +664,6 @@
 			};
 		};
 
-		/* Dynamic pinmux config for DMIC1 */
-		dmic1_dap_active_state: dmic1_dap_active {
-			dmic_dmic1_clk_pm1 {
-				nvidia,pins = "dmic1_clk_pm1";
-				nvidia,function = "dmic1";
-			};
-			dmic_dmic1_dat_pm0 {
-				nvidia,pins = "dmic1_dat_pm0";
-				nvidia,function = "dmic1";
-			};
-		};
-		/* Dynamic pinmux config for DMIC2 */
-		dmic2_dap_active_state: dmic2_dap_active {
-			dmic_dmic2_dat_pm2 {
-				nvidia,pins = "dmic2_dat_pm2";
-				nvidia,function = "dmic2";
-			};
-			dmic_dmic2_clk_pm3 {
-				nvidia,pins = "dmic2_clk_pm3";
-				nvidia,function = "dmic2";
-			};
-		};
 		/* Dynamic pinmux config for DMIC3 */
 		dmic3_dap_active_state: dmic3_dap_active {
 			dmic_can_gpio0_paa0 {
@@ -693,35 +671,14 @@
 				nvidia,function = "dmic3";
 				nvidia,tristate = <TEGRA_PIN_ENABLE>;
 				nvidia,enable-input = <TEGRA_PIN_ENABLE>;
-				nvidia,pull = <TEGRA_PIN_PULL_NONE>;
+				nvidia,pull = <TEGRA_PIN_PULL_DOWN>;
 			};
 			dmic_can_gpio1_paa1 {
 				nvidia,pins = "can_gpio1_paa1";
 				nvidia,function = "dmic3";
 				nvidia,tristate = <TEGRA_PIN_DISABLE>;
 				nvidia,enable-input = <TEGRA_PIN_DISABLE>;
-				nvidia,pull = <TEGRA_PIN_PULL_NONE>;
-			};
-		};
-		dmic3_dap_inactive_state: dmic3_dap_inactive {
-			dmic_can_gpio0_paa0 {
-				nvidia,pins = "can_gpio0_paa0";
-				nvidia,function = "dmic5";
-			};
-			dmic_can_gpio1_paa1 {
-				nvidia,pins = "can_gpio1_paa1";
-				nvidia,function = "dmic5";
-			};
-		};
-		/* Dynamic pinmux config for DMIC4 */
-		dmic4_dap_active_state: dmic4_dap_active {
-			dmic_dmic4_dat_pm4 {
-				nvidia,pins = "dmic4_dat_pm4";
-				nvidia,function = "dmic4";
-			};
-			dmic_dmic4_clk_pm5 {
-				nvidia,pins = "dmic4_clk_pm5";
-				nvidia,function = "dmic4";
+				nvidia,pull = <TEGRA_PIN_PULL_DOWN>;
 			};
 		};
 		/* Dynamic pinmux config for I2S1 */
@@ -730,80 +687,33 @@
 				nvidia,pins = "dap1_fs_pj3";
 				nvidia,function = "i2s1";
 				nvidia,tristate = <TEGRA_PIN_DISABLE>;
-				nvidia,enable-input = <TEGRA_PIN_DISABLE>;
-				nvidia,pull = <TEGRA_PIN_PULL_NONE>;
+				nvidia,enable-input = <TEGRA_PIN_ENABLE>;
+				nvidia,pull = <TEGRA_PIN_PULL_DOWN>;
+				nvidia,lpdr = <TEGRA_PIN_DISABLE>;
 			};
 			i2s1_dap1_din_pj2 {
 				nvidia,pins = "dap1_din_pj2";
 				nvidia,function = "i2s1";
 				nvidia,tristate = <TEGRA_PIN_ENABLE>;
 				nvidia,enable-input = <TEGRA_PIN_ENABLE>;
-				nvidia,pull = <TEGRA_PIN_PULL_UP>;
+				nvidia,pull = <TEGRA_PIN_PULL_DOWN>;
+				nvidia,lpdr = <TEGRA_PIN_DISABLE>;
 			};
 			i2s1_dap1_dout_pj1 {
 				nvidia,pins = "dap1_dout_pj1";
 				nvidia,function = "i2s1";
 				nvidia,tristate = <TEGRA_PIN_DISABLE>;
 				nvidia,enable-input = <TEGRA_PIN_DISABLE>;
-				nvidia,pull = <TEGRA_PIN_PULL_NONE>;
+				nvidia,pull = <TEGRA_PIN_PULL_DOWN>;
+				nvidia,lpdr = <TEGRA_PIN_DISABLE>;
 			};
 			i2s1_dap1_sclk_pj0 {
 				nvidia,pins = "dap1_sclk_pj0";
 				nvidia,function = "i2s1";
 				nvidia,tristate = <TEGRA_PIN_DISABLE>;
-				nvidia,enable-input = <TEGRA_PIN_DISABLE>;
-				nvidia,pull = <TEGRA_PIN_PULL_NONE>;
-			};
-		};
-		/* Dynamic pinmux config for I2S2 */
-		i2s2_dap_active_state: i2s2_dap_active {
-			i2s2_dap2_din_pc3 {
-				nvidia,pins = "dap2_din_pc3";
-				nvidia,function = "i2s2";
-				nvidia,tristate = <TEGRA_PIN_ENABLE>;
 				nvidia,enable-input = <TEGRA_PIN_ENABLE>;
-				nvidia,pull = <TEGRA_PIN_PULL_UP>;
-			};
-			i2s2_dap2_dout_pc2 {
-				nvidia,pins = "dap2_dout_pc2";
-				nvidia,function = "i2s2";
-				nvidia,tristate = <TEGRA_PIN_DISABLE>;
-				nvidia,enable-input = <TEGRA_PIN_DISABLE>;
-				nvidia,pull = <TEGRA_PIN_PULL_NONE>;
-			};
-			i2s2_dap2_sclk_pc1 {
-				nvidia,pins = "dap2_sclk_pc1";
-				nvidia,function = "i2s2";
-				nvidia,tristate = <TEGRA_PIN_DISABLE>;
-				nvidia,enable-input = <TEGRA_PIN_DISABLE>;
-				nvidia,pull = <TEGRA_PIN_PULL_NONE>;
-			};
-			i2s2_dap2_fs_pc4 {
-				nvidia,pins = "dap2_fs_pc4";
-				nvidia,function = "i2s2";
-				nvidia,tristate = <TEGRA_PIN_DISABLE>;
-				nvidia,enable-input = <TEGRA_PIN_DISABLE>;
-				nvidia,pull = <TEGRA_PIN_PULL_NONE>;
-			};
-		};
-
-		/* Dynamic pinmux config for I2S3 */
-		i2s3_dap_active_state: i2s3_dap_active {
-			i2s3_dmic1_clk_pm1 {
-				nvidia,pins = "dmic1_clk_pm1";
-				nvidia,function = "i2s3";
-			};
-			i2s3_dmic1_dat_pm0 {
-				nvidia,pins = "dmic1_dat_pm0";
-				nvidia,function = "i2s3";
-			};
-			i2s3_dmic2_dat_pm2 {
-				nvidia,pins = "dmic2_dat_pm2";
-				nvidia,function = "i2s3";
-			};
-			i2s3_dmic2_clk_pm3 {
-				nvidia,pins = "dmic2_clk_pm3";
-				nvidia,function = "i2s3";
+				nvidia,pull = <TEGRA_PIN_PULL_DOWN>;
+				nvidia,lpdr = <TEGRA_PIN_DISABLE>;
 			};
 		};
 	};
@@ -812,39 +722,14 @@
 	aconnect@2a41000 {
 #endif
 	ahub {
-		dmic@2904000 {
-			pinctrl-names = "dap_active", "dap_inactive";
-			pinctrl-0 = <&dmic1_dap_active_state>;
-			pinctrl-1 = <>;
-		};
-		dmic@2904100 {
-			pinctrl-names = "dap_active", "dap_inactive";
-			pinctrl-0 = <&dmic2_dap_active_state>;
-			pinctrl-1 = <>;
-		};
 		dmic@2904200 {
 			pinctrl-names = "dap_active", "dap_inactive";
 			pinctrl-0 = <&dmic3_dap_active_state>;
-			pinctrl-1 = <&dmic3_dap_inactive_state>;
-		};
-		dmic@2904300 {
-			pinctrl-names = "dap_active", "dap_inactive";
-			pinctrl-0 = <&dmic4_dap_active_state>;
 			pinctrl-1 = <>;
 		};
 		i2s@2901000 {
 			pinctrl-names = "dap_active", "dap_inactive";
 			pinctrl-0 = <&i2s1_dap_active_state>;
-			pinctrl-1 = <>;
-		};
-		i2s@2901100 {
-			pinctrl-names = "dap_active", "dap_inactive";
-			pinctrl-0 = <&i2s2_dap_active_state>;
-			pinctrl-1 = <>;
-		};
-		i2s@2901200 {
-			pinctrl-names = "dap_active", "dap_inactive";
-			pinctrl-0 = <&i2s3_dap_active_state>;
 			pinctrl-1 = <>;
 		};
 	};

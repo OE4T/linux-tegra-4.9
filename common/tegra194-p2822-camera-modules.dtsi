@@ -209,6 +209,7 @@
 		};
 
 		slvs_ec_base: slvs-ec@15ac0000 {
+			status = "disabled";
 			streams {
 				slvs_ec_stream0: stream@0 {
 					status = "disabled";

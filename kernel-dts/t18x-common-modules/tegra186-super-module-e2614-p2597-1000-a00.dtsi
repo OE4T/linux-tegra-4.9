@@ -304,6 +304,7 @@
 			overrides@10 {
 				target = <&tegra_sound>;
 				_overlay_ {
+					nvidia,num-codec-link = <13>;
 					nvidia,audio-routing =
 						"x Headphone Jack",	"x HPO L Playback",
 						"x Headphone Jack",	"x HPO R Playback",
@@ -328,7 +329,8 @@
 						"c IN",			"c Mic",
 						"d IN",			"d Mic",
 						"d1 Headphone",		"d1 OUT",
-						"d2 Headphone",		"d2 OUT";
+						"d2 Headphone",		"d2 OUT",
+						"d3 Headphone",		"d3 OUT";
 				};
 			};
 

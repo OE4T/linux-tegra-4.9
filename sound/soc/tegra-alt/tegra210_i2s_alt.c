@@ -686,16 +686,6 @@ static int tegra210_i2s_hw_params(struct snd_pcm_substream *substream,
 	return 0;
 }
 
-static int tegra210_i2s_codec_probe(struct snd_soc_codec *codec)
-{
-	struct tegra210_i2s *i2s = snd_soc_codec_get_drvdata(codec);
-
-	/* default threshold settings */
-	i2s->rx_fifo_th = 3;
-
-	return 0;
-}
-
 static struct snd_soc_dai_ops tegra210_i2s_dai_ops = {
 	.set_fmt	= tegra210_i2s_set_fmt,
 	.hw_params	= tegra210_i2s_hw_params,
@@ -889,7 +879,6 @@ static const struct snd_soc_dapm_route tegra210_i2s_routes[] = {
 };
 
 static struct snd_soc_codec_driver tegra210_i2s_codec = {
-	.probe = tegra210_i2s_codec_probe,
 	.idle_bias_off = 1,
 	.component_driver = {
 		.dapm_widgets = tegra210_i2s_widgets,
@@ -1044,6 +1033,8 @@ static int tegra210_i2s_platform_probe(struct platform_device *pdev)
 	i2s->loopback = 0;
 	i2s->is_shutdown = false;
 	i2s->prod_name = NULL;
+	/* default threshold settings */
+	i2s->rx_fifo_th = 3;
 	dev_set_drvdata(&pdev->dev, i2s);
 
 	if (!(tegra_platform_is_unit_fpga() || tegra_platform_is_fpga())) {

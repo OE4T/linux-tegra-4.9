@@ -232,16 +232,6 @@ static int tegra186_dspk_hw_params(struct snd_pcm_substream *substream,
 	return ret;
 }
 
-static int tegra186_dspk_codec_probe(struct snd_soc_codec *codec)
-{
-	struct tegra186_dspk *dspk = snd_soc_codec_get_drvdata(codec);
-
-	dspk->rx_fifo_th = 0;
-	dspk->osr_val = TEGRA186_DSPK_OSR_64;
-
-	return 0;
-}
-
 static struct snd_soc_dai_ops tegra186_dspk_dai_ops = {
 	.hw_params	= tegra186_dspk_hw_params,
 	.set_bclk_ratio	= tegra186_dspk_set_dai_bclk_ratio,
@@ -345,7 +335,6 @@ static const struct snd_kcontrol_new tegrat186_dspk_controls[] = {
 };
 
 static struct snd_soc_codec_driver tegra186_dspk_codec = {
-	.probe = tegra186_dspk_codec_probe,
 	.idle_bias_off = 1,
 	.component_driver = {
 		.dapm_widgets = tegra186_dspk_widgets,
@@ -459,6 +448,8 @@ static int tegra186_dspk_platform_probe(struct platform_device *pdev)
 
 	dspk->is_shutdown = false;
 	dspk->prod_name = NULL;
+	dspk->rx_fifo_th = 0;
+	dspk->osr_val = TEGRA186_DSPK_OSR_64;
 
 	if (!(tegra_platform_is_unit_fpga() || tegra_platform_is_fpga())) {
 		dspk->clk_dspk = devm_clk_get(&pdev->dev, NULL);

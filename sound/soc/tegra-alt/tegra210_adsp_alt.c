@@ -4370,13 +4370,7 @@ static const struct snd_soc_component_driver tegra210_adsp_component = {
 	.probe			= tegra210_adsp_component_probe,
 };
 
-static int tegra210_adsp_codec_probe(struct snd_soc_codec *codec)
-{
-	return 0;
-}
-
 static struct snd_soc_codec_driver tegra210_adsp_codec = {
-	.probe = tegra210_adsp_codec_probe,
 	.idle_bias_off = 1,
 };
 

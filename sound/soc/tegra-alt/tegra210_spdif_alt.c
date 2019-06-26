@@ -236,13 +236,6 @@ static int tegra210_spdif_set_dai_bclk_ratio(struct snd_soc_dai *dai,
 	return 0;
 }
 
-static int tegra210_spdif_codec_probe(struct snd_soc_codec *codec)
-{
-	struct tegra210_spdif *spdif = snd_soc_codec_get_drvdata(codec);
-
-	return 0;
-}
-
 static struct snd_soc_dai_ops tegra210_spdif_dai_ops = {
 	.hw_params	= tegra210_spdif_hw_params,
 	.set_sysclk	= tegra210_spdif_set_dai_sysclk,
@@ -338,7 +331,6 @@ static const struct snd_soc_dapm_route tegra210_spdif_routes[] = {
 };
 
 static struct snd_soc_codec_driver tegra210_spdif_codec = {
-	.probe = tegra210_spdif_codec_probe,
 	.idle_bias_off = 1,
 	.component_driver = {
 		.dapm_widgets = tegra210_spdif_widgets,

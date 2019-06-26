@@ -585,13 +585,6 @@ static int tegra186_asrc_req_arad_ratio(struct snd_soc_dapm_widget *w,
 	return ret;
 }
 
-static int tegra186_asrc_codec_probe(struct snd_soc_codec *codec)
-{
-	struct tegra186_asrc *asrc = snd_soc_codec_get_drvdata(codec);
-
-	return 0;
-}
-
 static struct snd_soc_dai_ops tegra186_asrc_in_dai_ops = {
 	.hw_params	= tegra186_asrc_in_hw_params,
 };
@@ -891,7 +884,6 @@ static const struct snd_kcontrol_new tegra186_asrc_controls[] = {
 };
 
 static struct snd_soc_codec_driver tegra186_asrc_codec = {
-	.probe = tegra186_asrc_codec_probe,
 	.idle_bias_off = 1,
 	.component_driver = {
 		.dapm_widgets = tegra186_asrc_widgets,

@@ -300,13 +300,6 @@ static int tegra210_mixer_out_hw_params(struct snd_pcm_substream *substream,
 	return ret;
 }
 
-static int tegra210_mixer_codec_probe(struct snd_soc_codec *codec)
-{
-	struct tegra210_mixer *mixer = snd_soc_codec_get_drvdata(codec);
-
-	return 0;
-}
-
 static struct snd_soc_dai_ops tegra210_mixer_out_dai_ops = {
 	.hw_params	= tegra210_mixer_out_hw_params,
 };
@@ -530,7 +523,6 @@ static const struct snd_soc_dapm_route tegra210_mixer_routes[] = {
 };
 
 static struct snd_soc_codec_driver tegra210_mixer_codec = {
-	.probe = tegra210_mixer_codec_probe,
 	.idle_bias_off = 1,
 	.component_driver = {
 		.dapm_widgets = tegra210_mixer_widgets,

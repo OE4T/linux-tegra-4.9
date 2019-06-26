@@ -311,13 +311,6 @@ int tegra_xbar_remove(struct platform_device *pdev)
 }
 EXPORT_SYMBOL_GPL(tegra_xbar_remove);
 
-int tegra_xbar_codec_probe(struct snd_soc_codec *codec)
-{
-	return 0;
-}
-EXPORT_SYMBOL_GPL(tegra_xbar_codec_probe);
-
-
 int tegra_xbar_probe(struct platform_device *pdev,
 					struct tegra_xbar_soc_data *soc_data)
 {

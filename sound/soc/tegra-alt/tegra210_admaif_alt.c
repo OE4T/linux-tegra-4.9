@@ -1071,15 +1071,7 @@ static struct snd_kcontrol_new tegra186_admaif_controls[] = {
 		tegra210_ape_dump_reg_get, tegra210_ape_dump_reg_put),
 };
 
-static int tegra_admaif_codec_probe(struct snd_soc_codec *codec)
-{
-	struct tegra_admaif *admaif = snd_soc_codec_get_drvdata(codec);
-
-	return 0;
-}
-
 static struct snd_soc_codec_driver tegra210_admaif_codec = {
-	.probe = tegra_admaif_codec_probe,
 	.idle_bias_off = 1,
 	.component_driver = {
 		.dapm_widgets = tegra_admaif_widgets,
@@ -1092,7 +1084,6 @@ static struct snd_soc_codec_driver tegra210_admaif_codec = {
 };
 
 static struct snd_soc_codec_driver tegra186_admaif_codec = {
-	.probe = tegra_admaif_codec_probe,
 	.idle_bias_off = 1,
 	.component_driver = {
 		.dapm_widgets = tegra_admaif_widgets,

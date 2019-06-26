@@ -334,15 +334,6 @@ static int tegra210_dmic_put_control(struct snd_kcontrol *kcontrol,
 	return 0;
 }
 
-static int tegra210_dmic_codec_probe(struct snd_soc_codec *codec)
-{
-	struct tegra210_dmic *dmic = snd_soc_codec_get_drvdata(codec);
-
-	dmic->osr_val = TEGRA210_DMIC_OSR_64;
-
-	return 0;
-}
-
 static struct snd_soc_dai_ops tegra210_dmic_dai_ops = {
 	.hw_params	= tegra210_dmic_hw_params,
 	.set_bclk_ratio	= tegra210_dmic_set_dai_bclk_ratio,
@@ -454,7 +445,6 @@ static const struct snd_kcontrol_new tegra210_dmic_controls[] = {
 	};
 
 static struct snd_soc_codec_driver tegra210_dmic_codec = {
-	.probe = tegra210_dmic_codec_probe,
 	.idle_bias_off = 1,
 	.component_driver = {
 		.dapm_widgets = tegra210_dmic_widgets,
@@ -575,6 +565,7 @@ static int tegra210_dmic_platform_probe(struct platform_device *pdev)
 
 	dmic->is_shutdown = false;
 	dmic->prod_name = NULL;
+	dmic->osr_val = TEGRA210_DMIC_OSR_64;
 	dev_set_drvdata(&pdev->dev, dmic);
 
 	if (!(tegra_platform_is_unit_fpga() || tegra_platform_is_fpga())) {

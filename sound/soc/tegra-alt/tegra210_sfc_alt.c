@@ -3320,13 +3320,6 @@ static int tegra210_sfc_put_mono_conv(struct snd_kcontrol *kcontrol,
 	return 0;
 }
 
-static int tegra210_sfc_codec_probe(struct snd_soc_codec *codec)
-{
-	struct tegra210_sfc *sfc = snd_soc_codec_get_drvdata(codec);
-
-	return 0;
-}
-
 static struct snd_soc_dai_ops tegra210_sfc_in_dai_ops = {
 	.hw_params	= tegra210_sfc_in_hw_params,
 	.set_sysclk	= tegra210_sfc_set_dai_sysclk,
@@ -3429,7 +3422,6 @@ static const struct snd_kcontrol_new tegra210_sfc_controls[] = {
 };
 
 static struct snd_soc_codec_driver tegra210_sfc_codec = {
-	.probe = tegra210_sfc_codec_probe,
 	.idle_bias_off = 1,
 	.component_driver = {
 		.dapm_widgets = tegra210_sfc_widgets,

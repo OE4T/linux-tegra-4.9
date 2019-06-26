@@ -569,13 +569,6 @@ static int tegra210_amx_put_channels(struct snd_kcontrol *kcontrol,
 	return 0;
 }
 
-static int tegra210_amx_codec_probe(struct snd_soc_codec *codec)
-{
-	struct tegra210_amx *amx = snd_soc_codec_get_drvdata(codec);
-
-	return 0;
-}
-
 static struct snd_soc_dai_ops tegra210_amx_out_dai_ops = {
 	.hw_params	= tegra210_amx_out_hw_params,
 	.set_channel_map = tegra210_amx_set_channel_map,
@@ -730,7 +723,6 @@ static struct snd_kcontrol_new tegra210_amx_controls[] = {
 };
 
 static struct snd_soc_codec_driver tegra210_amx_codec = {
-	.probe = tegra210_amx_codec_probe,
 	.idle_bias_off = 1,
 	.component_driver = {
 		.dapm_widgets = tegra210_amx_widgets,

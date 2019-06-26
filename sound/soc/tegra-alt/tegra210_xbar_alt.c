@@ -1247,7 +1247,6 @@ static struct of_dev_auxdata tegra186_xbar_auxdata[] = {
 };
 
 static struct snd_soc_codec_driver tegra210_xbar_codec = {
-	.probe = tegra_xbar_codec_probe,
 	.idle_bias_off = 1,
 	.component_driver = {
 		.dapm_widgets = tegra210_xbar_widgets,
@@ -1258,7 +1257,6 @@ static struct snd_soc_codec_driver tegra210_xbar_codec = {
 };
 
 static struct snd_soc_codec_driver tegra186_xbar_codec = {
-	.probe = tegra_xbar_codec_probe,
 	.idle_bias_off = 1,
 	.component_driver = {
 		.dapm_widgets = tegra186_xbar_widgets,

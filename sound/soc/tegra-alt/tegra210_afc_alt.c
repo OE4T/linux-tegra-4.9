@@ -59,6 +59,7 @@ static const struct reg_default tegra210_afc_reg_defaults[] = {
 
 static void tegra210_afc_init(struct tegra210_afc *afc)
 {
+	afc->is_shutdown = false;
 	afc->ppm_diff = AFC_CLK_PPM_DIFF;
 	afc->threshold_type = TH_DEFAULT;
 	afc->src_burst = 0;
@@ -364,15 +365,6 @@ static int tegra210_afc_hw_params(struct snd_pcm_substream *substream,
 
 }
 
-static int tegra210_afc_codec_probe(struct snd_soc_codec *codec)
-{
-	struct tegra210_afc *afc = snd_soc_codec_get_drvdata(codec);
-
-	tegra210_afc_init(afc);
-
-	return 0;
-}
-
 static struct snd_soc_dai_ops tegra210_afc_dai_ops = {
 	.hw_params	= tegra210_afc_hw_params,
 };
@@ -415,7 +407,6 @@ static const struct snd_soc_dapm_route tegra210_afc_routes[] = {
 };
 
 static const struct snd_soc_codec_driver tegra210_afc_codec = {
-	.probe = tegra210_afc_codec_probe,
 	.idle_bias_off = 1,
 	.component_driver = {
 		.dapm_widgets = tegra210_afc_widgets,
@@ -426,7 +417,6 @@ static const struct snd_soc_codec_driver tegra210_afc_codec = {
 };
 
 static const struct snd_soc_codec_driver tegra186_afc_codec = {
-	.probe = tegra210_afc_codec_probe,
 	.idle_bias_off = 1,
 	.component_driver = {
 		.dapm_widgets = tegra210_afc_widgets,
@@ -544,7 +534,7 @@ static int tegra210_afc_platform_probe(struct platform_device *pdev)
 	}
 
 	afc->soc_data = soc_data;
-	afc->is_shutdown = false;
+	tegra210_afc_init(afc);
 
 	dev_set_drvdata(&pdev->dev, afc);
 

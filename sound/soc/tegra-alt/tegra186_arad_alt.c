@@ -102,13 +102,6 @@ static int tegra186_arad_runtime_resume(struct device *dev)
 }
 #endif
 
-static int tegra186_arad_codec_probe(struct snd_soc_codec *codec)
-{
-	struct tegra186_arad *arad = snd_soc_codec_get_drvdata(codec);
-
-	return 0;
-}
-
 static int tegra186_arad_get_lane_lock_status(
 	struct tegra186_arad *arad, unsigned int lane_id)
 {
@@ -548,7 +541,6 @@ void tegra186_arad_send_ratio(void)
 EXPORT_SYMBOL(tegra186_arad_send_ratio);
 
 static struct snd_soc_codec_driver tegra186_arad_codec = {
-	.probe = tegra186_arad_codec_probe,
 	.idle_bias_off = 1,
 	.component_driver = {
 		.dapm_widgets = tegra186_arad_widgets,

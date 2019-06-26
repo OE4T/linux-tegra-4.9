@@ -525,8 +525,6 @@ static int tegra210_adx_codec_probe(struct snd_soc_codec *codec)
 {
 	struct tegra210_adx *adx = snd_soc_codec_get_drvdata(codec);
 
-	codec->control_data = adx->regmap;
-
 	return 0;
 }
 

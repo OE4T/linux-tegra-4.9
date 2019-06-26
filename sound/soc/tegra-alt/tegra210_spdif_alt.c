@@ -240,8 +240,6 @@ static int tegra210_spdif_codec_probe(struct snd_soc_codec *codec)
 {
 	struct tegra210_spdif *spdif = snd_soc_codec_get_drvdata(codec);
 
-	codec->control_data = spdif->regmap;
-
 	return 0;
 }
 

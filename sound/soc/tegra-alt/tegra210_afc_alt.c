@@ -368,7 +368,6 @@ static int tegra210_afc_codec_probe(struct snd_soc_codec *codec)
 {
 	struct tegra210_afc *afc = snd_soc_codec_get_drvdata(codec);
 
-	codec->control_data = afc->regmap;
 	tegra210_afc_init(afc);
 
 	return 0;

@@ -146,8 +146,6 @@ static int tegra210_ope_codec_probe(struct snd_soc_codec *codec)
 {
 	struct tegra210_ope *ope = snd_soc_codec_get_drvdata(codec);
 
-	codec->control_data = ope->regmap;
-
 	tegra210_peq_codec_init(codec);
 	tegra210_mbdrc_codec_init(codec);
 

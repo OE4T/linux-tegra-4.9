@@ -3324,8 +3324,6 @@ static int tegra210_sfc_codec_probe(struct snd_soc_codec *codec)
 {
 	struct tegra210_sfc *sfc = snd_soc_codec_get_drvdata(codec);
 
-	codec->control_data = sfc->regmap;
-
 	return 0;
 }
 

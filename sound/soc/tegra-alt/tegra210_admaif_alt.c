@@ -1075,8 +1075,6 @@ static int tegra_admaif_codec_probe(struct snd_soc_codec *codec)
 {
 	struct tegra_admaif *admaif = snd_soc_codec_get_drvdata(codec);
 
-	codec->control_data = admaif->regmap;
-
 	return 0;
 }
 

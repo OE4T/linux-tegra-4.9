@@ -304,8 +304,6 @@ static int tegra210_mixer_codec_probe(struct snd_soc_codec *codec)
 {
 	struct tegra210_mixer *mixer = snd_soc_codec_get_drvdata(codec);
 
-	codec->control_data = mixer->regmap;
-
 	return 0;
 }
 

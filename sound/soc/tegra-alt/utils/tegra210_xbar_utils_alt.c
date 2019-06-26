@@ -313,8 +313,6 @@ EXPORT_SYMBOL_GPL(tegra_xbar_remove);
 
 int tegra_xbar_codec_probe(struct snd_soc_codec *codec)
 {
-	codec->control_data = xbar->regmap;
-
 	return 0;
 }
 EXPORT_SYMBOL_GPL(tegra_xbar_codec_probe);

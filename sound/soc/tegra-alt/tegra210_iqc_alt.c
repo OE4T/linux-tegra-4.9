@@ -148,8 +148,6 @@ static int tegra210_iqc_codec_probe(struct snd_soc_codec *codec)
 {
 	struct tegra210_iqc *iqc = snd_soc_codec_get_drvdata(codec);
 
-	codec->control_data = iqc->regmap;
-
 	return 0;
 }
 

@@ -236,7 +236,6 @@ static int tegra186_dspk_codec_probe(struct snd_soc_codec *codec)
 {
 	struct tegra186_dspk *dspk = snd_soc_codec_get_drvdata(codec);
 
-	codec->control_data = dspk->regmap;
 	dspk->rx_fifo_th = 0;
 	dspk->osr_val = TEGRA186_DSPK_OSR_64;
 

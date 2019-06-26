@@ -106,8 +106,6 @@ static int tegra186_arad_codec_probe(struct snd_soc_codec *codec)
 {
 	struct tegra186_arad *arad = snd_soc_codec_get_drvdata(codec);
 
-	codec->control_data = arad->regmap;
-
 	return 0;
 }
 

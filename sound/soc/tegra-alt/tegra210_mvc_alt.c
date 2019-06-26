@@ -423,8 +423,6 @@ static int tegra210_mvc_codec_probe(struct snd_soc_codec *codec)
 {
 	struct tegra210_mvc *mvc = snd_soc_codec_get_drvdata(codec);
 
-	codec->control_data = mvc->regmap;
-
 	return 0;
 }
 

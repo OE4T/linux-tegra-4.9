@@ -690,7 +690,6 @@ static int tegra210_i2s_codec_probe(struct snd_soc_codec *codec)
 {
 	struct tegra210_i2s *i2s = snd_soc_codec_get_drvdata(codec);
 
-	codec->control_data = i2s->regmap;
 	/* default threshold settings */
 	i2s->rx_fifo_th = 3;
 

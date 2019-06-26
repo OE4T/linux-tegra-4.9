@@ -573,8 +573,6 @@ static int tegra210_amx_codec_probe(struct snd_soc_codec *codec)
 {
 	struct tegra210_amx *amx = snd_soc_codec_get_drvdata(codec);
 
-	codec->control_data = amx->regmap;
-
 	return 0;
 }
 

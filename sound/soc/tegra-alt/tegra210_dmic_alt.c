@@ -338,7 +338,6 @@ static int tegra210_dmic_codec_probe(struct snd_soc_codec *codec)
 {
 	struct tegra210_dmic *dmic = snd_soc_codec_get_drvdata(codec);
 
-	codec->control_data = dmic->regmap;
 	dmic->osr_val = TEGRA210_DMIC_OSR_64;
 
 	return 0;

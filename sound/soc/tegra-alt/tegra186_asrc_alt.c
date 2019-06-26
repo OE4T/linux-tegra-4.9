@@ -589,8 +589,6 @@ static int tegra186_asrc_codec_probe(struct snd_soc_codec *codec)
 {
 	struct tegra186_asrc *asrc = snd_soc_codec_get_drvdata(codec);
 
-	codec->control_data = asrc->regmap;
-
 	return 0;
 }
 

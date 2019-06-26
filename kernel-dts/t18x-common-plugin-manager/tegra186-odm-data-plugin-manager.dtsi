@@ -102,12 +102,15 @@
 				target = <&{/host1x}>;
 				_overlay_ {
 					nvdisplay@15200000 {
+						win-mask = <0x3>;
 						status = "okay";
 					};
 					nvdisplay@15210000 {
+						win-mask = <0xc>;
 						status = "okay";
 					};
 					nvdisplay@15220000 {
+						win-mask = <0x30>;
 						status = "okay";
 					};
 					sor {

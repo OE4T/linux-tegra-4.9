@@ -129,11 +129,6 @@ struct tegra210_dmic {
 	bool is_shutdown;
 	int format_out;
 	bool set_parent_rate;
-	void (*start_capture_cb)(void);
 };
-
-/* exported functions to enable DMIC from other driver */
-int tegra210_dmic_enable(int id);
-int tegra210_dmic_disable(int id);
 
 #endif

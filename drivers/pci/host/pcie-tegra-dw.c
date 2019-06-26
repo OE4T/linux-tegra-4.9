@@ -3344,7 +3344,7 @@ static int tegra_pcie_dw_suspend_late(struct device *dev)
 	struct tegra_pcie_dw *pcie = dev_get_drvdata(dev);
 	u32 val;
 
-	if (!pcie->link_state)
+	if (!pcie->link_state && pcie->power_down_en)
 		return 0;
 
 	/* Enable HW_HOT_RST mode */
@@ -3362,7 +3362,7 @@ static int tegra_pcie_dw_suspend_noirq(struct device *dev)
 	struct tegra_pcie_dw *pcie = dev_get_drvdata(dev);
 	int ret = 0;
 
-	if (!pcie->link_state)
+	if (!pcie->link_state && pcie->power_down_en)
 		return 0;
 
 	/* save MSI interrutp vector*/
@@ -3409,7 +3409,7 @@ static int tegra_pcie_dw_resume_noirq(struct device *dev)
 	int ret;
 	u32 val;
 
-	if (!pcie->link_state)
+	if (!pcie->link_state && pcie->power_down_en)
 		return 0;
 
 	if (gpio_is_valid(pcie->pex_wake) && device_may_wakeup(dev)) {
@@ -3527,7 +3527,7 @@ static int tegra_pcie_dw_resume_early(struct device *dev)
 	struct tegra_pcie_dw *pcie = dev_get_drvdata(dev);
 	u32 val;
 
-	if (!pcie->link_state)
+	if (!pcie->link_state && pcie->power_down_en)
 		return 0;
 
 	/* Disable HW_HOT_RST mode */

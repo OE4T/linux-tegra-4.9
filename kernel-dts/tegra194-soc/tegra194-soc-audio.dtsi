@@ -416,9 +416,8 @@
 				reg = <0x0 0x2904000 0x0 0x100>;
 				nvidia,ahub-dmic-id = <0>;
 				clocks = <&bpmp_clks TEGRA194_CLK_DMIC1>,
-					<&bpmp_clks TEGRA194_CLK_PLLA_OUT0>,
-					<&bpmp_clks TEGRA194_CLK_SYNC_DMIC1>;
-				clock-names = "dmic1", "pll_a_out0", "sync_dmic1";
+					<&bpmp_clks TEGRA194_CLK_PLLA_OUT0>;
+				clock-names = "dmic", "parent";
 				status = "disabled";
 			};
 
@@ -427,9 +426,8 @@
 				reg = <0x0 0x2904100 0x0 0x100>;
 				nvidia,ahub-dmic-id = <1>;
 				clocks = <&bpmp_clks TEGRA194_CLK_DMIC2>,
-					<&bpmp_clks TEGRA194_CLK_PLLA_OUT0>,
-					<&bpmp_clks TEGRA194_CLK_SYNC_DMIC2>;
-				clock-names = "dmic2", "pll_a_out0", "sync_dmic2";
+					<&bpmp_clks TEGRA194_CLK_PLLA_OUT0>;
+				clock-names = "dmic", "parent";
 				status = "disabled";
 			};
 
@@ -439,9 +437,8 @@
 				      <0x0 0xc303000 0x0 0x1f0>;
 				nvidia,ahub-dmic-id = <2>;
 				clocks = <&bpmp_clks TEGRA194_CLK_DMIC3>,
-					<&bpmp_clks TEGRA194_CLK_PLLA_OUT0>,
-					<&bpmp_clks TEGRA194_CLK_SYNC_DMIC3>;
-				clock-names = "dmic3", "pll_a_out0", "sync_dmic3";
+					<&bpmp_clks TEGRA194_CLK_PLLA_OUT0>;
+				clock-names = "dmic", "parent";
 				status = "disabled";
 			};
 
@@ -450,9 +447,8 @@
 				reg = <0x0 0x2904300 0x0 0x100>;
 				nvidia,ahub-dmic-id = <3>;
 				clocks = <&bpmp_clks TEGRA194_CLK_DMIC4>,
-					<&bpmp_clks TEGRA194_CLK_PLLA_OUT0>,
-					<&bpmp_clks TEGRA194_CLK_SYNC_DMIC4>;
-				clock-names = "dmic4", "pll_a_out0", "sync_dmic4";
+					<&bpmp_clks TEGRA194_CLK_PLLA_OUT0>;
+				clock-names = "dmic", "parent";
 				status = "disabled";
 			};
 

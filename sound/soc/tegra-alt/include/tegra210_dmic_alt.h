@@ -90,7 +90,7 @@ enum tegra_dmic_osr {
 
 struct tegra210_dmic {
 	struct clk *clk_dmic;
-	struct clk *clk_pll_a_out0;
+	struct clk *clk_parent;
 	struct regmap *regmap;
 	const char *prod_name;
 	int boost_gain; /* with 100x factor */
@@ -101,7 +101,6 @@ struct tegra210_dmic {
 	int lrsel;
 	bool is_shutdown;
 	int format_out;
-	bool set_parent_rate;
 };
 
 #endif

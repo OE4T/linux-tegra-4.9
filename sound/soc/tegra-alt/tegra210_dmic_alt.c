@@ -173,15 +173,6 @@ static int tegra210_dmic_hw_params(struct snd_pcm_substream *substream,
 		program_dmic_gpio();
 		program_dmic_clk(dmic_clk);
 	} else {
-		if (dmic->set_parent_rate) {
-			ret = clk_set_rate(dmic->clk_pll_a_out0, dmic_clk);
-			if (ret) {
-				dev_err(dev,
-				"Can't set dmic parent clock rate: %d\n", ret);
-				return ret;
-			}
-		}
-
 		ret = clk_set_rate(dmic->clk_dmic, dmic_clk);
 		if (ret) {
 			dev_err(dev, "Can't set dmic clock rate: %d\n", ret);
@@ -547,21 +538,21 @@ static int tegra210_dmic_platform_probe(struct platform_device *pdev)
 	dev_set_drvdata(&pdev->dev, dmic);
 
 	if (!(tegra_platform_is_unit_fpga() || tegra_platform_is_fpga())) {
-		dmic->clk_dmic = devm_clk_get(&pdev->dev, NULL);
-		if (IS_ERR(dmic->clk_dmic)) {
+		dmic->clk_dmic = devm_clk_get(&pdev->dev, "dmic");
+		if (IS_ERR_OR_NULL(dmic->clk_dmic)) {
 			dev_err(&pdev->dev, "Can't retrieve dmic clock\n");
 			ret = PTR_ERR(dmic->clk_dmic);
 			goto err;
 		}
 
-		dmic->clk_pll_a_out0 = devm_clk_get(&pdev->dev, "pll_a_out0");
-		if (IS_ERR_OR_NULL(dmic->clk_pll_a_out0)) {
-			dev_err(&pdev->dev, "Can't retrieve pll_a_out0 clock\n");
-			ret = -ENOENT;
+		dmic->clk_parent = devm_clk_get(&pdev->dev, "parent");
+		if (IS_ERR_OR_NULL(dmic->clk_parent)) {
+			dev_err(&pdev->dev, "Can't retrieve parent clock\n");
+			ret = PTR_ERR(dmic->clk_parent);
 			goto err;
 		}
 
-		ret = clk_set_parent(dmic->clk_dmic, dmic->clk_pll_a_out0);
+		ret = clk_set_parent(dmic->clk_dmic, dmic->clk_parent);
 		if (ret) {
 			dev_err(&pdev->dev, "Can't set parent of dmic clock\n");
 			goto err;
@@ -602,8 +593,6 @@ static int tegra210_dmic_platform_probe(struct platform_device *pdev)
 	/* Below patch is as per latest POR value */
 	regmap_write(dmic->regmap, TEGRA210_DMIC_DCR_BIQUAD_0_COEF_4,
 		     0x00000000);
-
-	dmic->set_parent_rate = of_property_read_bool(np, "set-parent-rate");
 
 	if (of_property_read_u32(np, "nvidia,ahub-dmic-id",
 				 &pdev->dev.id) < 0) {

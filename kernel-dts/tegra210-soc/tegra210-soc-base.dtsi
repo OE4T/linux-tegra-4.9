@@ -1724,9 +1724,8 @@
 			nvidia,ahub-dmic-id = <0>;
 			status = "disabled";
 			clocks = <&tegra_car TEGRA210_CLK_DMIC1>,
-					<&tegra_car TEGRA210_CLK_PLL_A_OUT0>;
-			clock-names = "dmic1", "pll_a_out0";
-
+				 <&tegra_car TEGRA210_CLK_PLL_A_OUT0>;
+			clock-names = "dmic", "parent";
 			assigned-clocks = <&tegra_car TEGRA210_CLK_DMIC1>;
 			assigned-clock-rates = <3072000>;
 		};
@@ -1737,9 +1736,8 @@
 			nvidia,ahub-dmic-id = <1>;
 			status = "disabled";
 			clocks = <&tegra_car TEGRA210_CLK_DMIC2>,
-					<&tegra_car TEGRA210_CLK_PLL_A_OUT0>;
-			clock-names = "dmic2", "pll_a_out0";
-
+				 <&tegra_car TEGRA210_CLK_PLL_A_OUT0>;
+			clock-names = "dmic", "parent";
 			assigned-clocks = <&tegra_car TEGRA210_CLK_DMIC2>;
 			assigned-clock-rates = <3072000>;
 		};
@@ -1750,9 +1748,8 @@
 			nvidia,ahub-dmic-id = <2>;
 			status = "disabled";
 			clocks = <&tegra_car TEGRA210_CLK_DMIC3>,
-					<&tegra_car TEGRA210_CLK_PLL_A_OUT0>;
-			clock-names = "dmic3", "pll_a_out0";
-
+				 <&tegra_car TEGRA210_CLK_PLL_A_OUT0>;
+			clock-names = "dmic", "parent";
 			assigned-clocks = <&tegra_car TEGRA210_CLK_DMIC3>;
 			assigned-clock-rates = <3072000>;
 		};

@@ -378,6 +378,9 @@ static int tegra_machine_set_bclk_ratio(struct tegra_machine *machine,
 	unsigned int bclk_ratio;
 	int err;
 
+	if (!rtd->cpu_dai->driver->ops->set_bclk_ratio)
+		return 0;
+
 	if (machine->bclk_ratio_override) {
 		bclk_ratio = machine->bclk_ratio_override;
 	} else {

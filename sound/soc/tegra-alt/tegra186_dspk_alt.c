@@ -164,12 +164,6 @@ static int tegra186_dspk_set_audio_cif(struct tegra186_dspk *dspk,
 	return 0;
 }
 
-static int tegra186_dspk_set_dai_bclk_ratio(struct snd_soc_dai *dai,
-		unsigned int ratio)
-{
-	return 0;
-}
-
 static int tegra186_dspk_startup(struct snd_pcm_substream *substream,
 					struct snd_soc_dai *dai)
 {
@@ -234,12 +228,7 @@ static int tegra186_dspk_hw_params(struct snd_pcm_substream *substream,
 
 static struct snd_soc_dai_ops tegra186_dspk_dai_ops = {
 	.hw_params	= tegra186_dspk_hw_params,
-	.set_bclk_ratio	= tegra186_dspk_set_dai_bclk_ratio,
 	.startup	= tegra186_dspk_startup,
-};
-
-static struct snd_soc_dai_ops tegra186_dspk_dai_ops2 = {
-	.set_bclk_ratio	= tegra186_dspk_set_dai_bclk_ratio,
 };
 
 static struct snd_soc_dai_driver tegra186_dspk_dais[] = {
@@ -281,7 +270,6 @@ static struct snd_soc_dai_driver tegra186_dspk_dais[] = {
 		.formats = SNDRV_PCM_FMTBIT_S16_LE |
 			   SNDRV_PCM_FMTBIT_S32_LE,
 	    },
-	    .ops = &tegra186_dspk_dai_ops2,
 	    .symmetric_rates = 1,
 	},
 	{

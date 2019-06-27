@@ -101,12 +101,6 @@ static int tegra210_dmic_runtime_resume(struct device *dev)
 	return 0;
 }
 
-static int tegra210_dmic_set_dai_bclk_ratio(struct snd_soc_dai *dai,
-		unsigned int ratio)
-{
-	return 0;
-}
-
 static const int tegra210_dmic_fmt_values[] = {
 	0,
 	TEGRA210_AUDIOCIF_BITS_16,
@@ -312,7 +306,6 @@ static int tegra210_dmic_put_control(struct snd_kcontrol *kcontrol,
 
 static struct snd_soc_dai_ops tegra210_dmic_dai_ops = {
 	.hw_params	= tegra210_dmic_hw_params,
-	.set_bclk_ratio	= tegra210_dmic_set_dai_bclk_ratio,
 	.startup	= tegra210_dmic_startup,
 };
 

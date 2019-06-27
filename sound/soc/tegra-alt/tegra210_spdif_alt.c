@@ -230,16 +230,9 @@ static int tegra210_spdif_hw_params(struct snd_pcm_substream *substream,
 	return 0;
 }
 
-static int tegra210_spdif_set_dai_bclk_ratio(struct snd_soc_dai *dai,
-		unsigned int ratio)
-{
-	return 0;
-}
-
 static struct snd_soc_dai_ops tegra210_spdif_dai_ops = {
 	.hw_params	= tegra210_spdif_hw_params,
 	.set_sysclk	= tegra210_spdif_set_dai_sysclk,
-	.set_bclk_ratio	= tegra210_spdif_set_dai_bclk_ratio,
 };
 
 static struct snd_soc_dai_driver tegra210_spdif_dais[] = {

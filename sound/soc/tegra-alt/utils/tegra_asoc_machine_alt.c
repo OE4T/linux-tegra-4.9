@@ -3910,6 +3910,297 @@ void tegra_machine_dma_set_mask(struct platform_device *pdev)
 }
 EXPORT_SYMBOL_GPL(tegra_machine_dma_set_mask);
 
+void release_asoc_phandles(struct tegra_machine *machine)
+{
+	unsigned int i;
+
+	if (machine->asoc->dai_links) {
+		for (i = 0; i < machine->asoc->num_links; i++) {
+			of_node_put(machine->asoc->dai_links[i].cpu_of_node);
+			of_node_put(machine->asoc->dai_links[i].codec_of_node);
+		}
+	}
+
+	if (machine->asoc->codec_confs) {
+		for (i = 0; i < machine->asoc->num_confs; i++)
+			of_node_put(machine->asoc->codec_confs[i].of_node);
+	}
+}
+EXPORT_SYMBOL_GPL(release_asoc_phandles);
+
+int tegra_asoc_populate_dai_links(struct platform_device *pdev)
+{
+	struct device_node *np = pdev->dev.of_node, *subnp;
+	struct snd_soc_card *card = platform_get_drvdata(pdev);
+	struct tegra_machine *machine = snd_soc_card_get_drvdata(card);
+	struct snd_soc_dai_link *dai_links, *ahub_links;
+	struct snd_soc_pcm_stream *params;
+	char dai_link_name[MAX_STR_SIZE], *str;
+	unsigned int num_codec_links, num_ahub_links, num_links,
+		link_count = 0, i, j, *rx_slot, *tx_slot;
+	int ret;
+
+	num_ahub_links = machine->soc_data->num_ahub_links;
+	ahub_links = machine->soc_data->ahub_links;
+
+	if (!np || !num_ahub_links || !ahub_links)
+		return -EINVAL;
+
+	/* read number of codec links exposed via DT */
+	ret = of_property_read_u32(np, "nvidia,num-codec-link",
+				   &machine->num_codec_links);
+	if (ret < 0) {
+		dev_err(&pdev->dev,
+			"Property 'nvidia,num-codec-link' missing\n");
+		return ret;
+	}
+	num_codec_links = machine->num_codec_links;
+
+	/*
+	 * each codec link specified in device tree will result into one DAP
+	 * and one CIF link. For example, i2s dai link will look like below.
+	 * ahub <----CIF----> i2s <----DAP----> codec
+	 */
+	num_links = num_ahub_links + (num_codec_links << 1);
+
+	machine->asoc->num_links = num_links;
+	machine->asoc->dai_links = devm_kzalloc(&pdev->dev,
+						sizeof(*dai_links) * num_links,
+						GFP_KERNEL);
+	dai_links = machine->asoc->dai_links;
+	if (!dai_links)
+		return -ENOMEM;
+
+	machine->asoc->rx_slot = devm_kzalloc(&pdev->dev,
+					      sizeof(*rx_slot) * num_links,
+					      GFP_KERNEL);
+	rx_slot = machine->asoc->rx_slot;
+	if (!rx_slot)
+		return -ENOMEM;
+
+	machine->asoc->tx_slot = devm_kzalloc(&pdev->dev,
+					      sizeof(*tx_slot) * num_links,
+					      GFP_KERNEL);
+	tx_slot = machine->asoc->tx_slot;
+	if (!tx_slot)
+		return -ENOMEM;
+
+	/* populate now ahub links */
+	memcpy(dai_links, ahub_links, num_ahub_links * sizeof(*dai_links));
+
+	/* populate now CIF and DAP links from device tree */
+	for (i = num_ahub_links, j = num_ahub_links + num_codec_links;
+	     i < num_ahub_links + num_codec_links; i++, j++) {
+		memset((void *)dai_link_name, '\0', MAX_STR_SIZE);
+		sprintf(dai_link_name, "nvidia,dai-link-%d", ++link_count);
+		subnp = of_get_child_by_name(np, dai_link_name);
+		if (!subnp)
+			return -ENOENT;
+
+		/* DAP DAI link configuration */
+		dai_links[i].stream_name = "Playback";
+		dai_links[i].codec_of_node = of_parse_phandle(subnp,
+							      "codec-dai", 0);
+		if (!dai_links[i].codec_of_node) {
+			dev_err(&pdev->dev,
+				"property 'codec-dai' is missing\n");
+			ret = -ENOENT;
+			break;
+		}
+
+		dai_links[i].cpu_of_node = of_parse_phandle(subnp, "cpu-dai",
+							    0);
+		if (!dai_links[i].cpu_of_node) {
+			dev_err(&pdev->dev, "property 'cpu-dai' is missing\n");
+			ret = -ENOENT;
+			break;
+		}
+
+		of_property_read_string(subnp, "link-name", &dai_links[i].name);
+
+		/*
+		 * special case for DSPK
+		 * Two mono codecs can be connected to the controller
+		 * DAP2 is required for DAPM path completion
+		 * TODO revisit this when ASoC has multi-codec support
+		 */
+		if (!strcmp(dai_links[i].name, "dspk-playback-r"))
+			dai_links[i].cpu_dai_name = "DAP2";
+		else
+			dai_links[i].cpu_dai_name = "DAP";
+		dai_links[i].dai_fmt = snd_soc_of_parse_daifmt(subnp, NULL,
+							       NULL, NULL);
+
+		params = devm_kzalloc(&pdev->dev, sizeof(*params), GFP_KERNEL);
+		if (!params) {
+			ret = -ENOMEM;
+			break;
+		}
+
+		ret = of_property_read_string(subnp, "bit-format",
+					      (const char **)&str);
+		if (ret < 0) {
+			dev_err(&pdev->dev, "Property 'bit-format' missing\n");
+			break;
+		}
+
+		ret = tegra_machine_get_format(&params->formats, str);
+		if (ret < 0) {
+			dev_err(&pdev->dev, "Wrong codec format\n");
+			break;
+		}
+
+		ret = of_property_read_u32(subnp, "srate", &params->rate_min);
+		if (ret < 0) {
+			dev_err(&pdev->dev, "Property 'srate' missing\n");
+			break;
+		}
+		params->rate_max = params->rate_min;
+
+		ret = of_property_read_u32(subnp, "num-channel",
+					   &params->channels_min);
+		if (ret < 0) {
+			dev_err(&pdev->dev, "Property 'num-channel' missing\n");
+			break;
+		}
+		params->channels_max = params->channels_min;
+
+		dai_links[i].params = params;
+		ret = of_property_read_string(subnp, "codec-dai-name",
+					      &dai_links[i].codec_dai_name);
+		if (ret < 0) {
+			dev_err(&pdev->dev,
+				"property 'codec-dai-name' is missing\n");
+			break;
+		}
+
+		of_property_read_u32(subnp, "rx-mask", (u32 *)&rx_slot[i]);
+		of_property_read_u32(subnp, "tx-mask", (u32 *)&tx_slot[i]);
+
+		/*
+		 * CIF DAI link configuration
+		 * CIF link is towards XBAR, hence xbar node is cpu_of_node
+		 * and codec_of_node is same as DAP's cpu_of_node.
+		 */
+		dai_links[j].codec_of_node = of_parse_phandle(subnp, "cpu-dai",
+							      0);
+		dai_links[j].cpu_of_node = of_parse_phandle(np, "nvidia,xbar",
+							    0);
+		if (!dai_links[j].cpu_of_node) {
+			dev_err(&pdev->dev,
+				"property 'nvidia,xbar' is missing\n");
+			ret = -ENOENT;
+			break;
+		}
+
+		/*
+		 * special case for DSPK
+		 * Two mono codecs can be connected to the controller
+		 * CIF2 is required for DAPM path completion
+		 * TODO revist this when ASoC has multi-codec support
+		 */
+		if (!strcmp(dai_links[i].name, "dspk-playback-r"))
+			dai_links[j].codec_dai_name = "CIF2";
+		else
+			dai_links[j].codec_dai_name = "CIF";
+
+		ret = of_property_read_string(subnp, "cpu-dai-name",
+					      &dai_links[j].cpu_dai_name);
+		if (ret < 0) {
+			dev_err(&pdev->dev,
+				"property 'cpu-dai-name' is missing\n");
+			break;
+		}
+
+		str = devm_kzalloc(&pdev->dev,
+			sizeof(dai_links[j].cpu_dai_name) +
+			1 + sizeof(dai_links[j].codec_dai_name),
+			GFP_KERNEL);
+		str = strcat(str, dai_links[j].cpu_dai_name);
+		str = strcat(str, " ");
+		str = strcat(str, dai_links[j].codec_dai_name);
+
+		dai_links[j].name = dai_links[j].stream_name = str;
+		dai_links[j].params = dai_links[i].params;
+
+		of_node_put(subnp);
+	}
+
+	/*
+	 * release subnp here. DAI links and codec conf release will be
+	 * taken care during error exit of machine driver probe()
+	 */
+	if (ret < 0) {
+		of_node_put(subnp);
+		return ret;
+	}
+
+	card->num_links = num_links;
+	card->dai_link = dai_links;
+
+	return 0;
+}
+EXPORT_SYMBOL_GPL(tegra_asoc_populate_dai_links);
+
+int tegra_asoc_populate_codec_confs(struct platform_device *pdev)
+{
+	struct snd_soc_card *card = platform_get_drvdata(pdev);
+	struct tegra_machine *machine = snd_soc_card_get_drvdata(card);
+	unsigned int num_codec_confs, num_ahub_confs, num_confs, i;
+	struct snd_soc_codec_conf *codec_confs, *ahub_confs;
+	char dai_link_name[MAX_STR_SIZE];
+	struct device_node *of_node;
+	struct device_node *np = pdev->dev.of_node, *subnp;
+
+	ahub_confs = machine->soc_data->ahub_confs;
+	num_ahub_confs = machine->soc_data->num_ahub_confs;
+	num_codec_confs = machine->num_codec_links;
+	if (!ahub_confs || !num_codec_confs || !num_ahub_confs)
+		return -EINVAL;
+	num_confs = num_codec_confs + num_ahub_confs;
+	machine->asoc->num_confs = num_confs;
+
+	machine->asoc->codec_confs =
+		devm_kzalloc(&pdev->dev, sizeof(*codec_confs) * num_confs,
+			     GFP_KERNEL);
+	codec_confs = machine->asoc->codec_confs;
+	if (!codec_confs)
+		return -ENOMEM;
+
+	/* add codec confs from ahub */
+	memcpy(codec_confs, ahub_confs, num_ahub_confs * sizeof(*codec_confs));
+
+	/* append codec confs from device tree */
+	for (i = 0; i < num_codec_confs; i++) {
+		memset((void *)dai_link_name, '\0', MAX_STR_SIZE);
+		sprintf(dai_link_name, "nvidia,dai-link-%d", i+1);
+		subnp = of_get_child_by_name(np, dai_link_name);
+		if (!subnp)
+			return -ENOENT;
+
+		of_node = of_parse_phandle(subnp, "codec-dai", 0);
+		if (!of_node) {
+			dev_err(&pdev->dev,
+				"property 'codec-dai' is missing\n");
+			of_node_put(subnp);
+			return -ENOENT;
+		}
+
+		codec_confs[i + num_ahub_confs].dev_name = NULL;
+		codec_confs[i + num_ahub_confs].of_node = of_node;
+		of_property_read_string(subnp, "name-prefix",
+			&codec_confs[i + num_ahub_confs].name_prefix);
+
+		of_node_put(subnp);
+	}
+
+	card->num_configs = num_confs;
+	card->codec_conf = codec_confs;
+
+	return 0;
+}
+EXPORT_SYMBOL_GPL(tegra_asoc_populate_codec_confs);
+
 MODULE_AUTHOR("Arun Shamanna Lakshmi <aruns@nvidia.com>");
 MODULE_AUTHOR("Junghyun Kim <juskim@nvidia.com>");
 MODULE_LICENSE("GPL");

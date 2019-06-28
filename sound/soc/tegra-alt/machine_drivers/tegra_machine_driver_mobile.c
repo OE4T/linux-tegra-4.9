@@ -32,7 +32,6 @@
 #include <dt-bindings/sound/tas2552.h>
 #include "rt5659.h"
 #include "sgtl5000.h"
-#include "tegra_asoc_utils_alt.h"
 #include "tegra_asoc_machine_alt.h"
 #include "tegra210_xbar_alt.h"
 
@@ -52,41 +51,6 @@
 		.channels_min = channels,	\
 		.channels_max = channels,	\
 	}
-
-/* machine structure which holds sound card */
-struct tegra_machine {
-	struct tegra_asoc_audio_clock_info audio_clock;
-	unsigned int num_codec_links;
-	int rate_via_kcontrol;
-	int fmt_via_kcontrol;
-	struct tegra_machine_soc_data *soc_data;
-};
-
-/* used for soc specific data */
-struct tegra_machine_soc_data {
-	unsigned int num_xbar_dai_links,
-		/* dai link indexes */
-		admaif_dai_link_start,
-		admaif_dai_link_end,
-		adsp_pcm_dai_link_start,
-		adsp_pcm_dai_link_end,
-		adsp_compr_dai_link_start,
-		adsp_compr_dai_link_end,
-		sfc_dai_link;
-
-	bool is_asrc_available,
-		is_clk_rate_via_dt,
-		write_cdev1_state,
-		write_idle_bias_off_state;
-
-	/* call back APIs */
-	struct snd_soc_dai_link *(*get_dai_link)(void);
-	struct snd_soc_codec_conf *(*get_codec_conf)(void);
-	int (*append_dai_link)(struct snd_soc_dai_link *link,
-		unsigned int link_size);
-	int (*append_codec_conf)(struct snd_soc_codec_conf *conf,
-		unsigned int conf_size);
-};
 
 /* function prototypes */
 static int tegra_machine_driver_remove(struct platform_device *);
@@ -782,6 +746,96 @@ static int tegra_machine_sfc_init(struct snd_soc_pcm_runtime *rtd)
 					SND_SOC_CLOCK_IN);
 
 	return err;
+}
+
+static int codec_init(struct tegra_machine *machine)
+{
+	struct snd_soc_dai_link *dai_links = machine->asoc->dai_links;
+	unsigned int num_links = machine->asoc->num_links, i;
+
+	if (!dai_links || !num_links)
+		return -EINVAL;
+
+	/*
+	 * set sfc dai_init
+	 * TODO: review if this is really needed
+	 */
+	machine->asoc->dai_links[machine->soc_data->sfc_dai_link].init =
+		&tegra_machine_sfc_init;
+
+	for (i = 0; i < num_links; i++) {
+		if (!dai_links[i].name)
+			continue;
+
+		if (strstr(dai_links[i].name, "rt565x-playback") ||
+		    strstr(dai_links[i].name, "rt565x-codec-sysclk-bclk1"))
+			dai_links[i].init = tegra_machine_rt565x_init;
+		else if (strstr(dai_links[i].name, "fe-pi-audio-z-v2"))
+			dai_links[i].init = tegra_machine_fepi_init;
+	}
+
+	return 0;
+}
+
+static void set_dai_ops(struct tegra_machine *machine)
+{
+	int i;
+
+	/* set ADMAIF dai_ops */
+	for (i = machine->soc_data->admaif_dai_link_start;
+	     i <= machine->soc_data->admaif_dai_link_end; i++)
+		machine->asoc->dai_links[i].ops = &tegra_machine_pcm_ops;
+#if IS_ENABLED(CONFIG_SND_SOC_TEGRA210_ADSP_ALT)
+	/* set ADSP PCM/COMPR */
+	for (i = machine->soc_data->adsp_pcm_dai_link_start;
+	     i <= machine->soc_data->adsp_pcm_dai_link_end; i++)
+		machine->asoc->dai_links[i].ops = &tegra_machine_pcm_ops;
+	/* set ADSP COMPR */
+	for (i = machine->soc_data->adsp_compr_dai_link_start;
+	     i <= machine->soc_data->adsp_compr_dai_link_end; i++)
+		machine->asoc->dai_links[i].compr_ops =
+			&tegra_machine_compr_ops;
+#endif
+#if IS_ENABLED(CONFIG_SND_SOC_TEGRA186_ASRC_ALT)
+	/* set ASRC params. The default is 2 channels */
+	for (i = 0; i < 6; i++) {
+		int tx = TEGRA186_DAI_LINK_ASRC1_TX1 + i;
+		int rx = TEGRA186_DAI_LINK_ASRC1_RX1 + i;
+
+		machine->asoc->dai_links[tx].params =
+			&tegra_machine_asrc_link_params[i];
+		machine->asoc->dai_links[rx].params =
+			&tegra_machine_asrc_link_params[i];
+	}
+#endif
+}
+
+static int __maybe_unused add_dai_links(struct platform_device *pdev)
+{
+	struct snd_soc_card *card = platform_get_drvdata(pdev);
+	struct tegra_machine *machine = snd_soc_card_get_drvdata(card);
+	int ret;
+
+	machine->asoc = devm_kzalloc(&pdev->dev, sizeof(*machine->asoc),
+				     GFP_KERNEL);
+	if (!machine->asoc)
+		return -ENOMEM;
+
+	ret = tegra_asoc_populate_dai_links(pdev);
+	if (ret < 0)
+		return ret;
+
+	ret = tegra_asoc_populate_codec_confs(pdev);
+	if (ret < 0)
+		return ret;
+
+	ret = codec_init(machine);
+	if (ret < 0)
+		return ret;
+
+	set_dai_ops(machine);
+
+	return 0;
 }
 
 static void dai_link_setup(struct platform_device *pdev)

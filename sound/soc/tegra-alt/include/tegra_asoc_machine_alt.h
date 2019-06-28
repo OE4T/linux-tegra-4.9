@@ -19,6 +19,67 @@
 #ifndef __TEGRA_ASOC_MACHINE_ALT_H__
 #define __TEGRA_ASOC_MACHINE_ALT_H__
 
+#include "tegra_asoc_utils_alt.h"
+
+/* used for soc specific data */
+struct tegra_machine_soc_data {
+	unsigned int num_xbar_dai_links,
+		/* dai link indexes */
+		admaif_dai_link_start,
+		admaif_dai_link_end,
+		adsp_pcm_dai_link_start,
+		adsp_pcm_dai_link_end,
+		adsp_compr_dai_link_start,
+		adsp_compr_dai_link_end,
+		sfc_dai_link;
+
+	bool is_asrc_available,
+		is_clk_rate_via_dt,
+		write_cdev1_state,
+		write_idle_bias_off_state;
+
+	struct snd_soc_codec_conf *ahub_confs;
+	struct snd_soc_dai_link *ahub_links;
+	unsigned int num_ahub_links;
+	unsigned int num_ahub_confs;
+
+	/* call back APIs */
+	struct snd_soc_dai_link *(*get_dai_link)(void);
+	struct snd_soc_codec_conf *(*get_codec_conf)(void);
+	int (*append_dai_link)(struct snd_soc_dai_link *link,
+		unsigned int link_size);
+	int (*append_codec_conf)(struct snd_soc_codec_conf *conf,
+		unsigned int conf_size);
+};
+
+/*
+ * struct tegra_asoc - ASoC topology of dai links and codec confs
+ * @codec_confs: Configuration of codecs from xbar and devicetree
+ * @dai_links: All DAI links from xbar and device tree
+ * @num_links: Total number of DAI links for given card
+ * @num_confs: Total number of codec confs for given card
+ * @tx_slot: TDM slot for Tx path
+ * @rx_slot: TDM slot for Rx path
+ */
+struct tegra_asoc {
+	struct snd_soc_codec_conf *codec_confs;
+	struct snd_soc_dai_link *dai_links;
+	unsigned int num_links;
+	unsigned int num_confs;
+	unsigned int *tx_slot;
+	unsigned int *rx_slot;
+};
+
+/* machine structure which holds sound card */
+struct tegra_machine {
+	struct tegra_asoc_audio_clock_info audio_clock;
+	struct tegra_machine_soc_data *soc_data;
+	struct tegra_asoc *asoc;
+	unsigned int num_codec_links;
+	int rate_via_kcontrol;
+	int fmt_via_kcontrol;
+};
+
 enum tegra210_xbar_dai_link {
 	TEGRA210_DAI_LINK_ADMAIF1,
 	TEGRA210_DAI_LINK_ADMAIF2,
@@ -438,6 +499,11 @@ int tegra_machine_add_codec_jack_control(struct snd_soc_card *card,
 					 struct snd_soc_jack *jack);
 
 void tegra_machine_dma_set_mask(struct platform_device *pdev);
+
+/* new helper functions for populating sound card DAI links and codec confs */
+int tegra_asoc_populate_dai_links(struct platform_device *pdev);
+int tegra_asoc_populate_codec_confs(struct platform_device *pdev);
+void release_asoc_phandles(struct tegra_machine *machine);
 
 /* for legacy machine driver support */
 static inline int tegra_machine_get_bclk_ratio(struct snd_soc_pcm_runtime *rtd,

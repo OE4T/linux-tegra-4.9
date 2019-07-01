@@ -66,9 +66,9 @@ static int pva_copy_task(struct pva_ioctl_submit_task *ioctl_task,
 {
 	int err = 0;
 	int copy_ret = 0;
+	int i;
 
 	if (ioctl_task->num_prefences > PVA_MAX_PREFENCES ||
-	    ioctl_task->num_postfences > PVA_MAX_POSTFENCES ||
 	    ioctl_task->num_input_task_status > PVA_MAX_INPUT_STATUS ||
 	    ioctl_task->num_output_task_status > PVA_MAX_OUTPUT_STATUS ||
 	    ioctl_task->num_input_surfaces > PVA_MAX_INPUT_SURFACES ||
@@ -85,7 +85,6 @@ static int pva_copy_task(struct pva_ioctl_submit_task *ioctl_task,
 	 */
 	task->operation			= ioctl_task->operation;
 	task->num_prefences		= ioctl_task->num_prefences;
-	task->num_postfences		= ioctl_task->num_postfences;
 	task->num_input_task_status	= ioctl_task->num_input_task_status;
 	task->num_output_task_status	= ioctl_task->num_output_task_status;
 	task->num_input_surfaces	= ioctl_task->num_input_surfaces;
@@ -130,8 +129,6 @@ static int pva_copy_task(struct pva_ioctl_submit_task *ioctl_task,
 			struct pva_surface);
 	COPY_FIELD(task->prefences, ioctl_task->prefences, task->num_prefences,
 			struct nvdev_fence);
-	COPY_FIELD(task->postfences, ioctl_task->postfences,
-			task->num_postfences, struct nvdev_fence);
 	COPY_FIELD(task->input_task_status, ioctl_task->input_task_status,
 			task->num_input_task_status,
 			struct pva_status_handle);
@@ -140,44 +137,27 @@ static int pva_copy_task(struct pva_ioctl_submit_task *ioctl_task,
 			struct pva_status_handle);
 	COPY_FIELD(task->pointers, ioctl_task->pointers,
 			task->num_pointers, struct pva_memory_handle);
+
+	COPY_FIELD(task->pvafences, ioctl_task->pvafences,
+			sizeof(task->pvafences), u8);
+	COPY_FIELD(task->num_pvafences, ioctl_task->num_pvafences,
+		   sizeof(task->num_pvafences), u8);
+	COPY_FIELD(task->num_pva_ts_buffers, ioctl_task->num_pva_ts_buffers,
+		   sizeof(task->num_pva_ts_buffers), u8);
+
+	for (i = 0; i < PVA_MAX_FENCE_TYPES; i++) {
+		if ((task->num_pvafences[i] > PVA_MAX_FENCES_PER_TYPE) ||
+			(task->num_pva_ts_buffers[i] >
+			 PVA_MAX_FENCES_PER_TYPE)) {
+			err = -EINVAL;
+			goto err_out;
+		}
+	}
+
+
 #undef COPY_FIELD
 
 err_out:
-	return err;
-}
-
-static int pva_create_postfence(struct nvhost_queue *queue,
-				struct nvdev_fence *dst,
-				u32 thresh)
-{
-	struct platform_device *host1x_pdev =
-			to_platform_device(queue->vm_pdev->dev.parent);
-	int err = 0;
-	/* Return post-fences */
-	switch (dst->type) {
-	case NVDEV_FENCE_TYPE_SYNCPT: {
-		dst->syncpoint_index = queue->syncpt_id;
-		dst->syncpoint_value = thresh;
-		break;
-	}
-	case NVDEV_FENCE_TYPE_SYNC_FD: {
-		struct nvhost_ctrl_sync_fence_info pts;
-
-		pts.id = queue->syncpt_id;
-		pts.thresh = thresh;
-
-		err = nvhost_sync_create_fence_fd(host1x_pdev,
-				&pts, 1, "fence_pva", &dst->sync_fd);
-
-		break;
-	}
-	case NVDEV_FENCE_TYPE_SEMAPHORE:
-		break;
-	default:
-		err = -ENOSYS;
-		break;
-	}
-
 	return err;
 }
 
@@ -201,10 +181,11 @@ static int pva_submit(struct pva_private *priv, void *arg)
 	struct pva_ioctl_submit_task *ioctl_tasks = NULL;
 	struct pva_submit_tasks tasks_header;
 	struct pva_submit_task *task = NULL;
-	struct nvdev_fence fence;
 	int err = 0;
 	int i;
 	int j;
+	int k;
+	int threshold;
 
 	memset(&tasks_header, 0, sizeof(tasks_header));
 
@@ -282,46 +263,88 @@ static int pva_submit(struct pva_private *priv, void *arg)
 		goto err_submit_task;
 	}
 
-	/* Copy post-fences back to userspace */
+	/* Copy fences back to userspace */
 	for (i = 0; i < ioctl_tasks_header->num_tasks; i++) {
-		struct nvdev_fence __user *postfences =
-				(struct nvdev_fence __user *)
-				ioctl_tasks[i].postfences;
+		struct nvpva_fence __user *pvafences =
+			(struct nvpva_fence __user *)
+			ioctl_tasks[i].pvafences;
+
+		struct platform_device *host1x_pdev =
+			to_platform_device(priv->queue->vm_pdev->dev.parent);
 
 		task = tasks_header.tasks[i];
 
-		for (j = 0; j < ioctl_tasks[i].num_postfences; j++) {
-			err = copy_from_user(&fence,
-					     postfences + j,
-					     sizeof(struct nvdev_fence));
-			if (err < 0) {
-				nvhost_warn(&priv->pva->pdev->dev,
-					"Failed to copy fences to userspace");
-				break;
+		threshold = tasks_header.task_thresh[i] - task->fence_num + 1;
+
+		/* Return post-fences */
+		for (k = 0; k < PVA_MAX_FENCE_TYPES; k++) {
+			u32 increment = 0;
+			struct nvdev_fence *fence;
+
+			if ((task->num_pvafences[k] == 0) ||
+				(k == PVA_FENCE_PRE)) {
+				continue;
 			}
 
-			err = pva_create_postfence(priv->queue,
-					     &fence,
-					     tasks_header.task_thresh[i]);
-			if (err < 0) {
-				nvhost_warn(&priv->pva->pdev->dev,
-						"Failed to create fence of type %d", fence.type);
+			switch (k) {
+			case PVA_FENCE_SOT_V:
+				increment = 1;
 				break;
-			}
-
-			/* Needed for further recording in pva_task_update */
-			memcpy(task->postfences + j, &fence, sizeof(fence));
-
-			err = copy_to_user(postfences + j,
-					   &fence,
-					   sizeof(struct nvdev_fence));
-			if (err < 0) {
-				nvhost_warn(&priv->pva->pdev->dev,
-						"Failed to copy fences to userspace");
+			case PVA_FENCE_SOT_R:
+				increment = 1;
 				break;
+			case PVA_FENCE_POST:
+				increment = 1;
+				break;
+			default:
+
+				break;
+			};
+
+			for (j = 0; j < task->num_pvafences[k]; j++) {
+				fence = &task->pvafences[k][j].fence;
+
+				switch (fence->type) {
+				case NVDEV_FENCE_TYPE_SYNCPT: {
+					fence->syncpoint_index =
+						priv->queue->syncpt_id;
+					fence->syncpoint_value =
+						threshold;
+					threshold += increment;
+					break;
+				}
+				case NVDEV_FENCE_TYPE_SYNC_FD: {
+					struct nvhost_ctrl_sync_fence_info pts;
+
+					pts.id = priv->queue->syncpt_id;
+					pts.thresh = threshold;
+					threshold += increment;
+					err = nvhost_sync_create_fence_fd(
+						host1x_pdev,
+						&pts, 1,
+						"fence_pva",
+						&fence->sync_fd);
+
+					break;
+				}
+				case NVDEV_FENCE_TYPE_SEMAPHORE:
+					break;
+				default:
+					err = -ENOSYS;
+					nvhost_warn(&priv->pva->pdev->dev,
+						    "Bad fence type");
+				}
 			}
 		}
 
+		err = copy_to_user(pvafences,
+				   task->pvafences,
+				   sizeof(task->pvafences));
+		if (err < 0) {
+			nvhost_warn(&priv->pva->pdev->dev,
+				    "Failed to copy  pva fences to userspace");
+			break;
+		}
 		/* Drop the reference */
 		kref_put(&task->ref, pva_task_free);
 	}

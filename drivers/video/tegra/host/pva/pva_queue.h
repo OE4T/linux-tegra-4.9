@@ -96,10 +96,13 @@ struct pva_submit_task {
 	u64 timeout;
 	bool invalid;
 	u32 syncpt_thresh;
+	u32 fence_num;
 
 	/* Data provided by userspace "as is" */
 	struct nvdev_fence prefences[PVA_MAX_PREFENCES];
 	struct nvdev_fence postfences[PVA_MAX_POSTFENCES];
+	struct nvpva_fence pvafences[PVA_MAX_FENCE_TYPES]
+		[PVA_MAX_FENCES_PER_TYPE];
 	struct pva_surface input_surfaces[PVA_MAX_INPUT_SURFACES];
 	struct pva_task_parameter input_scalars;
 	struct pva_surface output_surfaces[PVA_MAX_OUTPUT_SURFACES];
@@ -108,12 +111,18 @@ struct pva_submit_task {
 	struct pva_status_handle output_task_status[PVA_MAX_OUTPUT_STATUS];
 	struct pva_memory_handle pointers[PVA_MAX_POINTERS];
 	u8 primary_payload[PVA_MAX_PRIMARY_PAYLOAD_SIZE];
+	u8 num_pvafences[PVA_MAX_FENCE_TYPES];
+	u8 num_pva_ts_buffers[PVA_MAX_FENCE_TYPES];
 
 	/* External data that is added by the KMD */
 	struct pva_parameter_ext prefences_ext[PVA_MAX_PREFENCES];
 	struct pva_parameter_ext postfences_ext[PVA_MAX_POSTFENCES];
+	struct pva_parameter_ext pvafences_ext[PVA_MAX_FENCE_TYPES]
+		[PVA_MAX_FENCES_PER_TYPE];
 	struct pva_parameter_ext prefences_sema_ext[PVA_MAX_PREFENCES];
 	struct pva_parameter_ext postfences_sema_ext[PVA_MAX_POSTFENCES];
+	struct pva_parameter_ext pvafences_sema_ext[PVA_MAX_FENCE_TYPES]
+		[PVA_MAX_FENCES_PER_TYPE];
 	struct pva_parameter_ext input_surfaces_ext[PVA_MAX_INPUT_SURFACES];
 	struct pva_parameter_ext input_scalars_ext;
 	struct pva_parameter_ext output_surfaces_ext[PVA_MAX_OUTPUT_SURFACES];
@@ -125,6 +134,8 @@ struct pva_submit_task {
 	struct pva_parameter_ext
 			output_surface_rois_ext[PVA_MAX_OUTPUT_SURFACES];
 	struct pva_parameter_ext pointers_ext[PVA_MAX_POINTERS];
+	struct pva_parameter_ext pva_ts_buffers_ext[PVA_MAX_FENCE_TYPES]
+		[PVA_MAX_FENCES_PER_TYPE];
 };
 
 struct pva_submit_tasks {

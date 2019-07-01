@@ -4540,10 +4540,6 @@ static int tegra_pcie_dw_runtime_resume(struct device *dev)
 		val |= APPL_PINMUX_CLKREQ_OUT_OVRD_EN;
 		val |= APPL_PINMUX_CLKREQ_OUT_OVRD;
 		writel(val, pcie->appl_base + APPL_PINMUX);
-
-		/* Disable ASPM-L1SS adv as there is no CLKREQ routing */
-		disable_aspm_l11(pcie); /* Disable L1.1 */
-		disable_aspm_l12(pcie); /* Disable L1.2 */
 	}
 
 	/* update iATU_DMA base address */
@@ -4551,6 +4547,12 @@ static int tegra_pcie_dw_runtime_resume(struct device *dev)
 	       pcie->appl_base + APPL_CFG_IATU_DMA_BASE_ADDR);
 
 	reset_control_deassert(pcie->core_rst);
+
+	if (pcie->disable_clock_request) {
+		/* Disable ASPM-L1SS adv as there is no CLKREQ routing */
+		disable_aspm_l11(pcie); /* Disable L1.1 */
+		disable_aspm_l12(pcie); /* Disable L1.2 */
+	}
 
 	/* program to use MPS of 256 whereever possible */
 	pcie_bus_config = PCIE_BUS_SAFE;
@@ -4723,10 +4725,6 @@ static int tegra_pcie_dw_resume_noirq(struct device *dev)
 		val |= APPL_PINMUX_CLKREQ_OUT_OVRD_EN;
 		val |= APPL_PINMUX_CLKREQ_OUT_OVRD;
 		writel(val, pcie->appl_base + APPL_PINMUX);
-
-		/* Disable ASPM-L1SS adv as there is no CLKREQ routing */
-		disable_aspm_l11(pcie); /* Disable L1.1 */
-		disable_aspm_l12(pcie); /* Disable L1.2 */
 	}
 
 	/* update iATU_DMA base address */
@@ -4734,6 +4732,12 @@ static int tegra_pcie_dw_resume_noirq(struct device *dev)
 	       pcie->appl_base + APPL_CFG_IATU_DMA_BASE_ADDR);
 
 	reset_control_deassert(pcie->core_rst);
+
+	if (pcie->disable_clock_request) {
+		/* Disable ASPM-L1SS adv as there is no CLKREQ routing */
+		disable_aspm_l11(pcie); /* Disable L1.1 */
+		disable_aspm_l12(pcie); /* Disable L1.2 */
+	}
 
 	tegra_pcie_dw_host_init(&pcie->pci.pp);
 

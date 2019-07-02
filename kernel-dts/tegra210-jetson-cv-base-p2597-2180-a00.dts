@@ -392,10 +392,8 @@
 
 		nvidia,xbar = <&tegra_axbar>;
 
-		/* The codec-dai here is initialized to dummy and will be   */
-		/* replaced with rt565x codec-dai on detecting super-module */
 		nvidia,dai-link-1 {
-			link-name = "rt565x-playback";
+			link-name = "spdif-dit-0";
 			cpu-dai = <&tegra_i2s1>;
 			codec-dai = <&spdif_dit4>;
 			cpu-dai-name = "I2S1";
@@ -451,7 +449,7 @@
 		};
 
 		nvidia,dai-link-5 {
-			link-name = "spdif-dit-0";
+			link-name = "spdif-dit-4";
 			cpu-dai = <&tegra_i2s4>;
 			codec-dai = <&spdif_dit0>;
 			cpu-dai-name = "I2S4";

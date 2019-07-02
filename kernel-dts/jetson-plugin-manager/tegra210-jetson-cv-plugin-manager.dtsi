@@ -92,6 +92,7 @@
 						"m IN",			"m Mic",
 						"n IN",			"n Mic";
 					nvidia,dai-link-1 {
+						link-name = "rt565x-playback";
 						codec-dai-name = "rt5659-aif1";
 					};
 				};

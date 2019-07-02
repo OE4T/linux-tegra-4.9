@@ -337,6 +337,7 @@
 			overrides@11 {
 				target = <&rt565x_dai_link>;
 				_overlay_ {
+					link-name = "rt565x-playback";
 					codec-dai-name = "rt5659-aif1";
 				};
 			};

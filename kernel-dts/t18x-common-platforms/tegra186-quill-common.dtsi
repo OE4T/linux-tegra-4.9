@@ -727,7 +727,7 @@
 		nvidia,xbar = <&tegra_axbar>;
 
 		rt565x_dai_link: nvidia,dai-link-1 {
-			link-name = "rt565x-playback";
+			link-name = "spdif-dit-0";
 			cpu-dai = <&tegra_i2s1>;
 			codec-dai = <&spdif_dit0>;
 			cpu-dai-name = "I2S1";

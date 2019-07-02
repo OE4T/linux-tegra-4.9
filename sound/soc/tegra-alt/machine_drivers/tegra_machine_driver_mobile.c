@@ -59,7 +59,6 @@ struct tegra_machine {
 	struct tegra_asoc_audio_clock_info audio_clock;
 	unsigned int num_codec_links;
 	int rate_via_kcontrol;
-	bool is_hs_supported;
 	int fmt_via_kcontrol;
 	unsigned int bclk_ratio_override;
 	struct tegra_machine_soc_data *soc_data;
@@ -544,13 +543,11 @@ static int tegra_machine_dai_init(struct snd_soc_pcm_runtime *runtime,
 		dai_params->formats = (machine->fmt_via_kcontrol == 2) ?
 			(1ULL << SNDRV_PCM_FORMAT_S32_LE) : formats;
 
-		if (machine->is_hs_supported) {
-			err = snd_soc_dai_set_sysclk(rtd->codec_dai,
-			RT5659_SCLK_S_MCLK, clk_out_rate, SND_SOC_CLOCK_IN);
-			if (err < 0) {
-				dev_err(card->dev, "codec_dai clock not set\n");
-				return err;
-			}
+		err = snd_soc_dai_set_sysclk(rtd->codec_dai, RT5659_SCLK_S_MCLK,
+					     clk_out_rate, SND_SOC_CLOCK_IN);
+		if (err < 0) {
+			dev_err(card->dev, "codec_dai clock not set\n");
+			return err;
 		}
 	}
 
@@ -574,6 +571,14 @@ static int tegra_machine_dai_init(struct snd_soc_pcm_runtime *runtime,
 	/* TODO: remove below spdif links if clk_rate is passed
 	 *	in tegra_machine_set_params
 	 */
+	rtd = snd_soc_get_pcm_runtime(card, "spdif-dit-0");
+	if (rtd) {
+		dai_params =
+		(struct snd_soc_pcm_stream *)rtd->dai_link->params;
+
+		dai_params->rate_min = clk_rate;
+	}
+
 	rtd = snd_soc_get_pcm_runtime(card, "spdif-dit-1");
 	if (rtd) {
 		dai_params =
@@ -860,7 +865,6 @@ static void dai_link_setup(struct platform_device *pdev)
 	struct snd_soc_codec_conf *tegra_new_codec_conf = NULL;
 	struct snd_soc_dai_link *tegra_machine_dai_links = NULL;
 	struct snd_soc_dai_link *tegra_machine_codec_links = NULL;
-	const char *codec_dai_name;
 	int i;
 
 	/* set new codec links and conf */
@@ -877,16 +881,8 @@ static void dai_link_setup(struct platform_device *pdev)
 				"rt565x-playback") ||
 			    strstr(tegra_machine_codec_links[i].name,
 				"rt565x-codec-sysclk-bclk1")) {
-				codec_dai_name =
-				 tegra_machine_codec_links[i].codec_dai_name;
-				if (!strcmp("dit-hifi", codec_dai_name)) {
-					dev_info(&pdev->dev, "This is a dummy codec\n");
-					machine->is_hs_supported = false;
-				} else {
-					machine->is_hs_supported = true;
-					tegra_machine_codec_links[i].init =
+				tegra_machine_codec_links[i].init =
 						tegra_machine_rt565x_init;
-				}
 			} else if (strstr(tegra_machine_codec_links[i].name,
 				"fe-pi-audio-z-v2")) {
 				tegra_machine_codec_links[i].init =
@@ -1022,7 +1018,6 @@ static int tegra_machine_driver_probe(struct platform_device *pdev)
 
 	platform_set_drvdata(pdev, card);
 	snd_soc_card_set_drvdata(card, machine);
-	machine->is_hs_supported = false;
 
 	if (machine->soc_data->write_cdev1_state)
 		machine->audio_clock.clk_cdev1_state = 0;

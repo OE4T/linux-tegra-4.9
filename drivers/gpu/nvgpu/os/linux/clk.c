@@ -90,7 +90,7 @@ static unsigned long nvgpu_linux_get_fmax_at_vmin_safe(struct gk20a *g)
 	 */
 	if (g->clk.tegra_clk)
 		return tegra_dvfs_get_fmax_at_vmin_safe_t(
-			clk_get_parent(g->clk.tegra_clk));
+			g->clk.tegra_clk_parent);
 
 	if (platform->maxmin_clk_id)
 		return tegra_bpmp_dvfs_get_fmax_at_vmin(
@@ -116,7 +116,7 @@ static int nvgpu_linux_predict_mv_at_hz_cur_tfloor(struct clk_gk20a *clk,
 	unsigned long rate)
 {
 	return tegra_dvfs_predict_mv_at_hz_cur_tfloor(
-				clk_get_parent(clk->tegra_clk), rate);
+				clk->tegra_clk_parent, rate);
 }
 
 static unsigned long nvgpu_linux_get_maxrate(struct gk20a *g, u32 api_domain)
@@ -125,7 +125,7 @@ static unsigned long nvgpu_linux_get_maxrate(struct gk20a *g, u32 api_domain)
 
 	switch (api_domain) {
 	case CTRL_CLK_DOMAIN_GPCCLK:
-		ret = tegra_dvfs_get_maxrate(clk_get_parent(g->clk.tegra_clk));
+		ret = tegra_dvfs_get_maxrate(g->clk.tegra_clk_parent);
 		break;
 	default:
 		nvgpu_err(g, "unknown clock: %u", api_domain);

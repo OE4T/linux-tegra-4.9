@@ -60,7 +60,6 @@ struct tegra_machine {
 	unsigned int num_codec_links;
 	int rate_via_kcontrol;
 	int fmt_via_kcontrol;
-	unsigned int bclk_ratio_override;
 	struct tegra_machine_soc_data *soc_data;
 };
 
@@ -82,7 +81,6 @@ struct tegra_machine_soc_data {
 		write_idle_bias_off_state;
 
 	/* call back APIs */
-	int (*get_bclk_ratio)(struct snd_soc_pcm_runtime *, unsigned int *);
 	struct snd_soc_dai_link *(*get_dai_link)(void);
 	struct snd_soc_codec_conf *(*get_codec_conf)(void);
 	int (*append_dai_link)(struct snd_soc_dai_link *link,
@@ -122,10 +120,6 @@ static int tegra_machine_codec_get_format(struct snd_kcontrol *,
 		struct snd_ctl_elem_value *);
 static int tegra_machine_codec_put_format(struct snd_kcontrol *,
 		struct snd_ctl_elem_value *);
-static int tegra_machine_codec_get_bclk_ratio(struct snd_kcontrol *,
-		struct snd_ctl_elem_value *);
-static int tegra_machine_codec_put_bclk_ratio(struct snd_kcontrol *,
-		struct snd_ctl_elem_value *);
 
 /* t210 soc data */
 static const struct tegra_machine_soc_data soc_data_tegra210 = {
@@ -146,7 +140,6 @@ static const struct tegra_machine_soc_data soc_data_tegra210 = {
 	.write_cdev1_state		= false,
 	.write_idle_bias_off_state	= false,
 
-	.get_bclk_ratio			= &tegra_machine_get_bclk_ratio,
 	.get_dai_link			= &tegra_machine_get_dai_link,
 	.get_codec_conf			= &tegra_machine_get_codec_conf,
 	.append_dai_link		= &tegra_machine_append_dai_link,
@@ -172,7 +165,6 @@ static const struct tegra_machine_soc_data soc_data_tegra186 = {
 	.write_cdev1_state		= true,
 	.write_idle_bias_off_state	= true,
 
-	.get_bclk_ratio			= &tegra_machine_get_bclk_ratio_t18x,
 	.get_dai_link			= &tegra_machine_get_dai_link_t18x,
 	.get_codec_conf			= &tegra_machine_get_codec_conf_t18x,
 	.append_dai_link		= &tegra_machine_append_dai_link_t18x,
@@ -280,9 +272,6 @@ static const struct snd_kcontrol_new tegra_machine_controls[] = {
 		tegra_machine_codec_get_rate, tegra_machine_codec_put_rate),
 	SOC_ENUM_EXT("codec-x format", tegra_machine_codec_format,
 		tegra_machine_codec_get_format, tegra_machine_codec_put_format),
-	SOC_SINGLE_EXT("bclk ratio override", SND_SOC_NOPM, 0, INT_MAX, 0,
-		tegra_machine_codec_get_bclk_ratio,
-		tegra_machine_codec_put_bclk_ratio),
 };
 
 static struct snd_soc_card snd_soc_tegra_card = {
@@ -350,48 +339,6 @@ static int tegra_machine_codec_put_format(struct snd_kcontrol *kcontrol,
 	return 0;
 }
 
-static int tegra_machine_codec_get_bclk_ratio(struct snd_kcontrol *kcontrol,
-	struct snd_ctl_elem_value *ucontrol)
-{
-	struct snd_soc_card *card = snd_kcontrol_chip(kcontrol);
-	struct tegra_machine *machine = snd_soc_card_get_drvdata(card);
-
-	ucontrol->value.integer.value[0] = machine->bclk_ratio_override;
-
-	return 0;
-}
-
-static int tegra_machine_codec_put_bclk_ratio(struct snd_kcontrol *kcontrol,
-	struct snd_ctl_elem_value *ucontrol)
-{
-	struct snd_soc_card *card = snd_kcontrol_chip(kcontrol);
-	struct tegra_machine *machine = snd_soc_card_get_drvdata(card);
-
-	machine->bclk_ratio_override = ucontrol->value.integer.value[0];
-
-	return 0;
-}
-
-static int tegra_machine_set_bclk_ratio(struct tegra_machine *machine,
-					struct snd_soc_pcm_runtime *rtd)
-{
-	unsigned int bclk_ratio;
-	int err;
-
-	if (!rtd->cpu_dai->driver->ops->set_bclk_ratio)
-		return 0;
-
-	if (machine->bclk_ratio_override) {
-		bclk_ratio = machine->bclk_ratio_override;
-	} else {
-		err = machine->soc_data->get_bclk_ratio(rtd, &bclk_ratio);
-		if (err < 0)
-			return err;
-	}
-
-	return snd_soc_dai_set_bclk_ratio(rtd->cpu_dai, bclk_ratio);
-}
-
 static int tegra_machine_set_params(struct snd_soc_card *card,
 					struct tegra_machine *machine,
 					int rate,
@@ -434,15 +381,6 @@ static int tegra_machine_set_params(struct snd_soc_card *card,
 
 				/* TODO: why below overrite is needed */
 				dai_params->formats = formats;
-
-				err = tegra_machine_set_bclk_ratio(machine,
-								   rtd);
-				if (err < 0) {
-					dev_err(card->dev,
-					"Failed to set cpu dai bclk ratio for %s\n",
-					rtd->dai_link->name);
-					return err;
-				}
 
 				fmt = rtd->dai_link->dai_fmt;
 				fmt &= SND_SOC_DAIFMT_FORMAT_MASK;
@@ -1010,7 +948,6 @@ static int tegra_machine_driver_probe(struct platform_device *pdev)
 	machine->soc_data = (struct tegra_machine_soc_data *)match->data;
 
 	if (!machine->soc_data->get_dai_link ||
-		!machine->soc_data->get_bclk_ratio ||
 		!machine->soc_data->get_codec_conf ||
 		!machine->soc_data->append_dai_link ||
 		!machine->soc_data->append_codec_conf) {

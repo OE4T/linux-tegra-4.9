@@ -407,8 +407,6 @@ struct snd_soc_codec_conf *tegra_machine_new_codec_conf(
 
 unsigned int tegra_machine_get_codec_dai_link_idx(const char *codec_name);
 
-int tegra_machine_get_bclk_ratio(struct snd_soc_pcm_runtime *rtd,
-				 unsigned int *ratio);
 unsigned int tegra_machine_get_rx_mask(
 	struct snd_soc_pcm_runtime *rtd);
 unsigned int tegra_machine_get_tx_mask(
@@ -427,8 +425,6 @@ int tegra_machine_append_codec_conf_t18x(struct snd_soc_codec_conf *conf,
 
 unsigned int tegra_machine_get_codec_dai_link_idx_t18x(const char *codec_name);
 
-int tegra_machine_get_bclk_ratio_t18x(struct snd_soc_pcm_runtime *rtd,
-				      unsigned int *ratio);
 unsigned int tegra_machine_get_rx_mask_t18x(
 	struct snd_soc_pcm_runtime *rtd);
 unsigned int tegra_machine_get_tx_mask_t18x(
@@ -442,4 +438,20 @@ int tegra_machine_add_codec_jack_control(struct snd_soc_card *card,
 					 struct snd_soc_jack *jack);
 
 void tegra_machine_dma_set_mask(struct platform_device *pdev);
+
+/* for legacy machine driver support */
+static inline int tegra_machine_get_bclk_ratio(struct snd_soc_pcm_runtime *rtd,
+					       unsigned int *ratio) {
+	*ratio = 1;
+
+	return 0;
+}
+
+static inline int tegra_machine_get_bclk_ratio_t18x(
+	struct snd_soc_pcm_runtime *rtd, unsigned int *ratio) {
+	*ratio = 1;
+
+	return 0;
+}
+
 #endif

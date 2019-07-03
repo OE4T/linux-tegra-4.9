@@ -30,7 +30,6 @@
 
 static struct snd_soc_dai_link *tegra_asoc_machine_links;
 static struct snd_soc_codec_conf *tegra_asoc_codec_conf;
-static unsigned int *bclk_ratio;
 static unsigned int *tx_mask;
 static unsigned int *rx_mask;
 static unsigned int num_dai_links;
@@ -2927,7 +2926,6 @@ void tegra_machine_remove_dai_link(void)
 {
 	kfree(tegra_asoc_machine_links);
 	tegra_asoc_machine_links = NULL;
-	bclk_ratio = NULL;
 	tx_mask = NULL;
 	rx_mask = NULL;
 }
@@ -3123,15 +3121,6 @@ struct snd_soc_dai_link *tegra_machine_new_codec_links(
 		goto err;
 	}
 
-	if (bclk_ratio == NULL) {
-		bclk_ratio = devm_kzalloc(&pdev->dev, num_codec_links *
-			sizeof(unsigned int), GFP_KERNEL);
-		if (!bclk_ratio) {
-			dev_err(&pdev->dev, "Can't allocate bclk_ratio\n");
-			goto err;
-		}
-	}
-
 	if (rx_mask == NULL) {
 		rx_mask = devm_kzalloc(&pdev->dev, num_codec_links *
 			sizeof(unsigned int), GFP_KERNEL);
@@ -3240,9 +3229,6 @@ struct snd_soc_dai_link *tegra_machine_new_codec_links(
 			}
 			params->channels_max = params->channels_min;
 			tegra_codec_links[i].params = params;
-
-			of_property_read_u32(subnp,
-				"bclk_ratio", (u32 *)&bclk_ratio[i]);
 
 			of_property_read_u32(subnp,
 				"rx-mask", (u32 *)&rx_mask[i]);
@@ -3380,26 +3366,6 @@ err:
 	return -EINVAL;
 }
 EXPORT_SYMBOL_GPL(tegra_machine_get_codec_dai_link_idx);
-
-int tegra_machine_get_bclk_ratio(struct snd_soc_pcm_runtime *rtd,
-				 unsigned int *ratio)
-{
-	struct snd_soc_dai_link *codec_dai_link = rtd->dai_link;
-	char *codec_name = (char *)codec_dai_link->name;
-	unsigned int idx = tegra_machine_get_codec_dai_link_idx(codec_name);
-
-	if (idx == -EINVAL || !ratio || !bclk_ratio)
-		return -EINVAL;
-
-	idx = idx - ((of_machine_is_compatible("nvidia,tegra210") ||
-			of_machine_is_compatible("nvidia,tegra210b01")) ?
-			TEGRA210_XBAR_DAI_LINKS : 0);
-
-	*ratio = bclk_ratio[idx];
-
-	return 0;
-}
-EXPORT_SYMBOL_GPL(tegra_machine_get_bclk_ratio);
 
 unsigned int tegra_machine_get_rx_mask(
 	struct snd_soc_pcm_runtime *rtd)
@@ -3599,26 +3565,6 @@ err:
 	return -EINVAL;
 }
 EXPORT_SYMBOL_GPL(tegra_machine_get_codec_dai_link_idx_t18x);
-
-int tegra_machine_get_bclk_ratio_t18x(struct snd_soc_pcm_runtime *rtd,
-				      unsigned int *ratio)
-{
-	struct snd_soc_dai_link *codec_dai_link = rtd->dai_link;
-	char *codec_name = (char *)codec_dai_link->name;
-	unsigned int idx =
-		tegra_machine_get_codec_dai_link_idx_t18x(codec_name);
-	unsigned int *bclk_ratio_t18x = bclk_ratio;
-
-	if (idx == -EINVAL || !ratio || !bclk_ratio_t18x)
-		return -EINVAL;
-
-	idx = idx - num_links;
-
-	*ratio = bclk_ratio_t18x[idx];
-
-	return 0;
-}
-EXPORT_SYMBOL_GPL(tegra_machine_get_bclk_ratio_t18x);
 
 unsigned int tegra_machine_get_rx_mask_t18x(
 	struct snd_soc_pcm_runtime *rtd)

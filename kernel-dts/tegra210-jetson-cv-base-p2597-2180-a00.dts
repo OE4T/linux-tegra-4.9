@@ -161,6 +161,7 @@
 			vdd-1v8-spi-hv-supply = <&max77620_sd3>;
 			vdd-1v8-spi-hv-bias-supply = <&max77620_sd3>;
 			fsync-width = <0>;
+			bclk-ratio = <4>;
 		};
 
 		i2s@702d1400 {
@@ -407,7 +408,6 @@
 			codec-dai-name = "dit-hifi";
 			format = "i2s";
 			bit-format = "s16_le";
-			bclk_ratio = <0>;
 			srate = <48000>;
 			num-channel = <2>;
 			name-prefix = "x";
@@ -422,7 +422,6 @@
 			format = "dsp_a";
 			bitclock-inversion;
 			bit-format = "s16_le";
-			bclk_ratio = <4>;
 			srate = <8000>;
 			num-channel = <1>;
 			name-prefix = "y";
@@ -449,7 +448,6 @@
 			codec-dai-name = "dit-hifi";
 			format = "i2s";
 			bit-format = "s16_le";
-			bclk_ratio = <0>;
 			srate = <48000>;
 			num-channel = <2>;
 			name-prefix = "l";
@@ -463,7 +461,6 @@
 			codec-dai-name = "dit-hifi";
 			format = "i2s";
 			bit-format = "s16_le";
-			bclk_ratio = <0>;
 			srate = <48000>;
 			num-channel = <2>;
 			name-prefix = "s";
@@ -477,7 +474,6 @@
 			codec-dai-name = "dit-hifi";
 			format = "i2s";
 			bit-format = "s16_le";
-			bclk_ratio = <0>;
 			srate = <48000>;
 			num-channel = <2>;
 			name-prefix = "w";

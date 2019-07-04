@@ -407,7 +407,6 @@
 			bitclock-noninversion;
 			frame-noninversion;
 			bit-format = "s16_le";
-			bclk_ratio = <1>;
 			srate = <48000>;
 			num-channel = <2>;
 			ignore_suspend;
@@ -426,7 +425,6 @@
 			bitclock-noninversion;
 			frame-noninversion;
 			bit-format = "s16_le";
-			bclk_ratio = <1>;
 			srate = <48000>;
 			num-channel = <2>;
 			ignore_suspend;

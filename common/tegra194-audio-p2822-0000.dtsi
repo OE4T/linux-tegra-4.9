@@ -52,6 +52,7 @@
 			/* I2S4 in Short frame sync for BT SCO */
 			i2s@2901300 {
 				fsync-width = <0>;
+				bclk-ratio = <4>;
 			};
 		};
 	};
@@ -100,11 +101,13 @@
 			"d1 Headphone",         "d1 OUT",
 			"d2 Headphone",         "d2 OUT";
 
-			/* Default config for all I2S dai links are
-			format = "i2s", bitclock-slave, frame-slave,
-			bitclock-noninversion, frame-noninversion,
-			bclk_ratio = 1 , Any change from default needs
-			override on platform specific files. */
+			/*
+			 * Default config for all I2S dai links are
+			 * format = "i2s", bitclock-slave, frame-slave,
+			 * bitclock-noninversion, frame-noninversion,
+			 * Any change from default needs override on
+			 * platform specific files.
+			 */
 
 			/* Override with Codec entries */
 			nvidia,dai-link-1 {
@@ -119,7 +122,6 @@
 				tx-mask = <0xFF>;
 				rx-mask = <0xFF>;
 				bitclock-inversion;
-				bclk_ratio = <4>;
 				srate = <8000>;
 				num-channel = <1>;
 			};

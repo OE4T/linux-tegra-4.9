@@ -413,6 +413,10 @@
 		compatible = "nvidia,dma_test";
 	};
 
+	tegra_udrm: tegra_udrm {
+		compatible = "nvidia,tegra-udrm";
+	};
+
 	mc {
 		compatible = "nvidia,tegra-t18x-mc";
 

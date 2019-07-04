@@ -79,7 +79,6 @@
 			codec-dai-name = "dit-hifi";
 			format = "i2s";
 			bit-format = "s16_le";
-			bclk_ratio = <1>;
 			srate = <48000>;
 			num-channel = <2>;
 			ignore_suspend;
@@ -94,7 +93,6 @@
 			codec-dai-name = "dit-hifi";
 			format = "i2s";
 			bit-format = "s16_le";
-			bclk_ratio = <1>;
 			srate = <48000>;
 			num-channel = <2>;
 			ignore_suspend;
@@ -109,7 +107,6 @@
 			codec-dai-name = "dit-hifi";
 			format = "i2s";
 			bit-format = "s16_le";
-			bclk_ratio = <1>;
 			srate = <48000>;
 			num-channel = <2>;
 			ignore_suspend;
@@ -124,7 +121,6 @@
 			codec-dai-name = "dit-hifi";
 			format = "i2s";
 			bit-format = "s16_le";
-			bclk_ratio = <1>;
 			srate = <48000>;
 			num-channel = <2>;
 			ignore_suspend;
@@ -139,7 +135,6 @@
 			codec-dai-name = "dit-hifi";
 			format = "i2s";
 			bit-format = "s16_le";
-			bclk_ratio = <1>;
 			srate = <48000>;
 			num-channel = <2>;
 			ignore_suspend;
@@ -154,7 +149,6 @@
 			codec-dai-name = "dit-hifi";
 			format = "i2s";
 			bit-format = "s16_le";
-			bclk_ratio = <1>;
 			srate = <8000>;
 			num-channel = <1>;
 			ignore_suspend;

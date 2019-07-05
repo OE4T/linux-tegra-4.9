@@ -622,26 +622,10 @@
 	};
 
 	hda@3510000 {
-		compatible = "nvidia,tegra30-hda";
+		compatible = "nvidia,tegra194-hda", "nvidia,tegra30-hda";
 		hda,card-name = "tegra-hda-galen-t194";
 		iommus = <&smmu TEGRA_SID_HDA>;
 		reg = <0x0 0x3510000 0x0 0x10000>;
-
-		/* WAR: GCAP reg presently shows 2 SDO lines */
-		nvidia,num-sdo-stripe = <4>;
-
-		/* below property is a WAR due to a HW bug, which causes random
-		 * behavior with audio playback, bug 200379206.
-		 * More details in HDA spec(revision 1.0a, section - 5.3.2.3)
-		 */
-		nvidia,avoid-compact-sdo-bw;
-
-		/* Set watermark registers to default value */
-		nvidia,set-watermark-reg;
-
-		/* program GSC_ID */
-		nvidia,apr-gsc-id = <10>;
-
 		clocks = <&bpmp_clks TEGRA194_CLK_PLLP_OUT0>,
 			 <&bpmp_clks TEGRA194_CLK_MAUD>,
 			 <&bpmp_clks TEGRA194_CLK_HDA>,

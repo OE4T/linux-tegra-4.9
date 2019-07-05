@@ -146,6 +146,7 @@ static irqreturn_t ufs_cd_gpio_isr(int irq, void *dev_id)
 {
 	struct ufs_tegra_host *ufs_tegra = dev_id;
 
+	cancel_delayed_work(&ufs_tegra->detect);
 	ufs_schedule_delayed_work(&ufs_tegra->detect, msecs_to_jiffies(200));
 
 	return IRQ_HANDLED;

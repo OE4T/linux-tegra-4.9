@@ -30,7 +30,7 @@
  * =========================================================================
  */
 /*
- * Copyright (c) 2015-2018, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2019, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -698,7 +698,6 @@ static int eqos_set_coalesce(struct net_device *dev,
 	struct eqos_prv_data *pdata = netdev_priv(dev);
 	struct rx_ring *prx_ring =
 	    GET_RX_WRAPPER_DESC(0);
-	struct hw_if_struct *hw_if = &(pdata->hw_if);
 	unsigned int rx_riwt, rx_usec, local_use_riwt, qinx;
 
 	pr_debug("-->eqos_set_coalesce\n");
@@ -750,14 +749,16 @@ static int eqos_set_coalesce(struct net_device *dev,
 	}
 	/* The selected parameters are applied to all the
 	 * receive queues equally, so all the queue configurations
-	 * are in sync
+	 * are in sync. Update software data structure here. We cannot
+	 * update hardware here since interface is down at this point.
+	 * Hardware will be updated on interface getting up using
+	 * "ifconfig eth0 up" after this setting is done.
 	 */
 	for (qinx = 0; qinx < EQOS_RX_QUEUE_CNT; qinx++) {
 		prx_ring = GET_RX_WRAPPER_DESC(qinx);
 		prx_ring->use_riwt = local_use_riwt;
 		prx_ring->rx_riwt = rx_riwt;
 		prx_ring->rx_coal_frames = ec->rx_max_coalesced_frames;
-		hw_if->config_rx_watchdog(qinx, prx_ring->rx_riwt);
 	}
 
 	pr_debug("<--eqos_set_coalesce\n");

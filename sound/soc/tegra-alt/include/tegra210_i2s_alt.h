@@ -203,9 +203,6 @@ struct tegra210_i2s {
 	struct clk *clk_audio_sync;
 	struct clk *clk_i2s_source;
 	struct regmap *regmap;
-	struct pinctrl *pinctrl;
-	struct pinctrl_state *pin_default_state;
-	struct pinctrl_state *pin_idle_state;
 	const char *prod_name;
 	struct regulator_bulk_data *supplies;
 	int num_supplies;

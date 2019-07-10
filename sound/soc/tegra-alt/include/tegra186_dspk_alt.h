@@ -175,9 +175,6 @@ struct tegra186_dspk {
         struct clk *clk_dspk;
 	struct clk *clk_pll_a_out0;
         struct regmap *regmap;
-	struct pinctrl *pinctrl;
-	struct pinctrl_state *pin_active_state;
-	struct pinctrl_state *pin_idle_state;
 	const char *prod_name;
 	unsigned int rx_fifo_th; /* threshold in terms of frames */
 	unsigned int osr_val; /* osr value */

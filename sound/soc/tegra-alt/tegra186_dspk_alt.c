@@ -31,7 +31,6 @@
 #include <linux/of_device.h>
 #include <linux/debugfs.h>
 #include <soc/tegra/chip-id.h>
-#include <linux/pinctrl/consumer.h>
 #include <linux/version.h>
 #include <linux/pinctrl/pinconf-tegra.h>
 
@@ -185,38 +184,7 @@ static int tegra186_dspk_startup(struct snd_pcm_substream *substream,
 					dspk->prod_name);
 	}
 
-	if (!(tegra_platform_is_unit_fpga() || tegra_platform_is_fpga())) {
-		if (!IS_ERR_OR_NULL(dspk->pin_active_state)) {
-			ret = pinctrl_select_state(dspk->pinctrl,
-						dspk->pin_active_state);
-			if (ret < 0) {
-				dev_err(dev,
-				"setting dspk pinctrl active state failed\n");
-				return -EINVAL;
-			}
-		}
-	}
-
 	return 0;
-}
-
-static void tegra186_dspk_shutdown(struct snd_pcm_substream *substream,
-					struct snd_soc_dai *dai)
-{
-	struct device *dev = dai->dev;
-	struct tegra186_dspk *dspk = snd_soc_dai_get_drvdata(dai);
-	int ret;
-
-	if (!(tegra_platform_is_unit_fpga() || tegra_platform_is_fpga())) {
-		if (!IS_ERR_OR_NULL(dspk->pin_idle_state)) {
-			ret = pinctrl_select_state(
-				dspk->pinctrl, dspk->pin_idle_state);
-			if (ret < 0) {
-				dev_err(dev,
-				"setting dap pinctrl idle state failed\n");
-			}
-		}
-	}
 }
 
 static int tegra186_dspk_hw_params(struct snd_pcm_substream *substream,
@@ -279,7 +247,6 @@ static struct snd_soc_dai_ops tegra186_dspk_dai_ops = {
 	.hw_params	= tegra186_dspk_hw_params,
 	.set_bclk_ratio	= tegra186_dspk_set_dai_bclk_ratio,
 	.startup	= tegra186_dspk_startup,
-	.shutdown	= tegra186_dspk_shutdown,
 };
 
 static struct snd_soc_dai_ops tegra186_dspk_dai_ops2 = {
@@ -577,27 +544,6 @@ static int tegra186_dspk_platform_probe(struct platform_device *pdev)
 					dspk->prod_name);
 	}
 
-	dspk->pinctrl = devm_pinctrl_get(&pdev->dev);
-	if (IS_ERR(dspk->pinctrl)) {
-		dev_warn(&pdev->dev, "Missing pinctrl device\n");
-		goto err_dap;
-	}
-
-	dspk->pin_active_state = pinctrl_lookup_state(dspk->pinctrl,
-								"dap_active");
-	if (IS_ERR(dspk->pin_active_state)) {
-		dev_dbg(&pdev->dev, "Missing dap-active state\n");
-		goto err_dap;
-	}
-
-	dspk->pin_idle_state = pinctrl_lookup_state(dspk->pinctrl,
-							"dap_inactive");
-	if (IS_ERR(dspk->pin_idle_state)) {
-		dev_dbg(&pdev->dev, "Missing dap-inactive state\n");
-		goto err_dap;
-	}
-
-err_dap:
 	dev_set_drvdata(&pdev->dev, dspk);
 
 	return 0;

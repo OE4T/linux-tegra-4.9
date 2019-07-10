@@ -30,7 +30,6 @@
 #include <sound/pcm.h>
 #include <sound/pcm_params.h>
 #include <sound/soc.h>
-#include <linux/pinctrl/consumer.h>
 #include <linux/pinctrl/pinconf-tegra.h>
 #include <linux/regulator/consumer.h>
 #include <linux/of_device.h>
@@ -492,16 +491,6 @@ static int tegra210_i2s_startup(struct snd_pcm_substream *substream,
 			}
 		}
 
-		if (!IS_ERR_OR_NULL(i2s->pin_default_state)) {
-			ret = pinctrl_select_state(i2s->pinctrl,
-						i2s->pin_default_state);
-			if (ret < 0) {
-				dev_err(dev,
-				"setting i2s pinctrl default state failed\n");
-				return -EINVAL;
-			}
-		}
-
 		if (i2s->num_supplies > 0) {
 			ret = regulator_bulk_enable(i2s->num_supplies,
 								i2s->supplies);
@@ -521,15 +510,6 @@ static void tegra210_i2s_shutdown(struct snd_pcm_substream *substream,
 	int ret;
 
 	if (!(tegra_platform_is_unit_fpga() || tegra_platform_is_fpga())) {
-		if (!IS_ERR_OR_NULL(i2s->pin_idle_state)) {
-			ret = pinctrl_select_state(
-				i2s->pinctrl, i2s->pin_idle_state);
-			if (ret < 0) {
-				dev_err(dev,
-				"setting dap pinctrl idle state failed\n");
-			}
-		}
-
 		if (i2s->num_supplies > 0) {
 			ret = regulator_bulk_disable(i2s->num_supplies,
 								i2s->supplies);
@@ -1181,29 +1161,7 @@ static int tegra210_i2s_platform_probe(struct platform_device *pdev)
 				return ret;
 			}
 		}
-
-		i2s->pinctrl = devm_pinctrl_get(&pdev->dev);
-		if (IS_ERR(i2s->pinctrl)) {
-			dev_warn(&pdev->dev, "Missing pinctrl device\n");
-			goto err_dap;
-		}
-
-		i2s->pin_default_state = pinctrl_lookup_state(i2s->pinctrl,
-									"dap_active");
-		if (IS_ERR(i2s->pin_default_state)) {
-			dev_dbg(&pdev->dev, "Missing dap-active state\n");
-			goto err_dap;
-		}
-
-		i2s->pin_idle_state = pinctrl_lookup_state(i2s->pinctrl,
-								"dap_inactive");
-		if (IS_ERR(i2s->pin_idle_state)) {
-			dev_dbg(&pdev->dev, "Missing dap-inactive state\n");
-			goto err_dap;
-		}
-
 	}
-err_dap:
 	pm_runtime_enable(&pdev->dev);
 	if (!pm_runtime_enabled(&pdev->dev)) {
 		ret = tegra210_i2s_runtime_resume(&pdev->dev);

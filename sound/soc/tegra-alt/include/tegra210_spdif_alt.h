@@ -252,10 +252,6 @@ struct tegra210_spdif {
 	struct clk *clk_pll_p_out0;
 	struct regmap *regmap;
 	unsigned int loopback;
-	int is_pinctrl;
-	struct pinctrl *pinctrl;
-	struct pinctrl_state *pin_active_state;
-	struct pinctrl_state *pin_idle_state;
 	bool is_shutdown;
 };
 

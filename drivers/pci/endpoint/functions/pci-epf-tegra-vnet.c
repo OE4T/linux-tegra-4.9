@@ -193,8 +193,12 @@ struct bar0_amap {
 
 struct h2ep_empty_list {
 	int size;
+#if ENABLE_DMA
+	struct sk_buff *skb;
+#else
 	struct page *page;
 	void *virt;
+#endif
 	dma_addr_t iova;
 	struct list_head list;
 };
@@ -533,6 +537,7 @@ static int tvnet_write_ctrl_msg(struct pci_epf_tvnet *tvnet,
 	return 0;
 }
 
+#if !ENABLE_DMA
 static dma_addr_t tvnet_ivoa_alloc(struct pci_epf_tvnet *tvnet)
 {
 	dma_addr_t iova;
@@ -557,6 +562,7 @@ static void tvnet_iova_dealloc(struct pci_epf_tvnet *tvnet, dma_addr_t iova)
 	pageno = (iova - tvnet->rx_buf_iova) >> PAGE_SHIFT;
 	bitmap_release_region(tvnet->rx_buf_bitmap, pageno, 0);
 }
+#endif
 
 static void tvnet_alloc_empty_buffers(struct pci_epf_tvnet *tvnet)
 {
@@ -566,18 +572,42 @@ static void tvnet_alloc_empty_buffers(struct pci_epf_tvnet *tvnet)
 	struct ep_own_cnt *ep_cnt = ep_ring_buf->ep_cnt;
 	struct pci_epc *epc = tvnet->epf->epc;
 	struct device *cdev = epc->dev.parent;
-	struct iommu_domain *domain = iommu_get_domain_for_dev(cdev);
 	struct data_msg *h2ep_empty_msg = ep_ring_buf->h2ep_empty_msgs;
 	struct h2ep_empty_list *h2ep_empty_ptr;
+#if ENABLE_DMA
+	struct net_device *ndev = tvnet->ndev;
+#else
+	struct iommu_domain *domain = iommu_get_domain_for_dev(cdev);
 	int ret = 0;
+#endif
 
 	while (!tvnet_ivc_full(ep_cnt, host_cnt, H2EP_EMPTY_BUF)) {
 		dma_addr_t iova;
+#if ENABLE_DMA
+		struct sk_buff *skb;
+		int len = ndev->mtu + ETH_HLEN;
+#else
 		struct page *page;
 		void *virt;
+#endif
 		u32 idx;
 		unsigned long flags;
 
+#if ENABLE_DMA
+		skb = netdev_alloc_skb(ndev, len);
+		if (!skb) {
+			pr_err("%s: alloc skb failed\n", __func__);
+			break;
+		}
+
+		iova = dma_map_single(cdev, skb->data, len, DMA_FROM_DEVICE);
+		if (dma_mapping_error(cdev, iova)) {
+			pr_err("%s: dma map failed\n", __func__);
+			dev_kfree_skb_any(skb);
+			break;
+		}
+
+#else
 		iova = tvnet_ivoa_alloc(tvnet);
 		if (iova == DMA_ERROR_CODE) {
 			dev_err(tvnet->fdev, "%s: iova alloc failed\n",
@@ -611,20 +641,31 @@ static void tvnet_alloc_empty_buffers(struct pci_epf_tvnet *tvnet)
 			tvnet_iova_dealloc(tvnet, iova);
 			break;
 		}
+#endif
 
 		h2ep_empty_ptr = kmalloc(sizeof(*h2ep_empty_ptr), GFP_KERNEL);
 		if (!h2ep_empty_ptr) {
+#if ENABLE_DMA
+			dma_unmap_single(cdev, iova, len, DMA_FROM_DEVICE);
+			dev_kfree_skb_any(skb);
+#else
 			vunmap(virt);
 			iommu_unmap(domain, iova, PAGE_SIZE);
 			__free_pages(page, 1);
 			tvnet_iova_dealloc(tvnet, iova);
+#endif
 			break;
 		}
 
+#if ENABLE_DMA
+		h2ep_empty_ptr->skb = skb;
+		h2ep_empty_ptr->size = len;
+#else
 		h2ep_empty_ptr->page = page;
 		h2ep_empty_ptr->virt = virt;
-		h2ep_empty_ptr->iova = iova;
 		h2ep_empty_ptr->size = PAGE_SIZE;
+#endif
+		h2ep_empty_ptr->iova = iova;
 		spin_lock_irqsave(&tvnet->h2ep_empty_lock, flags);
 		list_add_tail(&h2ep_empty_ptr->list, &tvnet->h2ep_empty_list);
 		spin_unlock_irqrestore(&tvnet->h2ep_empty_lock, flags);
@@ -644,7 +685,9 @@ static void tvnet_free_empty_buffers(struct pci_epf_tvnet *tvnet)
 	struct pci_epf *epf = tvnet->epf;
 	struct pci_epc *epc = epf->epc;
 	struct device *cdev = epc->dev.parent;
+#if !ENABLE_DMA
 	struct iommu_domain *domain = iommu_get_domain_for_dev(cdev);
+#endif
 	struct h2ep_empty_list *h2ep_empty_ptr, *temp;
 	unsigned long flags;
 
@@ -652,10 +695,16 @@ static void tvnet_free_empty_buffers(struct pci_epf_tvnet *tvnet)
 	list_for_each_entry_safe(h2ep_empty_ptr, temp, &tvnet->h2ep_empty_list,
 				 list) {
 		list_del(&h2ep_empty_ptr->list);
+#if ENABLE_DMA
+		dma_unmap_single(cdev, h2ep_empty_ptr->iova,
+				 h2ep_empty_ptr->size, DMA_FROM_DEVICE);
+		dev_kfree_skb_any(h2ep_empty_ptr->skb);
+#else
 		vunmap(h2ep_empty_ptr->virt);
 		iommu_unmap(domain, h2ep_empty_ptr->iova, PAGE_SIZE);
 		__free_pages(h2ep_empty_ptr->page, 1);
 		tvnet_iova_dealloc(tvnet, h2ep_empty_ptr->iova);
+#endif
 		kfree(h2ep_empty_ptr);
 	}
 	spin_unlock_irqrestore(&tvnet->h2ep_empty_lock, flags);
@@ -1030,7 +1079,9 @@ static void process_h2ep_msg(struct work_struct *work)
 	struct device *cdev = epc->dev.parent;
 	struct h2ep_empty_list *h2ep_empty_ptr;
 	struct net_device *ndev = tvnet->ndev;
+#if !ENABLE_DMA
 	struct iommu_domain *domain = iommu_get_domain_for_dev(cdev);
+#endif
 
 	while (tvnet_ivc_rd_available(ep_cnt, host_cnt, H2EP_FULL_BUF)) {
 		struct sk_buff *skb;
@@ -1061,6 +1112,14 @@ static void process_h2ep_msg(struct work_struct *work)
 		/* Advance H2EP full buffer after search in local list */
 		tvnet_ivc_advance_rd(ep_cnt, host_cnt, H2EP_FULL_BUF);
 
+#if ENABLE_DMA
+		dma_unmap_single(cdev, pcie_address, ndev->mtu,
+				 DMA_FROM_DEVICE);
+		skb = h2ep_empty_ptr->skb;
+		skb_put(skb, len);
+		skb->protocol = eth_type_trans(skb, ndev);
+		netif_rx(skb);
+#else
 		/* Alloc new skb and copy data from full buffer */
 		skb = netdev_alloc_skb(ndev, len);
 		memcpy(skb->data, h2ep_empty_ptr->virt, len);
@@ -1073,6 +1132,8 @@ static void process_h2ep_msg(struct work_struct *work)
 		iommu_unmap(domain, h2ep_empty_ptr->iova, PAGE_SIZE);
 		__free_pages(h2ep_empty_ptr->page, 1);
 		tvnet_iova_dealloc(tvnet, h2ep_empty_ptr->iova);
+#endif
+
 		kfree(h2ep_empty_ptr);
 	}
 }

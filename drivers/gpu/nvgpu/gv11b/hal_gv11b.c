@@ -278,6 +278,7 @@ static const struct gpu_ops gv11b_ops = {
 		.isr_stall = gv11b_ce_isr,
 		.isr_nonstall = gp10b_ce_nonstall_isr,
 		.get_num_pce = gv11b_ce_get_num_pce,
+		.init_prod_values = gv11b_ce_init_prod_values,
 	},
 	.gr = {
 		.get_patch_slots = gr_gv100_get_patch_slots,

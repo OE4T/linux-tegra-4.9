@@ -1,7 +1,7 @@
 /*
  * GK20A Graphics Copy Engine  (gr host)
  *
- * Copyright (c) 2011-2018, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2019, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -366,6 +366,11 @@ int gk20a_init_ce_support(struct gk20a *g)
 	ce_app->app_state = NVGPU_CE_ACTIVE;
 
 	nvgpu_mutex_release(&ce_app->app_mutex);
+
+	if (g->ops.ce2.init_prod_values != NULL) {
+		g->ops.ce2.init_prod_values(g);
+	}
+
 	nvgpu_log(g, gpu_dbg_cde_ctx, "ce: init finished");
 
 	return 0;

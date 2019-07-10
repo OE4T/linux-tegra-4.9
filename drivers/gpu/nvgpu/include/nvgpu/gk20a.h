@@ -225,6 +225,7 @@ struct gpu_ops {
 		void (*isr_stall)(struct gk20a *g, u32 inst_id, u32 pri_base);
 		u32 (*isr_nonstall)(struct gk20a *g, u32 inst_id, u32 pri_base);
 		u32 (*get_num_pce)(struct gk20a *g);
+		void (*init_prod_values)(struct gk20a *g);
 	} ce2;
 	struct {
 		u32 (*get_patch_slots)(struct gk20a *g);

@@ -634,9 +634,9 @@ static void tvnet_alloc_empty_buffers(struct pci_epf_tvnet *tvnet)
 		h2ep_empty_msg[idx].u.empty_buffer.pcie_address = iova;
 		h2ep_empty_msg[idx].u.empty_buffer.buffer_len = PAGE_SIZE;
 		tvnet_ivc_advance_wr(ep_cnt, host_cnt, H2EP_EMPTY_BUF);
-	}
 
-	pci_epc_raise_irq(epc, PCI_EPC_IRQ_MSIX, 0);
+		pci_epc_raise_irq(epc, PCI_EPC_IRQ_MSIX, 0);
+	}
 }
 
 static void tvnet_free_empty_buffers(struct pci_epf_tvnet *tvnet)

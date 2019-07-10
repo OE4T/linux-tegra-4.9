@@ -588,8 +588,9 @@ static void tvnet_alloc_empty_buffers(struct tvnet_priv *tvnet)
 		 */
 		smp_mb();
 		tvnet_ivc_advance_wr(ep_cnt, host_cnt, EP2H_EMPTY_BUF);
+
+		tvnet_raise_ep_ctrl_irq(tvnet);
 	}
-	tvnet_raise_ep_ctrl_irq(tvnet);
 }
 
 static void tvnet_free_empty_buffers(struct tvnet_priv *tvnet)

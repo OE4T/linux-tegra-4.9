@@ -124,7 +124,6 @@
 			nvidia,fb-bpp = <32>; /* bits per pixel */
 			nvidia,fb-flags = <TEGRA_FB_FLIP_ON_PROBE>;
 			nvidia,dc-or-node = "/host1x/sor1";
-			nvidia,50hz-ss-war;
 			nvidia,dc-connector = <&sor1>;
 		};
 		dc@54240000 {
@@ -135,7 +134,6 @@
 			nvidia,fb-bpp = <32>; /* bits per pixel */
 			nvidia,fb-flags = <TEGRA_FB_FLIP_ON_PROBE>;
 			nvidia,dc-or-node = "/host1x/sor";
-			nvidia,50hz-ss-war;
 			nvidia,dc-connector = <&sor0>;
 		};
 		sor {

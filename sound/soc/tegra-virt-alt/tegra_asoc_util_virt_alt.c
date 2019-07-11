@@ -1,7 +1,7 @@
 /*
  * tegra_asoc_util_virt_alt.c - Tegra xbar dai link for machine drivers
  *
- * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2019, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -1675,6 +1675,42 @@ int tegra_virt_t210ahub_set_regdump(struct snd_kcontrol *kcontrol,
 	return 0;
 }
 EXPORT_SYMBOL(tegra_virt_t210ahub_set_regdump);
+
+
+int tegra_virt_t210adma_get_regdump(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	return 0;
+}
+EXPORT_SYMBOL(tegra_virt_t210adma_get_regdump);
+
+int tegra_virt_t210adma_set_regdump(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct soc_mixer_control *mc =
+		(struct soc_mixer_control *)kcontrol->private_value;
+	unsigned int reg = mc->reg;
+	struct snd_soc_card *card = snd_kcontrol_chip(kcontrol);
+	struct nvaudio_ivc_ctxt *hivc_client =
+		nvaudio_ivc_alloc_ctxt(card->dev);
+	int err;
+	struct nvaudio_ivc_msg msg;
+
+	memset(&msg, 0, sizeof(struct nvaudio_ivc_msg));
+	msg.cmd = NVAUDIO_ADMA_BLOCK_REGDUMP;
+	msg.params.adma_info.channel_num = (uint32_t)reg;
+
+	err = nvaudio_ivc_send_retry(hivc_client,
+			&msg,
+			sizeof(struct nvaudio_ivc_msg));
+	if (err < 0) {
+		pr_err("%s: Timedout on ivc_send_retry\n", __func__);
+		return err;
+	}
+
+	return 0;
+}
+EXPORT_SYMBOL(tegra_virt_t210adma_set_regdump);
 
 //Set mixer fade
 int tegra_virt_t210mixer_set_fade(struct snd_kcontrol *kcontrol,

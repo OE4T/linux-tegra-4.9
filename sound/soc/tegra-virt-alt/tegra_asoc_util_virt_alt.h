@@ -224,6 +224,12 @@
 	tegra_virt_t210ahub_get_regdump, \
 	tegra_virt_t210ahub_set_regdump)
 
+#define ADMA_REGDUMP_CTRL_DECL(ename, channel_id) \
+	SOC_SINGLE_EXT(ename, channel_id,  \
+	0, 1, 0,	\
+	tegra_virt_t210adma_get_regdump, \
+	tegra_virt_t210adma_set_regdump)
+
 #define METADATA_CTRL_DECL(ename) \
 	{.iface = SNDRV_CTL_ELEM_IFACE_MIXER, \
 	.name = ename, .info = tegra_bytes_info, \
@@ -448,4 +454,12 @@ int tegra_virt_t210ahub_get_regdump(
 int tegra_virt_t210ahub_set_regdump(
 	struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol);
+
+int tegra_virt_t210adma_set_regdump(
+	struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol);
+int tegra_virt_t210adma_get_regdump(
+	struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol);
+
 #endif

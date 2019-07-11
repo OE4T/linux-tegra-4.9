@@ -22,6 +22,7 @@
 		mmc-ocr-mask = <0x0>;
 		cd-gpios = <&tegra_main_gpio TEGRA194_MAIN_GPIO(G, 7) 0>;
 		nvidia,cd-wakeup-capable;
+		nvidia,vmmc-always-on;
 		status = "okay";
 	};
 

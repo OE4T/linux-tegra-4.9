@@ -295,6 +295,12 @@
 					isp_bw_margin_pct = <25>;
 				};
 			};
+			override@16 {
+				target = <&cam_module1>;
+				_overlay_ {
+					status = "disabled";
+				};
+			};
 		};
 
 		fragement@10 {

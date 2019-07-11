@@ -131,36 +131,34 @@ static int tegra210_dmic_hw_params(struct snd_pcm_substream *substream,
 {
 	struct device *dev = dai->dev;
 	struct tegra210_dmic *dmic = snd_soc_dai_get_drvdata(dai);
-	int channels, srate, dmic_clk, osr = dmic->osr_val, ret;
+	int srate, dmic_clk, osr = dmic->osr_val, ret;
 	struct tegra210_xbar_cif_conf cif_conf;
 	unsigned long long boost_gain;
-	int channel_select;
+	unsigned int channels;
 
 	memset(&cif_conf, 0, sizeof(struct tegra210_xbar_cif_conf));
 
 	srate = params_rate(params);
 	if (dmic->sample_rate_via_control)
 		srate = dmic->sample_rate_via_control;
-
 	dmic_clk = (1 << (6+osr)) * srate;
 
-	if (dmic->ch_select == DMIC_CH_SELECT_NONE) {
-		channels = 2;
-		channel_select = DMIC_CH_SELECT_STEREO;
-	} else {
-		channels = 1;
-		channel_select = dmic->ch_select;
-	}
-
-	cif_conf.client_channels = channels;
+	channels = params_channels(params);
+	if (dmic->channels_via_control)
+		channels = dmic->channels_via_control;
 	cif_conf.audio_channels = channels;
 
-	/* For capture path, the mono input from client channel
-	 * can be converted to stereo with cif controls.
-	*/
-	if (dmic->tx_mono_to_stereo > 0) {
-		cif_conf.mono_conv = dmic->tx_mono_to_stereo - 1;
-		cif_conf.audio_channels = 2;
+	switch (dmic->ch_select) {
+	case DMIC_CH_SELECT_LEFT:
+	case DMIC_CH_SELECT_RIGHT:
+		cif_conf.client_channels = 1;
+		break;
+	case DMIC_CH_SELECT_STEREO:
+		cif_conf.client_channels = 2;
+		break;
+	default:
+		dev_err(dev, "unsupported ch_select value\n");
+		return -EINVAL;
 	}
 
 	if ((tegra_platform_is_unit_fpga() || tegra_platform_is_fpga())) {
@@ -187,7 +185,7 @@ static int tegra210_dmic_hw_params(struct snd_pcm_substream *substream,
 			   TEGRA210_DMIC_DBG_CTRL_DCR_ENABLE);
 	regmap_update_bits(dmic->regmap, TEGRA210_DMIC_CTRL,
 			   TEGRA210_DMIC_CTRL_CHANNEL_SELECT_MASK,
-			   channel_select << CH_SEL_SHIFT);
+			   (dmic->ch_select + 1) << CH_SEL_SHIFT);
 
 	/* Configure LPF for passthrough and use */
 	/* its gain register for applying boost; */
@@ -244,8 +242,9 @@ static int tegra210_dmic_hw_params(struct snd_pcm_substream *substream,
 
 	if (dmic->format_out)
 		cif_conf.audio_bits = tegra210_dmic_fmt_values[dmic->format_out];
-
 	cif_conf.client_bits = TEGRA210_AUDIOCIF_BITS_24;
+	cif_conf.mono_conv = dmic->mono_to_stereo;
+	cif_conf.stereo_conv = dmic->stereo_to_mono;
 
 	tegra210_xbar_set_cif(dmic->regmap, TEGRA210_DMIC_TX_CIF_CTRL,
 			      &cif_conf);
@@ -261,16 +260,20 @@ static int tegra210_dmic_get_control(struct snd_kcontrol *kcontrol,
 
 	if (strstr(kcontrol->id.name, "Boost"))
 		ucontrol->value.integer.value[0] = dmic->boost_gain;
-	else if (strstr(kcontrol->id.name, "Mono"))
+	else if (strstr(kcontrol->id.name, "Controller Channel Select"))
 		ucontrol->value.integer.value[0] = dmic->ch_select;
-	else if (strstr(kcontrol->id.name, "TX mono to stereo"))
-		ucontrol->value.integer.value[0] =
-					dmic->tx_mono_to_stereo;
+	else if (strstr(kcontrol->id.name, "Capture mono to stereo"))
+		ucontrol->value.integer.value[0] = dmic->mono_to_stereo;
+	else if (strstr(kcontrol->id.name, "Capture stereo to mono"))
+		ucontrol->value.integer.value[0] = dmic->stereo_to_mono;
 	else if (strstr(kcontrol->id.name, "output bit format"))
 		ucontrol->value.integer.value[0] = dmic->format_out;
 	else if (strstr(kcontrol->id.name, "Sample Rate"))
 		ucontrol->value.integer.value[0] =
 					dmic->sample_rate_via_control;
+	else if (strstr(kcontrol->id.name, "Channels"))
+		ucontrol->value.integer.value[0] =
+					dmic->channels_via_control;
 	else if (strstr(kcontrol->id.name, "OSR Value"))
 		ucontrol->value.integer.value[0] = dmic->osr_val;
 	else if (strstr(kcontrol->id.name, "LR Select"))
@@ -288,14 +291,18 @@ static int tegra210_dmic_put_control(struct snd_kcontrol *kcontrol,
 
 	if (strstr(kcontrol->id.name, "Boost"))
 		dmic->boost_gain = value;
-	else if (strstr(kcontrol->id.name, "Mono"))
+	else if (strstr(kcontrol->id.name, "Controller Channel Select"))
 		dmic->ch_select = ucontrol->value.integer.value[0];
-	else if (strstr(kcontrol->id.name, "TX mono to stereo"))
-		dmic->tx_mono_to_stereo = value;
+	else if (strstr(kcontrol->id.name, "Capture mono to stereo"))
+		dmic->mono_to_stereo = value;
+	else if (strstr(kcontrol->id.name, "Capture stereo to mono"))
+		dmic->stereo_to_mono = value;
 	else if (strstr(kcontrol->id.name, "output bit format"))
 		dmic->format_out = value;
 	else if (strstr(kcontrol->id.name, "Sample Rate"))
 		dmic->sample_rate_via_control = value;
+	else if (strstr(kcontrol->id.name, "Channels"))
+		dmic->channels_via_control = value;
 	else if (strstr(kcontrol->id.name, "OSR Value"))
 		dmic->osr_val = value;
 	else if (strstr(kcontrol->id.name, "LR Select"))
@@ -350,7 +357,7 @@ static const struct snd_soc_dapm_route tegra210_dmic_routes[] = {
 };
 
 static const char * const tegra210_dmic_ch_select[] = {
-	"None", "L", "R",
+	"L", "R", "Stereo",
 };
 
 static const struct soc_enum tegra210_dmic_ch_enum =
@@ -358,13 +365,22 @@ static const struct soc_enum tegra210_dmic_ch_enum =
 			tegra210_dmic_ch_select);
 
 static const char * const tegra210_dmic_mono_conv_text[] = {
-	"None", "ZERO", "COPY",
+	"ZERO", "COPY",
+};
+
+static const char * const tegra210_dmic_stereo_conv_text[] = {
+	"CH0", "CH1", "AVG",
 };
 
 static const struct soc_enum tegra210_dmic_mono_conv_enum =
 	SOC_ENUM_SINGLE(SND_SOC_NOPM, 0,
 			ARRAY_SIZE(tegra210_dmic_mono_conv_text),
 			tegra210_dmic_mono_conv_text);
+
+static const struct soc_enum tegra210_dmic_stereo_conv_enum =
+	SOC_ENUM_SINGLE(SND_SOC_NOPM, 0,
+			ARRAY_SIZE(tegra210_dmic_stereo_conv_text),
+			tegra210_dmic_stereo_conv_text);
 
 static const char * const tegra210_dmic_format_text[] = {
 	"None",
@@ -395,13 +411,19 @@ static const struct soc_enum tegra210_dmic_lrsel_enum =
 static const struct snd_kcontrol_new tegra210_dmic_controls[] = {
 	SOC_SINGLE_EXT("Boost Gain", 0, 0, 25599, 0, tegra210_dmic_get_control,
 		       tegra210_dmic_put_control),
-	SOC_ENUM_EXT("Mono Channel Select", tegra210_dmic_ch_enum,
+	SOC_ENUM_EXT("Controller Channel Select", tegra210_dmic_ch_enum,
 		     tegra210_dmic_get_control, tegra210_dmic_put_control),
-	SOC_ENUM_EXT("TX mono to stereo conv", tegra210_dmic_mono_conv_enum,
-		     tegra210_dmic_get_control, tegra210_dmic_put_control),
+	SOC_ENUM_EXT("Capture mono to stereo conv",
+		     tegra210_dmic_mono_conv_enum, tegra210_dmic_get_control,
+		     tegra210_dmic_put_control),
+	SOC_ENUM_EXT("Capture stereo to mono conv",
+		     tegra210_dmic_stereo_conv_enum, tegra210_dmic_get_control,
+		     tegra210_dmic_put_control),
 	SOC_ENUM_EXT("output bit format", tegra210_dmic_format_enum,
 		     tegra210_dmic_get_control, tegra210_dmic_put_control),
 	SOC_SINGLE_EXT("Sample Rate", 0, 0, 48000, 0, tegra210_dmic_get_control,
+		       tegra210_dmic_put_control),
+	SOC_SINGLE_EXT("Channels", 0, 0, 2, 0, tegra210_dmic_get_control,
 		       tegra210_dmic_put_control),
 	SOC_ENUM_EXT("OSR Value", tegra210_dmic_osr_enum,
 		     tegra210_dmic_get_control, tegra210_dmic_put_control),
@@ -528,6 +550,7 @@ static int tegra210_dmic_platform_probe(struct platform_device *pdev)
 	dmic->is_shutdown = false;
 	dmic->prod_name = NULL;
 	dmic->osr_val = DMIC_OSR_64;
+	dmic->ch_select = DMIC_CH_SELECT_STEREO;
 	dev_set_drvdata(&pdev->dev, dmic);
 
 	if (!(tegra_platform_is_unit_fpga() || tegra_platform_is_fpga())) {

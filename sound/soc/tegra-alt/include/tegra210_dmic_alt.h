@@ -76,7 +76,6 @@
 #define TEGRA210_DMIC_DBG_CTRL_BYPASS			BIT(0)
 
 enum tegra_dmic_ch_select {
-	DMIC_CH_SELECT_NONE,
 	DMIC_CH_SELECT_LEFT,
 	DMIC_CH_SELECT_RIGHT,
 	DMIC_CH_SELECT_STEREO,
@@ -94,9 +93,11 @@ struct tegra210_dmic {
 	struct regmap *regmap;
 	const char *prod_name;
 	int boost_gain; /* with 100x factor */
-	int ch_select;
-	int tx_mono_to_stereo;
-	int sample_rate_via_control;
+	unsigned int ch_select;
+	unsigned int mono_to_stereo;
+	unsigned int stereo_to_mono;
+	unsigned int sample_rate_via_control;
+	unsigned int channels_via_control;
 	unsigned int osr_val; /* osr value */
 	int lrsel;
 	bool is_shutdown;

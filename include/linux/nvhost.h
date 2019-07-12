@@ -728,6 +728,9 @@ int nvhost_channel_map(struct nvhost_device_data *pdata,
 			struct nvhost_channel **ch,
 			void *identifier);
 void nvhost_putchannel(struct nvhost_channel *ch, int cnt);
+void nvhost_getchannel(struct nvhost_channel *ch);
+bool nvhost_channel_is_resource_policy_per_device(
+			struct nvhost_device_data *pdata);
 /* Allocate memory for a job. Just enough memory will be allocated to
  * accomodate the submit announced in submit header.
  */

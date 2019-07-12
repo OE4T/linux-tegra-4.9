@@ -29,7 +29,6 @@
 #include <trace/events/nvhost.h>
 #include <uapi/linux/nvhost_ioctl.h>
 #include <linux/delay.h>
-#include <linux/nvhost.h>
 #include <linux/slab.h>
 #include <linux/version.h>
 #if LINUX_VERSION_CODE > KERNEL_VERSION(4, 13, 0)
@@ -454,6 +453,7 @@ void nvhost_getchannel(struct nvhost_channel *ch)
 #endif
 	kref_get(&ch->refcount);
 }
+EXPORT_SYMBOL(nvhost_getchannel);
 
 void nvhost_putchannel(struct nvhost_channel *ch, int cnt)
 {
@@ -529,3 +529,9 @@ int nvhost_channel_get_index_from_id(struct nvhost_master *host, int chid)
 {
 	return chid - nvhost_channel_ch_base(host);
 }
+
+bool nvhost_channel_is_resource_policy_per_device(struct nvhost_device_data *pdata)
+{
+	return (pdata->resource_policy == RESOURCE_PER_DEVICE);
+}
+EXPORT_SYMBOL(nvhost_channel_is_resource_policy_per_device);

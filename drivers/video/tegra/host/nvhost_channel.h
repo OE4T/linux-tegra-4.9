@@ -23,6 +23,7 @@
 
 #include <linux/cdev.h>
 #include <linux/io.h>
+#include <linux/nvhost.h>
 #include "nvhost_cdma.h"
 
 #define NVHOST_MAX_WAIT_CHECKS		256
@@ -78,7 +79,6 @@ struct nvhost_channel *nvhost_check_channel(struct nvhost_device_data *pdata);
 int nvhost_channel_init(struct nvhost_channel *ch,
 	struct nvhost_master *dev);
 
-void nvhost_getchannel(struct nvhost_channel *ch);
 int nvhost_channel_suspend(struct nvhost_master *host);
 
 int nvhost_channel_read_reg(struct nvhost_channel *channel,

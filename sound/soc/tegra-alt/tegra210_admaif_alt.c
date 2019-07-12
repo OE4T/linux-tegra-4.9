@@ -1206,26 +1206,15 @@ static int tegra_admaif_probe(struct platform_device *pdev)
 	}
 
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
-	if (!res) {
-		dev_err(&pdev->dev, "No memory resource for admaif\n");
-		ret = -ENODEV;
-		goto err;
-	}
-
 	regs = devm_ioremap_resource(&pdev->dev, res);
-	if (!regs) {
-		dev_err(&pdev->dev, "request/iomap region failed\n");
-		ret = -ENODEV;
-		goto err;
-	}
-
+	if (IS_ERR(regs))
+		return PTR_ERR(regs);
 	admaif->base_addr = regs;
 	admaif->regmap = devm_regmap_init_mmio(&pdev->dev, regs,
-					admaif->soc_data->regmap_conf);
+					       admaif->soc_data->regmap_conf);
 	if (IS_ERR(admaif->regmap)) {
 		dev_err(&pdev->dev, "regmap init failed\n");
-		ret = PTR_ERR(admaif->regmap);
-		goto err;
+		return PTR_ERR(admaif->regmap);
 	}
 	regcache_cache_only(admaif->regmap, true);
 

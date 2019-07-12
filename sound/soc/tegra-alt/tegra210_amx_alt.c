@@ -877,7 +877,7 @@ static const struct of_device_id tegra210_amx_of_match[] = {
 static int tegra210_amx_platform_probe(struct platform_device *pdev)
 {
 	struct tegra210_amx *amx;
-	struct resource *mem, *memregion;
+	struct resource *mem;
 	void __iomem *regs;
 	int ret;
 	const struct of_device_id *match;
@@ -905,33 +905,14 @@ static int tegra210_amx_platform_probe(struct platform_device *pdev)
 	dev_set_drvdata(&pdev->dev, amx);
 
 	mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
-	if (!mem) {
-		dev_err(&pdev->dev, "No memory resource\n");
-		ret = -ENODEV;
-		goto err;
-	}
-
-	memregion = devm_request_mem_region(&pdev->dev, mem->start,
-					    resource_size(mem), DRV_NAME);
-	if (!memregion) {
-		dev_err(&pdev->dev, "Memory region already claimed\n");
-		ret = -EBUSY;
-		goto err;
-	}
-
-	regs = devm_ioremap(&pdev->dev, mem->start, resource_size(mem));
-	if (!regs) {
-		dev_err(&pdev->dev, "ioremap failed\n");
-		ret = -ENOMEM;
-		goto err;
-	}
-
+	regs = devm_ioremap_resource(&pdev->dev, mem);
+	if (IS_ERR(regs))
+		return PTR_ERR(regs);
 	amx->regmap = devm_regmap_init_mmio(&pdev->dev, regs,
 					    soc_data->regmap_conf);
 	if (IS_ERR(amx->regmap)) {
 		dev_err(&pdev->dev, "regmap init failed\n");
-		ret = PTR_ERR(amx->regmap);
-		goto err;
+		return PTR_ERR(amx->regmap);
 	}
 	regcache_cache_only(amx->regmap, true);
 

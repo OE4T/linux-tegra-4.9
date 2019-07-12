@@ -745,7 +745,7 @@ void tegra186_arad_ahc_deferred_cb(void *data)
 static int tegra186_arad_platform_probe(struct platform_device *pdev)
 {
 	struct tegra186_arad *arad;
-	struct resource *mem, *memregion;
+	struct resource *mem;
 	void __iomem *regs;
 	int ret = 0;
 	const struct of_device_id *match;
@@ -769,33 +769,14 @@ static int tegra186_arad_platform_probe(struct platform_device *pdev)
 	dev_set_drvdata(&pdev->dev, arad);
 
 	mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
-	if (!mem) {
-		dev_err(&pdev->dev, "No memory resource\n");
-		ret = -ENODEV;
-		goto err;
-	}
-
-	memregion = devm_request_mem_region(&pdev->dev, mem->start,
-					    resource_size(mem), DRV_NAME);
-	if (!memregion) {
-		dev_err(&pdev->dev, "Memory region already claimed\n");
-		ret = -EBUSY;
-		goto err;
-	}
-
-	regs = devm_ioremap(&pdev->dev, mem->start, resource_size(mem));
-	if (!regs) {
-		dev_err(&pdev->dev, "ioremap failed\n");
-		ret = -ENOMEM;
-		goto err;
-	}
-
+	regs = devm_ioremap_resource(&pdev->dev, mem);
+	if (IS_ERR(regs))
+		return PTR_ERR(regs);
 	arad->regmap = devm_regmap_init_mmio(&pdev->dev, regs,
-					    &tegra186_arad_regmap_config);
+					     &tegra186_arad_regmap_config);
 	if (IS_ERR(arad->regmap)) {
 		dev_err(&pdev->dev, "regmap init failed\n");
-		ret = PTR_ERR(arad->regmap);
-		goto err;
+		return PTR_ERR(arad->regmap);
 	}
 	regcache_cache_only(arad->regmap, true);
 

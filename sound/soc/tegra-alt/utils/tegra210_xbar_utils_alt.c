@@ -377,25 +377,14 @@ int tegra_xbar_probe(struct platform_device *pdev,
 	}
 
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
-	if (!res) {
-		dev_err(&pdev->dev, "No memory resource for admaif\n");
-		ret = -ENODEV;
-		goto err;
-	}
-
 	regs = devm_ioremap_resource(&pdev->dev, res);
-	if (!regs) {
-		dev_err(&pdev->dev, "request/iomap region failed\n");
-		ret = -ENODEV;
-		goto err_clk_set_parent;
-	}
-
+	if (IS_ERR(regs))
+		return PTR_ERR(regs);
 	xbar->regmap = devm_regmap_init_mmio(&pdev->dev, regs,
 					     soc_data->regmap_config);
 	if (IS_ERR(xbar->regmap)) {
 		dev_err(&pdev->dev, "regmap init failed\n");
-		ret = PTR_ERR(xbar->regmap);
-		goto err_clk_set_parent;
+		return PTR_ERR(xbar->regmap);
 	}
 	regcache_cache_only(xbar->regmap, true);
 
@@ -420,8 +409,6 @@ err_suspend:
 err_pm_disable:
 	pm_runtime_disable(&pdev->dev);
 	tegra_pd_remove_device(&pdev->dev);
-err_clk_set_parent:
-	clk_set_parent(xbar->clk, parent_clk);
 err:
 	return ret;
 }

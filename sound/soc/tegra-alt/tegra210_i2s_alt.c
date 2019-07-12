@@ -1037,7 +1037,7 @@ static int tegra210_i2s_platform_probe(struct platform_device *pdev)
 	const struct of_device_id *match;
 	struct device_node *np = pdev->dev.of_node;
 	struct tegra210_i2s *i2s;
-	struct resource *mem, *memregion;
+	struct resource *mem;
 	struct property *prop;
 	void __iomem *regs;
 	int ret = 0, count = 0, num_supplies;
@@ -1095,36 +1095,17 @@ static int tegra210_i2s_platform_probe(struct platform_device *pdev)
 			goto err;
 		}
 	}
+
 	mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
-	if (!mem) {
-		dev_err(&pdev->dev, "No memory resource\n");
-		ret = -ENODEV;
-		goto err;
-	}
-
-	memregion = devm_request_mem_region(&pdev->dev, mem->start,
-					    resource_size(mem), pdev->name);
-	if (!memregion) {
-		dev_err(&pdev->dev, "Memory region already claimed\n");
-		ret = -EBUSY;
-		goto err;
-	}
-
-	regs = devm_ioremap(&pdev->dev, mem->start, resource_size(mem));
-	if (!regs) {
-		dev_err(&pdev->dev, "ioremap failed\n");
-		ret = -ENOMEM;
-		goto err;
-	}
-
+	regs = devm_ioremap_resource(&pdev->dev, mem);
+	if (IS_ERR(regs))
+		return PTR_ERR(regs);
 	i2s->regmap = devm_regmap_init_mmio(&pdev->dev, regs,
 					    &tegra210_i2s_regmap_config);
 	if (IS_ERR(i2s->regmap)) {
 		dev_err(&pdev->dev, "regmap init failed\n");
-		ret = PTR_ERR(i2s->regmap);
-		goto err;
+		return PTR_ERR(i2s->regmap);
 	}
-
 	regcache_cache_only(i2s->regmap, true);
 
 	if (of_property_read_u32(np, "nvidia,ahub-i2s-id",

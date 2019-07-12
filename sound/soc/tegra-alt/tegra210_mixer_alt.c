@@ -680,7 +680,7 @@ static const struct of_device_id tegra210_mixer_of_match[] = {
 static int tegra210_mixer_platform_probe(struct platform_device *pdev)
 {
 	struct tegra210_mixer *mixer;
-	struct resource *mem, *memregion;
+	struct resource *mem;
 	void __iomem *regs;
 	int ret, i;
 	const struct of_device_id *match;
@@ -721,33 +721,14 @@ static int tegra210_mixer_platform_probe(struct platform_device *pdev)
 		mixer->gain_value[i] = 0x10000;
 
 	mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
-	if (!mem) {
-		dev_err(&pdev->dev, "No memory resource\n");
-		ret = -ENODEV;
-		goto err;
-	}
-
-	memregion = devm_request_mem_region(&pdev->dev, mem->start,
-					    resource_size(mem), DRV_NAME);
-	if (!memregion) {
-		dev_err(&pdev->dev, "Memory region already claimed\n");
-		ret = -EBUSY;
-		goto err;
-	}
-
-	regs = devm_ioremap(&pdev->dev, mem->start, resource_size(mem));
-	if (!regs) {
-		dev_err(&pdev->dev, "ioremap failed\n");
-		ret = -ENOMEM;
-		goto err;
-	}
-
+	regs = devm_ioremap_resource(&pdev->dev, mem);
+	if (IS_ERR(regs))
+		return PTR_ERR(regs);
 	mixer->regmap = devm_regmap_init_mmio(&pdev->dev, regs,
-					    &tegra210_mixer_regmap_config);
+					      &tegra210_mixer_regmap_config);
 	if (IS_ERR(mixer->regmap)) {
 		dev_err(&pdev->dev, "regmap init failed\n");
-		ret = PTR_ERR(mixer->regmap);
-		goto err;
+		return PTR_ERR(mixer->regmap);
 	}
 	regcache_cache_only(mixer->regmap, true);
 

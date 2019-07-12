@@ -607,7 +607,7 @@ static const struct of_device_id tegra210_mvc_of_match[] = {
 static int tegra210_mvc_platform_probe(struct platform_device *pdev)
 {
 	struct tegra210_mvc *mvc;
-	struct resource *mem, *memregion;
+	struct resource *mem;
 	void __iomem *regs;
 	int ret = 0;
 	const struct of_device_id *match;
@@ -646,33 +646,14 @@ static int tegra210_mvc_platform_probe(struct platform_device *pdev)
 	mvc->volume = TEGRA210_MVC_INIT_VOL_DEFAULT_LINEAR;
 
 	mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
-	if (!mem) {
-		dev_err(&pdev->dev, "No memory resource\n");
-		ret = -ENODEV;
-		goto err;
-	}
-
-	memregion = devm_request_mem_region(&pdev->dev, mem->start,
-					    resource_size(mem), pdev->name);
-	if (!memregion) {
-		dev_err(&pdev->dev, "Memory region already claimed\n");
-		ret = -EBUSY;
-		goto err;
-	}
-
-	regs = devm_ioremap(&pdev->dev, mem->start, resource_size(mem));
-	if (!regs) {
-		dev_err(&pdev->dev, "ioremap failed\n");
-		ret = -ENOMEM;
-		goto err;
-	}
-
+	regs = devm_ioremap_resource(&pdev->dev, mem);
+	if (IS_ERR(regs))
+		return PTR_ERR(regs);
 	mvc->regmap = devm_regmap_init_mmio(&pdev->dev, regs,
 					    &tegra210_mvc_regmap_config);
 	if (IS_ERR(mvc->regmap)) {
 		dev_err(&pdev->dev, "regmap init failed\n");
-		ret = PTR_ERR(mvc->regmap);
-		goto err;
+		return PTR_ERR(mvc->regmap);
 	}
 	regcache_cache_only(mvc->regmap, true);
 

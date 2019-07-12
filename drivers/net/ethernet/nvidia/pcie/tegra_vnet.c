@@ -551,7 +551,7 @@ static void tvnet_alloc_empty_buffers(struct tvnet_priv *tvnet)
 	while (!tvnet_ivc_full(ep_cnt, host_cnt, EP2H_EMPTY_BUF)) {
 		struct sk_buff *skb;
 		dma_addr_t iova;
-		int len = ndev->mtu;
+		int len = ndev->mtu + ETH_HLEN;
 		u32 idx;
 
 		skb = netdev_alloc_skb(ndev, len);
@@ -1018,7 +1018,7 @@ static void process_ep2h_msg(struct work_struct *work)
 		/* Advance H2EP full buffer after search in local list */
 		tvnet_ivc_advance_rd(ep_cnt, host_cnt, EP2H_FULL_BUF);
 
-		dma_unmap_single(d, pcie_address, ndev->mtu, DMA_FROM_DEVICE);
+		dma_unmap_single(d, pcie_address, ndev->mtu + ETH_HLEN, DMA_FROM_DEVICE);
 		skb = ep2h_empty_ptr->skb;
 		skb_put(skb, len);
 		skb->protocol = eth_type_trans(skb, ndev);

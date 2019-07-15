@@ -1521,9 +1521,20 @@
                               <GIC_SPI INT_ADMA_EOT6 IRQ_TYPE_LEVEL_HIGH ROUTE_TO_HOST>,
                               <GIC_SPI INT_ADMA_EOT7 IRQ_TYPE_LEVEL_HIGH ROUTE_TO_HOST>,
                               <GIC_SPI INT_ADMA_EOT8 IRQ_TYPE_LEVEL_HIGH ROUTE_TO_HOST>,
-                              <GIC_SPI INT_ADMA_EOT9 IRQ_TYPE_LEVEL_HIGH ROUTE_TO_HOST>;
+                              <GIC_SPI INT_ADMA_EOT9 IRQ_TYPE_LEVEL_HIGH ROUTE_TO_HOST>,
+                              <GIC_SPI INT_ADMA_EOT10 IRQ_TYPE_LEVEL_HIGH ROUTE_TO_HOST>,
+                              <GIC_SPI INT_ADMA_EOT11 IRQ_TYPE_LEVEL_HIGH ROUTE_TO_HOST>,
+                              <GIC_SPI INT_ADMA_EOT12 IRQ_TYPE_LEVEL_HIGH ROUTE_TO_HOST>,
+                              <GIC_SPI INT_ADMA_EOT13 IRQ_TYPE_LEVEL_HIGH ROUTE_TO_HOST>,
+                              <GIC_SPI INT_ADMA_EOT14 IRQ_TYPE_LEVEL_HIGH ROUTE_TO_HOST>,
+                              <GIC_SPI INT_ADMA_EOT15 IRQ_TYPE_LEVEL_HIGH ROUTE_TO_HOST>,
+                              <GIC_SPI INT_ADMA_EOT16 IRQ_TYPE_LEVEL_HIGH ROUTE_TO_HOST>,
+                              <GIC_SPI INT_ADMA_EOT17 IRQ_TYPE_LEVEL_HIGH ROUTE_TO_HOST>,
+                              <GIC_SPI INT_ADMA_EOT18 IRQ_TYPE_LEVEL_HIGH ROUTE_TO_HOST>,
+                              <GIC_SPI INT_ADMA_EOT19 IRQ_TYPE_LEVEL_HIGH ROUTE_TO_HOST>,
+                              <GIC_SPI INT_ADMA_EOT20 IRQ_TYPE_LEVEL_HIGH ROUTE_TO_HOST>,
+                              <GIC_SPI INT_ADMA_EOT21 IRQ_TYPE_LEVEL_HIGH ROUTE_TO_HOST>;
 		#dma-cells = <1>;
-		dma-channels = <10>;
 		status = "disabled";
         };
 
@@ -1841,10 +1852,10 @@
 		iommus = <&smmu TEGRA_SWGROUP_APE>;
 		iommu-resv-regions = <0x0 0x0 0x0 0x70300000 0x0 0xFFF00000 0xffffffff 0xffffffff>;
 		iommu-group-id = <TEGRA_IOMMU_GROUP_APE>;
+		nvidia,adma_ch_start = <11>;
+		nvidia,adma_ch_cnt = <11>;
 		interrupt-parent = <&tegra_agic>;
-		interrupts = <GIC_SPI INT_ADMA_EOT10 IRQ_TYPE_LEVEL_HIGH
-				ROUTE_TO_ADSP>,
-			     <GIC_SPI INT_ADMA_EOT11 IRQ_TYPE_LEVEL_HIGH
+		interrupts = <GIC_SPI INT_ADMA_EOT11 IRQ_TYPE_LEVEL_HIGH
 				ROUTE_TO_ADSP>,
 			     <GIC_SPI INT_ADMA_EOT12 IRQ_TYPE_LEVEL_HIGH
 				ROUTE_TO_ADSP>,
@@ -1861,6 +1872,10 @@
 			     <GIC_SPI INT_ADMA_EOT18 IRQ_TYPE_LEVEL_HIGH
 				ROUTE_TO_ADSP>,
 			     <GIC_SPI INT_ADMA_EOT19 IRQ_TYPE_LEVEL_HIGH
+				ROUTE_TO_ADSP>,
+			     <GIC_SPI INT_ADMA_EOT20 IRQ_TYPE_LEVEL_HIGH
+				ROUTE_TO_ADSP>,
+			     <GIC_SPI INT_ADMA_EOT21 IRQ_TYPE_LEVEL_HIGH
 				ROUTE_TO_ADSP>;
 		clocks = <&tegra_car TEGRA210_CLK_D_AUDIO>,
 			     <&tegra_car TEGRA210_CLK_APE>;

@@ -24,7 +24,6 @@
 #include <linux/regulator/consumer.h>
 #include <linux/delay.h>
 #include <linux/pm_runtime.h>
-#include <linux/version.h>
 #include <sound/core.h>
 #include <sound/jack.h>
 #include <sound/pcm.h>
@@ -357,13 +356,7 @@ static int tegra_machine_set_params(struct snd_soc_card *card,
 				(1ULL << SNDRV_PCM_FORMAT_S32_LE) : formats;
 
 	/* update dai link hw_params */
-#if KERNEL_VERSION(4, 5, 0) > LINUX_VERSION_CODE
-	for (idx = 0; idx < num_of_dai_links;) {
-		rtd = &card->rtd[idx];
-
-#else
 	list_for_each_entry(rtd, &card->rtd_list, list) {
-#endif
 		if (rtd->dai_link->params) {
 			struct snd_soc_pcm_stream *dai_params;
 
@@ -649,14 +642,7 @@ static int tegra_machine_suspend_pre(struct snd_soc_card *card)
 	struct snd_soc_pcm_runtime *rtd;
 
 	/* DAPM dai link stream work for non pcm links */
-#if KERNEL_VERSION(4, 5, 0) > LINUX_VERSION_CODE
-	unsigned int idx;
-
-	for (idx = 0; idx < card->num_rtd; idx++) {
-		rtd = &card->rtd[idx];
-#else
 	list_for_each_entry(rtd, &card->rtd_list, list) {
-#endif
 		if (rtd->dai_link->params)
 			INIT_DELAYED_WORK(&rtd->delayed_work, NULL);
 	}

@@ -25,7 +25,6 @@
 #include <linux/platform_device.h>
 #include <linux/pm_runtime.h>
 #include <linux/regmap.h>
-#include <linux/slab.h>
 #include <soc/tegra/chip-id.h>
 #include <sound/core.h>
 #include <sound/pcm.h>
@@ -886,17 +885,13 @@ static int tegra210_amx_platform_probe(struct platform_device *pdev)
 	match = of_match_device(tegra210_amx_of_match, &pdev->dev);
 	if (!match) {
 		dev_err(&pdev->dev, "Error: No device match found\n");
-		ret = -ENODEV;
-		goto err;
+		return -ENODEV;
 	}
 	soc_data = (struct tegra210_amx_soc_data *)match->data;
 
-	amx = devm_kzalloc(&pdev->dev, sizeof(struct tegra210_amx), GFP_KERNEL);
-	if (!amx) {
-		dev_err(&pdev->dev, "Can't allocate tegra210_amx\n");
-		ret = -ENOMEM;
-		goto err;
-	}
+	amx = devm_kzalloc(&pdev->dev, sizeof(*amx), GFP_KERNEL);
+	if (!amx)
+		return -ENOMEM;
 
 	amx->soc_data = soc_data;
 	amx->is_shutdown = false;
@@ -916,46 +911,31 @@ static int tegra210_amx_platform_probe(struct platform_device *pdev)
 	}
 	regcache_cache_only(amx->regmap, true);
 
-	if (of_property_read_u32(pdev->dev.of_node,
-				"nvidia,ahub-amx-id",
-				&pdev->dev.id) < 0) {
-		dev_err(&pdev->dev,
-			"Missing property nvidia,ahub-amx-id\n");
-		ret = -ENODEV;
-		goto err;
+	ret = of_property_read_u32(pdev->dev.of_node,
+				   "nvidia,ahub-amx-id",
+				   &pdev->dev.id);
+	if (ret < 0) {
+		dev_err(&pdev->dev, "Missing property nvidia,ahub-amx-id\n");
+		return ret;
 	}
 
 	/* following is necessary to have the required codec-dai-name */
 	if (dev_set_name(&pdev->dev, "%s.%d", DRV_NAME, pdev->dev.id)) {
 		dev_err(&pdev->dev, "error in setting AMX dev name\n");
-		ret = -ENODEV;
-		goto err;
+		return -ENODEV;
 	}
 
 	pm_runtime_enable(&pdev->dev);
-	if (!pm_runtime_enabled(&pdev->dev)) {
-		ret = tegra210_amx_runtime_resume(&pdev->dev);
-		if (ret)
-			goto err_pm_disable;
-	}
-
 	ret = snd_soc_register_codec(&pdev->dev, &tegra210_amx_codec,
 				     tegra210_amx_dais,
 				     ARRAY_SIZE(tegra210_amx_dais));
 	if (ret != 0) {
 		dev_err(&pdev->dev, "Could not register CODEC: %d\n", ret);
-		goto err_suspend;
+		pm_runtime_disable(&pdev->dev);
+		return ret;
 	}
 
 	return 0;
-
-err_suspend:
-	if (!pm_runtime_status_suspended(&pdev->dev))
-		tegra210_amx_runtime_suspend(&pdev->dev);
-err_pm_disable:
-	pm_runtime_disable(&pdev->dev);
-err:
-	return ret;
 }
 
 static void tegra210_amx_platform_shutdown(struct platform_device *pdev)

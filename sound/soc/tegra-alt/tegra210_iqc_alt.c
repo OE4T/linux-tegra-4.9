@@ -23,14 +23,11 @@
 #include <linux/platform_device.h>
 #include <linux/pm_runtime.h>
 #include <linux/regmap.h>
-#include <linux/slab.h>
 #include <sound/core.h>
 #include <sound/pcm.h>
 #include <sound/pcm_params.h>
 #include <sound/soc.h>
-#include <linux/pinctrl/consumer.h>
 #include <linux/of_device.h>
-#include <linux/debugfs.h>
 #include <linux/tegra-soc.h>
 
 #include "tegra210_xbar_alt.h"
@@ -300,16 +297,12 @@ static int tegra210_iqc_platform_probe(struct platform_device *pdev)
 	match = of_match_device(tegra210_iqc_of_match, &pdev->dev);
 	if (!match) {
 		dev_err(&pdev->dev, "Error: No device match found\n");
-		ret = -ENODEV;
-		goto err;
+		return -ENODEV;
 	}
 
-	iqc = devm_kzalloc(&pdev->dev, sizeof(struct tegra210_iqc), GFP_KERNEL);
-	if (!iqc) {
-		dev_err(&pdev->dev, "Can't allocate iqc\n");
-		ret = -ENOMEM;
-		goto err;
-	}
+	iqc = devm_kzalloc(&pdev->dev, sizeof(*iqc), GFP_KERNEL);
+	if (!iqc)
+		return -ENOMEM;
 
 	dev_set_drvdata(&pdev->dev, iqc);
 
@@ -317,8 +310,7 @@ static int tegra210_iqc_platform_probe(struct platform_device *pdev)
 		iqc->clk_iqc = devm_clk_get(&pdev->dev, NULL);
 		if (IS_ERR(iqc->clk_iqc)) {
 			dev_err(&pdev->dev, "Can't retrieve iqc clock\n");
-			ret = PTR_ERR(iqc->clk_iqc);
-			goto err;
+			return PTR_ERR(iqc->clk_iqc);
 		}
 	}
 
@@ -334,19 +326,18 @@ static int tegra210_iqc_platform_probe(struct platform_device *pdev)
 	}
 	regcache_cache_only(iqc->regmap, true);
 
-	if (of_property_read_u32(pdev->dev.of_node,
-				"nvidia,ahub-iqc-id",
-				&pdev->dev.id) < 0) {
-		dev_err(&pdev->dev,
-			"Missing property nvidia,ahub-iqc-id\n");
-		ret = -ENODEV;
-		goto err;
+	ret = of_property_read_u32(pdev->dev.of_node,
+				   "nvidia,ahub-iqc-id",
+				   &pdev->dev.id);
+	if (ret < 0) {
+		dev_err(&pdev->dev, "Missing property nvidia,ahub-iqc-id\n");
+		return ret;
 	}
 
 	if (of_property_read_u32(pdev->dev.of_node,
-				"timestamp-enable",
-				&iqc->timestamp_enable) < 0) {
-		dev_err(&pdev->dev,
+				 "timestamp-enable",
+				 &iqc->timestamp_enable) < 0) {
+		dev_dbg(&pdev->dev,
 			"Missing property timestamp-enable for IQC\n");
 		iqc->timestamp_enable = 1;
 	}
@@ -354,35 +345,22 @@ static int tegra210_iqc_platform_probe(struct platform_device *pdev)
 	if (of_property_read_u32(pdev->dev.of_node,
 				"data-offset",
 				&iqc->data_offset) < 0) {
-		dev_err(&pdev->dev,
+		dev_dbg(&pdev->dev,
 			"Missing property data-offset for IQC\n");
 		iqc->data_offset = 0;
 	}
 
 	pm_runtime_enable(&pdev->dev);
-	if (!pm_runtime_enabled(&pdev->dev)) {
-		ret = tegra210_iqc_runtime_resume(&pdev->dev);
-		if (ret)
-			goto err_pm_disable;
-	}
-
 	ret = snd_soc_register_codec(&pdev->dev, &tegra210_iqc_codec,
 				     tegra210_iqc_dais,
 				     ARRAY_SIZE(tegra210_iqc_dais));
 	if (ret != 0) {
 		dev_err(&pdev->dev, "Could not register CODEC: %d\n", ret);
-		goto err_suspend;
+		pm_runtime_disable(&pdev->dev);
+		return ret;
 	}
 
 	return 0;
-
-err_suspend:
-	if (!pm_runtime_status_suspended(&pdev->dev))
-		tegra210_iqc_runtime_suspend(&pdev->dev);
-err_pm_disable:
-	pm_runtime_disable(&pdev->dev);
-err:
-	return ret;
 }
 
 static int tegra210_iqc_platform_remove(struct platform_device *pdev)

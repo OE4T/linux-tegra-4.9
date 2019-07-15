@@ -21,7 +21,6 @@
 #include <linux/module.h>
 #include <linux/pm_runtime.h>
 #include <linux/regmap.h>
-#include <linux/slab.h>
 #include <sound/core.h>
 #include <sound/soc.h>
 

@@ -536,16 +536,12 @@ static int tegra210_dmic_platform_probe(struct platform_device *pdev)
 	match = of_match_device(tegra210_dmic_of_match, &pdev->dev);
 	if (!match) {
 		dev_err(&pdev->dev, "Error: No device match found\n");
-		ret = -ENODEV;
-		goto err;
+		return -ENODEV;
 	}
 
-	dmic = devm_kzalloc(&pdev->dev, sizeof(struct tegra210_dmic), GFP_KERNEL);
-	if (!dmic) {
-		dev_err(&pdev->dev, "Can't allocate dmic\n");
-		ret = -ENOMEM;
-		goto err;
-	}
+	dmic = devm_kzalloc(&pdev->dev, sizeof(*dmic), GFP_KERNEL);
+	if (!dmic)
+		return -ENOMEM;
 
 	dmic->is_shutdown = false;
 	dmic->prod_name = NULL;
@@ -555,23 +551,21 @@ static int tegra210_dmic_platform_probe(struct platform_device *pdev)
 
 	if (!(tegra_platform_is_unit_fpga() || tegra_platform_is_fpga())) {
 		dmic->clk_dmic = devm_clk_get(&pdev->dev, "dmic");
-		if (IS_ERR_OR_NULL(dmic->clk_dmic)) {
+		if (IS_ERR(dmic->clk_dmic)) {
 			dev_err(&pdev->dev, "Can't retrieve dmic clock\n");
-			ret = PTR_ERR(dmic->clk_dmic);
-			goto err;
+			return PTR_ERR(dmic->clk_dmic);
 		}
 
 		dmic->clk_parent = devm_clk_get(&pdev->dev, "parent");
-		if (IS_ERR_OR_NULL(dmic->clk_parent)) {
+		if (IS_ERR(dmic->clk_parent)) {
 			dev_err(&pdev->dev, "Can't retrieve parent clock\n");
-			ret = PTR_ERR(dmic->clk_parent);
-			goto err;
+			return PTR_ERR(dmic->clk_parent);
 		}
 
 		ret = clk_set_parent(dmic->clk_dmic, dmic->clk_parent);
 		if (ret) {
 			dev_err(&pdev->dev, "Can't set parent of dmic clock\n");
-			goto err;
+			return ret;
 		}
 	}
 
@@ -591,27 +585,21 @@ static int tegra210_dmic_platform_probe(struct platform_device *pdev)
 	regmap_write(dmic->regmap, TEGRA210_DMIC_DCR_BIQUAD_0_COEF_4,
 		     0x00000000);
 
-	if (of_property_read_u32(np, "nvidia,ahub-dmic-id",
-				 &pdev->dev.id) < 0) {
-		dev_err(&pdev->dev,
-			"Missing property nvidia,ahub-dmic-id\n");
-		ret = -ENODEV;
-		goto err;
+	ret = of_property_read_u32(np, "nvidia,ahub-dmic-id",
+				   &pdev->dev.id);
+	if (ret < 0) {
+		dev_err(&pdev->dev, "Missing property nvidia,ahub-dmic-id\n");
+		return ret;
 	}
 
 	pm_runtime_enable(&pdev->dev);
-	if (!pm_runtime_enabled(&pdev->dev)) {
-		ret = tegra210_dmic_runtime_resume(&pdev->dev);
-		if (ret)
-			goto err_pm_disable;
-	}
-
 	ret = snd_soc_register_codec(&pdev->dev, &tegra210_dmic_codec,
 				     tegra210_dmic_dais,
 				     ARRAY_SIZE(tegra210_dmic_dais));
 	if (ret != 0) {
 		dev_err(&pdev->dev, "Could not register CODEC: %d\n", ret);
-		goto err_suspend;
+		pm_runtime_disable(&pdev->dev);
+		return ret;
 	}
 
 	if (of_property_read_string(np, "prod-name", &dmic->prod_name) == 0) {
@@ -622,14 +610,6 @@ static int tegra210_dmic_platform_probe(struct platform_device *pdev)
 	}
 
 	return 0;
-
-err_suspend:
-	if (!pm_runtime_status_suspended(&pdev->dev))
-		tegra210_dmic_runtime_suspend(&pdev->dev);
-err_pm_disable:
-	pm_runtime_disable(&pdev->dev);
-err:
-	return ret;
 }
 
 static void tegra210_dmic_platform_shutdown(struct platform_device *pdev)

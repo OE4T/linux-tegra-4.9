@@ -24,15 +24,12 @@
 #include <linux/platform_device.h>
 #include <linux/pm_runtime.h>
 #include <linux/regmap.h>
-#include <linux/slab.h>
 #include <sound/core.h>
 #include <sound/pcm.h>
 #include <sound/pcm_params.h>
 #include <sound/soc.h>
-#include <linux/pinctrl/consumer.h>
 #include <linux/of_device.h>
 #include <linux/tegra186_ahc.h>
-#include <linux/version.h>
 
 #include "tegra186_asrc_alt.h"
 #include "tegra186_arad_alt.h"
@@ -753,17 +750,12 @@ static int tegra186_arad_platform_probe(struct platform_device *pdev)
 	match = of_match_device(tegra186_arad_of_match, &pdev->dev);
 	if (!match) {
 		dev_err(&pdev->dev, "Error: No device match found\n");
-		ret = -ENODEV;
-		goto err;
+		return -ENODEV;
 	}
 
-	arad = devm_kzalloc(&pdev->dev,
-		sizeof(struct tegra186_arad), GFP_KERNEL);
-	if (!arad) {
-		dev_err(&pdev->dev, "Can't allocate tegra210_arad\n");
-		ret = -ENOMEM;
-		goto err;
-	}
+	arad = devm_kzalloc(&pdev->dev, sizeof(*arad), GFP_KERNEL);
+	if (!arad)
+		return -ENOMEM;
 
 	arad_dev = &pdev->dev;
 	dev_set_drvdata(&pdev->dev, arad);
@@ -780,13 +772,11 @@ static int tegra186_arad_platform_probe(struct platform_device *pdev)
 	}
 	regcache_cache_only(arad->regmap, true);
 
-	if (of_property_read_u32(pdev->dev.of_node,
-				"nvidia,ahub-arad-id",
-				&pdev->dev.id) < 0) {
-		dev_err(&pdev->dev,
-			"Missing property nvidia,ahub-arad-id\n");
-		ret = -ENODEV;
-		goto err;
+	ret = of_property_read_u32(pdev->dev.of_node, "nvidia,ahub-arad-id",
+				   &pdev->dev.id);
+	if (ret < 0) {
+		dev_err(&pdev->dev, "Missing property nvidia,ahub-arad-id\n");
+		return ret;
 	}
 
 	pm_runtime_enable(&pdev->dev);
@@ -796,7 +786,8 @@ static int tegra186_arad_platform_probe(struct platform_device *pdev)
 				     ARRAY_SIZE(tegra186_arad_dais));
 	if (ret != 0) {
 		dev_err(&pdev->dev, "Could not register CODEC: %d\n", ret);
-		goto err_suspend;
+		pm_runtime_disable(&pdev->dev);
+		return ret;
 	}
 
 #ifdef CONFIG_SND_SOC_TEGRA186_ARAD_WAR
@@ -808,14 +799,8 @@ static int tegra186_arad_platform_probe(struct platform_device *pdev)
 			TEGRA186_AHC_ARAD1_CB, &pdev->dev);
 #endif
 #endif
-	return 0;
 
-err_suspend:
-	if (!pm_runtime_status_suspended(&pdev->dev))
-		tegra186_arad_runtime_suspend(&pdev->dev);
-	pm_runtime_disable(&pdev->dev);
-err:
-	return ret;
+	return 0;
 }
 
 static int tegra186_arad_platform_remove(struct platform_device *pdev)

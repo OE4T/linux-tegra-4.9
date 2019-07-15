@@ -25,7 +25,6 @@
 #include <linux/platform_device.h>
 #include <linux/pm_runtime.h>
 #include <linux/regmap.h>
-#include <linux/slab.h>
 #include <sound/core.h>
 #include <sound/pcm.h>
 #include <sound/pcm_params.h>
@@ -33,7 +32,6 @@
 #include <linux/pinctrl/pinconf-tegra.h>
 #include <linux/regulator/consumer.h>
 #include <linux/of_device.h>
-#include <linux/debugfs.h>
 #include <soc/tegra/chip-id.h>
 #include <linux/pm_domain.h>
 
@@ -1046,16 +1044,12 @@ static int tegra210_i2s_platform_probe(struct platform_device *pdev)
 	match = of_match_device(tegra210_i2s_of_match, &pdev->dev);
 	if (!match) {
 		dev_err(&pdev->dev, "Error: No device match found\n");
-		ret = -ENODEV;
-		goto err;
+		return -ENODEV;
 	}
 
-	i2s = devm_kzalloc(&pdev->dev, sizeof(struct tegra210_i2s), GFP_KERNEL);
-	if (!i2s) {
-		dev_err(&pdev->dev, "Can't allocate i2s\n");
-		ret = -ENOMEM;
-		goto err;
-	}
+	i2s = devm_kzalloc(&pdev->dev, sizeof(*i2s), GFP_KERNEL);
+	if (!i2s)
+		return -ENOMEM;
 
 	i2s->tx_mask = i2s->rx_mask = 0xFFFF;
 	i2s->enable_cya = false;
@@ -1070,8 +1064,7 @@ static int tegra210_i2s_platform_probe(struct platform_device *pdev)
 		i2s->clk_i2s = devm_clk_get(&pdev->dev, NULL);
 		if (IS_ERR(i2s->clk_i2s)) {
 			dev_err(&pdev->dev, "Can't retrieve i2s clock\n");
-			ret = PTR_ERR(i2s->clk_i2s);
-			goto err;
+			return PTR_ERR(i2s->clk_i2s);
 		}
 
 		i2s->clk_i2s_sync = devm_clk_get(&pdev->dev, "ext_audio_sync");
@@ -1091,8 +1084,7 @@ static int tegra210_i2s_platform_probe(struct platform_device *pdev)
 		i2s->clk_i2s_source = devm_clk_get(&pdev->dev, "pll_a_out0");
 		if (IS_ERR(i2s->clk_i2s_source)) {
 			dev_err(&pdev->dev, "Can't retrieve pll_a_out0 clock\n");
-			ret = PTR_ERR(i2s->clk_i2s_source);
-			goto err;
+			return PTR_ERR(i2s->clk_i2s_source);
 		}
 	}
 
@@ -1108,12 +1100,11 @@ static int tegra210_i2s_platform_probe(struct platform_device *pdev)
 	}
 	regcache_cache_only(i2s->regmap, true);
 
-	if (of_property_read_u32(np, "nvidia,ahub-i2s-id",
-				&pdev->dev.id) < 0) {
-		dev_err(&pdev->dev,
-			"Missing property nvidia,ahub-i2s-id\n");
-		ret = -ENODEV;
-		goto err;
+	ret = of_property_read_u32(np, "nvidia,ahub-i2s-id",
+				   &pdev->dev.id);
+	if (ret < 0) {
+		dev_err(&pdev->dev, "Missing property nvidia,ahub-i2s-id\n");
+		return ret;
 	}
 
 	if (of_property_read_u32(pdev->dev.of_node, "bclk-ratio",
@@ -1136,32 +1127,31 @@ static int tegra210_i2s_platform_probe(struct platform_device *pdev)
 		i2s->fsync_width = 31;
 	}
 
-	i2s->enable_cya =
-		of_property_read_bool(pdev->dev.of_node,
-			"enable-cya");
+	i2s->enable_cya = of_property_read_bool(pdev->dev.of_node,
+						"enable-cya");
 
 	if (!(tegra_platform_is_unit_fpga() || tegra_platform_is_fpga())) {
 		if (of_property_read_string(np, "prod-name",
-						&i2s->prod_name) == 0)
+					    &i2s->prod_name) == 0)
 			tegra_pinctrl_config_prod(&pdev->dev, i2s->prod_name);
 
-		num_supplies =
-			of_property_count_strings(np, "regulator-supplies");
+		num_supplies = of_property_count_strings(np,
+							 "regulator-supplies");
 		if (num_supplies > 0) {
 			i2s->num_supplies = num_supplies;
 			i2s->supplies = devm_kzalloc(&pdev->dev, num_supplies *
-					sizeof(*i2s->supplies), GFP_KERNEL);
-			if (!i2s->supplies) {
-				ret = -ENOMEM;
-				goto err;
-			}
-			of_property_for_each_string(np,
-				"regulator-supplies", prop, supply)
+						     sizeof(*i2s->supplies),
+						     GFP_KERNEL);
+			if (!i2s->supplies)
+				return -ENOMEM;
+
+			of_property_for_each_string(np, "regulator-supplies",
+						    prop, supply)
 				i2s->supplies[count++].supply = supply;
 
-			ret = devm_regulator_bulk_get(
-					&pdev->dev, i2s->num_supplies,
-					i2s->supplies);
+			ret = devm_regulator_bulk_get(&pdev->dev,
+						      i2s->num_supplies,
+						      i2s->supplies);
 			if (ret) {
 				dev_err(&pdev->dev,
 					"Failed to get supplies: %d\n", ret);
@@ -1169,30 +1159,18 @@ static int tegra210_i2s_platform_probe(struct platform_device *pdev)
 			}
 		}
 	}
-	pm_runtime_enable(&pdev->dev);
-	if (!pm_runtime_enabled(&pdev->dev)) {
-		ret = tegra210_i2s_runtime_resume(&pdev->dev);
-		if (ret)
-			goto err_pm_disable;
-	}
 
+	pm_runtime_enable(&pdev->dev);
 	ret = snd_soc_register_codec(&pdev->dev, &tegra210_i2s_codec,
 				     tegra210_i2s_dais,
 				     ARRAY_SIZE(tegra210_i2s_dais));
 	if (ret != 0) {
 		dev_err(&pdev->dev, "Could not register CODEC: %d\n", ret);
-		goto err_suspend;
+		pm_runtime_disable(&pdev->dev);
+		return ret;
 	}
 
 	return 0;
-
-err_suspend:
-	if (!pm_runtime_status_suspended(&pdev->dev))
-		tegra210_i2s_runtime_suspend(&pdev->dev);
-err_pm_disable:
-	pm_runtime_disable(&pdev->dev);
-err:
-	return ret;
 }
 
 static void tegra210_i2s_platform_shutdown(struct platform_device *pdev)

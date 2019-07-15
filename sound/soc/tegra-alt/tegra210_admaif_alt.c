@@ -25,7 +25,6 @@
 #include <linux/platform_device.h>
 #include <linux/pm_runtime.h>
 #include <linux/regmap.h>
-#include <linux/slab.h>
 #include <linux/clk/tegra.h>
 #include <sound/soc.h>
 #include <sound/pcm_params.h>
@@ -33,7 +32,6 @@
 #include "tegra_pcm_alt.h"
 #include "tegra210_xbar_alt.h"
 #include "tegra_isomgr_bw_alt.h"
-
 #include "tegra210_admaif_alt.h"
 
 #define DRV_NAME "tegra210-ape-admaif"
@@ -1130,9 +1128,7 @@ static const struct of_device_id tegra_admaif_of_match[] = {
 
 static int tegra_admaif_probe(struct platform_device *pdev)
 {
-	int i;
-
-	int ret;
+	int ret, i;
 	struct tegra_admaif *admaif;
 	void __iomem *regs;
 	struct resource *res;
@@ -1146,11 +1142,8 @@ static int tegra_admaif_probe(struct platform_device *pdev)
 	}
 
 	admaif = devm_kzalloc(&pdev->dev, sizeof(*admaif), GFP_KERNEL);
-	if (!admaif) {
-		dev_err(&pdev->dev, "Can't allocate tegra_admaif\n");
-		ret = -ENOMEM;
-		goto err;
-	}
+	if (!admaif)
+		return -ENOMEM;
 
 	admaif->refcnt = 0;
 	admaif->dev = &pdev->dev;
@@ -1162,48 +1155,33 @@ static int tegra_admaif_probe(struct platform_device *pdev)
 			sizeof(struct tegra_alt_pcm_dma_params) *
 				admaif->soc_data->num_ch,
 			GFP_KERNEL);
-	if (!admaif->capture_dma_data) {
-		dev_err(&pdev->dev, "Can't allocate capture_dma_data\n");
-		ret = -ENOMEM;
-		goto err;
-	}
+	if (!admaif->capture_dma_data)
+		return -ENOMEM;
 
 	admaif->playback_dma_data = devm_kzalloc(&pdev->dev,
 			sizeof(struct tegra_alt_pcm_dma_params) *
 				admaif->soc_data->num_ch,
 			GFP_KERNEL);
-	if (!admaif->playback_dma_data) {
-		dev_err(&pdev->dev, "Can't allocate playback_dma_data\n");
-		ret = -ENOMEM;
-		goto err;
-	}
+	if (!admaif->playback_dma_data)
+		return -ENOMEM;
 
 	admaif->override_channels = devm_kzalloc(&pdev->dev,
 			sizeof(int) * admaif->soc_data->num_ch,
 			GFP_KERNEL);
-	if (!admaif->override_channels) {
-		dev_err(&pdev->dev, "Can't allocate override channel memory\n");
-		ret = -ENOMEM;
-		goto err;
-	}
+	if (!admaif->override_channels)
+		return -ENOMEM;
 
 	admaif->tx_mono_to_stereo = devm_kzalloc(&pdev->dev,
 			sizeof(int) * admaif->soc_data->num_ch,
 			GFP_KERNEL);
-	if (!admaif->tx_mono_to_stereo) {
-		dev_err(&pdev->dev, "Can't allocate override channel memory\n");
-		ret = -ENOMEM;
-		goto err;
-	}
+	if (!admaif->tx_mono_to_stereo)
+		return -ENOMEM;
 
 	admaif->rx_stereo_to_mono = devm_kzalloc(&pdev->dev,
 			sizeof(int) * admaif->soc_data->num_ch,
 			GFP_KERNEL);
-	if (!admaif->rx_stereo_to_mono) {
-		dev_err(&pdev->dev, "Can't allocate override channel memory\n");
-		ret = -ENOMEM;
-		goto err;
-	}
+	if (!admaif->rx_stereo_to_mono)
+		return -ENOMEM;
 
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	regs = devm_ioremap_resource(&pdev->dev, res);
@@ -1217,13 +1195,6 @@ static int tegra_admaif_probe(struct platform_device *pdev)
 		return PTR_ERR(admaif->regmap);
 	}
 	regcache_cache_only(admaif->regmap, true);
-
-	pm_runtime_enable(&pdev->dev);
-	if (!pm_runtime_enabled(&pdev->dev)) {
-		ret = tegra_admaif_runtime_resume(&pdev->dev);
-		if (ret)
-			goto err_pm_disable;
-	}
 
 	if (admaif->soc_data->is_isomgr_client)
 		tegra_isomgr_adma_register();
@@ -1240,14 +1211,14 @@ static int tegra_admaif_probe(struct platform_device *pdev)
 
 		admaif->playback_dma_data[i].width = 32;
 		admaif->playback_dma_data[i].req_sel = i + 1;
-		if (of_property_read_string_index(pdev->dev.of_node,
+		ret = of_property_read_string_index(pdev->dev.of_node,
 				"dma-names",
 				(i * 2) + 1,
-				&admaif->playback_dma_data[i].chan_name) < 0) {
+				&admaif->playback_dma_data[i].chan_name);
+		if (ret < 0) {
 			dev_err(&pdev->dev,
 				"Missing property nvidia,dma-names\n");
-			ret = -ENODEV;
-			goto err_suspend;
+			return ret;
 		}
 		buffer_size = 0;
 		if (of_property_read_u32_index(pdev->dev.of_node,
@@ -1261,14 +1232,14 @@ static int tegra_admaif_probe(struct platform_device *pdev)
 
 		admaif->capture_dma_data[i].width = 32;
 		admaif->capture_dma_data[i].req_sel = i + 1;
-		if (of_property_read_string_index(pdev->dev.of_node,
+		ret = of_property_read_string_index(pdev->dev.of_node,
 				"dma-names",
 				(i * 2),
-				&admaif->capture_dma_data[i].chan_name) < 0) {
+				&admaif->capture_dma_data[i].chan_name);
+		if (ret < 0) {
 			dev_err(&pdev->dev,
 				"Missing property nvidia,dma-names\n");
-			ret = -ENODEV;
-			goto err_suspend;
+			return ret;
 		}
 		buffer_size = 0;
 		if (of_property_read_u32_index(pdev->dev.of_node,
@@ -1281,46 +1252,41 @@ static int tegra_admaif_probe(struct platform_device *pdev)
 		admaif->capture_dma_data[i].buffer_size = buffer_size;
 	}
 
-	ret = snd_soc_register_component(&pdev->dev,
-					&tegra_admaif_dai_driver,
-					tegra_admaif_dais,
-					admaif->soc_data->num_ch);
+	regmap_update_bits(admaif->regmap, admaif->soc_data->global_base +
+			   TEGRA_ADMAIF_GLOBAL_ENABLE, 1, 1);
+
+	ret = devm_snd_soc_register_component(&pdev->dev,
+					      &tegra_admaif_dai_driver,
+					      tegra_admaif_dais,
+					      admaif->soc_data->num_ch);
 	if (ret) {
 		dev_err(&pdev->dev, "Could not register DAIs %d: %d\n",
 			i, ret);
-		ret = -ENOMEM;
-		goto err_suspend;
+		return ret;
 	}
 
+	pm_runtime_enable(&pdev->dev);
 	ret = snd_soc_register_codec(&pdev->dev, admaif->soc_data->admaif_codec,
-				admaif->soc_data->codec_dais,
-				admaif->soc_data->num_ch * 2);
+				     admaif->soc_data->codec_dais,
+				     admaif->soc_data->num_ch * 2);
 	if (ret != 0) {
 		dev_err(&pdev->dev, "Could not register CODEC: %d\n", ret);
-		goto err_unregister_dais;
+		goto pm_disable;
 	}
 
 	ret = tegra_alt_pcm_platform_register(&pdev->dev);
 	if (ret) {
 		dev_err(&pdev->dev, "Could not register PCM: %d\n", ret);
-		goto err_unregister_codec;
+		goto unregister_codec;
 	}
-
-	regmap_update_bits(admaif->regmap, admaif->soc_data->global_base +
-					TEGRA_ADMAIF_GLOBAL_ENABLE, 1, 1);
 
 	return 0;
 
-err_unregister_codec:
+unregister_codec:
 	snd_soc_unregister_codec(&pdev->dev);
-err_unregister_dais:
-	snd_soc_unregister_component(&pdev->dev);
-err_suspend:
-	if (!pm_runtime_status_suspended(&pdev->dev))
-		tegra_admaif_runtime_suspend(&pdev->dev);
-err_pm_disable:
+pm_disable:
 	pm_runtime_disable(&pdev->dev);
-err:
+
 	return ret;
 }
 

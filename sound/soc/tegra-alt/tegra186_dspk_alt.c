@@ -23,15 +23,12 @@
 #include <linux/platform_device.h>
 #include <linux/pm_runtime.h>
 #include <linux/regmap.h>
-#include <linux/slab.h>
 #include <sound/core.h>
 #include <sound/pcm.h>
 #include <sound/pcm_params.h>
 #include <sound/soc.h>
 #include <linux/of_device.h>
-#include <linux/debugfs.h>
 #include <soc/tegra/chip-id.h>
-#include <linux/version.h>
 #include <linux/pinctrl/pinconf-tegra.h>
 
 #include "tegra210_xbar_alt.h"
@@ -422,42 +419,36 @@ static int tegra186_dspk_platform_probe(struct platform_device *pdev)
 	match = of_match_device(tegra186_dspk_of_match, &pdev->dev);
 	if (!match) {
 		dev_err(&pdev->dev, "Error: No device match found\n");
-		ret = -ENODEV;
-		goto err;
+		return -ENODEV;
 	}
 
-	dspk = devm_kzalloc(&pdev->dev, sizeof(struct tegra186_dspk),
-			GFP_KERNEL);
-	if (!dspk) {
-		dev_err(&pdev->dev, "Can't allocate dspk\n");
-		ret = -ENOMEM;
-		goto err;
-	}
+	dspk = devm_kzalloc(&pdev->dev, sizeof(*dspk), GFP_KERNEL);
+	if (!dspk)
+		return -ENOMEM;
 
 	dspk->is_shutdown = false;
 	dspk->prod_name = NULL;
 	dspk->rx_fifo_th = 0;
 	dspk->osr_val = TEGRA186_DSPK_OSR_64;
+	dev_set_drvdata(&pdev->dev, dspk);
 
 	if (!(tegra_platform_is_unit_fpga() || tegra_platform_is_fpga())) {
 		dspk->clk_dspk = devm_clk_get(&pdev->dev, NULL);
 		if (IS_ERR(dspk->clk_dspk)) {
 			dev_err(&pdev->dev, "Can't retrieve dspk clock\n");
-			ret = PTR_ERR(dspk->clk_dspk);
-			goto err;
+			return PTR_ERR(dspk->clk_dspk);
 		}
 
 		dspk->clk_pll_a_out0 = devm_clk_get(&pdev->dev, "pll_a_out0");
-		if (IS_ERR_OR_NULL(dspk->clk_pll_a_out0)) {
+		if (IS_ERR(dspk->clk_pll_a_out0)) {
 			dev_err(&pdev->dev, "Can't retrieve pll_a_out0 clock\n");
-			ret = -ENOENT;
-		goto err;
+			return PTR_ERR(dspk->clk_pll_a_out0);
 		}
 
 		ret = clk_set_parent(dspk->clk_dspk, dspk->clk_pll_a_out0);
 		if (ret) {
 			dev_err(&pdev->dev, "Can't set parent of dspk clock\n");
-			goto err;
+			return ret;
 		}
 	}
 
@@ -473,47 +464,31 @@ static int tegra186_dspk_platform_probe(struct platform_device *pdev)
 	}
 	regcache_cache_only(dspk->regmap, true);
 
-	if (of_property_read_u32(np, "nvidia,ahub-dspk-id",
-				&pdev->dev.id) < 0) {
-		dev_err(&pdev->dev,
-			"Missing property nvidia,ahub-dspk-id\n");
-		ret = -ENODEV;
-		goto err;
+	ret = of_property_read_u32(np, "nvidia,ahub-dspk-id",
+				   &pdev->dev.id);
+	if (ret < 0) {
+		dev_err(&pdev->dev, "Missing property nvidia,ahub-dspk-id\n");
+		return ret;
 	}
 
 	pm_runtime_enable(&pdev->dev);
-	if (!pm_runtime_enabled(&pdev->dev)) {
-		ret = tegra186_dspk_runtime_resume(&pdev->dev);
-		if (ret)
-			goto err_pm_disable;
-	}
-
 	ret = snd_soc_register_codec(&pdev->dev, &tegra186_dspk_codec,
 				     tegra186_dspk_dais,
 				     ARRAY_SIZE(tegra186_dspk_dais));
 	if (ret != 0) {
 		dev_err(&pdev->dev, "Could not register CODEC: %d\n", ret);
-		goto err_suspend;
+		pm_runtime_disable(&pdev->dev);
+		return ret;
 	}
 
 	if (of_property_read_string(np, "prod-name", &dspk->prod_name) == 0) {
 		ret = tegra_pinctrl_config_prod(&pdev->dev, dspk->prod_name);
 		if (ret < 0)
 			dev_warn(&pdev->dev, "Failed to set %s setting\n",
-					dspk->prod_name);
+				 dspk->prod_name);
 	}
 
-	dev_set_drvdata(&pdev->dev, dspk);
-
 	return 0;
-
-err_suspend:
-	if (!pm_runtime_status_suspended(&pdev->dev))
-		tegra186_dspk_runtime_suspend(&pdev->dev);
-err_pm_disable:
-	pm_runtime_disable(&pdev->dev);
-err:
-	return ret;
 }
 
 static void tegra186_dspk_platform_shutdown(struct platform_device *pdev)

@@ -24,12 +24,10 @@
 #include <linux/platform_device.h>
 #include <linux/pm_runtime.h>
 #include <linux/regmap.h>
-#include <linux/slab.h>
 #include <sound/core.h>
 #include <sound/pcm.h>
 #include <sound/pcm_params.h>
 #include <sound/soc.h>
-#include <linux/pinctrl/consumer.h>
 #include <linux/of_device.h>
 
 #include "tegra210_xbar_alt.h"

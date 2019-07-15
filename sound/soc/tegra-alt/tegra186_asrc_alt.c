@@ -23,16 +23,13 @@
 #include <linux/platform_device.h>
 #include <linux/pm_runtime.h>
 #include <linux/regmap.h>
-#include <linux/slab.h>
 #include <sound/core.h>
 #include <sound/pcm.h>
 #include <sound/pcm_params.h>
 #include <sound/soc.h>
 #include <linux/delay.h>
-#include <linux/pinctrl/consumer.h>
 #include <linux/of_device.h>
 #include <linux/tegra186_ahc.h>
-#include <linux/version.h>
 
 #include "tegra210_xbar_alt.h"
 #include "tegra186_asrc_alt.h"
@@ -1094,17 +1091,12 @@ static int tegra186_asrc_platform_probe(struct platform_device *pdev)
 	match = of_match_device(tegra186_asrc_of_match, &pdev->dev);
 	if (!match) {
 		dev_err(&pdev->dev, "Error: No device match found\n");
-		ret = -ENODEV;
-		goto err;
+		return -ENODEV;
 	}
 	asrc_dev = &pdev->dev;
-	asrc = devm_kzalloc(&pdev->dev,
-		sizeof(struct tegra186_asrc), GFP_KERNEL);
-	if (!asrc) {
-		dev_err(&pdev->dev, "Can't allocate asrc\n");
-		ret = -ENOMEM;
-		goto err;
-	}
+	asrc = devm_kzalloc(&pdev->dev, sizeof(*asrc), GFP_KERNEL);
+	if (!asrc)
+		return -ENOMEM;
 
 	asrc->is_shutdown = false;
 	dev_set_drvdata(&pdev->dev, asrc);
@@ -1121,29 +1113,20 @@ static int tegra186_asrc_platform_probe(struct platform_device *pdev)
 	}
 	regcache_cache_only(asrc->regmap, true);
 
-	if (of_property_read_u32(pdev->dev.of_node,
-				"nvidia,ahub-asrc-id",
-				&pdev->dev.id) < 0) {
-		dev_err(&pdev->dev,
-			"Missing property nvidia,ahub-asrc-id\n");
-		ret = -ENODEV;
-		goto err;
+	ret = of_property_read_u32(pdev->dev.of_node, "nvidia,ahub-asrc-id",
+				   &pdev->dev.id);
+	if (ret < 0) {
+		dev_err(&pdev->dev, "Missing property nvidia,ahub-asrc-id\n");
+		return ret;
 	}
 
 #ifdef CONFIG_TEGRA186_AHC
-	tegra186_ahc_register_cb(tegra186_asrc_ahc_cb,
-			TEGRA186_AHC_ASRC1_CB, &pdev->dev);
+	tegra186_ahc_register_cb(tegra186_asrc_ahc_cb, TEGRA186_AHC_ASRC1_CB,
+				 &pdev->dev);
 #endif
 
-	pm_runtime_enable(&pdev->dev);
-	if (!pm_runtime_enabled(&pdev->dev)) {
-		ret = tegra186_asrc_runtime_resume(&pdev->dev);
-		if (ret)
-			goto err_pm_disable;
-	}
-
 	regmap_write(asrc->regmap, TEGRA186_ASRC_GLOBAL_CONFIG,
-		TEGRA186_ASRC_GLOBAL_CONFIG_FRAC_32BIT_PRECISION);
+		     TEGRA186_ASRC_GLOBAL_CONFIG_FRAC_32BIT_PRECISION);
 
 	/* initialize default output srate */
 	for (i = 0; i < 6; i++) {
@@ -1159,23 +1142,17 @@ static int tegra186_asrc_platform_probe(struct platform_device *pdev)
 			ASRC_STREAM_REG(TEGRA186_ASRC_STREAM1_CONFIG, i), 1, 1);
 	}
 
+	pm_runtime_enable(&pdev->dev);
 	ret = snd_soc_register_codec(&pdev->dev, &tegra186_asrc_codec,
 				     tegra186_asrc_dais,
 				     ARRAY_SIZE(tegra186_asrc_dais));
 	if (ret != 0) {
 		dev_err(&pdev->dev, "Could not register CODEC: %d\n", ret);
-		goto err_suspend;
+		pm_runtime_disable(&pdev->dev);
+		return ret;
 	}
 
 	return 0;
-
-err_suspend:
-	if (!pm_runtime_status_suspended(&pdev->dev))
-		tegra186_asrc_runtime_suspend(&pdev->dev);
-err_pm_disable:
-	pm_runtime_disable(&pdev->dev);
-err:
-	return ret;
 }
 
 static void tegra186_asrc_platform_shutdown(struct platform_device *pdev)

@@ -23,9 +23,7 @@
 #include <linux/of_platform.h>
 #include <linux/platform_device.h>
 #include <linux/pm_runtime.h>
-#include <linux/tegra_pm_domains.h>
 #include <linux/regmap.h>
-#include <linux/slab.h>
 #include <soc/tegra/chip-id.h>
 #include <sound/soc.h>
 #include <linux/clk/tegra.h>
@@ -305,8 +303,6 @@ int tegra_xbar_remove(struct platform_device *pdev)
 	if (!pm_runtime_status_suspended(&pdev->dev))
 		tegra_xbar_runtime_suspend(&pdev->dev);
 
-	tegra_pd_remove_device(&pdev->dev);
-
 	return 0;
 }
 EXPORT_SYMBOL_GPL(tegra_xbar_remove);
@@ -320,11 +316,8 @@ int tegra_xbar_probe(struct platform_device *pdev,
 	int ret;
 
 	xbar = devm_kzalloc(&pdev->dev, sizeof(*xbar), GFP_KERNEL);
-	if (!xbar) {
-		dev_err(&pdev->dev, "Can't allocate xbar\n");
-		ret = -ENOMEM;
-		goto err;
-	}
+	if (!xbar)
+		return -ENOMEM;
 
 	xbar->soc_data = soc_data;
 	xbar->is_shutdown = false;
@@ -335,44 +328,39 @@ int tegra_xbar_probe(struct platform_device *pdev,
 		xbar->clk = devm_clk_get(&pdev->dev, "ahub");
 		if (IS_ERR(xbar->clk)) {
 			dev_err(&pdev->dev, "Can't retrieve ahub clock\n");
-			ret = PTR_ERR(xbar->clk);
-			goto err;
+			return PTR_ERR(xbar->clk);
 		}
 
 		xbar->clk_parent = devm_clk_get(&pdev->dev, "pll_a_out0");
 		if (IS_ERR(xbar->clk_parent)) {
 			dev_err(&pdev->dev, "Can't retrieve pll_a_out0 clock\n");
-			ret = PTR_ERR(xbar->clk_parent);
-			goto err;
+			return PTR_ERR(xbar->clk_parent);
 		}
 
 		xbar->clk_apb2ape = devm_clk_get(&pdev->dev, "apb2ape");
 		if (IS_ERR(xbar->clk_apb2ape)) {
 			dev_err(&pdev->dev, "Can't retrieve apb2ape clock\n");
-			ret = PTR_ERR(xbar->clk_apb2ape);
-			goto err;
+			return PTR_ERR(xbar->clk_apb2ape);
 		}
 
 		xbar->clk_ape = devm_clk_get(&pdev->dev, "xbar.ape");
 		if (IS_ERR(xbar->clk_ape)) {
 			dev_err(&pdev->dev, "Can't retrieve ape clock\n");
-			ret = PTR_ERR(xbar->clk_ape);
-			goto err;
+			return PTR_ERR(xbar->clk_ape);
 		}
 	}
 
 	parent_clk = clk_get_parent(xbar->clk);
 	if (IS_ERR(parent_clk)) {
 		dev_err(&pdev->dev, "Can't get parent clock for xbar\n");
-		ret = PTR_ERR(parent_clk);
-		goto err;
+		return PTR_ERR(parent_clk);
 	}
 
 	if (!(tegra_platform_is_unit_fpga() || tegra_platform_is_fpga())) {
 		ret = clk_set_parent(xbar->clk, xbar->clk_parent);
 		if (ret) {
 			dev_err(&pdev->dev, "Failed to set parent clock with pll_a_out0\n");
-			goto err;
+			return ret;
 		}
 	}
 
@@ -388,29 +376,14 @@ int tegra_xbar_probe(struct platform_device *pdev,
 	}
 	regcache_cache_only(xbar->regmap, true);
 
-	tegra_pd_add_device(&pdev->dev);
-
 	pm_runtime_enable(&pdev->dev);
-	if (!pm_runtime_enabled(&pdev->dev)) {
-		ret = tegra_xbar_runtime_resume(&pdev->dev);
-		if (ret)
-			goto err_pm_disable;
+	ret = soc_data->xbar_registration(pdev);
+	if (ret) {
+		pm_runtime_disable(&pdev->dev);
+		return ret;
 	}
 
-	ret = soc_data->xbar_registration(pdev);
-	if (ret == -EBUSY)
-		goto err_suspend;
-
 	return 0;
-
-err_suspend:
-	if (!pm_runtime_status_suspended(&pdev->dev))
-		tegra_xbar_runtime_suspend(&pdev->dev);
-err_pm_disable:
-	pm_runtime_disable(&pdev->dev);
-	tegra_pd_remove_device(&pdev->dev);
-err:
-	return ret;
 }
 EXPORT_SYMBOL_GPL(tegra_xbar_probe);
 MODULE_LICENSE("GPL");

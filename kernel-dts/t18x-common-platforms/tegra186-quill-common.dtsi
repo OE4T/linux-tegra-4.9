@@ -1,7 +1,7 @@
 /*
  * tegra186-quill-common.dtsi: Quill common dtsi.
  *
- * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2019, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -654,10 +654,6 @@
 #if TEGRA_AUDIO_BUS_DT_VERSION >= DT_VERSION_2
 	aconnect@2a41000 {
 #endif
-	adma@2930000 {
-		dma-channels = <10>;
-	};
-
 	ahub {
 		admaif@290f000 {
 			dma-buffer-size = <32768>, <32768>, <32768>, <32768>,

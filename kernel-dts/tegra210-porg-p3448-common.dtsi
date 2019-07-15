@@ -290,7 +290,6 @@
 
 	aconnect@702c0000 {
 		adma@702e2000 {
-			dma-channels = <10>;
 			status = "okay";
 		};
 

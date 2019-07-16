@@ -87,7 +87,7 @@ wrapper-files := $(filter-out $(header-files), $(wrapper-files))
 all-files     := $(header-files) $(genhdr-files) $(wrapper-files)
 define set_all_files_overlay
   oname := $(lastword $(subst /, ,$(overlay)))
-  all-files += header-files.$(oname)
+  all-files += $(header-files.$(oname))
 endef
 $(foreach overlay,$(KERNEL_OVERLAYS),$(eval $(value set_all_files_overlay)))
 output-files  := $(addprefix $(installdir)/, $(all-files))

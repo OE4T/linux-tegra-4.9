@@ -24,6 +24,8 @@
 /* Network link timeout 5 sec */
 #define LINK_TIMEOUT 5000
 
+#define TVNET_NAPI_WEIGHT	64
+
 #define RING_COUNT 256
 
 /* Allocate 100% extra desc to handle the drift between empty & full buffer */
@@ -182,6 +184,7 @@ struct dma_desc_cnt {
 
 struct tvnet_priv {
 	struct net_device *ndev;
+	struct napi_struct napi;
 	struct pci_dev *pdev;
 	void __iomem *mmio_base;
 	void __iomem *msix_tbl;
@@ -190,7 +193,6 @@ struct tvnet_priv {
 	struct ep_ring_buf ep_mem;
 	struct host_ring_buf host_mem;
 	struct work_struct ctrl_msg_work;
-	struct work_struct ep2h_msg_work;
 	struct work_struct alloc_buf_work;
 	struct list_head ep2h_empty_list;
 	/* To protect ep2h empty list */
@@ -624,10 +626,6 @@ static void tvnet_stop_tx_queue(struct tvnet_priv *tvnet)
 static void tvnet_stop_rx_work(struct tvnet_priv *tvnet)
 {
 	cancel_work_sync(&tvnet->alloc_buf_work);
-	/* Since the remote system tx queue is stopped, not expecting new
-	 * new interrupts, so no need to cancel data reprime work
-	 */
-	cancel_work_sync(&tvnet->ep2h_msg_work);
 }
 
 static void tvnet_clear_data_msg_counters(struct tvnet_priv *tvnet)
@@ -731,6 +729,7 @@ static int tvnet_open(struct net_device *ndev)
 	mutex_lock(&tvnet->link_state_lock);
 	if (tvnet->rx_link_state == DIR_LINK_STATE_DOWN)
 		tvnet_user_link_up_req(tvnet);
+	napi_enable(&tvnet->napi);
 	mutex_unlock(&tvnet->link_state_lock);
 
 	return 0;
@@ -742,6 +741,7 @@ static int tvnet_close(struct net_device *ndev)
 	int ret = 0;
 
 	mutex_lock(&tvnet->link_state_lock);
+	napi_disable(&tvnet->napi);
 	if (tvnet->rx_link_state == DIR_LINK_STATE_UP)
 		tvnet_user_link_down_req(tvnet);
 
@@ -977,10 +977,8 @@ static void process_ctrl_msg(struct work_struct *work)
 	}
 }
 
-static void process_ep2h_msg(struct work_struct *work)
+static int process_ep2h_msg(struct tvnet_priv *tvnet)
 {
-	struct tvnet_priv *tvnet =
-		container_of(work, struct tvnet_priv, ep2h_msg_work);
 	struct host_ring_buf *host_mem = &tvnet->host_mem;
 	struct host_own_cnt *host_cnt = host_mem->host_cnt;
 	struct ep_ring_buf *ep_mem = &tvnet->ep_mem;
@@ -989,8 +987,10 @@ static void process_ep2h_msg(struct work_struct *work)
 	struct device *d = &tvnet->pdev->dev;
 	struct ep2h_empty_list *ep2h_empty_ptr;
 	struct net_device *ndev = tvnet->ndev;
+	int count = 0;
 
-	while (tvnet_ivc_rd_available(ep_cnt, host_cnt, EP2H_FULL_BUF)) {
+	while ((count < TVNET_NAPI_WEIGHT) &&
+	       tvnet_ivc_rd_available(ep_cnt, host_cnt, EP2H_FULL_BUF)) {
 		struct sk_buff *skb;
 		u64 pcie_address;
 		u32 len;
@@ -1022,11 +1022,14 @@ static void process_ep2h_msg(struct work_struct *work)
 		skb = ep2h_empty_ptr->skb;
 		skb_put(skb, len);
 		skb->protocol = eth_type_trans(skb, ndev);
-		netif_rx(skb);
+		napi_gro_receive(&tvnet->napi, skb);
 
 		/* Free EP2H empty list element */
 		kfree(ep2h_empty_ptr);
+		count++;
 	}
+
+	return count;
 }
 
 static void alloc_ep2h_rx_buf(struct work_struct *work)
@@ -1074,10 +1077,27 @@ static irqreturn_t tvnet_irq_data(int irq, void *data)
 	struct ep_ring_buf *ep_mem = &tvnet->ep_mem;
 	struct ep_own_cnt *ep_cnt = ep_mem->ep_cnt;
 
-	if (tvnet_ivc_rd_available(ep_cnt, host_cnt, EP2H_FULL_BUF))
-		schedule_work(&tvnet->ep2h_msg_work);
+	if (tvnet_ivc_rd_available(ep_cnt, host_cnt, EP2H_FULL_BUF)) {
+		disable_irq_nosync(pci_irq_vector(tvnet->pdev, 1));
+		napi_schedule(&tvnet->napi);
+	}
 
 	return IRQ_HANDLED;
+}
+
+static int tvnet_poll(struct napi_struct *napi, int budget)
+{
+	struct tvnet_priv *tvnet = container_of(napi, struct tvnet_priv, napi);
+	int work_done;
+
+	work_done = process_ep2h_msg(tvnet);
+	if (work_done < budget) {
+		napi_complete(napi);
+		enable_irq(pci_irq_vector(tvnet->pdev, 1));
+		mmiowb();
+	}
+
+	return work_done;
 }
 
 static int tvnet_probe(struct pci_dev *pdev, const struct pci_device_id *pci_id)
@@ -1151,6 +1171,8 @@ static int tvnet_probe(struct pci_dev *pdev, const struct pci_device_id *pci_id)
 	/* Setup BAR0 meta data */
 	tvnet_setup_bar0_md(tvnet);
 
+	netif_napi_add(ndev, &tvnet->napi, tvnet_poll, TVNET_NAPI_WEIGHT);
+
 	ret = register_netdev(ndev);
 	if (ret) {
 		dev_err(&pdev->dev, "register_netdev() fail: %d\n", ret);
@@ -1190,7 +1212,6 @@ static int tvnet_probe(struct pci_dev *pdev, const struct pci_device_id *pci_id)
 #endif
 
 	INIT_WORK(&tvnet->ctrl_msg_work, process_ctrl_msg);
-	INIT_WORK(&tvnet->ep2h_msg_work, process_ep2h_msg);
 	INIT_WORK(&tvnet->alloc_buf_work, alloc_ep2h_rx_buf);
 	INIT_LIST_HEAD(&tvnet->ep2h_empty_list);
 	spin_lock_init(&tvnet->ep2h_empty_lock);
@@ -1204,6 +1225,7 @@ disable_msi:
 unreg_netdev:
 	unregister_netdev(ndev);
 pci_disable:
+	netif_napi_del(&tvnet->napi);
 	pci_disable_device(pdev);
 free_netdev:
 	free_netdev(ndev);

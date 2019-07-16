@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2020, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -894,8 +894,8 @@ static void pex_ep_event_hot_rst_done(struct tegra_pcie_dw_ep *pcie)
 
 static void pex_ep_event_bme_change(struct tegra_pcie_dw_ep *pcie)
 {
-	u32 val = 0, width = 0, speed = 0;
-	unsigned long freq;
+	u32 val = 0, speed = 0;
+	unsigned long freq, width = 0;
 
 	/* If EP doesn't advertise L1SS, just return */
 	val = readl(pcie->dbi_base + pcie->cfg_link_cap_l1sub);
@@ -932,8 +932,7 @@ static void pex_ep_event_bme_change(struct tegra_pcie_dw_ep *pcie)
 	/* Make EMC FLOOR freq request based on link width and speed */
 	val = readl(pcie->dbi_base + CFG_LINK_STATUS_CONTROL);
 	width = ((val >> 16) & PCI_EXP_LNKSTA_NLW) >> 4;
-	width = find_first_bit((const unsigned long *)&width,
-			       sizeof(width));
+	width = find_first_bit(&width, sizeof(width));
 	speed = ((val >> 16) & PCI_EXP_LNKSTA_CLS);
 	freq = pcie->dvfs_tbl[width][speed - 1];
 	dev_dbg(pcie->dev, "EMC Freq requested = %lu\n", freq);

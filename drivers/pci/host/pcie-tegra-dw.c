@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017 - 2019, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017 - 2020, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -2523,9 +2523,10 @@ static void tegra_pcie_dw_scan_bus(struct pcie_port *pp)
 	struct tegra_pcie_dw *pcie = to_tegra_pcie(pp);
 	struct resource_entry *win;
 	struct pci_dev *pdev = NULL, *ppdev = NULL;
-	u32 width = 0, speed = 0, data = 0, pos = 0;
+	u32 speed = 0, data = 0, pos = 0;
 	struct pci_bus *child;
 	unsigned long freq;
+	unsigned long width = 0;
 
 	if (!tegra_pcie_dw_link_up(pp))
 		return;
@@ -2534,7 +2535,7 @@ static void tegra_pcie_dw_scan_bus(struct pcie_port *pp)
 	data = readl(pp->dbi_base + CFG_LINK_STATUS_CONTROL);
 	width = ((data >> 16) & PCI_EXP_LNKSTA_NLW) >> 4;
 	/* Here 6 is size of PCIE_CAP_NEGO_LINK_WIDTH register field*/
-	width = find_first_bit((const unsigned long *)&width, 6);
+	width = find_first_bit(&width, 6);
 	speed = ((data >> 16) & PCI_EXP_LNKSTA_CLS);
 	freq = pcie->dvfs_tbl[width][speed - 1];
 	dev_dbg(pp->dev, "EMC Freq requested = %lu\n", freq);

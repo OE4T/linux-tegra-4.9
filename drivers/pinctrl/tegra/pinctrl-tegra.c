@@ -344,13 +344,6 @@ static int tegra_pinctrl_set_mux(struct pinctrl_dev *pctldev,
 	return 0;
 }
 
-static int tegra_pinctrl_gpio_request_enable(struct pinctrl_dev *pctldev,
-				struct pinctrl_gpio_range *range,
-				unsigned pin)
-{
-	return 0;
-}
-
 static int tegra_pinctrl_gpio_set_direction(struct pinctrl_dev *pctldev,
 	struct pinctrl_gpio_range *range, unsigned offset, bool input)
 {
@@ -465,29 +458,18 @@ static int tegra_pinctrl_gpio_restore_config(struct pinctrl_dev *pctldev,
 	return 0;
 }
 
-static void tegra_pinctrl_gpio_disable_free(struct pinctrl_dev *pctldev,
-	struct pinctrl_gpio_range *range, unsigned offset)
+static int tegra_pinctrl_gpio_request_enable(struct pinctrl_dev *pctldev,
+					     struct pinctrl_gpio_range *range,
+					     unsigned offset)
 {
-	struct tegra_pmx *pmx = pinctrl_dev_get_drvdata(pctldev);
-	unsigned group;
-	const unsigned *pins;
-	unsigned num_pins;
-	int ret;
+	return tegra_pinctrl_gpio_save_config(pctldev, range, offset);
+}
 
-	if (pmx->soc->is_gpio_reg_support) {
-		for (group = 0; group < pmx->soc->ngroups; ++group) {
-			ret = tegra_pinctrl_get_group_pins(pctldev, group,
-					&pins, &num_pins);
-			if (ret < 0 || num_pins != 1)
-				continue;
-			if (offset == pins[0])
-				break;
-		}
-		ret = tegra_pinconfig_group_set(pctldev, group,
-				TEGRA_PINCONF_PARAM_GPIO_MODE, 1);
-		if (ret != 0)
-			dev_err(pctldev->dev, "GPIO/SFIO bit cannot be set\n");
-	}
+static void tegra_pinctrl_gpio_disable_free(struct pinctrl_dev *pctldev,
+					    struct pinctrl_gpio_range *range,
+					    unsigned offset)
+{
+	tegra_pinctrl_gpio_restore_config(pctldev, range, offset);
 }
 
 static const struct pinmux_ops tegra_pinmux_ops = {

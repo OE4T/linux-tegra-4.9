@@ -1,7 +1,7 @@
 /*
  * MAXIM MAX77620 GPIO driver
  *
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2019, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -22,8 +22,6 @@ struct max77620_gpio {
 	struct regmap		*rmap;
 	struct device		*dev;
 	int			gpio_irq;
-	int			irq_base;
-	int			gpio_base;
 };
 
 static const struct regmap_irq max77620_gpio_irqs[] = {
@@ -268,30 +266,30 @@ static int max77620_gpio_probe(struct platform_device *pdev)
 	mgpio->gpio_chip.ngpio = MAX77620_GPIO_NR;
 	mgpio->gpio_chip.can_sleep = 1;
 	mgpio->gpio_chip.base = -1;
-	mgpio->irq_base = -1;
 #ifdef CONFIG_OF_GPIO
 	mgpio->gpio_chip.of_node = pdev->dev.parent->of_node;
 #endif
 
 	platform_set_drvdata(pdev, mgpio);
-
-	ret = devm_gpiochip_add_data(&pdev->dev, &mgpio->gpio_chip, mgpio);
-	if (ret < 0) {
-		dev_err(&pdev->dev, "gpio_init: Failed to add max77620_gpio\n");
-		return ret;
-	}
-
-	mgpio->gpio_base = mgpio->gpio_chip.base;
 	ret = devm_regmap_add_irq_chip(&pdev->dev, chip->rmap, mgpio->gpio_irq,
-				       IRQF_ONESHOT, mgpio->irq_base,
+				       IRQF_ONESHOT, -1,
 				       &max77620_gpio_irq_chip,
 				       &chip->gpio_irq_data);
 	if (ret < 0) {
 		dev_err(&pdev->dev, "Failed to add gpio irq_chip %d\n", ret);
-		return ret;
+		goto out;
 	}
 
-	return 0;
+	ret = devm_gpiochip_add_data(&pdev->dev, &mgpio->gpio_chip, mgpio);
+	if (ret < 0) {
+		dev_err(&pdev->dev, "gpio_init: Failed to add max77620_gpio\n");
+		goto out;
+	}
+
+
+	ret = 0;
+out:
+	return ret;
 }
 
 static const struct platform_device_id max77620_gpio_devtype[] = {

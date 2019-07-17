@@ -568,11 +568,17 @@ static int gk20a_ctrl_get_fbp_l2_masks(
 static int nvgpu_gpu_ioctl_l2_fb_ops(struct gk20a *g,
 		struct nvgpu_gpu_l2_fb_args *args)
 {
-	int err = 0;
+	int ret = 0;
 
 	if ((!args->l2_flush && !args->fb_flush) ||
 	    (!args->l2_flush && args->l2_invalidate))
 		return -EINVAL;
+
+	ret = gk20a_busy_try_noresume(g);
+
+	/* return if device is already powered off */
+	if (ret == 0)
+		return 0;
 
 	if (args->l2_flush)
 		g->ops.mm.l2_flush(g, args->l2_invalidate ? true : false);
@@ -580,7 +586,10 @@ static int nvgpu_gpu_ioctl_l2_fb_ops(struct gk20a *g,
 	if (args->fb_flush)
 		g->ops.mm.fb_flush(g);
 
-	return err;
+  	if (ret > 0)
+		gk20a_idle_nosuspend(g);
+
+	return 0;
 }
 
 static int nvgpu_gpu_ioctl_set_mmu_debug_mode(

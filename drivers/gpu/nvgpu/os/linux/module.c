@@ -109,6 +109,11 @@ void gk20a_busy_noresume(struct gk20a *g)
 	pm_runtime_get_noresume(dev_from_gk20a(g));
 }
 
+int gk20a_busy_try_noresume(struct gk20a *g)
+{
+	return pm_runtime_get_if_in_use(dev_from_gk20a(g));
+}
+
 /*
  * Check if the device can go busy.
  */

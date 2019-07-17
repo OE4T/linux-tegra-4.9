@@ -1747,6 +1747,7 @@ enum {
 #define GK20A_SIM_IORESOURCE_MEM 2
 
 void gk20a_busy_noresume(struct gk20a *g);
+int gk20a_busy_try_noresume(struct gk20a *g);
 void gk20a_idle_nosuspend(struct gk20a *g);
 int __must_check gk20a_busy(struct gk20a *g);
 void gk20a_idle(struct gk20a *g);

@@ -943,6 +943,11 @@ static int process_h2ep_msg(struct pci_epf_tvnet *tvnet)
 
 		/* Advance H2EP full buffer after search in local list */
 		tvnet_ivc_advance_rd(&tvnet->h2ep_full);
+		/*
+		 * If H2EP network queue is stopped due to lack of H2EP_FULL
+		 * queue, raising ctrl irq will help.
+		 */
+		pci_epc_raise_irq(epc, PCI_EPC_IRQ_MSIX, 0);
 
 #if ENABLE_DMA
 		dma_unmap_single(cdev, pcie_address, ndev->mtu,

@@ -862,6 +862,10 @@ static int process_ep2h_msg(struct tvnet_priv *tvnet)
 
 		/* Advance H2EP full buffer after search in local list */
 		tvnet_ivc_advance_rd(&tvnet->ep2h_full);
+		/* If EP2H network queue is stopped due to lack of EP2H_FULL
+		 * queue, raising ctrl irq will help.
+		 */
+		tvnet_raise_ep_ctrl_irq(tvnet);
 
 		dma_unmap_single(d, pcie_address, ndev->mtu + ETH_HLEN, DMA_FROM_DEVICE);
 		skb = ep2h_empty_ptr->skb;

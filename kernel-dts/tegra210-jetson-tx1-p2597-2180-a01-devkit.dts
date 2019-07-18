@@ -79,11 +79,6 @@
 	watchdog@60005100 {
 		status = "okay";
 	};
-	reserved-memory {
-		vpr-carveout {
-			     status = "disabled";
-		     };
-	};
 
 	nvdumper {
 		status = "disabled";

@@ -2022,7 +2022,7 @@ static struct snd_soc_dai_link
 		.name = "MIXER1 RX7",
 		.stream_name = "MIXER1 RX",
 		.cpu_dai_name = "MIXER1-7",
-		.codec_dai_name = "RX6",
+		.codec_dai_name = "RX7",
 		.cpu_name = "tegra210-axbar",
 		.codec_name = "tegra210-mixer",
 		.params = &default_link_params,

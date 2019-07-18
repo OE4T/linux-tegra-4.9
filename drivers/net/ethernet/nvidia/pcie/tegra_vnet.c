@@ -123,6 +123,11 @@ struct data_msg {
 	} u;
 };
 
+struct tvnet_counter {
+	u32 *rd;
+	u32 *wr;
+};
+
 struct ep_own_cnt {
 	u32 h2ep_ctrl_rd_cnt;
 	u32 ep2h_ctrl_wr_cnt;
@@ -207,35 +212,21 @@ struct tvnet_priv {
 	/* To synchronize network link state machine*/
 	struct mutex link_state_lock;
 	wait_queue_head_t link_state_wq;
+
+	struct tvnet_counter h2ep_ctrl;
+	struct tvnet_counter ep2h_ctrl;
+	struct tvnet_counter h2ep_empty;
+	struct tvnet_counter h2ep_full;
+	struct tvnet_counter ep2h_empty;
+	struct tvnet_counter ep2h_full;
 };
 
-static inline bool tvnet_ivc_empty(struct ep_own_cnt *ep_cnt,
-				   struct host_own_cnt *host_cnt,
-				   enum ring_buf ring_buf)
+static inline bool tvnet_ivc_empty(struct tvnet_counter *counter)
 {
 	u32 rd, wr;
 
-	if (ring_buf == H2EP_CTRL) {
-		wr = READ_ONCE(host_cnt->h2ep_ctrl_wr_cnt);
-		rd = READ_ONCE(ep_cnt->h2ep_ctrl_rd_cnt);
-	} else if (ring_buf == EP2H_CTRL) {
-		wr = READ_ONCE(ep_cnt->ep2h_ctrl_wr_cnt);
-		rd = READ_ONCE(host_cnt->ep2h_ctrl_rd_cnt);
-	} else if (ring_buf == EP2H_EMPTY_BUF) {
-		wr = READ_ONCE(host_cnt->ep2h_empty_wr_cnt);
-		rd = READ_ONCE(ep_cnt->ep2h_empty_rd_cnt);
-	} else if (ring_buf == EP2H_FULL_BUF) {
-		wr = READ_ONCE(ep_cnt->ep2h_full_wr_cnt);
-		rd = READ_ONCE(host_cnt->ep2h_full_rd_cnt);
-	} else if (ring_buf == H2EP_FULL_BUF) {
-		wr = READ_ONCE(host_cnt->h2ep_full_wr_cnt);
-		rd = READ_ONCE(ep_cnt->h2ep_full_rd_cnt);
-	} else if (ring_buf == H2EP_EMPTY_BUF) {
-		wr = READ_ONCE(ep_cnt->h2ep_empty_wr_cnt);
-		rd = READ_ONCE(host_cnt->h2ep_empty_rd_cnt);
-	} else {
-		pr_err("%s: invalid query: %d\n", __func__, ring_buf);
-	}
+	wr = READ_ONCE(*counter->wr);
+	rd = READ_ONCE(*counter->rd);
 
 	if (wr - rd > RING_COUNT)
 		return true;
@@ -243,199 +234,58 @@ static inline bool tvnet_ivc_empty(struct ep_own_cnt *ep_cnt,
 	return wr == rd;
 }
 
-static inline bool tvnet_ivc_full(struct ep_own_cnt *ep_cnt,
-				  struct host_own_cnt *host_cnt,
-				  enum ring_buf ring_buf)
+static inline bool tvnet_ivc_full(struct tvnet_counter *counter)
 {
 	u32 rd, wr;
 
-	if (ring_buf == H2EP_CTRL) {
-		wr = READ_ONCE(host_cnt->h2ep_ctrl_wr_cnt);
-		rd = READ_ONCE(ep_cnt->h2ep_ctrl_rd_cnt);
-	} else if (ring_buf == EP2H_CTRL) {
-		wr = READ_ONCE(ep_cnt->ep2h_ctrl_wr_cnt);
-		rd = READ_ONCE(host_cnt->ep2h_ctrl_rd_cnt);
-	} else if (ring_buf == EP2H_EMPTY_BUF) {
-		wr = READ_ONCE(host_cnt->ep2h_empty_wr_cnt);
-		rd = READ_ONCE(ep_cnt->ep2h_empty_rd_cnt);
-	} else if (ring_buf == EP2H_FULL_BUF) {
-		wr = READ_ONCE(ep_cnt->ep2h_full_wr_cnt);
-		rd = READ_ONCE(host_cnt->ep2h_full_rd_cnt);
-	} else if (ring_buf == H2EP_FULL_BUF) {
-		wr = READ_ONCE(host_cnt->h2ep_full_wr_cnt);
-		rd = READ_ONCE(ep_cnt->h2ep_full_rd_cnt);
-	} else if (ring_buf == H2EP_EMPTY_BUF) {
-		wr = READ_ONCE(ep_cnt->h2ep_empty_wr_cnt);
-		rd = READ_ONCE(host_cnt->h2ep_empty_rd_cnt);
-	} else {
-		pr_err("%s: invalid query: %d\n", __func__, ring_buf);
-	}
+	wr = READ_ONCE(*counter->wr);
+	rd = READ_ONCE(*counter->rd);
 
 	return wr - rd >= RING_COUNT;
 }
 
-static inline u32 tvnet_ivc_rd_available(struct ep_own_cnt *ep_cnt,
-					 struct host_own_cnt *host_cnt,
-					 enum ring_buf ring_buf)
+static inline u32 tvnet_ivc_rd_available(struct tvnet_counter *counter)
 {
 	u32 rd, wr;
 
-	if (ring_buf == H2EP_CTRL) {
-		wr = READ_ONCE(host_cnt->h2ep_ctrl_wr_cnt);
-		rd = READ_ONCE(ep_cnt->h2ep_ctrl_rd_cnt);
-	} else if (ring_buf == EP2H_CTRL) {
-		wr = READ_ONCE(ep_cnt->ep2h_ctrl_wr_cnt);
-		rd = READ_ONCE(host_cnt->ep2h_ctrl_rd_cnt);
-	} else if (ring_buf == EP2H_EMPTY_BUF) {
-		wr = READ_ONCE(host_cnt->ep2h_empty_wr_cnt);
-		rd = READ_ONCE(ep_cnt->ep2h_empty_rd_cnt);
-	} else if (ring_buf == EP2H_FULL_BUF) {
-		wr = READ_ONCE(ep_cnt->ep2h_full_wr_cnt);
-		rd = READ_ONCE(host_cnt->ep2h_full_rd_cnt);
-	} else if (ring_buf == H2EP_FULL_BUF) {
-		wr = READ_ONCE(host_cnt->h2ep_full_wr_cnt);
-		rd = READ_ONCE(ep_cnt->h2ep_full_rd_cnt);
-	} else if (ring_buf == H2EP_EMPTY_BUF) {
-		wr = READ_ONCE(ep_cnt->h2ep_empty_wr_cnt);
-		rd = READ_ONCE(host_cnt->h2ep_empty_rd_cnt);
-	} else {
-		pr_err("%s: invalid query: %d\n", __func__, ring_buf);
-	}
+	wr = READ_ONCE(*counter->wr);
+	rd = READ_ONCE(*counter->rd);
 
 	return wr - rd;
 }
 
-static inline u32 tvnet_ivc_wr_available(struct ep_own_cnt *ep_cnt,
-					 struct host_own_cnt *host_cnt,
-					 enum ring_buf ring_buf)
+static inline u32 tvnet_ivc_wr_available(struct tvnet_counter *counter)
 {
 	u32 rd, wr;
 
-	if (ring_buf == H2EP_CTRL) {
-		wr = READ_ONCE(host_cnt->h2ep_ctrl_wr_cnt);
-		rd = READ_ONCE(ep_cnt->h2ep_ctrl_rd_cnt);
-	} else if (ring_buf == EP2H_CTRL) {
-		wr = READ_ONCE(ep_cnt->ep2h_ctrl_wr_cnt);
-		rd = READ_ONCE(host_cnt->ep2h_ctrl_rd_cnt);
-	} else if (ring_buf == EP2H_EMPTY_BUF) {
-		wr = READ_ONCE(host_cnt->ep2h_empty_wr_cnt);
-		rd = READ_ONCE(ep_cnt->ep2h_empty_rd_cnt);
-	} else if (ring_buf == EP2H_FULL_BUF) {
-		wr = READ_ONCE(ep_cnt->ep2h_full_wr_cnt);
-		rd = READ_ONCE(host_cnt->ep2h_full_rd_cnt);
-	} else if (ring_buf == H2EP_FULL_BUF) {
-		wr = READ_ONCE(host_cnt->h2ep_full_wr_cnt);
-		rd = READ_ONCE(ep_cnt->h2ep_full_rd_cnt);
-	} else if (ring_buf == H2EP_EMPTY_BUF) {
-		wr = READ_ONCE(ep_cnt->h2ep_empty_wr_cnt);
-		rd = READ_ONCE(host_cnt->h2ep_empty_rd_cnt);
-	} else {
-		pr_err("%s: invalid query: %d\n", __func__, ring_buf);
-	}
+	wr = READ_ONCE(*counter->wr);
+	rd = READ_ONCE(*counter->rd);
 
 	return (RING_COUNT - (wr - rd));
 }
 
-static inline void tvnet_ivc_advance_wr(struct ep_own_cnt *ep_cnt,
-					struct host_own_cnt *host_cnt,
-					enum ring_buf ring_buf)
+static inline void tvnet_ivc_advance_wr(struct tvnet_counter *counter)
 {
-	if (ring_buf == H2EP_CTRL) {
-		WRITE_ONCE(host_cnt->h2ep_ctrl_wr_cnt,
-			   READ_ONCE(host_cnt->h2ep_ctrl_wr_cnt) + 1);
-	} else if (ring_buf == EP2H_CTRL) {
-		WRITE_ONCE(ep_cnt->ep2h_ctrl_wr_cnt,
-			   READ_ONCE(ep_cnt->ep2h_ctrl_wr_cnt) + 1);
-	} else if (ring_buf == EP2H_EMPTY_BUF) {
-		WRITE_ONCE(host_cnt->ep2h_empty_wr_cnt,
-			   READ_ONCE(host_cnt->ep2h_empty_wr_cnt) + 1);
-	} else if (ring_buf == EP2H_FULL_BUF) {
-		WRITE_ONCE(ep_cnt->ep2h_full_wr_cnt,
-			   READ_ONCE(ep_cnt->ep2h_full_wr_cnt) + 1);
-	} else if (ring_buf == H2EP_FULL_BUF) {
-		WRITE_ONCE(host_cnt->h2ep_full_wr_cnt,
-			   READ_ONCE(host_cnt->h2ep_full_wr_cnt) + 1);
-	} else if (ring_buf == H2EP_EMPTY_BUF) {
-		WRITE_ONCE(ep_cnt->h2ep_empty_wr_cnt,
-			   READ_ONCE(ep_cnt->h2ep_empty_wr_cnt) + 1);
-	} else {
-		pr_err("%s: invalid query: %d\n", __func__, ring_buf);
-	}
+	WRITE_ONCE(*counter->wr, READ_ONCE(*counter->wr) + 1);
+	smp_mb();
+}
+
+static inline void tvnet_ivc_advance_rd(struct tvnet_counter *counter)
+{
+	WRITE_ONCE(*counter->rd, READ_ONCE(*counter->rd) + 1);
+
 	/* BAR0 mmio address is wc mem, add mb to make sure cnts are updated */
 	smp_mb();
 }
 
-static inline void tvnet_ivc_advance_rd(struct ep_own_cnt *ep_cnt,
-					struct host_own_cnt *host_cnt,
-					enum ring_buf ring_buf)
+static inline u32 tvnet_ivc_get_wr_cnt(struct tvnet_counter *counter)
 {
-	if (ring_buf == H2EP_CTRL) {
-		WRITE_ONCE(ep_cnt->h2ep_ctrl_rd_cnt,
-			   READ_ONCE(ep_cnt->h2ep_ctrl_rd_cnt) + 1);
-	} else if (ring_buf == EP2H_CTRL) {
-		WRITE_ONCE(host_cnt->ep2h_ctrl_rd_cnt,
-			   READ_ONCE(host_cnt->ep2h_ctrl_rd_cnt) + 1);
-	} else if (ring_buf == EP2H_EMPTY_BUF) {
-		WRITE_ONCE(ep_cnt->ep2h_empty_rd_cnt,
-			   READ_ONCE(ep_cnt->ep2h_empty_rd_cnt) + 1);
-	} else if (ring_buf == EP2H_FULL_BUF) {
-		WRITE_ONCE(host_cnt->ep2h_full_rd_cnt,
-			   READ_ONCE(host_cnt->ep2h_full_rd_cnt) + 1);
-	} else if (ring_buf == H2EP_FULL_BUF) {
-		WRITE_ONCE(ep_cnt->h2ep_full_rd_cnt,
-			   READ_ONCE(ep_cnt->h2ep_full_rd_cnt) + 1);
-	} else if (ring_buf == H2EP_EMPTY_BUF) {
-		WRITE_ONCE(host_cnt->h2ep_empty_rd_cnt,
-			   READ_ONCE(host_cnt->h2ep_empty_rd_cnt) + 1);
-	} else {
-		pr_err("%s: invalid query: %d\n", __func__, ring_buf);
-	}
-	/* BAR0 mmio address is wc mem, add mb to make sure cnts are updated */
-	smp_mb();
+	return READ_ONCE(*counter->wr);
 }
 
-static inline u32 tvnet_ivc_get_wr_cnt(struct ep_own_cnt *ep_cnt,
-				       struct host_own_cnt *host_cnt,
-				       enum ring_buf ring_buf)
+static inline u32 tvnet_ivc_get_rd_cnt(struct tvnet_counter *counter)
 {
-	if (ring_buf == H2EP_CTRL) {
-		return READ_ONCE(host_cnt->h2ep_ctrl_wr_cnt);
-	} else if (ring_buf == EP2H_CTRL) {
-		return READ_ONCE(ep_cnt->ep2h_ctrl_wr_cnt);
-	} else if (ring_buf == EP2H_EMPTY_BUF) {
-		return READ_ONCE(host_cnt->ep2h_empty_wr_cnt);
-	} else if (ring_buf == EP2H_FULL_BUF) {
-		return READ_ONCE(ep_cnt->ep2h_full_wr_cnt);
-	} else if (ring_buf == H2EP_FULL_BUF) {
-		return READ_ONCE(host_cnt->h2ep_full_wr_cnt);
-	} else if (ring_buf == H2EP_EMPTY_BUF) {
-		return READ_ONCE(ep_cnt->h2ep_empty_wr_cnt);
-	} else {
-		pr_err("%s: invalid query: %d\n", __func__, ring_buf);
-		return -EINVAL;
-	}
-}
-
-static inline u32 tvnet_ivc_get_rd_cnt(struct ep_own_cnt *ep_cnt,
-				       struct host_own_cnt *host_cnt,
-				       enum ring_buf ring_buf)
-{
-	if (ring_buf == H2EP_CTRL) {
-		return READ_ONCE(ep_cnt->h2ep_ctrl_rd_cnt);
-	} else if (ring_buf == EP2H_CTRL) {
-		return READ_ONCE(host_cnt->ep2h_ctrl_rd_cnt);
-	} else if (ring_buf == EP2H_EMPTY_BUF) {
-		return READ_ONCE(ep_cnt->ep2h_empty_rd_cnt);
-	} else if (ring_buf == EP2H_FULL_BUF) {
-		return READ_ONCE(host_cnt->ep2h_full_rd_cnt);
-	} else if (ring_buf == H2EP_FULL_BUF) {
-		return READ_ONCE(ep_cnt->h2ep_full_rd_cnt);
-	} else if (ring_buf == H2EP_EMPTY_BUF) {
-		return READ_ONCE(host_cnt->h2ep_empty_rd_cnt);
-	} else {
-		pr_err("%s: invalid query: %d\n", __func__, ring_buf);
-		return -EINVAL;
-	}
+	return READ_ONCE(*counter->rd);
 }
 
 #if ENABLE_DMA
@@ -492,47 +342,41 @@ static void tvnet_raise_ep_data_irq(struct tvnet_priv *tvnet)
 
 static void tvnet_read_ctrl_msg(struct tvnet_priv *tvnet, struct ctrl_msg *msg)
 {
-	struct host_ring_buf *host_mem = &tvnet->host_mem;
-	struct host_own_cnt *host_cnt = host_mem->host_cnt;
 	struct ep_ring_buf *ep_mem = &tvnet->ep_mem;
-	struct ep_own_cnt *ep_cnt = ep_mem->ep_cnt;
 	struct ctrl_msg *ctrl_msg = ep_mem->ep2h_ctrl_msgs;
 	u32 idx;
 
-	if (tvnet_ivc_empty(ep_cnt, host_cnt, EP2H_CTRL)) {
+	if (tvnet_ivc_empty(&tvnet->ep2h_ctrl)) {
 		pr_debug("%s: EP2H ctrl ring is empty\n", __func__);
 		return;
 	}
 
-	idx = tvnet_ivc_get_rd_cnt(ep_cnt, host_cnt, EP2H_CTRL) % RING_COUNT;
+	idx = tvnet_ivc_get_rd_cnt(&tvnet->ep2h_ctrl) % RING_COUNT;
 	memcpy(msg, &ctrl_msg[idx], sizeof(*msg));
-	tvnet_ivc_advance_rd(ep_cnt, host_cnt, EP2H_CTRL);
+	tvnet_ivc_advance_rd(&tvnet->ep2h_ctrl);
 }
 
 /* TODO Handle error case */
 static int tvnet_write_ctrl_msg(struct tvnet_priv *tvnet, struct ctrl_msg *msg)
 {
 	struct host_ring_buf *host_mem = &tvnet->host_mem;
-	struct host_own_cnt *host_cnt = host_mem->host_cnt;
-	struct ep_ring_buf *ep_mem = &tvnet->ep_mem;
-	struct ep_own_cnt *ep_cnt = ep_mem->ep_cnt;
 	struct ctrl_msg *ctrl_msg = host_mem->h2ep_ctrl_msgs;
 	u32 idx;
 
-	if (tvnet_ivc_full(ep_cnt, host_cnt, H2EP_CTRL)) {
+	if (tvnet_ivc_full(&tvnet->h2ep_ctrl)) {
 		/* Raise an interrupt to let host process EP2H ring */
 		tvnet_raise_ep_ctrl_irq(tvnet);
 		pr_info("%s: EP2H ctrl ring is full\n", __func__);
 		return -EAGAIN;
 	}
 
-	idx = tvnet_ivc_get_wr_cnt(ep_cnt, host_cnt, H2EP_CTRL) % RING_COUNT;
+	idx = tvnet_ivc_get_wr_cnt(&tvnet->h2ep_ctrl) % RING_COUNT;
 	memcpy(&ctrl_msg[idx], msg, sizeof(*msg));
 	/* BAR0 mmio address is wc mem, add mb to make sure ctrl msg is written
 	 * before updating counters.
 	 */
 	smp_mb();
-	tvnet_ivc_advance_wr(ep_cnt, host_cnt, H2EP_CTRL);
+	tvnet_ivc_advance_wr(&tvnet->h2ep_ctrl);
 	tvnet_raise_ep_ctrl_irq(tvnet);
 
 	return 0;
@@ -542,15 +386,12 @@ static void tvnet_alloc_empty_buffers(struct tvnet_priv *tvnet)
 {
 	struct net_device *ndev = tvnet->ndev;
 	struct host_ring_buf *host_mem = &tvnet->host_mem;
-	struct host_own_cnt *host_cnt = host_mem->host_cnt;
-	struct ep_ring_buf *ep_mem = &tvnet->ep_mem;
-	struct ep_own_cnt *ep_cnt = ep_mem->ep_cnt;
 	struct data_msg *ep2h_empty_msg = host_mem->ep2h_empty_msgs;
 	struct ep2h_empty_list *ep2h_empty_ptr;
 	struct device *d = &tvnet->pdev->dev;
 	unsigned long flags;
 
-	while (!tvnet_ivc_full(ep_cnt, host_cnt, EP2H_EMPTY_BUF)) {
+	while (!tvnet_ivc_full(&tvnet->ep2h_empty)) {
 		struct sk_buff *skb;
 		dma_addr_t iova;
 		int len = ndev->mtu + ETH_HLEN;
@@ -581,7 +422,7 @@ static void tvnet_alloc_empty_buffers(struct tvnet_priv *tvnet)
 		list_add_tail(&ep2h_empty_ptr->list, &tvnet->ep2h_empty_list);
 		spin_unlock_irqrestore(&tvnet->ep2h_empty_lock, flags);
 
-		idx = tvnet_ivc_get_wr_cnt(ep_cnt, host_cnt, EP2H_EMPTY_BUF) %
+		idx = tvnet_ivc_get_wr_cnt(&tvnet->ep2h_empty) %
 					RING_COUNT;
 		ep2h_empty_msg[idx].u.empty_buffer.pcie_address = iova;
 		ep2h_empty_msg[idx].u.empty_buffer.buffer_len = len;
@@ -589,7 +430,7 @@ static void tvnet_alloc_empty_buffers(struct tvnet_priv *tvnet)
 		 * buffers are updated before updating counters.
 		 */
 		smp_mb();
-		tvnet_ivc_advance_wr(ep_cnt, host_cnt, EP2H_EMPTY_BUF);
+		tvnet_ivc_advance_wr(&tvnet->ep2h_empty);
 
 		tvnet_raise_ep_ctrl_irq(tvnet);
 	}
@@ -766,11 +607,9 @@ static netdev_tx_t tvnet_start_xmit(struct sk_buff *skb,
 {
 	struct tvnet_priv *tvnet = netdev_priv(ndev);
 	struct host_ring_buf *host_mem = &tvnet->host_mem;
-	struct host_own_cnt *host_cnt = host_mem->host_cnt;
-	struct ep_ring_buf *ep_mem = &tvnet->ep_mem;
-	struct ep_own_cnt *ep_cnt = ep_mem->ep_cnt;
 	struct data_msg *h2ep_full_msg = host_mem->h2ep_full_msgs;
 	struct skb_shared_info *info = skb_shinfo(skb);
+	struct ep_ring_buf *ep_mem = &tvnet->ep_mem;
 	struct data_msg *h2ep_empty_msg = ep_mem->h2ep_empty_msgs;
 	struct device *d = &tvnet->pdev->dev;
 #if ENABLE_DMA
@@ -791,7 +630,7 @@ static netdev_tx_t tvnet_start_xmit(struct sk_buff *skb,
 	WARN_ON(info->nr_frags);
 
 	/* Check if H2EP_EMPTY_BUF available to read */
-	if (!tvnet_ivc_rd_available(ep_cnt, host_cnt, H2EP_EMPTY_BUF)) {
+	if (!tvnet_ivc_rd_available(&tvnet->h2ep_empty)) {
 		tvnet_raise_ep_ctrl_irq(tvnet);
 		pr_debug("%s: No H2EP empty msg, stop tx\n", __func__);
 		netif_stop_queue(ndev);
@@ -799,7 +638,7 @@ static netdev_tx_t tvnet_start_xmit(struct sk_buff *skb,
 	}
 
 	/* Check if H2EP_FULL_BUF available to write */
-	if (tvnet_ivc_full(ep_cnt, host_cnt, H2EP_FULL_BUF)) {
+	if (tvnet_ivc_full(&tvnet->h2ep_full)) {
 		tvnet_raise_ep_ctrl_irq(tvnet);
 		pr_debug("%s: No H2EP full buf, stop tx\n", __func__);
 		netif_stop_queue(ndev);
@@ -825,14 +664,14 @@ static netdev_tx_t tvnet_start_xmit(struct sk_buff *skb,
 	}
 
 	/* Get H2EP empty msg */
-	rd_idx = tvnet_ivc_get_rd_cnt(ep_cnt, host_cnt, H2EP_EMPTY_BUF) %
+	rd_idx = tvnet_ivc_get_rd_cnt(&tvnet->h2ep_empty) %
 				RING_COUNT;
 	dst_iova = h2ep_empty_msg[rd_idx].u.empty_buffer.pcie_address;
 	dst_virt = tvnet->mmio_base + (dst_iova - tvnet->bar_md->bar0_base_phy);
 	/* Advance read count after all failure cases complated, to avoid
 	 * dangling buffer at endpoint.
 	 */
-	tvnet_ivc_advance_rd(ep_cnt, host_cnt, H2EP_EMPTY_BUF);
+	tvnet_ivc_advance_rd(&tvnet->h2ep_empty);
 	/* Raise an interrupt to let EP populate H2EP_EMPTY_BUF ring */
 	tvnet_raise_ep_ctrl_irq(tvnet);
 
@@ -902,7 +741,7 @@ static netdev_tx_t tvnet_start_xmit(struct sk_buff *skb,
 #endif
 
 	/* Push dst to H2EP full ring */
-	wr_idx = tvnet_ivc_get_wr_cnt(ep_cnt, host_cnt, H2EP_FULL_BUF) %
+	wr_idx = tvnet_ivc_get_wr_cnt(&tvnet->h2ep_full) %
 				RING_COUNT;
 	h2ep_full_msg[wr_idx].u.full_buffer.packet_size = len;
 	h2ep_full_msg[wr_idx].u.full_buffer.pcie_address = dst_iova;
@@ -911,7 +750,7 @@ static netdev_tx_t tvnet_start_xmit(struct sk_buff *skb,
 	 * buffer is written before updating counters.
 	 */
 	smp_mb();
-	tvnet_ivc_advance_wr(ep_cnt, host_cnt, H2EP_FULL_BUF);
+	tvnet_ivc_advance_wr(&tvnet->h2ep_full);
 	tvnet_raise_ep_data_irq(tvnet);
 
 	/* Free skb */
@@ -954,19 +793,28 @@ static void tvnet_setup_bar0_md(struct tvnet_priv *tvnet)
 
 	tvnet->dma_desc = (struct tvnet_dma_desc *)(tvnet->mmio_base +
 					tvnet->bar_md->host_dma_offset);
+
+	tvnet->h2ep_ctrl.rd = &ep_mem->ep_cnt->h2ep_ctrl_rd_cnt;
+	tvnet->h2ep_ctrl.wr = &host_mem->host_cnt->h2ep_ctrl_wr_cnt;
+	tvnet->ep2h_ctrl.rd = &host_mem->host_cnt->ep2h_ctrl_rd_cnt;
+	tvnet->ep2h_ctrl.wr = &ep_mem->ep_cnt->ep2h_ctrl_wr_cnt;
+	tvnet->h2ep_empty.rd = &host_mem->host_cnt->h2ep_empty_rd_cnt;
+	tvnet->h2ep_empty.wr = &ep_mem->ep_cnt->h2ep_empty_wr_cnt;
+	tvnet->h2ep_full.rd = &ep_mem->ep_cnt->h2ep_full_rd_cnt;
+	tvnet->h2ep_full.wr = &host_mem->host_cnt->h2ep_full_wr_cnt;
+	tvnet->ep2h_empty.rd = &ep_mem->ep_cnt->ep2h_empty_rd_cnt;
+	tvnet->ep2h_empty.wr = &host_mem->host_cnt->ep2h_empty_wr_cnt;
+	tvnet->ep2h_full.rd = &host_mem->host_cnt->ep2h_full_rd_cnt;
+	tvnet->ep2h_full.wr = &ep_mem->ep_cnt->ep2h_full_wr_cnt;
 }
 
 static void process_ctrl_msg(struct work_struct *work)
 {
 	struct tvnet_priv *tvnet =
 		container_of(work, struct tvnet_priv, ctrl_msg_work);
-	struct host_ring_buf *host_mem = &tvnet->host_mem;
-	struct host_own_cnt *host_cnt = host_mem->host_cnt;
-	struct ep_ring_buf *ep_mem = &tvnet->ep_mem;
-	struct ep_own_cnt *ep_cnt = ep_mem->ep_cnt;
 	struct ctrl_msg msg;
 
-	while (tvnet_ivc_rd_available(ep_cnt, host_cnt, EP2H_CTRL)) {
+	while (tvnet_ivc_rd_available(&tvnet->ep2h_ctrl)) {
 		tvnet_read_ctrl_msg(tvnet, &msg);
 		if (msg.msg_id == CTRL_MSG_LINK_UP)
 			tvnet_rcv_link_up_msg(tvnet);
@@ -979,10 +827,7 @@ static void process_ctrl_msg(struct work_struct *work)
 
 static int process_ep2h_msg(struct tvnet_priv *tvnet)
 {
-	struct host_ring_buf *host_mem = &tvnet->host_mem;
-	struct host_own_cnt *host_cnt = host_mem->host_cnt;
 	struct ep_ring_buf *ep_mem = &tvnet->ep_mem;
-	struct ep_own_cnt *ep_cnt = ep_mem->ep_cnt;
 	struct data_msg *data_msg = ep_mem->ep2h_full_msgs;
 	struct device *d = &tvnet->pdev->dev;
 	struct ep2h_empty_list *ep2h_empty_ptr;
@@ -990,7 +835,7 @@ static int process_ep2h_msg(struct tvnet_priv *tvnet)
 	int count = 0;
 
 	while ((count < TVNET_NAPI_WEIGHT) &&
-	       tvnet_ivc_rd_available(ep_cnt, host_cnt, EP2H_FULL_BUF)) {
+	       tvnet_ivc_rd_available(&tvnet->ep2h_full)) {
 		struct sk_buff *skb;
 		u64 pcie_address;
 		u32 len;
@@ -998,7 +843,7 @@ static int process_ep2h_msg(struct tvnet_priv *tvnet)
 		unsigned long flags;
 
 		/* Read EP2H full msg */
-		idx = tvnet_ivc_get_rd_cnt(ep_cnt, host_cnt, EP2H_FULL_BUF) %
+		idx = tvnet_ivc_get_rd_cnt(&tvnet->ep2h_full) %
 					RING_COUNT;
 		len = data_msg[idx].u.full_buffer.packet_size;
 		pcie_address = data_msg[idx].u.full_buffer.pcie_address;
@@ -1016,7 +861,7 @@ static int process_ep2h_msg(struct tvnet_priv *tvnet)
 		spin_unlock_irqrestore(&tvnet->ep2h_empty_lock, flags);
 
 		/* Advance H2EP full buffer after search in local list */
-		tvnet_ivc_advance_rd(ep_cnt, host_cnt, EP2H_FULL_BUF);
+		tvnet_ivc_advance_rd(&tvnet->ep2h_full);
 
 		dma_unmap_single(d, pcie_address, ndev->mtu + ETH_HLEN, DMA_FROM_DEVICE);
 		skb = ep2h_empty_ptr->skb;
@@ -1045,21 +890,17 @@ static irqreturn_t tvnet_irq_ctrl(int irq, void *data)
 {
 	struct net_device *ndev = data;
 	struct tvnet_priv *tvnet = netdev_priv(ndev);
-	struct host_ring_buf *host_mem = &tvnet->host_mem;
-	struct host_own_cnt *host_cnt = host_mem->host_cnt;
-	struct ep_ring_buf *ep_mem = &tvnet->ep_mem;
-	struct ep_own_cnt *ep_cnt = ep_mem->ep_cnt;
 
-	if (tvnet_ivc_rd_available(ep_cnt, host_cnt, EP2H_CTRL))
+	if (tvnet_ivc_rd_available(&tvnet->ep2h_ctrl))
 		schedule_work(&tvnet->ctrl_msg_work);
 
-	if (!tvnet_ivc_full(ep_cnt, host_cnt, EP2H_EMPTY_BUF))
+	if (!tvnet_ivc_full(&tvnet->ep2h_empty))
 		schedule_work(&tvnet->alloc_buf_work);
 
 	if (netif_queue_stopped(ndev)) {
 		if ((tvnet->os_link_state == OS_LINK_STATE_UP) &&
-		    tvnet_ivc_rd_available(ep_cnt, host_cnt, H2EP_EMPTY_BUF) &&
-		    !tvnet_ivc_full(ep_cnt, host_cnt, H2EP_FULL_BUF)) {
+		    tvnet_ivc_rd_available(&tvnet->h2ep_empty) &&
+		    !tvnet_ivc_full(&tvnet->h2ep_full)) {
 			pr_debug("%s: wake net tx queue\n", __func__);
 			netif_wake_queue(ndev);
 		}
@@ -1072,12 +913,8 @@ static irqreturn_t tvnet_irq_data(int irq, void *data)
 {
 	struct net_device *ndev = data;
 	struct tvnet_priv *tvnet = netdev_priv(ndev);
-	struct host_ring_buf *host_mem = &tvnet->host_mem;
-	struct host_own_cnt *host_cnt = host_mem->host_cnt;
-	struct ep_ring_buf *ep_mem = &tvnet->ep_mem;
-	struct ep_own_cnt *ep_cnt = ep_mem->ep_cnt;
 
-	if (tvnet_ivc_rd_available(ep_cnt, host_cnt, EP2H_FULL_BUF)) {
+	if (tvnet_ivc_rd_available(&tvnet->ep2h_full)) {
 		disable_irq_nosync(pci_irq_vector(tvnet->pdev, 1));
 		napi_schedule(&tvnet->napi);
 	}
@@ -1091,6 +928,7 @@ static int tvnet_poll(struct napi_struct *napi, int budget)
 	int work_done;
 
 	work_done = process_ep2h_msg(tvnet);
+	trace_printk("work_done: %d budget: %d\n", work_done, budget);
 	if (work_done < budget) {
 		napi_complete(napi);
 		enable_irq(pci_irq_vector(tvnet->pdev, 1));

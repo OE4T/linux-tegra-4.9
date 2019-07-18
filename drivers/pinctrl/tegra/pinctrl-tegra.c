@@ -1,7 +1,7 @@
 /*
  * Driver for the NVIDIA Tegra pinmux
  *
- * Copyright (c) 2011-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2019, NVIDIA CORPORATION.  All rights reserved.
  *
  * Derived from code:
  * Copyright (C) 2010 Google, Inc.
@@ -348,10 +348,6 @@ static int tegra_pinctrl_gpio_request_enable(struct pinctrl_dev *pctldev,
 				struct pinctrl_gpio_range *range,
 				unsigned pin)
 {
-	struct tegra_pmx *pmx = pinctrl_dev_get_drvdata(pctldev);
-
-	if (pmx->soc->gpio_request_enable)
-		return pmx->soc->gpio_request_enable(pin);
 	return 0;
 }
 

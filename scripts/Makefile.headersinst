@@ -34,6 +34,7 @@ define set_subdirs_overlay
 		 $(sort $(dir $(wildcard $(srcdir.$(oname))/*/)))))
 endef
 $(foreach overlay,$(KERNEL_OVERLAYS),$(eval $(value set_subdirs_overlay)))
+subdirs := $(sort $(subdirs))
 
 # Recursion
 __headers: $(subdirs)

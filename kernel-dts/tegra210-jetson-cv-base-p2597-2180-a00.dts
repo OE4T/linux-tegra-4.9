@@ -22,6 +22,7 @@
 #include <tegra210-soc/tegra210-audio.dtsi>
 #include "jetson-platforms/tegra210-jetson-cv-power-tree-p2597-2180-a00.dtsi"
 #include "jetson-platforms/tegra210-jetson-cv-pinmux-p2597-2180-a00.dtsi"
+#include "jetson-platforms/tegra210-jetson-cv-gpio-p2597-2180-a00.dtsi"
 #include "jetson-platforms/tegra210-jetson-cv-prods.dtsi"
 #include "jetson-platforms/tegra210-comms-p2530-0930.dtsi"
 #include "jetson-platforms/tegra210-jetson-cv-camera-modules.dtsi"

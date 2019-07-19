@@ -1257,8 +1257,7 @@ struct tegra_fb_info *tegra_fb_register(struct platform_device *ndev,
 	tegra_fb->win.idx = fb_data->win;
 	tegra_fb->win.dc = dc;
 
-	if (tegra_fb_is_console_enabled(dc->pdata) ||
-				(fb_mem && fb_mem->start)) {
+	if (fb_mem && fb_mem->start) {
 		fb_base = tegra_fb_check_and_alloc_framebuffer(info);
 		if (!fb_base) {
 			ret = -EBUSY;

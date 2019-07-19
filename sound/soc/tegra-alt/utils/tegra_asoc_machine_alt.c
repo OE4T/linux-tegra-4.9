@@ -80,8 +80,7 @@ static const char * const bit_format[] = {
 	"dsd_u8", "dsd_u16_le",
 };
 
-static struct snd_soc_dai_link
-	tegra210_xbar_dai_links[TEGRA210_XBAR_DAI_LINKS] = {
+struct snd_soc_dai_link tegra210_xbar_dai_links[TEGRA210_XBAR_DAI_LINKS] = {
 	[TEGRA210_DAI_LINK_ADMAIF1] = {
 		.name = "ADMAIF1 CIF",
 		.stream_name = "ADMAIF1 CIF",
@@ -1006,9 +1005,9 @@ static struct snd_soc_dai_link
 	},
 #endif
 };
+EXPORT_SYMBOL_GPL(tegra210_xbar_dai_links);
 
-static struct snd_soc_codec_conf
-	tegra210_xbar_codec_conf[TEGRA210_XBAR_CODEC_CONF] = {
+struct snd_soc_codec_conf tegra210_xbar_codec_conf[TEGRA210_XBAR_CODEC_CONF] = {
 	[TEGRA210_CODEC_AMX1_CONF] = {
 		.dev_name = "tegra210-amx.0",
 		.name_prefix = "AMX1",
@@ -1114,9 +1113,9 @@ static struct snd_soc_codec_conf
 		.name_prefix = "DMIC3",
 	},
 };
+EXPORT_SYMBOL_GPL(tegra210_xbar_codec_conf);
 
-static struct snd_soc_dai_link
-	tegra186_xbar_dai_links[TEGRA186_XBAR_DAI_LINKS] = {
+struct snd_soc_dai_link tegra186_xbar_dai_links[TEGRA186_XBAR_DAI_LINKS] = {
 	[TEGRA186_DAI_LINK_ADMAIF1] = {
 		.name = "ADMAIF1 CIF",
 		.stream_name = "ADMAIF1 CIF",
@@ -2755,9 +2754,9 @@ static struct snd_soc_dai_link
 		.ignore_suspend = 1,
 	},
 };
+EXPORT_SYMBOL_GPL(tegra186_xbar_dai_links);
 
-static struct snd_soc_codec_conf
-	tegra186_xbar_codec_conf[TEGRA186_XBAR_CODEC_CONF] = {
+struct snd_soc_codec_conf tegra186_xbar_codec_conf[TEGRA186_XBAR_CODEC_CONF] = {
 	[TEGRA186_CODEC_AMX1_CONF] = {
 		.dev_name = "tegra210-amx.0",
 		.name_prefix = "AMX1",
@@ -2895,6 +2894,7 @@ static struct snd_soc_codec_conf
 		.name_prefix = "ASRC1",
 	},
 };
+EXPORT_SYMBOL_GPL(tegra186_xbar_codec_conf);
 
 struct snd_soc_dai_link *tegra_machine_get_dai_link(void)
 {

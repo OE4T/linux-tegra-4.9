@@ -80,6 +80,11 @@ struct tegra_machine {
 	int fmt_via_kcontrol;
 };
 
+extern struct snd_soc_dai_link tegra186_xbar_dai_links[];
+extern struct snd_soc_dai_link tegra210_xbar_dai_links[];
+extern struct snd_soc_codec_conf tegra186_xbar_codec_conf[];
+extern struct snd_soc_codec_conf tegra210_xbar_codec_conf[];
+
 enum tegra210_xbar_dai_link {
 	TEGRA210_DAI_LINK_ADMAIF1,
 	TEGRA210_DAI_LINK_ADMAIF2,

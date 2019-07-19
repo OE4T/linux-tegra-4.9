@@ -55,7 +55,7 @@
 /* function prototypes */
 static int tegra_machine_driver_remove(struct platform_device *);
 static int tegra_machine_driver_probe(struct platform_device *);
-static void dai_link_setup(struct platform_device *);
+static void __maybe_unused dai_link_setup(struct platform_device *);
 static int tegra_machine_sfc_init(struct snd_soc_pcm_runtime *);
 static int tegra_machine_rt565x_init(struct snd_soc_pcm_runtime *);
 
@@ -107,6 +107,11 @@ static const struct tegra_machine_soc_data soc_data_tegra210 = {
 	.get_codec_conf			= &tegra_machine_get_codec_conf,
 	.append_dai_link		= &tegra_machine_append_dai_link,
 	.append_codec_conf		= &tegra_machine_append_codec_conf,
+
+	.ahub_links			= tegra210_xbar_dai_links,
+	.num_ahub_links			= TEGRA210_XBAR_DAI_LINKS,
+	.ahub_confs			= tegra210_xbar_codec_conf,
+	.num_ahub_confs			= TEGRA210_XBAR_CODEC_CONF,
 };
 
 /* t186 soc data */
@@ -132,6 +137,11 @@ static const struct tegra_machine_soc_data soc_data_tegra186 = {
 	.get_codec_conf			= &tegra_machine_get_codec_conf_t18x,
 	.append_dai_link		= &tegra_machine_append_dai_link_t18x,
 	.append_codec_conf		= &tegra_machine_append_codec_conf_t18x,
+
+	.ahub_links			= tegra186_xbar_dai_links,
+	.num_ahub_links			= TEGRA186_XBAR_DAI_LINKS,
+	.ahub_confs			= tegra186_xbar_codec_conf,
+	.num_ahub_confs			= TEGRA186_XBAR_CODEC_CONF,
 };
 
 static const char * const tegra_machine_srate_text[] = {
@@ -312,7 +322,7 @@ static int tegra_machine_set_params(struct snd_soc_card *card,
 	int idx = 0, err = 0;
 	u64 format_k;
 
-	int num_of_dai_links = machine->soc_data->num_xbar_dai_links +
+	int num_of_dai_links = machine->soc_data->num_ahub_links +
 				machine->num_codec_links;
 	struct snd_soc_pcm_runtime *rtd;
 
@@ -332,7 +342,7 @@ static int tegra_machine_set_params(struct snd_soc_card *card,
 			dai_params->channels_min = channels;
 			dai_params->formats = format_k;
 
-			if ((idx >= machine->soc_data->num_xbar_dai_links)
+			if ((idx >= machine->soc_data->num_ahub_links)
 				&& (idx < num_of_dai_links)) {
 				unsigned int fmt;
 
@@ -810,7 +820,7 @@ static void set_dai_ops(struct tegra_machine *machine)
 #endif
 }
 
-static int __maybe_unused add_dai_links(struct platform_device *pdev)
+static int add_dai_links(struct platform_device *pdev)
 {
 	struct snd_soc_card *card = platform_get_drvdata(pdev);
 	struct tegra_machine *machine = snd_soc_card_get_drvdata(card);
@@ -838,7 +848,7 @@ static int __maybe_unused add_dai_links(struct platform_device *pdev)
 	return 0;
 }
 
-static void dai_link_setup(struct platform_device *pdev)
+static void __maybe_unused dai_link_setup(struct platform_device *pdev)
 {
 	struct snd_soc_card *card = platform_get_drvdata(pdev);
 	struct tegra_machine *machine = snd_soc_card_get_drvdata(card);
@@ -1041,7 +1051,9 @@ static int tegra_machine_driver_probe(struct platform_device *pdev)
 
 	tegra_machine_dma_set_mask(pdev);
 
-	dai_link_setup(pdev);
+	ret = add_dai_links(pdev);
+	if (ret < 0)
+		goto cleanup_asoc;
 
 	ret = tegra_alt_asoc_utils_init(&machine->audio_clock,
 					&pdev->dev,
@@ -1057,7 +1069,7 @@ static int tegra_machine_driver_probe(struct platform_device *pdev)
 	}
 
 	tegra_machine_add_i2s_codec_controls(card,
-					machine->soc_data->num_xbar_dai_links +
+					machine->soc_data->num_ahub_links +
 					machine->num_codec_links);
 
 	return 0;
@@ -1065,6 +1077,8 @@ static int tegra_machine_driver_probe(struct platform_device *pdev)
 err_alloc_dai_link:
 	tegra_machine_remove_dai_link();
 	tegra_machine_remove_codec_conf();
+cleanup_asoc:
+	release_asoc_phandles(machine);
 err:
 	return ret;
 }

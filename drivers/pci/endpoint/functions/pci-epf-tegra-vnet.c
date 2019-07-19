@@ -253,8 +253,6 @@ struct pci_epf_tvnet {
 	/* To synchronize network link state machine*/
 	struct mutex link_state_lock;
 	wait_queue_head_t link_state_wq;
-	struct work_struct ctrl_msg_work;
-	struct work_struct alloc_buf_work;
 	struct list_head h2ep_empty_list;
 #if ENABLE_DMA
 	struct dma_desc_cnt desc_cnt;
@@ -569,7 +567,7 @@ static void tvnet_stop_tx_queue(struct pci_epf_tvnet *tvnet)
 
 static void tvnet_stop_rx_work(struct pci_epf_tvnet *tvnet)
 {
-	cancel_work_sync(&tvnet->alloc_buf_work);
+	/* TODO wait for syncpoint interrupt handlers */
 }
 
 static void tvnet_clear_data_msg_counters(struct pci_epf_tvnet *tvnet)
@@ -884,10 +882,8 @@ static const struct net_device_ops tvnet_netdev_ops = {
 	.ndo_start_xmit = tvnet_start_xmit,
 };
 
-static void process_ctrl_msg(struct work_struct *work)
+static void process_ctrl_msg(struct pci_epf_tvnet *tvnet)
 {
-	struct pci_epf_tvnet *tvnet =
-		container_of(work, struct pci_epf_tvnet, ctrl_msg_work);
 	struct ctrl_msg msg;
 
 	while (tvnet_ivc_rd_available(&tvnet->h2ep_ctrl)) {
@@ -978,15 +974,6 @@ static int process_h2ep_msg(struct pci_epf_tvnet *tvnet)
 	return count;
 }
 
-static void alloc_h2ep_rx_buf(struct work_struct *work)
-{
-	struct pci_epf_tvnet *tvnet =
-		container_of(work, struct pci_epf_tvnet, alloc_buf_work);
-
-	if (tvnet->os_link_state == OS_LINK_STATE_UP)
-		tvnet_alloc_empty_buffers(tvnet);
-}
-
 #if ENABLE_DMA
 static void tvnet_setup_ep_dma(struct pci_epf_tvnet *tvnet)
 {
@@ -1067,12 +1054,6 @@ static void ctrl_irqsp_callback(void *private_data)
 	struct pci_epf_tvnet *tvnet = dev_get_drvdata(data_irqsp->dev);
 	struct net_device *ndev = tvnet->ndev;
 
-	if (tvnet_ivc_rd_available(&tvnet->h2ep_ctrl))
-		schedule_work(&tvnet->ctrl_msg_work);
-
-	if (!tvnet_ivc_full(&tvnet->h2ep_empty))
-		schedule_work(&tvnet->alloc_buf_work);
-
 	if (netif_queue_stopped(ndev)) {
 		if ((tvnet->os_link_state == OS_LINK_STATE_UP) &&
 		    tvnet_ivc_rd_available(&tvnet->ep2h_empty) &&
@@ -1080,6 +1061,13 @@ static void ctrl_irqsp_callback(void *private_data)
 			netif_wake_queue(ndev);
 		}
 	}
+
+	if (tvnet_ivc_rd_available(&tvnet->h2ep_ctrl))
+		process_ctrl_msg(tvnet);
+
+	if (!tvnet_ivc_full(&tvnet->h2ep_empty) &&
+	    (tvnet->os_link_state == OS_LINK_STATE_UP))
+		tvnet_alloc_empty_buffers(tvnet);
 
 	schedule_work(&data_irqsp->reprime_work);
 }
@@ -1605,8 +1593,6 @@ static int pci_epf_tvnet_bind(struct pci_epf *epf)
 	mutex_init(&tvnet->link_state_lock);
 	init_waitqueue_head(&tvnet->link_state_wq);
 
-	INIT_WORK(&tvnet->ctrl_msg_work, process_ctrl_msg);
-	INIT_WORK(&tvnet->alloc_buf_work, alloc_h2ep_rx_buf);
 	INIT_LIST_HEAD(&tvnet->h2ep_empty_list);
 	spin_lock_init(&tvnet->h2ep_empty_lock);
 
@@ -1683,7 +1669,6 @@ static void pci_epf_tvnet_unbind(struct pci_epf *epf)
 
 	cancel_work_sync(&tvnet->ctrl_irqsp->reprime_work);
 	cancel_work_sync(&tvnet->data_irqsp->reprime_work);
-	cancel_work_sync(&tvnet->alloc_buf_work);
 	pci_epc_stop(epc);
 	pci_epc_clear_bar(epc, BAR_0);
 	dma_free_coherent(cdev,

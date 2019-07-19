@@ -197,8 +197,6 @@ struct tvnet_priv {
 	struct bar_md *bar_md;
 	struct ep_ring_buf ep_mem;
 	struct host_ring_buf host_mem;
-	struct work_struct ctrl_msg_work;
-	struct work_struct alloc_buf_work;
 	struct list_head ep2h_empty_list;
 	/* To protect ep2h empty list */
 	spinlock_t ep2h_empty_lock;
@@ -466,7 +464,9 @@ static void tvnet_stop_tx_queue(struct tvnet_priv *tvnet)
 
 static void tvnet_stop_rx_work(struct tvnet_priv *tvnet)
 {
-	cancel_work_sync(&tvnet->alloc_buf_work);
+	/* wait for interrupt handle to return to ensure rx is stopped */
+	synchronize_irq(pci_irq_vector(tvnet->pdev, 0));
+	synchronize_irq(pci_irq_vector(tvnet->pdev, 1));
 }
 
 static void tvnet_clear_data_msg_counters(struct tvnet_priv *tvnet)
@@ -808,10 +808,8 @@ static void tvnet_setup_bar0_md(struct tvnet_priv *tvnet)
 	tvnet->ep2h_full.wr = &ep_mem->ep_cnt->ep2h_full_wr_cnt;
 }
 
-static void process_ctrl_msg(struct work_struct *work)
+static void process_ctrl_msg(struct tvnet_priv *tvnet)
 {
-	struct tvnet_priv *tvnet =
-		container_of(work, struct tvnet_priv, ctrl_msg_work);
 	struct ctrl_msg msg;
 
 	while (tvnet_ivc_rd_available(&tvnet->ep2h_ctrl)) {
@@ -881,25 +879,10 @@ static int process_ep2h_msg(struct tvnet_priv *tvnet)
 	return count;
 }
 
-static void alloc_ep2h_rx_buf(struct work_struct *work)
-{
-	struct tvnet_priv *tvnet =
-		container_of(work, struct tvnet_priv, alloc_buf_work);
-
-	if (tvnet->os_link_state == OS_LINK_STATE_UP)
-		tvnet_alloc_empty_buffers(tvnet);
-}
-
 static irqreturn_t tvnet_irq_ctrl(int irq, void *data)
 {
 	struct net_device *ndev = data;
 	struct tvnet_priv *tvnet = netdev_priv(ndev);
-
-	if (tvnet_ivc_rd_available(&tvnet->ep2h_ctrl))
-		schedule_work(&tvnet->ctrl_msg_work);
-
-	if (!tvnet_ivc_full(&tvnet->ep2h_empty))
-		schedule_work(&tvnet->alloc_buf_work);
 
 	if (netif_queue_stopped(ndev)) {
 		if ((tvnet->os_link_state == OS_LINK_STATE_UP) &&
@@ -909,6 +892,13 @@ static irqreturn_t tvnet_irq_ctrl(int irq, void *data)
 			netif_wake_queue(ndev);
 		}
 	}
+
+	if (tvnet_ivc_rd_available(&tvnet->ep2h_ctrl))
+		process_ctrl_msg(tvnet);
+
+	if (!tvnet_ivc_full(&tvnet->ep2h_empty) &&
+	    (tvnet->os_link_state == OS_LINK_STATE_UP))
+		tvnet_alloc_empty_buffers(tvnet);
 
 	return IRQ_HANDLED;
 }
@@ -1053,8 +1043,6 @@ static int tvnet_probe(struct pci_dev *pdev, const struct pci_device_id *pci_id)
 	tvnet_write_dma_msix_settings(tvnet);
 #endif
 
-	INIT_WORK(&tvnet->ctrl_msg_work, process_ctrl_msg);
-	INIT_WORK(&tvnet->alloc_buf_work, alloc_ep2h_rx_buf);
 	INIT_LIST_HEAD(&tvnet->ep2h_empty_list);
 	spin_lock_init(&tvnet->ep2h_empty_lock);
 

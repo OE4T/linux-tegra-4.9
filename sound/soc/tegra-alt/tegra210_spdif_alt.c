@@ -90,9 +90,7 @@ static int tegra210_spdif_runtime_resume(struct device *dev)
 	}
 
 	regcache_cache_only(spdif->regmap, false);
-
-	if (!spdif->is_shutdown)
-		regcache_sync(spdif->regmap);
+	regcache_sync(spdif->regmap);
 
 	return 0;
 }
@@ -413,7 +411,6 @@ static int tegra210_spdif_platform_probe(struct platform_device *pdev)
 	if (!spdif)
 		return -ENOMEM;
 
-	spdif->is_shutdown = false;
 	dev_set_drvdata(&pdev->dev, spdif);
 
 	if (!(tegra_platform_is_unit_fpga() || tegra_platform_is_fpga())) {
@@ -481,13 +478,6 @@ static int tegra210_spdif_platform_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static void tegra210_spdif_platform_shutdown(struct platform_device *pdev)
-{
-	struct tegra210_spdif *spdif = dev_get_drvdata(&pdev->dev);
-
-	spdif->is_shutdown = true;
-}
-
 static int tegra210_spdif_platform_remove(struct platform_device *pdev)
 {
 	snd_soc_unregister_codec(&pdev->dev);
@@ -515,7 +505,6 @@ static struct platform_driver tegra210_spdif_driver = {
 	},
 	.probe = tegra210_spdif_platform_probe,
 	.remove = tegra210_spdif_platform_remove,
-	.shutdown = tegra210_spdif_platform_shutdown,
 };
 module_platform_driver(tegra210_spdif_driver);
 

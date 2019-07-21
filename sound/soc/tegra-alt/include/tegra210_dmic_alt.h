@@ -100,7 +100,6 @@ struct tegra210_dmic {
 	unsigned int channels_via_control;
 	unsigned int osr_val; /* osr value */
 	int lrsel;
-	bool is_shutdown;
 	int format_out;
 };
 

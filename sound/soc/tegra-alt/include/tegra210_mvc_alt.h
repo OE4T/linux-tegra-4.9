@@ -139,7 +139,6 @@ struct tegra210_mvc {
 	unsigned int cif_channels;
 	unsigned int audio_bits;
 	unsigned int format_in;
-	bool is_shutdown;
 };
 
 #endif

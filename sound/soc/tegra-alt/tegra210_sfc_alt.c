@@ -2928,9 +2928,7 @@ static int tegra210_sfc_runtime_resume(struct device *dev)
 	struct tegra210_sfc *sfc = dev_get_drvdata(dev);
 
 	regcache_cache_only(sfc->regmap, false);
-
-	if (!sfc->is_shutdown)
-		regcache_sync(sfc->regmap);
+	regcache_sync(sfc->regmap);
 
 	return 0;
 }
@@ -3541,8 +3539,6 @@ static int tegra210_sfc_platform_probe(struct platform_device *pdev)
 	if (!sfc)
 		return -ENOMEM;
 
-	sfc->is_shutdown = false;
-
 	dev_set_drvdata(&pdev->dev, sfc);
 
 	mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
@@ -3578,13 +3574,6 @@ static int tegra210_sfc_platform_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static void tegra210_sfc_platform_shutdown(struct platform_device *pdev)
-{
-	struct tegra210_sfc *sfc = dev_get_drvdata(&pdev->dev);
-
-	sfc->is_shutdown = true;
-}
-
 static int tegra210_sfc_platform_remove(struct platform_device *pdev)
 {
 	snd_soc_unregister_codec(&pdev->dev);
@@ -3612,7 +3601,6 @@ static struct platform_driver tegra210_sfc_driver = {
 	},
 	.probe = tegra210_sfc_platform_probe,
 	.remove = tegra210_sfc_platform_remove,
-	.shutdown = tegra210_sfc_platform_shutdown,
 };
 module_platform_driver(tegra210_sfc_driver)
 

@@ -173,10 +173,6 @@ static int tegra186_asrc_runtime_resume(struct device *dev)
 	int lane_id;
 
 	regcache_cache_only(asrc->regmap, false);
-
-	if (asrc->is_shutdown)
-		return 0;
-
 	regcache_sync(asrc->regmap);
 
 	/* HW needs sw reset to make sure previous
@@ -1098,7 +1094,6 @@ static int tegra186_asrc_platform_probe(struct platform_device *pdev)
 	if (!asrc)
 		return -ENOMEM;
 
-	asrc->is_shutdown = false;
 	dev_set_drvdata(&pdev->dev, asrc);
 
 	mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
@@ -1155,13 +1150,6 @@ static int tegra186_asrc_platform_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static void tegra186_asrc_platform_shutdown(struct platform_device *pdev)
-{
-	struct tegra186_asrc *asrc = dev_get_drvdata(&pdev->dev);
-
-	asrc->is_shutdown = true;
-}
-
 static int tegra186_asrc_platform_remove(struct platform_device *pdev)
 {
 	snd_soc_unregister_codec(&pdev->dev);
@@ -1189,7 +1177,6 @@ static struct platform_driver tegra186_asrc_driver = {
 	},
 	.probe = tegra186_asrc_platform_probe,
 	.remove = tegra186_asrc_platform_remove,
-	.shutdown = tegra186_asrc_platform_shutdown,
 };
 module_platform_driver(tegra186_asrc_driver)
 

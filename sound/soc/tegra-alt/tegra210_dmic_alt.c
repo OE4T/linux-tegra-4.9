@@ -94,9 +94,7 @@ static int tegra210_dmic_runtime_resume(struct device *dev)
 	}
 
 	regcache_cache_only(dmic->regmap, false);
-
-	if (!dmic->is_shutdown)
-		regcache_sync(dmic->regmap);
+	regcache_sync(dmic->regmap);
 
 	return 0;
 }
@@ -543,7 +541,6 @@ static int tegra210_dmic_platform_probe(struct platform_device *pdev)
 	if (!dmic)
 		return -ENOMEM;
 
-	dmic->is_shutdown = false;
 	dmic->prod_name = NULL;
 	dmic->osr_val = DMIC_OSR_64;
 	dmic->ch_select = DMIC_CH_SELECT_STEREO;
@@ -612,13 +609,6 @@ static int tegra210_dmic_platform_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static void tegra210_dmic_platform_shutdown(struct platform_device *pdev)
-{
-	struct tegra210_dmic *dmic = dev_get_drvdata(&pdev->dev);
-
-	dmic->is_shutdown = true;
-}
-
 static int tegra210_dmic_platform_remove(struct platform_device *pdev)
 {
 	struct tegra210_dmic *dmic;
@@ -649,7 +639,6 @@ static struct platform_driver tegra210_dmic_driver = {
 	},
 	.probe = tegra210_dmic_platform_probe,
 	.remove = tegra210_dmic_platform_remove,
-	.shutdown = tegra210_dmic_platform_shutdown,
 };
 module_platform_driver(tegra210_dmic_driver)
 

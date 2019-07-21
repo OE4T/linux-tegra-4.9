@@ -178,7 +178,6 @@ struct tegra186_dspk {
 	const char *prod_name;
 	unsigned int rx_fifo_th; /* threshold in terms of frames */
 	unsigned int osr_val; /* osr value */
-	bool is_shutdown;
 };
 
 #endif

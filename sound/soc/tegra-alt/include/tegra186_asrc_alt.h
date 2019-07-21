@@ -173,7 +173,6 @@ struct tegra186_asrc {
 	struct tasklet_struct   tasklet;
 	struct list_head task_desc;
 	int active_dai_count;
-	bool is_shutdown;
 };
 int tegra186_asrc_set_source(int id, int source);
 int tegra186_asrc_event(int id, enum asrc_task_event event, int status);

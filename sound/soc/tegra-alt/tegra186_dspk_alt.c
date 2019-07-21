@@ -114,9 +114,8 @@ static int tegra186_dspk_runtime_resume(struct device *dev)
 	}
 
 	regcache_cache_only(dspk->regmap, false);
+	regcache_sync(dspk->regmap);
 
-	if (!dspk->is_shutdown)
-		regcache_sync(dspk->regmap);
 	return 0;
 }
 
@@ -426,7 +425,6 @@ static int tegra186_dspk_platform_probe(struct platform_device *pdev)
 	if (!dspk)
 		return -ENOMEM;
 
-	dspk->is_shutdown = false;
 	dspk->prod_name = NULL;
 	dspk->rx_fifo_th = 0;
 	dspk->osr_val = TEGRA186_DSPK_OSR_64;
@@ -491,13 +489,6 @@ static int tegra186_dspk_platform_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static void tegra186_dspk_platform_shutdown(struct platform_device *pdev)
-{
-	struct tegra186_dspk *dspk = dev_get_drvdata(&pdev->dev);
-
-	dspk->is_shutdown = true;
-}
-
 static int tegra186_dspk_platform_remove(struct platform_device *pdev)
 {
 	struct tegra186_dspk *dspk;
@@ -528,7 +519,6 @@ static struct platform_driver tegra186_dspk_driver = {
 	},
 	.probe = tegra186_dspk_platform_probe,
 	.remove = tegra186_dspk_platform_remove,
-	.shutdown = tegra186_dspk_platform_shutdown,
 };
 module_platform_driver(tegra186_dspk_driver);
 

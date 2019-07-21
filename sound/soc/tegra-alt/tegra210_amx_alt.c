@@ -281,16 +281,11 @@ static int tegra210_amx_runtime_resume(struct device *dev)
 	struct tegra210_amx *amx = dev_get_drvdata(dev);
 
 	regcache_cache_only(amx->regmap, false);
-
-	if (!amx->is_shutdown) {
-		regcache_sync(amx->regmap);
-
-		/* update map ram */
-		tegra210_amx_set_master_stream(amx, 0,
-				TEGRA210_AMX_WAIT_ON_ANY);
-		tegra210_amx_update_map_ram(amx);
-		tegra210_amx_set_out_byte_mask(amx);
-	}
+	regcache_sync(amx->regmap);
+	/* update map ram */
+	tegra210_amx_set_master_stream(amx, 0, TEGRA210_AMX_WAIT_ON_ANY);
+	tegra210_amx_update_map_ram(amx);
+	tegra210_amx_set_out_byte_mask(amx);
 
 	return 0;
 }
@@ -894,7 +889,6 @@ static int tegra210_amx_platform_probe(struct platform_device *pdev)
 		return -ENOMEM;
 
 	amx->soc_data = soc_data;
-	amx->is_shutdown = false;
 	memset(amx->map, 0, sizeof(amx->map));
 	memset(amx->byte_mask, 0, sizeof(amx->byte_mask));
 	dev_set_drvdata(&pdev->dev, amx);
@@ -938,13 +932,6 @@ static int tegra210_amx_platform_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static void tegra210_amx_platform_shutdown(struct platform_device *pdev)
-{
-	struct tegra210_amx *amx = dev_get_drvdata(&pdev->dev);
-
-	amx->is_shutdown = true;
-}
-
 static int tegra210_amx_platform_remove(struct platform_device *pdev)
 {
 	snd_soc_unregister_codec(&pdev->dev);
@@ -972,7 +959,6 @@ static struct platform_driver tegra210_amx_driver = {
 	},
 	.probe = tegra210_amx_platform_probe,
 	.remove = tegra210_amx_platform_remove,
-	.shutdown = tegra210_amx_platform_shutdown,
 };
 module_platform_driver(tegra210_amx_driver);
 

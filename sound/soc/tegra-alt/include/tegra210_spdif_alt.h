@@ -252,7 +252,6 @@ struct tegra210_spdif {
 	struct clk *clk_pll_p_out0;
 	struct regmap *regmap;
 	unsigned int loopback;
-	bool is_shutdown;
 };
 
 #endif

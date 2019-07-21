@@ -265,19 +265,11 @@ int tegra_xbar_runtime_resume(struct device *dev)
 	tegra186_setup_ahc_interrupts();
 #endif
 	regcache_cache_only(xbar->regmap, false);
-
-	if (!xbar->is_shutdown)
-		regcache_sync(xbar->regmap);
+	regcache_sync(xbar->regmap);
 
 	return 0;
 }
 EXPORT_SYMBOL_GPL(tegra_xbar_runtime_resume);
-
-void tegra_xbar_shutdown(struct platform_device *pdev)
-{
-	xbar->is_shutdown = true;
-}
-EXPORT_SYMBOL_GPL(tegra_xbar_shutdown);
 
 int tegra_xbar_remove(struct platform_device *pdev)
 {
@@ -304,8 +296,6 @@ int tegra_xbar_probe(struct platform_device *pdev,
 		return -ENOMEM;
 
 	xbar->soc_data = soc_data;
-	xbar->is_shutdown = false;
-
 	platform_set_drvdata(pdev, xbar);
 
 	if (!(tegra_platform_is_unit_fpga() || tegra_platform_is_fpga())) {

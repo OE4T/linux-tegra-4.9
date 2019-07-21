@@ -92,7 +92,6 @@ struct tegra210_sfc {
 	int stereo_conv_input;
 	int mono_conv_output;
 	unsigned int channels_via_control;
-	bool is_shutdown;
 };
 
 #endif

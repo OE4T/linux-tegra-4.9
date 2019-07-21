@@ -239,8 +239,7 @@ static int tegra210_i2s_runtime_resume(struct device *dev)
 	}
 
 	regcache_cache_only(i2s->regmap, false);
-	if (!i2s->is_shutdown)
-		regcache_sync(i2s->regmap);
+	regcache_sync(i2s->regmap);
 
 	return 0;
 }
@@ -1054,7 +1053,6 @@ static int tegra210_i2s_platform_probe(struct platform_device *pdev)
 	i2s->tx_mask = i2s->rx_mask = 0xFFFF;
 	i2s->enable_cya = false;
 	i2s->loopback = 0;
-	i2s->is_shutdown = false;
 	i2s->prod_name = NULL;
 	/* default threshold settings */
 	i2s->rx_fifo_th = 3;
@@ -1173,13 +1171,6 @@ static int tegra210_i2s_platform_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static void tegra210_i2s_platform_shutdown(struct platform_device *pdev)
-{
-	struct tegra210_i2s *i2s = dev_get_drvdata(&pdev->dev);
-
-	i2s->is_shutdown = true;
-}
-
 static int tegra210_i2s_platform_remove(struct platform_device *pdev)
 {
 	snd_soc_unregister_codec(&pdev->dev);
@@ -1207,7 +1198,6 @@ static struct platform_driver tegra210_i2s_driver = {
 	},
 	.probe = tegra210_i2s_platform_probe,
 	.remove = tegra210_i2s_platform_remove,
-	.shutdown = tegra210_i2s_platform_shutdown,
 };
 module_platform_driver(tegra210_i2s_driver)
 

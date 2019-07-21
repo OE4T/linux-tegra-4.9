@@ -166,7 +166,6 @@ struct tegra210_adx {
 	unsigned int byte_mask[2];
 	int input_channels;
 	int output_channels[TEGRA210_ADX_NUM_OUTPUTS];
-	bool is_shutdown;
 };
 
 #endif

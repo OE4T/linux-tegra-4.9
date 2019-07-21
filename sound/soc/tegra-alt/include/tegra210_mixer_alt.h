@@ -125,7 +125,6 @@ struct tegra210_mixer {
 	int gain_coeff[14];
 	int gain_value[TEGRA210_MIXER_AXBAR_RX_MAX];
 	unsigned int channels_via_control[TEGRA210_MIXER_TOTAL_PATH];
-	bool is_shutdown;
 };
 
 #endif

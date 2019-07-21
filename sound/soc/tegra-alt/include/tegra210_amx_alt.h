@@ -190,7 +190,6 @@ struct tegra210_amx {
 	int input_channels[TEGRA210_AMX_NUM_INPUTS];
 	int output_channels;
 	const struct tegra210_amx_soc_data *soc_data;
-	bool is_shutdown;
 };
 
 #endif

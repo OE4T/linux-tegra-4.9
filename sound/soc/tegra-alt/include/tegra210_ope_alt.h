@@ -76,7 +76,6 @@ struct tegra210_ope {
 	struct regmap *mbdrc_regmap;
 	u32 peq_biquad_gains[TEGRA210_PEQ_GAIN_PARAM_SIZE_PER_CH];
 	u32 peq_biquad_shifts[TEGRA210_PEQ_SHIFT_PARAM_SIZE_PER_CH];
-	bool is_shutdown;
 };
 
 extern int tegra210_peq_init(struct platform_device *pdev, int id);

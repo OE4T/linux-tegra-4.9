@@ -552,18 +552,6 @@ static int tegra210_dmic_platform_probe(struct platform_device *pdev)
 			dev_err(&pdev->dev, "Can't retrieve dmic clock\n");
 			return PTR_ERR(dmic->clk_dmic);
 		}
-
-		dmic->clk_parent = devm_clk_get(&pdev->dev, "parent");
-		if (IS_ERR(dmic->clk_parent)) {
-			dev_err(&pdev->dev, "Can't retrieve parent clock\n");
-			return PTR_ERR(dmic->clk_parent);
-		}
-
-		ret = clk_set_parent(dmic->clk_dmic, dmic->clk_parent);
-		if (ret) {
-			dev_err(&pdev->dev, "Can't set parent of dmic clock\n");
-			return ret;
-		}
 	}
 
 	mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);

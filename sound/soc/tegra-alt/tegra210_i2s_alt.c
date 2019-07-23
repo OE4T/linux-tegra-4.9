@@ -73,27 +73,6 @@ static int tegra210_i2s_set_clock_rate(struct device *dev, int clock_rate)
 	if (!(tegra_platform_is_unit_fpga() || tegra_platform_is_fpga())) {
 		if (((val & TEGRA210_I2S_CTRL_MASTER_EN_MASK) ==
 				TEGRA210_I2S_CTRL_MASTER_EN)) {
-
-			ret = clk_set_rate(i2s->clk_i2s_sync, clock_rate);
-			if (ret) {
-				dev_err(dev, "Can't set I2S sync clock rate\n");
-				return ret;
-			}
-
-			ret = clk_set_parent(i2s->clk_audio_sync,
-					i2s->clk_i2s_sync);
-			if (ret) {
-				dev_err(dev,
-					"Can't set parent of i2s audio sync clock\n");
-				return ret;
-			}
-
-			ret = clk_set_parent(i2s->clk_i2s, i2s->clk_i2s_source);
-			if (ret) {
-				dev_err(dev, "Can't set parent of I2S clock\n");
-				return ret;
-			}
-
 			ret = clk_set_rate(i2s->clk_i2s, clock_rate);
 			if (ret) {
 				dev_err(dev,
@@ -1059,30 +1038,10 @@ static int tegra210_i2s_platform_probe(struct platform_device *pdev)
 	dev_set_drvdata(&pdev->dev, i2s);
 
 	if (!(tegra_platform_is_unit_fpga() || tegra_platform_is_fpga())) {
-		i2s->clk_i2s = devm_clk_get(&pdev->dev, NULL);
+		i2s->clk_i2s = devm_clk_get(&pdev->dev, "i2s");
 		if (IS_ERR(i2s->clk_i2s)) {
 			dev_err(&pdev->dev, "Can't retrieve i2s clock\n");
 			return PTR_ERR(i2s->clk_i2s);
-		}
-
-		i2s->clk_i2s_sync = devm_clk_get(&pdev->dev, "ext_audio_sync");
-		if (IS_ERR(i2s->clk_i2s_sync)) {
-			dev_err(&pdev->dev, "Can't retrieve i2s_sync clock\n");
-			ret = PTR_ERR(i2s->clk_i2s_sync);
-			goto err;
-		}
-
-		i2s->clk_audio_sync = devm_clk_get(&pdev->dev, "audio_sync");
-		if (IS_ERR(i2s->clk_audio_sync)) {
-			dev_err(&pdev->dev, "Can't retrieve audio sync clock\n");
-			ret = PTR_ERR(i2s->clk_audio_sync);
-			goto err;
-		}
-
-		i2s->clk_i2s_source = devm_clk_get(&pdev->dev, "pll_a_out0");
-		if (IS_ERR(i2s->clk_i2s_source)) {
-			dev_err(&pdev->dev, "Can't retrieve pll_a_out0 clock\n");
-			return PTR_ERR(i2s->clk_i2s_source);
 		}
 	}
 

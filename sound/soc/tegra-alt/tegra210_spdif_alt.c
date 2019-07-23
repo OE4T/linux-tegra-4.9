@@ -138,32 +138,20 @@ static int tegra210_spdif_set_dai_sysclk(struct snd_soc_dai *dai,
 
 	if (!(tegra_platform_is_unit_fpga() || tegra_platform_is_fpga())) {
 		if (dir == SND_SOC_CLOCK_OUT) {
-			ret = clk_set_parent(spdif->clk_spdif_out,
-						spdif->clk_pll_a_out0);
+			ret = clk_set_rate(spdif->clk_spdif_out,
+					   spdif_out_clock_rate);
 			if (ret) {
-				dev_err(dev, "Can't set parent of SPDIF OUT clock\n");
-				return ret;
-			}
-
-			ret = clk_set_rate(
-				spdif->clk_spdif_out, spdif_out_clock_rate);
-			if (ret) {
-				dev_err(dev, "Can't set SPDIF Out clock rate: %d\n",
+				dev_err(dev,
+					"Can't set SPDIF Out clock rate: %d\n",
 					ret);
 				return ret;
 			}
 		} else {
-			ret = clk_set_parent(spdif->clk_spdif_in,
-						spdif->clk_pll_p_out0);
+			ret = clk_set_rate(spdif->clk_spdif_in,
+					   spdif_in_clock_rate);
 			if (ret) {
-				dev_err(dev, "Can't set parent of SPDIF IN clock\n");
-				return ret;
-			}
-
-			ret = clk_set_rate(
-				spdif->clk_spdif_in, spdif_in_clock_rate);
-			if (ret) {
-				dev_err(dev, "Can't set SPDIF In clock rate: %d\n",
+				dev_err(dev,
+					"Can't set SPDIF In clock rate: %d\n",
 					ret);
 				return ret;
 			}
@@ -414,18 +402,6 @@ static int tegra210_spdif_platform_probe(struct platform_device *pdev)
 	dev_set_drvdata(&pdev->dev, spdif);
 
 	if (!(tegra_platform_is_unit_fpga() || tegra_platform_is_fpga())) {
-		spdif->clk_pll_a_out0 = devm_clk_get(&pdev->dev, "pll_a_out0");
-		if (IS_ERR(spdif->clk_pll_a_out0)) {
-			dev_err(&pdev->dev, "Can't retrieve pll_a_out0 clock\n");
-			return PTR_ERR(spdif->clk_pll_a_out0);
-		}
-
-		spdif->clk_pll_p_out0 = devm_clk_get(&pdev->dev, "pll_p_out0");
-		if (IS_ERR(spdif->clk_pll_p_out0)) {
-			dev_err(&pdev->dev, "Can't retrieve pll_p_out0 clock\n");
-			return PTR_ERR(spdif->clk_pll_p_out0);
-		}
-
 		spdif->clk_spdif_out = devm_clk_get(&pdev->dev, "spdif_out");
 		if (IS_ERR(spdif->clk_spdif_out)) {
 			dev_err(&pdev->dev, "Can't retrieve spdif clock\n");

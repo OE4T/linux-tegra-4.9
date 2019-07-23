@@ -229,11 +229,9 @@ int tegra_xbar_runtime_suspend(struct device *dev)
 	regcache_cache_only(xbar->regmap, true);
 	regcache_mark_dirty(xbar->regmap);
 
-	if (!(tegra_platform_is_unit_fpga() || tegra_platform_is_fpga())) {
+	if (!(tegra_platform_is_unit_fpga() || tegra_platform_is_fpga()))
 		clk_disable_unprepare(xbar->clk);
-		clk_disable_unprepare(xbar->clk_ape);
-		clk_disable_unprepare(xbar->clk_apb2ape);
-	}
+
 	return 0;
 }
 EXPORT_SYMBOL_GPL(tegra_xbar_runtime_suspend);
@@ -243,18 +241,6 @@ int tegra_xbar_runtime_resume(struct device *dev)
 	int ret;
 
 	if (!(tegra_platform_is_unit_fpga() || tegra_platform_is_fpga())) {
-		ret = clk_prepare_enable(xbar->clk_ape);
-		if (ret) {
-			dev_err(dev, "clk_prepare_enable failed: %d\n", ret);
-			return ret;
-		}
-
-		ret = clk_prepare_enable(xbar->clk_apb2ape);
-		if (ret) {
-			dev_err(dev, "clk_prepare_enable failed: %d\n", ret);
-			return ret;
-		}
-
 		ret = clk_prepare_enable(xbar->clk);
 		if (ret) {
 			dev_err(dev, "clk_prepare_enable failed: %d\n", ret);
@@ -284,11 +270,10 @@ int tegra_xbar_remove(struct platform_device *pdev)
 EXPORT_SYMBOL_GPL(tegra_xbar_remove);
 
 int tegra_xbar_probe(struct platform_device *pdev,
-					struct tegra_xbar_soc_data *soc_data)
+		     struct tegra_xbar_soc_data *soc_data)
 {
 	void __iomem *regs;
 	struct resource *res;
-	struct clk *parent_clk;
 	int ret;
 
 	xbar = devm_kzalloc(&pdev->dev, sizeof(*xbar), GFP_KERNEL);
@@ -305,36 +290,10 @@ int tegra_xbar_probe(struct platform_device *pdev,
 			return PTR_ERR(xbar->clk);
 		}
 
-		xbar->clk_parent = devm_clk_get(&pdev->dev, "pll_a_out0");
+		xbar->clk_parent = devm_clk_get(&pdev->dev, "parent");
 		if (IS_ERR(xbar->clk_parent)) {
-			dev_err(&pdev->dev, "Can't retrieve pll_a_out0 clock\n");
+			dev_err(&pdev->dev, "Can't retrieve parent clock\n");
 			return PTR_ERR(xbar->clk_parent);
-		}
-
-		xbar->clk_apb2ape = devm_clk_get(&pdev->dev, "apb2ape");
-		if (IS_ERR(xbar->clk_apb2ape)) {
-			dev_err(&pdev->dev, "Can't retrieve apb2ape clock\n");
-			return PTR_ERR(xbar->clk_apb2ape);
-		}
-
-		xbar->clk_ape = devm_clk_get(&pdev->dev, "xbar.ape");
-		if (IS_ERR(xbar->clk_ape)) {
-			dev_err(&pdev->dev, "Can't retrieve ape clock\n");
-			return PTR_ERR(xbar->clk_ape);
-		}
-	}
-
-	parent_clk = clk_get_parent(xbar->clk);
-	if (IS_ERR(parent_clk)) {
-		dev_err(&pdev->dev, "Can't get parent clock for xbar\n");
-		return PTR_ERR(parent_clk);
-	}
-
-	if (!(tegra_platform_is_unit_fpga() || tegra_platform_is_fpga())) {
-		ret = clk_set_parent(xbar->clk, xbar->clk_parent);
-		if (ret) {
-			dev_err(&pdev->dev, "Failed to set parent clock with pll_a_out0\n");
-			return ret;
 		}
 	}
 

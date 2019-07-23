@@ -431,22 +431,10 @@ static int tegra186_dspk_platform_probe(struct platform_device *pdev)
 	dev_set_drvdata(&pdev->dev, dspk);
 
 	if (!(tegra_platform_is_unit_fpga() || tegra_platform_is_fpga())) {
-		dspk->clk_dspk = devm_clk_get(&pdev->dev, NULL);
+		dspk->clk_dspk = devm_clk_get(&pdev->dev, "dspk");
 		if (IS_ERR(dspk->clk_dspk)) {
 			dev_err(&pdev->dev, "Can't retrieve dspk clock\n");
 			return PTR_ERR(dspk->clk_dspk);
-		}
-
-		dspk->clk_pll_a_out0 = devm_clk_get(&pdev->dev, "pll_a_out0");
-		if (IS_ERR(dspk->clk_pll_a_out0)) {
-			dev_err(&pdev->dev, "Can't retrieve pll_a_out0 clock\n");
-			return PTR_ERR(dspk->clk_pll_a_out0);
-		}
-
-		ret = clk_set_parent(dspk->clk_dspk, dspk->clk_pll_a_out0);
-		if (ret) {
-			dev_err(&pdev->dev, "Can't set parent of dspk clock\n");
-			return ret;
 		}
 	}
 

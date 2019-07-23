@@ -173,7 +173,6 @@
 
 struct tegra186_dspk {
         struct clk *clk_dspk;
-	struct clk *clk_pll_a_out0;
         struct regmap *regmap;
 	const char *prod_name;
 	unsigned int rx_fifo_th; /* threshold in terms of frames */

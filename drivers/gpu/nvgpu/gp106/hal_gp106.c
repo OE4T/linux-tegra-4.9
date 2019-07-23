@@ -815,6 +815,9 @@ static const struct gpu_ops gp106_ops = {
 	.acr = {
 		.acr_sw_init = nvgpu_gp106_acr_sw_init,
 	},
+	.tpc = {
+		.tpc_powergate = NULL,
+	},
 	.get_litter_value = gp106_get_litter_value,
 	.chip_init_gpu_characteristics = gp106_init_gpu_characteristics,
 };
@@ -870,6 +873,7 @@ int gp106_init_hal(struct gk20a *g)
 	gops->falcon = gp106_ops.falcon;
 	gops->priv_ring = gp106_ops.priv_ring;
 	gops->fuse = gp106_ops.fuse;
+	gops->tpc = gp106_ops.tpc;
 	gops->acr = gp106_ops.acr;
 
 	/* Lone functions */

@@ -149,7 +149,7 @@ enum gk20a_cbc_op {
 
 #define nvgpu_get_litter_value(g, v) (g)->ops.get_litter_value((g), v)
 
-#define MAX_TPC_PG_CONFIGS      3
+#define MAX_TPC_PG_CONFIGS      9
 
 enum nvgpu_unit;
 
@@ -1348,6 +1348,9 @@ struct gpu_ops {
 	struct {
 		void (*acr_sw_init)(struct gk20a *g, struct nvgpu_acr *acr);
 	} acr;
+	struct {
+		int (*tpc_powergate)(struct gk20a *g, u32 fuse_status);
+	} tpc;
 	void (*semaphore_wakeup)(struct gk20a *g, bool post_events);
 };
 
@@ -1615,6 +1618,7 @@ struct gk20a {
 	u32 tpc_fs_mask_user;
 
 	u32 tpc_pg_mask;
+	u32 tpc_count;
 	bool can_tpc_powergate;
 
 	u32 valid_tpc_mask[MAX_TPC_PG_CONFIGS];

@@ -330,6 +330,7 @@ nvgpu-y += \
 	gv11b/subctx_gv11b.o \
 	gv11b/regops_gv11b.o \
 	gv11b/ecc_gv11b.o \
+	gv11b/tpc_gv11b.o \
 	gv100/mm_gv100.o \
 	gv100/gr_ctx_gv100.o \
 	gv100/bios_gv100.o \

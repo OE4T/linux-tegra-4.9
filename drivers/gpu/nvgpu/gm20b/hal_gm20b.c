@@ -687,6 +687,9 @@ static const struct gpu_ops gm20b_ops = {
 	.acr = {
 		.acr_sw_init = nvgpu_gm20b_acr_sw_init,
 	},
+	.tpc = {
+		.tpc_powergate = NULL,
+	},
 	.chip_init_gpu_characteristics = gk20a_init_gpu_characteristics,
 	.get_litter_value = gm20b_get_litter_value,
 };
@@ -736,6 +739,8 @@ int gm20b_init_hal(struct gk20a *g)
 	gops->priv_ring = gm20b_ops.priv_ring;
 
 	gops->fuse = gm20b_ops.fuse;
+
+	gops->tpc = gm20b_ops.tpc;
 
 	gops->acr = gm20b_ops.acr;
 

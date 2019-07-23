@@ -1200,7 +1200,8 @@ static int nvgpu_read_fuse_overrides(struct gk20a *g)
 			break;
 		case GV11B_FUSE_OPT_TPC_DISABLE:
 			if (platform->set_tpc_pg_mask != NULL)
-				platform->set_tpc_pg_mask(dev_from_gk20a(g), value);
+				platform->set_tpc_pg_mask(dev_from_gk20a(g),
+								value);
 			break;
 		default:
 			nvgpu_err(g, "ignore unknown fuse override %08x", fuse);

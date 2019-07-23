@@ -88,6 +88,7 @@
 #include "regops_gv11b.h"
 #include "subctx_gv11b.h"
 #include "ecc_gv11b.h"
+#include "tpc_gv11b.h"
 
 #include <nvgpu/ptimer.h>
 #include <nvgpu/debug.h>
@@ -859,6 +860,9 @@ static const struct gpu_ops gv11b_ops = {
 	.acr = {
 		.acr_sw_init = nvgpu_gv11b_acr_sw_init,
 	},
+	.tpc = {
+		.tpc_powergate = gv11b_tpc_powergate,
+	},
 	.chip_init_gpu_characteristics = gv11b_init_gpu_characteristics,
 	.get_litter_value = gv11b_get_litter_value,
 };
@@ -893,6 +897,7 @@ int gv11b_init_hal(struct gk20a *g)
 	gops->falcon = gv11b_ops.falcon;
 	gops->priv_ring = gv11b_ops.priv_ring;
 	gops->fuse = gv11b_ops.fuse;
+	gops->tpc = gv11b_ops.tpc;
 	gops->clk_arb = gv11b_ops.clk_arb;
 	gops->acr = gv11b_ops.acr;
 

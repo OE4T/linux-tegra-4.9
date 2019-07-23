@@ -971,6 +971,9 @@ static const struct gpu_ops gv100_ops = {
 	.acr = {
 		.acr_sw_init = nvgpu_gp106_acr_sw_init,
 	},
+	.tpc = {
+		.tpc_powergate = NULL,
+	},
 	.chip_init_gpu_characteristics = gv100_init_gpu_characteristics,
 	.get_litter_value = gv100_get_litter_value,
 };
@@ -1008,6 +1011,7 @@ int gv100_init_hal(struct gk20a *g)
 	gops->falcon = gv100_ops.falcon;
 	gops->priv_ring = gv100_ops.priv_ring;
 	gops->fuse = gv100_ops.fuse;
+	gops->tpc = gv100_ops.tpc;
 	gops->nvlink = gv100_ops.nvlink;
 	gops->top = gv100_ops.top;
 	gops->acr = gv100_ops.acr;

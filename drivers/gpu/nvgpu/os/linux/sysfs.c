@@ -788,24 +788,26 @@ static ssize_t force_idle_read(struct device *dev,
 static DEVICE_ATTR(force_idle, ROOTRW, force_idle_read, force_idle_store);
 #endif
 
-static ssize_t tpc_pg_mask_read(struct device *dev,
-	struct device_attribute *attr, char *buf)
-{
-	struct gk20a *g = get_gk20a(dev);
-
-	return snprintf(buf, PAGE_SIZE, "%d\n", g->tpc_pg_mask);
-}
-
 static bool is_tpc_mask_valid(struct gk20a *g, u32 tpc_mask)
 {
 	u32 i;
 	bool valid = false;
 
 	for (i = 0; i < MAX_TPC_PG_CONFIGS; i++) {
-		if (tpc_mask == g->valid_tpc_mask[i])
+		if (tpc_mask == g->valid_tpc_mask[i]) {
 			valid = true;
+			break;
+		}
 	}
 	return valid;
+}
+
+static ssize_t tpc_pg_mask_read(struct device *dev,
+	struct device_attribute *attr, char *buf)
+{
+	struct gk20a *g = get_gk20a(dev);
+
+	return snprintf(buf, PAGE_SIZE, "%d\n", g->tpc_pg_mask);
 }
 
 static ssize_t tpc_pg_mask_store(struct device *dev,
@@ -816,11 +818,6 @@ static ssize_t tpc_pg_mask_store(struct device *dev,
 	unsigned long val = 0;
 
 	nvgpu_mutex_acquire(&g->tpc_pg_lock);
-
-	if (!g->can_tpc_powergate) {
-		nvgpu_info(g, "TPC-PG not enabled for the platform");
-		goto exit;
-	}
 
 	if (kstrtoul(buf, 10, &val) < 0) {
 		nvgpu_err(g, "invalid value");
@@ -839,6 +836,9 @@ static ssize_t tpc_pg_mask_store(struct device *dev,
 		return -ENODEV;
 	}
 
+	/* checking that the value from userspace is within
+	 * the  possible valid TPC configurations.
+	 */
 	if (is_tpc_mask_valid(g, (u32)val)) {
 		g->tpc_pg_mask = val;
 	} else {

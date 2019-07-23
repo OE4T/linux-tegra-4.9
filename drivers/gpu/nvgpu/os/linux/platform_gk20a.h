@@ -196,8 +196,8 @@ struct gk20a_platform {
 	/* Pre callback is called before frequency change */
 	void (*prescale)(struct device *dev);
 
-	/* Set TPC_PG during probe */
-	void (*set_tpc_pg_mask)(struct device *dev, u32 tpc_mask);
+	/* Set TPC_PG_MASK during probe */
+	void (*set_tpc_pg_mask)(struct device *dev, u32 tpc_pg_mask);
 
 	/* Devfreq governor name. If scaling is enabled, we request
 	 * this governor to be used in scaling */

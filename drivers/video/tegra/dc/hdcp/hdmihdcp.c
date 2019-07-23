@@ -1937,7 +1937,9 @@ static int link_integrity_check(struct tegra_nvhdcp *nvhdcp,
 	u16 rx_status = 0;
 	uint64_t *pkt = NULL;
 	int err = 0;
+#ifdef CONFIG_TRUSTED_LITTLE_KERNEL
 	unsigned char nonce[HDCP_NONCE_SIZE];
+#endif
 
 	pkt = kzalloc(PKT_SIZE, GFP_KERNEL);
 

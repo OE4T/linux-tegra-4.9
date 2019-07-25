@@ -232,11 +232,16 @@ static ssize_t store_std_fltr(struct device *dev,
 			dev_err(dev, "Invalid std filter Index\n");
 			return -EINVAL;
 		}
+
+		/* array access based on user provided index/data */
+		speculation_barrier();
 		ttcan_set_std_id_filter(priv->ttcan, priv->std_shadow,
 			idx, (u8)sft, (u8)sfec, sfid1, sfid2);
 		if (idx == cur_filter_size)
 			priv->ttcan->fltr_config.std_fltr_size++;
 	} else {
+		/* array access based on user provided index/data */
+		speculation_barrier();
 		ttcan_set_std_id_filter(priv->ttcan, priv->std_shadow,
 			cur_filter_size, (u8) sft, (u8)sfec, sfid1, sfid2);
 			priv->ttcan->fltr_config.std_fltr_size++;
@@ -292,11 +297,16 @@ static ssize_t store_xtd_fltr(struct device *dev,
 			dev_err(dev, "Invalid xtd filter Index\n");
 			return -EINVAL;
 		}
+
+		/* array access based on user provided index/data */
+		speculation_barrier();
 		ttcan_set_xtd_id_filter(priv->ttcan, priv->xtd_shadow,
 			idx, (u8) eft, (u8) efec, efid1, efid2);
 		if (idx == cur_filter_size)
 			priv->ttcan->fltr_config.xtd_fltr_size++;
 	} else {
+		/* array access based on user provided index/data */
+		speculation_barrier();
 		ttcan_set_xtd_id_filter(priv->ttcan, priv->xtd_shadow,
 			cur_filter_size, (u8) eft, (u8) efec, efid1, efid2);
 		priv->ttcan->fltr_config.xtd_fltr_size++;
@@ -606,12 +616,17 @@ static ssize_t store_trigger_mem(struct device *dev,
 			dev_err(dev, "Invalid Trigger Mem Index\n");
 			return -EINVAL;
 		}
+
+		/* array access based on user provided index/data */
+		speculation_barrier();
 		ttcan_set_trigger_mem(priv->ttcan, priv->tmc_shadow, idx, tm,
 			cc, tmin, tmex, type, ftype, mnr);
 
 		if (idx == cur)
 			priv->ttcan->tt_mem_elements++;
 	} else {
+		/* array access based on user provided index/data */
+		speculation_barrier();
 		ttcan_set_trigger_mem(priv->ttcan,  priv->tmc_shadow, cur, tm,
 			cc, tmin, tmex, type, ftype, mnr);
 		priv->ttcan->tt_mem_elements++;

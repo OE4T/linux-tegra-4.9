@@ -42,14 +42,6 @@ struct tegra_machine_soc_data {
 	struct snd_soc_dai_link *ahub_links;
 	unsigned int num_ahub_links;
 	unsigned int num_ahub_confs;
-
-	/* call back APIs */
-	struct snd_soc_dai_link *(*get_dai_link)(void);
-	struct snd_soc_codec_conf *(*get_codec_conf)(void);
-	int (*append_dai_link)(struct snd_soc_dai_link *link,
-		unsigned int link_size);
-	int (*append_codec_conf)(struct snd_soc_codec_conf *conf,
-		unsigned int conf_size);
 };
 
 /*

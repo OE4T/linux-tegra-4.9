@@ -34,9 +34,8 @@ struct tegra_machine_soc_data {
 		sfc_dai_link;
 
 	bool is_asrc_available,
-		is_clk_rate_via_dt,
-		write_cdev1_state,
-		write_idle_bias_off_state;
+	     write_cdev1_state,
+	     write_idle_bias_off_state;
 
 	struct snd_soc_codec_conf *ahub_confs;
 	struct snd_soc_dai_link *ahub_links;

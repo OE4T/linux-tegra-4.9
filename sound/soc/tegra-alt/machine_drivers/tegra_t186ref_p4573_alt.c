@@ -124,11 +124,11 @@ static int tegra186_hw_params(struct snd_pcm_substream *substream,
 		return ret;
 	}
 
-	clk_out_rate = machine->audio_clock.set_clk_out_rate;
+	clk_out_rate = machine->audio_clock.set_aud_mclk_rate;
 
 	dev_dbg(card->dev,
 		"pll_a_out0 = %d Hz, aud_mclk = %d Hz, codec rate = %d Hz\n",
-		machine->audio_clock.set_mclk, clk_out_rate, rate);
+		machine->audio_clock.set_pll_out_rate, clk_out_rate, rate);
 
 	/* Update dai link hw_params for non pcm links */
 	i = 0;

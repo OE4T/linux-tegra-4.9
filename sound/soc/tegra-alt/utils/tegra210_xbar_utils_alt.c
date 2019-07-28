@@ -32,22 +32,6 @@
 
 static struct tegra_xbar *xbar;
 
-int tegra210_xbar_set_clock(unsigned long rate)
-{
-	int ret = 0;
-
-	ret = clk_set_rate(xbar->clk_parent, rate);
-	if (ret)
-		pr_info("Failed to set clock rate of pll_a_out0\n");
-
-	ret = clk_set_rate(xbar->clk, rate);
-	if (ret)
-		pr_info("Failed to set clock rate of ahub\n");
-
-	return 0;
-}
-EXPORT_SYMBOL_GPL(tegra210_xbar_set_clock);
-
 void tegra210_xbar_set_cif(struct regmap *regmap, unsigned int reg,
 			  struct tegra210_xbar_cif_conf *conf)
 {

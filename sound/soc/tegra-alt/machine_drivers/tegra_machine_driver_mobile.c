@@ -70,9 +70,9 @@ static int tegra_machine_suspend_pre(struct snd_soc_card *);
 static int tegra_machine_pcm_hw_params(struct snd_pcm_substream *,
 		struct snd_pcm_hw_params *);
 static int tegra_machine_dai_init(struct snd_soc_pcm_runtime *,
-		int, int, u64, bool);
+		unsigned int, unsigned int, u64, bool);
 static int tegra_machine_set_params(struct snd_soc_card *,
-		struct tegra_machine *, int, int, u64);
+		struct tegra_machine *, unsigned int, unsigned int, u64);
 static int tegra_machine_codec_get_rate(struct snd_kcontrol *,
 		struct snd_ctl_elem_value *);
 static int tegra_machine_codec_put_rate(struct snd_kcontrol *,
@@ -94,8 +94,6 @@ static const struct tegra_machine_soc_data soc_data_tegra210 = {
 #endif
 	.sfc_dai_link			= TEGRA210_DAI_LINK_SFC1_RX,
 
-	.is_clk_rate_via_dt		= false,
-	.write_cdev1_state		= false,
 	.write_idle_bias_off_state	= false,
 
 	.ahub_links			= tegra210_xbar_dai_links,
@@ -116,8 +114,6 @@ static const struct tegra_machine_soc_data soc_data_tegra186 = {
 #endif
 	.sfc_dai_link			= TEGRA186_DAI_LINK_SFC1_RX,
 
-	.is_clk_rate_via_dt		= true,
-	.write_cdev1_state		= true,
 	.write_idle_bias_off_state	= true,
 
 	.ahub_links			= tegra186_xbar_dai_links,
@@ -295,10 +291,10 @@ static int tegra_machine_codec_put_format(struct snd_kcontrol *kcontrol,
 }
 
 static int tegra_machine_set_params(struct snd_soc_card *card,
-					struct tegra_machine *machine,
-					int rate,
-					int channels,
-					u64 formats)
+				    struct tegra_machine *machine,
+				    unsigned int rate,
+				    unsigned int channels,
+				    u64 formats)
 {
 	unsigned int mask = (1 << channels) - 1;
 	int idx = 0, err = 0;
@@ -354,72 +350,31 @@ static int tegra_machine_set_params(struct snd_soc_card *card,
 	return 0;
 }
 static int tegra_machine_dai_init(struct snd_soc_pcm_runtime *runtime,
-					int rate,
-					int channels,
-					u64 formats,
-					bool is_playback)
+				  unsigned int rate, unsigned int channels,
+				  u64 formats, bool is_playback)
 {
 	struct snd_soc_card *card = runtime->card;
 	struct tegra_machine *machine = snd_soc_card_get_drvdata(card);
 	struct snd_soc_pcm_stream *dai_params;
-	unsigned int clk_out_rate = 0, mclk = 0;
-	int err, codec_rate, clk_rate;
+	unsigned int aud_mclk, srate;
+	int err;
 	struct snd_soc_pcm_runtime *rtd;
 
-	codec_rate = tegra_machine_srate_values[machine->rate_via_kcontrol];
-	clk_rate = (machine->rate_via_kcontrol) ? codec_rate : rate;
+	srate = (machine->rate_via_kcontrol) ?
+			tegra_machine_srate_values[machine->rate_via_kcontrol] :
+			rate;
 
-	if (!machine->soc_data->is_clk_rate_via_dt) {
-		/* TODO remove this hardcoding */
-		/* aud_mclk, 256 times the sample rate */
-		clk_out_rate = clk_rate << 8;
-		switch (clk_rate) {
-		case 11025:
-			mclk = 22579200;
-			break;
-		case 22050:
-		case 44100:
-		case 88200:
-		case 176400:
-			mclk = 45158400;
-			break;
-		case 8000:
-			mclk = 24576000;
-			break;
-		case 16000:
-		case 32000:
-		case 48000:
-		case 64000:
-		case 96000:
-		case 192000:
-		default:
-			mclk = 49152000;
-			break;
-		}
-
-		err = tegra210_xbar_set_clock(mclk);
-		if (err < 0) {
-			dev_err(card->dev,
-				"Can't configure xbar clock = %d Hz\n", mclk);
-			return err;
-		}
-	}
-
-	err = tegra_alt_asoc_utils_set_rate(&machine->audio_clock, clk_rate,
-			mclk, clk_out_rate);
+	err = tegra_alt_asoc_utils_set_rate(&machine->audio_clock, srate, 0, 0);
 	if (err < 0) {
 		dev_err(card->dev, "Can't configure clocks\n");
 		return err;
 	}
 
-	if (machine->soc_data->is_clk_rate_via_dt)
-		clk_out_rate = machine->audio_clock.set_clk_out_rate;
+	aud_mclk = machine->audio_clock.set_aud_mclk_rate;
 
-	pr_debug("pll_a_out0 = %d Hz, aud_mclk = %d Hz, codec rate = %d Hz\n",
-		machine->audio_clock.set_mclk,
-		machine->audio_clock.set_clk_out_rate, clk_rate);
+	pr_debug("pll_a_out0 = %u Hz, aud_mclk = %u Hz, sample rate = %u Hz\n",
+		 machine->audio_clock.set_pll_out_rate, aud_mclk, srate);
 
-	/* TODO: should we pass here clk_rate ? */
 	err = tegra_machine_set_params(card, machine, rate, channels, formats);
 	if (err < 0)
 		return err;
@@ -429,12 +384,12 @@ static int tegra_machine_dai_init(struct snd_soc_pcm_runtime *runtime,
 		dai_params =
 		(struct snd_soc_pcm_stream *)rtd->dai_link->params;
 
-		dai_params->rate_min = clk_rate;
+		dai_params->rate_min = srate;
 		dai_params->formats = (machine->fmt_via_kcontrol == 2) ?
 			(1ULL << SNDRV_PCM_FORMAT_S32_LE) : formats;
 
 		err = snd_soc_dai_set_sysclk(rtd->codec_dai, RT5659_SCLK_S_MCLK,
-					     clk_out_rate, SND_SOC_CLOCK_IN);
+					     aud_mclk, SND_SOC_CLOCK_IN);
 		if (err < 0) {
 			dev_err(card->dev, "codec_dai clock not set\n");
 			return err;
@@ -446,7 +401,7 @@ static int tegra_machine_dai_init(struct snd_soc_pcm_runtime *runtime,
 		dai_params =
 		(struct snd_soc_pcm_stream *)rtd->dai_link->params;
 
-		dai_params->rate_min = clk_rate;
+		dai_params->rate_min = srate;
 		dai_params->formats = (machine->fmt_via_kcontrol == 2) ?
 			(1ULL << SNDRV_PCM_FORMAT_S32_LE) : formats;
 
@@ -458,15 +413,12 @@ static int tegra_machine_dai_init(struct snd_soc_pcm_runtime *runtime,
 		}
 	}
 
-	/* TODO: remove below spdif links if clk_rate is passed
-	 *	in tegra_machine_set_params
-	 */
 	rtd = snd_soc_get_pcm_runtime(card, "spdif-dit-0");
 	if (rtd) {
 		dai_params =
 		(struct snd_soc_pcm_stream *)rtd->dai_link->params;
 
-		dai_params->rate_min = clk_rate;
+		dai_params->rate_min = srate;
 	}
 
 	rtd = snd_soc_get_pcm_runtime(card, "spdif-dit-1");
@@ -474,7 +426,7 @@ static int tegra_machine_dai_init(struct snd_soc_pcm_runtime *runtime,
 		dai_params =
 		(struct snd_soc_pcm_stream *)rtd->dai_link->params;
 
-		dai_params->rate_min = clk_rate;
+		dai_params->rate_min = srate;
 	}
 
 	/* set clk rate for i2s3 dai link*/
@@ -483,7 +435,7 @@ static int tegra_machine_dai_init(struct snd_soc_pcm_runtime *runtime,
 		dai_params =
 		(struct snd_soc_pcm_stream *)rtd->dai_link->params;
 
-		dai_params->rate_min = clk_rate;
+		dai_params->rate_min = srate;
 	}
 
 	rtd = snd_soc_get_pcm_runtime(card, "spdif-dit-3");
@@ -491,7 +443,7 @@ static int tegra_machine_dai_init(struct snd_soc_pcm_runtime *runtime,
 		dai_params =
 		(struct snd_soc_pcm_stream *)rtd->dai_link->params;
 
-		dai_params->rate_min = clk_rate;
+		dai_params->rate_min = srate;
 	}
 
 	rtd = snd_soc_get_pcm_runtime(card, "spdif-dit-5");
@@ -500,7 +452,7 @@ static int tegra_machine_dai_init(struct snd_soc_pcm_runtime *runtime,
 		(struct snd_soc_pcm_stream *)rtd->dai_link->params;
 
 		/* update link_param to update hw_param for DAPM */
-		dai_params->rate_min = clk_rate;
+		dai_params->rate_min = srate;
 		dai_params->channels_min = channels;
 		dai_params->formats = formats;
 	}
@@ -512,7 +464,7 @@ static int tegra_machine_dai_init(struct snd_soc_pcm_runtime *runtime,
 
 		if (!strcmp(rtd->codec_dai->name, "tas2552-amplifier")) {
 			err = snd_soc_dai_set_sysclk(rtd->codec_dai,
-				TAS2552_PDM_CLK_IVCLKIN, clk_out_rate,
+				TAS2552_PDM_CLK_IVCLKIN, aud_mclk,
 				SND_SOC_CLOCK_IN);
 			if (err < 0) {
 				dev_err(card->dev, "codec_dai clock not set\n");
@@ -528,7 +480,7 @@ static int tegra_machine_dai_init(struct snd_soc_pcm_runtime *runtime,
 
 		if (!strcmp(rtd->codec_dai->name, "tas2552-amplifier")) {
 			err = snd_soc_dai_set_sysclk(rtd->codec_dai,
-				TAS2552_PDM_CLK_IVCLKIN, clk_out_rate,
+				TAS2552_PDM_CLK_IVCLKIN, aud_mclk,
 				SND_SOC_CLOCK_IN);
 			if (err < 0) {
 				dev_err(card->dev, "codec_dai clock not set\n");
@@ -542,7 +494,7 @@ static int tegra_machine_dai_init(struct snd_soc_pcm_runtime *runtime,
 		dai_params =
 		(struct snd_soc_pcm_stream *)rtd->dai_link->params;
 
-		dai_params->rate_min = clk_rate;
+		dai_params->rate_min = srate;
 		dai_params->channels_min = channels;
 		dai_params->formats = formats;
 	}
@@ -864,33 +816,16 @@ static int tegra_machine_driver_probe(struct platform_device *pdev)
 	if (ret)
 		return ret;
 
+	memset(&machine->audio_clock, 0, sizeof(machine->audio_clock));
 	if (of_property_read_u32(np, "nvidia,mclk-rate",
-				&machine->audio_clock.mclk_rate) < 0)
+				 &machine->audio_clock.mclk_rate) < 0)
 		dev_dbg(&pdev->dev, "Missing property nvidia,mclk-rate\n");
 
 	if (of_property_read_u32(np, "mclk-fs",
-			&machine->audio_clock.mclk_scale) < 0) {
+				 &machine->audio_clock.mclk_scale) < 0) {
+		/* TODO: fix clock in DT and remove usage of default scale */
 		machine->audio_clock.mclk_scale = 256;
 		dev_dbg(&pdev->dev, "Missing property mclk-fs\n");
-	}
-
-	if (machine->soc_data->is_clk_rate_via_dt) {
-		ret = of_property_read_u32(np, "nvidia,num-clk",
-					   &machine->audio_clock.num_clk);
-		if (ret < 0) {
-			dev_err(&pdev->dev,
-				"Missing property 'nvidia,num-clk'\n");
-			return ret;
-		}
-
-		ret = of_property_read_u32_array(np, "nvidia,clk-rates",
-				(u32 *)&machine->audio_clock.clk_rates,
-				machine->audio_clock.num_clk);
-		if (ret < 0) {
-			dev_err(&pdev->dev,
-				"Missing property 'nvidia,clk-rates'\n");
-			return ret;
-		}
 	}
 
 	tegra_machine_dma_set_mask(pdev);

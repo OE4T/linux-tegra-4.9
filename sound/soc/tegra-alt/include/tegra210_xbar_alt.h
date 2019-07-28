@@ -205,7 +205,6 @@ struct tegra_soc_bytes {
 	u32 shift; /* Used as offset for ahub ram related programing */
 };
 
-int tegra210_xbar_set_clock(unsigned long rate);
 void tegra210_xbar_set_cif(struct regmap *regmap, unsigned int reg,
 			  struct tegra210_xbar_cif_conf *conf);
 void tegra210_xbar_write_ahubram(struct regmap *regmap, unsigned int reg_ctrl,

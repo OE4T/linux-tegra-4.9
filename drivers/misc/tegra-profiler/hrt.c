@@ -849,7 +849,7 @@ bool quadd_is_inherited(struct task_struct *task)
 		return false;
 
 	for (p = task; p != &init_task;) {
-		if (task_pid_nr(p) == hrt.root_pid)
+		if (task_tgid_nr(p) == hrt.root_pid)
 			return true;
 
 		rcu_read_lock();

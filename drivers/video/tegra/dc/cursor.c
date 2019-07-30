@@ -181,6 +181,7 @@ static int set_cursor_position(struct tegra_dc *dc, s16 x, s16 y)
 	if (tegra_dc_is_nvdisplay())
 		nvdisp_set_cursor_position(dc, x, y);
 	else
+		/* todo: Bug 2671921: disable cursor if offscreen */
 		tegra_dc_writel(dc, CURSOR_POSITION(x, y,
 				H_CURSOR_POSITION_SIZE),
 				DC_DISP_CURSOR_POSITION);

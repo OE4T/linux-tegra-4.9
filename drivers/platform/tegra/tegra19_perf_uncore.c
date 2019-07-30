@@ -57,7 +57,8 @@
 #endif
 
 /*
- * Carmel uncore perfmon supports two counters per unit
+ * Carmel uncore perfmon supports two counters per unit. We currently
+ * only support tracking either SCF or L2_0.
  */
 #define CARMEL_MAX_UNCORE_CNTS		2
 
@@ -66,8 +67,6 @@
  */
 #define CARMEL_PMCR_E		(1 << 0) /* Enable all counters */
 #define CARMEL_PMCR_P		(1 << 1) /* Reset all counters */
-
-static DEFINE_PER_CPU(struct pmu_hw_events, cpu_hw_events);
 
 #define to_arm_pmu(p) (container_of(p, struct arm_pmu, pmu))
 
@@ -89,21 +88,23 @@ enum carmel_uncore_perf_types {
 	CARMEL_PMU_L2D_CACHE_REFILL_ST = 0x53,
 	CARMEL_PMU_L2D_CACHE_WB_VIC_TIM = 0x56,
 
+	CARMEL_PMU_L2D_CMD_A = 0xC5,
+	CARMEL_PMU_L2D_CMD_B = 0xC6,
+
 	CARMEL_PMU_EVENT_NV_INT_START = 0x200,
 	CARMEL_PMU_EVENT_NV_INT_END = 0x208,
 
 };
 
 /**
- * Data for each uncore perfmon counter
+ * Data for each uncore perfmon counter. Currently only used for debug,
+ * but could be useful to extend functionality
  */
 struct perfmon_cnt_info {
-	uint8_t counter;	/* Event id */
+	struct perf_event *event;
 	uint8_t group;		/* Group selector */
 	uint8_t unit;		/* Unit selector */
-	uint8_t index;		/* Virtual Index */
 	uint8_t idx;		/* Physical Index */
-	uint8_t valid;		/* Valid info */
 };
 
 static struct perfmon_cnt_info carmel_uncore_event[CARMEL_MAX_UNCORE_CNTS];
@@ -138,64 +139,9 @@ static u32 sys_counter_read(u32 reg)
 	}
 }
 
-static inline int get_ctr_info(u32 idx, struct perfmon_cnt_info *info)
-{
-	int i;
-
-	for (i = 0; i < CARMEL_MAX_UNCORE_CNTS; i++) {
-		if (carmel_uncore_event[i].index == idx &&
-			carmel_uncore_event[i].valid == 1) {
-			*info = carmel_uncore_event[i];
-			return 0;
-		}
-	}
-	return -1;
-}
-
-static inline int alloc_carmel_ctr(u32 idx, u32 group, u32 event)
-{
-	int i;
-	struct perfmon_cnt_info info;
-
-	if (get_ctr_info(idx, &info) < 0) {
-		for (i = 0; i < CARMEL_MAX_UNCORE_CNTS; i++) {
-			if (carmel_uncore_event[i].valid == 0) {
-				carmel_uncore_event[i].counter = event;
-				carmel_uncore_event[i].group = group;
-				carmel_uncore_event[i].unit = 0;
-				carmel_uncore_event[i].index = idx;
-				carmel_uncore_event[i].idx = i;
-				carmel_uncore_event[i].valid = 1;
-				break;
-			}
-		}
-
-		if (i == CARMEL_MAX_UNCORE_CNTS) {
-			pr_err("carmel_pmu: failed to allocate Carmel uncore ctr\n");
-			return -1;
-		}
-	}
-
-	return 0;
-}
-
-static inline int clear_carmel_ctr(u32 idx)
-{
-	int i;
-
-	for (i = 0; i < CARMEL_MAX_UNCORE_CNTS; i++) {
-		if (carmel_uncore_event[i].index == idx) {
-			carmel_uncore_event[i].valid = 0;
-			break;
-		}
-	}
-
-	return 0;
-}
-
 static inline int get_uncore_group(u32 event, bool set)
 {
-	u32 group = 0x0;//, pre_group;
+	u32 group = 0x0;
 	switch (event) {
 		case CARMEL_PMU_L2D_CACHE:
 		case CARMEL_PMU_L2D_CACHE_REFILL:
@@ -205,6 +151,8 @@ static inline int get_uncore_group(u32 event, bool set)
 		case CARMEL_PMU_L2D_CACHE_REFILL_LD:
 		case CARMEL_PMU_L2D_CACHE_REFILL_ST:
 		case CARMEL_PMU_L2D_CACHE_WB_VIC_TIM:
+		case CARMEL_PMU_L2D_CMD_A:
+		case CARMEL_PMU_L2D_CMD_B:
 		{
 			group = 0x0100;
 			break;
@@ -234,24 +182,15 @@ static inline int get_uncore_group(u32 event, bool set)
 	return group;
 }
 
-static inline int carmel_pmu_counter_valid(u32 idx,
-		struct perfmon_cnt_info *info)
-{
-	if (get_ctr_info(idx, info) < 0)
-		return 0;
-	return 1;
-}
-
 static inline int carmel_pmu_counter_has_overflowed(u32 pmnc, int idx)
 {
 	int ret = 0;
-	struct perfmon_cnt_info info;
 
-	if (!carmel_pmu_counter_valid(idx, &info)) {
+	if (idx < CARMEL_MAX_UNCORE_CNTS) {
+		ret = pmnc & BIT(idx);
+	} else {
 		pr_err("carmel_pmu: CPU%u checking wrong counter %d overflow status\n",
 			smp_processor_id(), idx);
-	} else {
-		ret = pmnc & BIT(idx);
 	}
 
 	return ret;
@@ -261,17 +200,16 @@ static inline u32 carmel_pmu_read_counter(struct perf_event *event)
 {
 	struct hw_perf_event *hwc = &event->hw;
 	int idx = hwc->idx;
-	struct perfmon_cnt_info info;
 	u32 value = 0;
 
-	PMCPRINT("Read counter %d\n", idx);
 
-	if (carmel_pmu_counter_valid(idx, &info)){
+	if (idx < CARMEL_MAX_UNCORE_CNTS) {
 		value = sys_counter_read(nv_pmevcntrs[idx]);
-	}
-	else
+		PMCPRINT("Read counter %d: 0x%x\n", idx, value);
+	} else {
 		pr_err("carmel_pmu: CPU%u reading invalid counter %d\n",
 			smp_processor_id(), idx);
+	}
 
 	return value;
 }
@@ -280,12 +218,12 @@ static inline void carmel_pmu_write_counter(struct perf_event *event, u32 value)
 {
 	struct hw_perf_event *hwc = &event->hw;
 	int idx = hwc->idx;
-	struct perfmon_cnt_info info;
 
-	if (carmel_pmu_counter_valid(idx, &info)){
+	PMCPRINT("Write counter %d: 0x%x\n", idx, value);
+
+	if (idx < CARMEL_MAX_UNCORE_CNTS) {
 		sys_counter_write(nv_pmevcntrs[idx], value);
-	}
-	else
+	} else
 		pr_err("carmel_pmu: CPU%u writing invalid counter %d\n",
 			smp_processor_id(), idx);
 
@@ -294,9 +232,8 @@ static inline void carmel_pmu_write_counter(struct perf_event *event, u32 value)
 static inline void carmel_pmu_write_evtype(int idx, u32 val)
 {
 	int group;
-	struct perfmon_cnt_info info;
 
-	if (carmel_pmu_counter_valid(idx, &info)) {
+	if (idx < CARMEL_MAX_UNCORE_CNTS) {
 		group = get_uncore_group(val, true);
 		if(group < 0) {
 			pr_err("carmel_pmu: Try to write an invalid group\n");
@@ -304,16 +241,17 @@ static inline void carmel_pmu_write_evtype(int idx, u32 val)
 		}
 
 		sys_counter_write(nv_pmevtypers[idx], val);
-	}
+	} else
+		pr_err("carmel_pmu: CPU%u writing evtype to invalid counter %d\n",
+			smp_processor_id(), idx);
 
 }
 
 static inline int carmel_pmu_enable_counter(int idx)
 {
-	struct perfmon_cnt_info info;
 	u32 data = 0;
 
-	if (carmel_pmu_counter_valid(idx, &info)) {
+	if (idx < CARMEL_MAX_UNCORE_CNTS) {
 		data = BIT(idx);
 		write_sysreg_s(data, SYS_NV_PMCNTENSET_EL0);
 	} else {
@@ -329,7 +267,7 @@ static inline int carmel_pmu_disable_counter(int idx)
 {
 	u32 data = 0;
 
-	if (idx <= CARMEL_MAX_UNCORE_CNTS) {
+	if (idx < CARMEL_MAX_UNCORE_CNTS) {
 		data = BIT(idx);
 		write_sysreg_s(data, SYS_NV_PMCNTENCLR_EL0);
 	} else {
@@ -492,7 +430,6 @@ static irqreturn_t carmel_pmu_handle_irq(int irq_num, void *dev)
 	 */
 	regs = get_irq_regs();
 
-	cpuc = this_cpu_ptr(&cpu_hw_events);
 	for (idx = 0; idx < uncore_pmu->num_events; ++idx) {
 		struct perf_event *event = cpuc->events[idx];
 		struct hw_perf_event *hwc;
@@ -507,6 +444,8 @@ static irqreturn_t carmel_pmu_handle_irq(int irq_num, void *dev)
 		 */
 		if (!carmel_pmu_counter_has_overflowed(pmovsr, idx))
 			continue;
+
+		PMCPRINT("event %llu overflowed\n", event->attr.config);
 
 		hwc = &event->hw;
 		armpmu_event_update(event);
@@ -573,8 +512,13 @@ static int carmel_pmu_get_event_idx(struct pmu_hw_events *cpuc,
 
 	for (idx = 0; idx < uncore_pmu->num_events; ++idx) {
 		if (!test_and_set_bit(idx, cpuc->used_mask)) {
+
 			group = get_uncore_group(event->attr.config, true);
-			alloc_carmel_ctr(idx, group, event->attr.config);
+
+			carmel_uncore_event[idx].event = event;
+			carmel_uncore_event[idx].group = group;
+			carmel_uncore_event[idx].idx = idx;
+
 			return idx;
 		}
 	}
@@ -585,15 +529,9 @@ static int carmel_pmu_get_event_idx(struct pmu_hw_events *cpuc,
 
 static void carmel_pmu_reset(void *info)
 {
-	struct arm_pmu *uncore_pmu = (struct arm_pmu *)info;
-	u32 idx, nb_cnt = uncore_pmu->num_events;
 	int value = 0;
 
 	PMCPRINT("Resetting Carmel PMU\n");
-
-	/* The counter and interrupt enable registers are unknown at reset. */
-	for (idx = 0; idx < nb_cnt; ++idx)
-		clear_carmel_ctr(idx);
 
 	/* Initialize & Reset PMNC: C and P bits. */
 	value |= CARMEL_PMCR_P;

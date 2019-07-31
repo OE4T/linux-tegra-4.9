@@ -702,6 +702,9 @@ int gm20b_init_hal(struct gk20a *g)
 	gops->clock_gating = gm20b_ops.clock_gating;
 	gops->fifo = gm20b_ops.fifo;
 	gops->gr_ctx = gm20b_ops.gr_ctx;
+#ifdef CONFIG_GK20A_CTXSW_TRACE
+	gops->fecs_trace = gm20b_ops.fecs_trace;
+#endif
 	gops->mm = gm20b_ops.mm;
 	gops->therm = gm20b_ops.therm;
 	gops->pmu = gm20b_ops.pmu;

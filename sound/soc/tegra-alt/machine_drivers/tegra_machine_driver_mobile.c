@@ -55,7 +55,6 @@
 /* function prototypes */
 static int tegra_machine_driver_remove(struct platform_device *);
 static int tegra_machine_driver_probe(struct platform_device *);
-static int tegra_machine_sfc_init(struct snd_soc_pcm_runtime *);
 static int tegra_machine_rt565x_init(struct snd_soc_pcm_runtime *);
 
 #if IS_ENABLED(CONFIG_SND_SOC_TEGRA210_ADSP_ALT)
@@ -724,23 +723,6 @@ static int tegra_machine_rt565x_init(struct snd_soc_pcm_runtime *rtd)
 	return 0;
 }
 
-static int tegra_machine_sfc_init(struct snd_soc_pcm_runtime *rtd)
-{
-	struct snd_soc_dai *codec_dai = rtd->codec_dai;
-	unsigned int in_srate, out_srate;
-	int err;
-
-	in_srate = 48000;
-	out_srate = 8000;
-
-	err = snd_soc_dai_set_sysclk(codec_dai, 0, out_srate,
-					SND_SOC_CLOCK_OUT);
-	err = snd_soc_dai_set_sysclk(codec_dai, 0, in_srate,
-					SND_SOC_CLOCK_IN);
-
-	return err;
-}
-
 static int codec_init(struct tegra_machine *machine)
 {
 	struct snd_soc_dai_link *dai_links = machine->asoc->dai_links;
@@ -748,13 +730,6 @@ static int codec_init(struct tegra_machine *machine)
 
 	if (!dai_links || !num_links)
 		return -EINVAL;
-
-	/*
-	 * set sfc dai_init
-	 * TODO: review if this is really needed
-	 */
-	machine->asoc->dai_links[machine->soc_data->sfc_dai_link].init =
-		&tegra_machine_sfc_init;
 
 	for (i = 0; i < num_links; i++) {
 		if (!dai_links[i].name)

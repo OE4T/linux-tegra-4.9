@@ -2935,24 +2935,6 @@ static int tegra210_sfc_runtime_resume(struct device *dev)
 	return 0;
 }
 
-static int tegra210_sfc_set_dai_sysclk(struct snd_soc_dai *dai,
-		int clk_id, unsigned int freq, int dir)
-{
-	struct tegra210_sfc *sfc = snd_soc_dai_get_drvdata(dai);
-	unsigned int value;
-
-	value = tegra210_sfc_rate_to_index(freq);
-	if (value < 0)
-		return value;
-
-	if (dir == SND_SOC_CLOCK_OUT)
-		sfc->srate_out = value;
-	else if (dir == SND_SOC_CLOCK_IN)
-		sfc->srate_in = value;
-
-	return 0;
-}
-
 static int tegra210_sfc_write_coeff_ram(struct tegra210_sfc *sfc)
 {
 	u32 *coeff_ram = NULL;
@@ -3320,7 +3302,6 @@ static int tegra210_sfc_put_mono_conv(struct snd_kcontrol *kcontrol,
 
 static struct snd_soc_dai_ops tegra210_sfc_in_dai_ops = {
 	.hw_params	= tegra210_sfc_in_hw_params,
-	.set_sysclk	= tegra210_sfc_set_dai_sysclk,
 };
 
 static struct snd_soc_dai_ops tegra210_sfc_out_dai_ops = {
@@ -3561,9 +3542,6 @@ static int tegra210_sfc_platform_probe(struct platform_device *pdev)
 		return -ENOMEM;
 
 	sfc->is_shutdown = false;
-
-	/* initialize default output srate */
-	sfc->srate_out = tegra210_sfc_rate_to_index(48000);
 
 	dev_set_drvdata(&pdev->dev, sfc);
 

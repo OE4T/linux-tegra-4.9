@@ -380,22 +380,15 @@
 		nvidia,ldo-gpios = <&gpio TEGRA_GPIO(BB, 3) GPIO_ACTIVE_HIGH>;
 		nvidia,hp-det-gpios = <&gpio TEGRA_GPIO(E, 6) GPIO_ACTIVE_HIGH>;
 
-		clocks = <&tegra_car TEGRA210_CLK_PLL_P_OUT1>,
-			<&tegra_car TEGRA210_CLK_PLL_A>,
-			<&tegra_car TEGRA210_CLK_PLL_A_OUT0>,
-			<&tegra_car TEGRA210_CLK_D_AUDIO>,
-			<&tegra_car TEGRA210_CLK_CLK_M>,
-			<&tegra_car TEGRA210_CLK_EXTERN1>;
-		clock-names = "pll_p_out1", "pll_a", "pll_a_out0", "ahub",
-			"clk_m", "extern1";
-
-
-		assigned-clocks = <&tegra_car TEGRA210_CLK_PLL_A>,
-			<&tegra_car TEGRA210_CLK_PLL_A_OUT0>,
-			<&tegra_car TEGRA210_CLK_D_AUDIO>,
-			<&tegra_car TEGRA210_CLK_EXTERN1>;
-		assigned-clock-rates = <368640000>, <36864000>,
-			<36864000>, <12288000>;
+		clocks = <&tegra_car TEGRA210_CLK_PLL_A>,
+			 <&tegra_car TEGRA210_CLK_PLL_A_OUT0>,
+			 <&tegra_car TEGRA210_CLK_D_AUDIO>,
+			 <&tegra_car TEGRA210_CLK_EXTERN1>;
+		clock-names = "pll_a", "pll_a_out0", "ahub", "extern1";
+		assigned-clocks = <&tegra_car TEGRA210_CLK_D_AUDIO>,
+				  <&tegra_car TEGRA210_CLK_EXTERN1>;
+		assigned-clock-parents = <&tegra_car TEGRA210_CLK_PLL_A_OUT0>,
+					 <&tegra_car TEGRA210_CLK_PLL_A_OUT0>;
 
 		nvidia,num-codec-link = <3>;
 

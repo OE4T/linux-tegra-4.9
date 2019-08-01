@@ -696,23 +696,17 @@
 		compatible = "nvidia,tegra-audio-t186ref-mobile-rt565x";
 		nvidia,model = "tegra-snd-t186ref-mobile-rt565x";
 		nvidia,num-codec-link = <12>;
-		nvidia,num-clk = <8>;
-		nvidia,clk-rates = < 270950400	/* PLLA_x11025_RATE */
-				     11289600	/* AUD_MCLK_x11025_RATE */
-				     45158400	/* PLLA_OUT0_x11025_RATE */
-				     45158400	/* AHUB_x11025_RATE */
-				     245760000  /* PLLA_x8000_RATE */
-				     12288000	/* AUD_MCLK_x8000_RATE */
-				     49152000	/* PLLA_OUT0_x8000_RATE */
-				     49152000 >;/* AHUB_x8000_RATE */
-		clocks = <&tegra_car TEGRA186_CLK_PLLP_OUT0>,
-			<&tegra_car TEGRA186_CLK_PLLA>,
-			<&tegra_car TEGRA186_CLK_PLL_A_OUT0>,
-			<&tegra_car TEGRA186_CLK_AHUB>,
-			<&tegra_car TEGRA186_CLK_CLK_M>,
-			<&tegra_car TEGRA186_CLK_AUD_MCLK>;
-		clock-names = "pll_p_out1", "pll_a", "pll_a_out0", "ahub",
-				"clk_m", "extern1";
+		clocks = <&tegra_car TEGRA186_CLK_PLLA>,
+			 <&tegra_car TEGRA186_CLK_PLL_A_OUT0>,
+			 <&tegra_car TEGRA186_CLK_AHUB>,
+			 <&tegra_car TEGRA186_CLK_AUD_MCLK>;
+		clock-names = "pll_a", "pll_a_out0", "ahub", "extern1";
+		assigned-clocks = <&tegra_car TEGRA186_CLK_PLL_A_OUT0>,
+				  <&tegra_car TEGRA186_CLK_AHUB>,
+				  <&tegra_car TEGRA186_CLK_AUD_MCLK>;
+		assigned-clock-parents = <&tegra_car TEGRA186_CLK_PLLA>,
+					 <&tegra_car TEGRA186_CLK_PLL_A_OUT0>,
+					 <&tegra_car TEGRA186_CLK_PLL_A_OUT0>;
 		resets = <&tegra_car TEGRA186_RESET_AUD_MCLK>;
 		reset-names = "extern1_rst";
 

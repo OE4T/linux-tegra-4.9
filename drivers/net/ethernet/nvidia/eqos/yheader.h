@@ -1444,6 +1444,8 @@ struct eqos_prv_data {
 	/* for filtering */
 	unsigned int max_hash_table_size;
 	int max_addr_reg_cnt;
+	/* To store index of last written MAC address filter register */
+	unsigned int mac_addr_idx;
 
 	/* L3/L4 filtering */
 	unsigned int l3_l4_filter;

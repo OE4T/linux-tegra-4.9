@@ -29,7 +29,7 @@
  * DAMAGE.
  * ========================================================================= */
 /*
- * Copyright (c) 2015-2018, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2019, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -684,11 +684,16 @@ static INT config_l2_da_perfect_inverse_match(INT perfect_inverse_match)
 
 static INT update_mac_addr32_127_low_high_reg(INT idx, UCHAR addr[])
 {
-
-	MAC_MA32_127HR_ADDRHI_AE_WR(idx, (addr[4] | (addr[5] << 8)), 0x1);
-	MAC_MA32_127LR_WR(idx,
-			  (addr[0] | (addr[1] << 8) | (addr[2] << 16) |
-			   (addr[3] << 24)));
+	if (!addr) {
+		MAC_MA32_127HR_ADDRHI_AE_WR(idx, 0x0, 0x0);
+		MAC_MA32_127LR_WR(idx, 0x0);
+	} else {
+		MAC_MA32_127HR_ADDRHI_AE_WR(idx,
+					    (addr[4] | (addr[5] << 8)), 0x1);
+		MAC_MA32_127LR_WR(idx,
+				  (addr[0] | (addr[1] << 8) | (addr[2] << 16) |
+				  (addr[3] << 24)));
+	}
 
 	return Y_SUCCESS;
 }
@@ -705,11 +710,16 @@ static INT update_mac_addr32_127_low_high_reg(INT idx, UCHAR addr[])
 
 static INT update_mac_addr1_31_low_high_reg(INT idx, UCHAR addr[])
 {
-
-	MAC_MA1_31HR_ADDRHI_AE_WR(idx, (addr[4] | (addr[5] << 8)), 0x1);
-	MAC_MA1_31LR_WR(idx,
-			(addr[0] | (addr[1] << 8) | (addr[2] << 16) |
-			 (addr[3] << 24)));
+	if (!addr) {
+		MAC_MA1_31HR_ADDRHI_AE_WR(idx, 0x0, 0x0);
+		MAC_MA1_31LR_WR(idx, 0x0);
+	} else {
+		MAC_MA1_31HR_ADDRHI_AE_WR(idx,
+					  (addr[4] | (addr[5] << 8)), 0x1);
+		MAC_MA1_31LR_WR(idx,
+				(addr[0] | (addr[1] << 8) | (addr[2] << 16) |
+				(addr[3] << 24)));
+	}
 
 	return Y_SUCCESS;
 }

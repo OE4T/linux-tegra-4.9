@@ -916,6 +916,7 @@ static void eqos_default_common_confs(struct eqos_prv_data *pdata)
 	pdata->use_lpi_tx_automate = true;
 	pdata->eee_active = 0;
 	pdata->one_nsec_accuracy = 1;
+	pdata->mac_addr_idx = 0;
 
 	pr_debug("<--eqos_default_common_confs\n");
 }
@@ -1239,7 +1240,8 @@ static int eqos_close(struct net_device *dev)
 * \retval 0 if perfect filtering is seleted & 1 if hash
 * filtering is seleted.
 */
-static int eqos_prepare_mc_list(struct net_device *dev)
+static int eqos_prepare_mc_list(struct net_device *dev,
+				unsigned int *mac_addr_idx)
 {
 	struct eqos_prv_data *pdata = netdev_priv(dev);
 	struct hw_if_struct *hw_if = &(pdata->hw_if);
@@ -1354,6 +1356,8 @@ static int eqos_prepare_mc_list(struct net_device *dev)
 
 			i++;
 		}
+
+		*mac_addr_idx = i;
 	}
 
 	DBGPR_FILTER("<--eqos_prepare_mc_list\n");
@@ -1372,7 +1376,8 @@ static int eqos_prepare_mc_list(struct net_device *dev)
 * \retval 0 if perfect filtering is seleted  & 1 if hash
 * filtering is seleted.
 */
-static int eqos_prepare_uc_list(struct net_device *dev)
+static int eqos_prepare_uc_list(struct net_device *dev,
+				unsigned int *mac_addr_idx)
 {
 	struct eqos_prv_data *pdata = netdev_priv(dev);
 	struct hw_if_struct *hw_if = &(pdata->hw_if);
@@ -1471,6 +1476,8 @@ static int eqos_prepare_uc_list(struct net_device *dev)
 									  addr);
 			i++;
 		}
+
+		*mac_addr_idx = i;
 	}
 
 	DBGPR_FILTER("<--eqos_prepare_uc_list\n");
@@ -1497,6 +1504,7 @@ static void eqos_set_rx_mode(struct net_device *dev)
 	unsigned char hmc_mode = 0;
 	unsigned char pm_mode = 0;
 	unsigned char hpf_mode = 0;
+	unsigned int mac_addr_idx = 0;
 	int mode, i;
 
 	DBGPR_FILTER("-->eqos_set_rx_mode\n");
@@ -1526,7 +1534,7 @@ static void eqos_set_rx_mode(struct net_device *dev)
 			/* switch to PROMISCUOUS mode */
 			pr_mode = 1;
 		} else {
-			mode = eqos_prepare_mc_list(dev);
+			mode = eqos_prepare_mc_list(dev, &mac_addr_idx);
 			if (mode) {
 				/* Hash filtering for multicast */
 				hmc_mode = 1;
@@ -1544,7 +1552,7 @@ static void eqos_set_rx_mode(struct net_device *dev)
 		/* switch to PROMISCUOUS mode */
 		pr_mode = 1;
 	} else if (!netdev_uc_empty(dev)) {
-		mode = eqos_prepare_uc_list(dev);
+		mode = eqos_prepare_uc_list(dev, &mac_addr_idx);
 		if (mode) {
 			/* Hash filtering for unicast */
 			huc_mode = 1;
@@ -1554,6 +1562,20 @@ static void eqos_set_rx_mode(struct net_device *dev)
 			hpf_mode = 1;
 		}
 	}
+
+	/* reset filter MAC addresses which are deleted */
+	if (pdata->mac_addr_idx > mac_addr_idx) {
+		for (i = mac_addr_idx; i <= pdata->mac_addr_idx; i++) {
+			if (i < 32)
+				hw_if->update_mac_addr1_31_low_high_reg(i,
+						NULL);
+			else
+				hw_if->update_mac_addr32_127_low_high_reg(i,
+						NULL);
+		}
+	}
+
+	pdata->mac_addr_idx = mac_addr_idx;
 
 	hw_if->config_mac_pkt_filter_reg(pr_mode, huc_mode,
 					 hmc_mode, pm_mode, hpf_mode);

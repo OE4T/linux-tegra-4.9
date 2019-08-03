@@ -70,7 +70,7 @@ static int tegra_machine_suspend_pre(struct snd_soc_card *);
 static int tegra_machine_pcm_hw_params(struct snd_pcm_substream *,
 		struct snd_pcm_hw_params *);
 static int tegra_machine_dai_init(struct snd_soc_pcm_runtime *,
-		unsigned int, unsigned int, u64, bool);
+		unsigned int, unsigned int, u64);
 static int tegra_machine_set_params(struct snd_soc_card *,
 		struct tegra_machine *, unsigned int, unsigned int, u64);
 static int tegra_machine_codec_get_rate(struct snd_kcontrol *,
@@ -351,7 +351,7 @@ static int tegra_machine_set_params(struct snd_soc_card *card,
 }
 static int tegra_machine_dai_init(struct snd_soc_pcm_runtime *runtime,
 				  unsigned int rate, unsigned int channels,
-				  u64 formats, bool is_playback)
+				  u64 formats)
 {
 	struct snd_soc_card *card = runtime->card;
 	struct tegra_machine *machine = snd_soc_card_get_drvdata(card);
@@ -508,17 +508,10 @@ static int tegra_machine_pcm_hw_params(struct snd_pcm_substream *substream,
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 	struct snd_soc_card *card = rtd->card;
 	int err;
-	bool is_playback;
-
-	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
-		is_playback = true;
-	else
-		is_playback = false;
 
 	err = tegra_machine_dai_init(rtd, params_rate(params),
-			params_channels(params),
-			(1ULL << (params_format(params))),
-			is_playback);
+				     params_channels(params),
+				     1ULL << params_format(params));
 	if (err < 0) {
 		dev_err(card->dev, "Failed dai init\n");
 		return err;
@@ -586,7 +579,6 @@ static int tegra_machine_compr_set_params(struct snd_compr_stream *cstream)
 	struct snd_soc_platform *platform = rtd->platform;
 	struct snd_codec codec_params;
 	int err;
-	bool is_playback;
 
 	if (platform->driver->compr_ops &&
 		platform->driver->compr_ops->get_params) {
@@ -601,14 +593,9 @@ static int tegra_machine_compr_set_params(struct snd_compr_stream *cstream)
 		return -EINVAL;
 	}
 
-	if (cstream->direction == SND_COMPRESS_PLAYBACK)
-		is_playback = true;
-	else
-		is_playback = false;
-
 	err = tegra_machine_dai_init(rtd, codec_params.sample_rate,
-			codec_params.ch_out, SNDRV_PCM_FMTBIT_S16_LE,
-			is_playback);
+				     codec_params.ch_out,
+				     SNDRV_PCM_FMTBIT_S16_LE);
 	if (err < 0) {
 		dev_err(card->dev, "Failed dai init\n");
 		return err;

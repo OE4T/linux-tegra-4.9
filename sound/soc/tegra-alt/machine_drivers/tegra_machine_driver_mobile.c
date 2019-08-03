@@ -21,8 +21,6 @@
 #include <linux/of_platform.h>
 #include <linux/input.h>
 #include <linux/gpio.h>
-#include <linux/regulator/consumer.h>
-#include <linux/delay.h>
 #include <linux/pm_runtime.h>
 #include <sound/core.h>
 #include <sound/jack.h>
@@ -37,12 +35,6 @@
 
 #define DRV_NAME "tegra-asoc:"
 
-#define GPIO_SPKR_EN    BIT(0)
-#define GPIO_HP_MUTE    BIT(1)
-#define GPIO_INT_MIC_EN BIT(2)
-#define GPIO_EXT_MIC_EN BIT(3)
-#define GPIO_HP_DET     BIT(4)
-
 #define PARAMS(sformat, channels)		\
 	{					\
 		.formats = sformat,		\
@@ -51,36 +43,6 @@
 		.channels_min = channels,	\
 		.channels_max = channels,	\
 	}
-
-/* function prototypes */
-static int tegra_machine_driver_remove(struct platform_device *);
-static int tegra_machine_driver_probe(struct platform_device *);
-static int tegra_machine_rt565x_init(struct snd_soc_pcm_runtime *);
-
-#if IS_ENABLED(CONFIG_SND_SOC_TEGRA210_ADSP_ALT)
-static int tegra_machine_compr_set_params(struct snd_compr_stream *);
-static void tegra_machine_compr_shutdown(struct snd_compr_stream *);
-static int tegra_machine_compr_startup(struct snd_compr_stream *);
-#endif
-
-static void tegra_machine_pcm_shutdown(struct snd_pcm_substream *);
-static int tegra_machine_pcm_startup(struct snd_pcm_substream *);
-static void tegra_machine_pcm_shutdown(struct snd_pcm_substream *);
-static int tegra_machine_suspend_pre(struct snd_soc_card *);
-static int tegra_machine_pcm_hw_params(struct snd_pcm_substream *,
-		struct snd_pcm_hw_params *);
-static int tegra_machine_dai_init(struct snd_soc_pcm_runtime *,
-		unsigned int, unsigned int, u64);
-static int tegra_machine_set_params(struct snd_soc_card *,
-		struct tegra_machine *, unsigned int, unsigned int, u64);
-static int tegra_machine_codec_get_rate(struct snd_kcontrol *,
-		struct snd_ctl_elem_value *);
-static int tegra_machine_codec_put_rate(struct snd_kcontrol *,
-		struct snd_ctl_elem_value *);
-static int tegra_machine_codec_get_format(struct snd_kcontrol *,
-		struct snd_ctl_elem_value *);
-static int tegra_machine_codec_put_format(struct snd_kcontrol *,
-		struct snd_ctl_elem_value *);
 
 /* t210 soc data */
 static const struct tegra_machine_soc_data soc_data_tegra210 = {
@@ -146,11 +108,11 @@ static const char * const tegra_machine_format_text[] = {
 
 static const struct soc_enum tegra_machine_codec_rate =
 	SOC_ENUM_SINGLE_EXT(ARRAY_SIZE(tegra_machine_srate_text),
-		tegra_machine_srate_text);
+			    tegra_machine_srate_text);
 
 static const struct soc_enum tegra_machine_codec_format =
 	SOC_ENUM_SINGLE_EXT(ARRAY_SIZE(tegra_machine_format_text),
-		tegra_machine_format_text);
+			    tegra_machine_format_text);
 
 static const int tegra_machine_srate_values[] = {
 	0,
@@ -167,20 +129,6 @@ static const int tegra_machine_srate_values[] = {
 	176400,
 	192000,
 };
-
-static struct snd_soc_ops tegra_machine_pcm_ops = {
-	.hw_params	= tegra_machine_pcm_hw_params,
-	.startup	= tegra_machine_pcm_startup,
-	.shutdown	= tegra_machine_pcm_shutdown,
-};
-
-#if IS_ENABLED(CONFIG_SND_SOC_TEGRA210_ADSP_ALT)
-static struct snd_soc_compr_ops tegra_machine_compr_ops = {
-	.set_params	= tegra_machine_compr_set_params,
-	.startup	= tegra_machine_compr_startup,
-	.shutdown	= tegra_machine_compr_shutdown,
-};
-#endif
 
 static const struct snd_soc_dapm_widget tegra_machine_dapm_widgets[] = {
 	SND_SOC_DAPM_SPK("x Int Spk", NULL),
@@ -218,23 +166,6 @@ static const struct snd_soc_dapm_widget tegra_machine_dapm_widgets[] = {
 	SND_SOC_DAPM_MIC("s Mic", NULL),
 };
 
-static const struct snd_kcontrol_new tegra_machine_controls[] = {
-	SOC_ENUM_EXT("codec-x rate", tegra_machine_codec_rate,
-		tegra_machine_codec_get_rate, tegra_machine_codec_put_rate),
-	SOC_ENUM_EXT("codec-x format", tegra_machine_codec_format,
-		tegra_machine_codec_get_format, tegra_machine_codec_put_format),
-};
-
-static struct snd_soc_card snd_soc_tegra_card = {
-	.owner = THIS_MODULE,
-	.controls = tegra_machine_controls,
-	.num_controls = ARRAY_SIZE(tegra_machine_controls),
-	.dapm_widgets = tegra_machine_dapm_widgets,
-	.num_dapm_widgets = ARRAY_SIZE(tegra_machine_dapm_widgets),
-	.suspend_pre = tegra_machine_suspend_pre,
-	.fully_routed = true,
-};
-
 static struct snd_soc_pcm_stream tegra_machine_asrc_link_params[] = {
 	PARAMS(SNDRV_PCM_FMTBIT_S32_LE, 8),
 	PARAMS(SNDRV_PCM_FMTBIT_S16_LE, 2),
@@ -245,7 +176,7 @@ static struct snd_soc_pcm_stream tegra_machine_asrc_link_params[] = {
 };
 
 static int tegra_machine_codec_get_rate(struct snd_kcontrol *kcontrol,
-	struct snd_ctl_elem_value *ucontrol)
+					struct snd_ctl_elem_value *ucontrol)
 {
 	struct snd_soc_card *card = snd_kcontrol_chip(kcontrol);
 	struct tegra_machine *machine = snd_soc_card_get_drvdata(card);
@@ -256,7 +187,7 @@ static int tegra_machine_codec_get_rate(struct snd_kcontrol *kcontrol,
 }
 
 static int tegra_machine_codec_put_rate(struct snd_kcontrol *kcontrol,
-	struct snd_ctl_elem_value *ucontrol)
+					struct snd_ctl_elem_value *ucontrol)
 {
 	struct snd_soc_card *card = snd_kcontrol_chip(kcontrol);
 	struct tegra_machine *machine = snd_soc_card_get_drvdata(card);
@@ -297,15 +228,15 @@ static int tegra_machine_set_params(struct snd_soc_card *card,
 				    u64 formats)
 {
 	unsigned int mask = (1 << channels) - 1;
+	struct snd_soc_pcm_runtime *rtd;
 	int idx = 0, err = 0;
 	u64 format_k;
 
 	int num_of_dai_links = machine->soc_data->num_ahub_links +
-				machine->num_codec_links;
-	struct snd_soc_pcm_runtime *rtd;
+			       machine->num_codec_links;
 
 	format_k = (machine->fmt_via_kcontrol == 2) ?
-				(1ULL << SNDRV_PCM_FORMAT_S32_LE) : formats;
+			(1ULL << SNDRV_PCM_FORMAT_S32_LE) : formats;
 
 	/* update dai link hw_params */
 	list_for_each_entry(rtd, &card->rtd_list, list) {
@@ -349,6 +280,7 @@ static int tegra_machine_set_params(struct snd_soc_card *card,
 	}
 	return 0;
 }
+
 static int tegra_machine_dai_init(struct snd_soc_pcm_runtime *runtime,
 				  unsigned int rate, unsigned int channels,
 				  u64 formats)
@@ -684,6 +616,20 @@ static int codec_init(struct tegra_machine *machine)
 	return 0;
 }
 
+static struct snd_soc_ops tegra_machine_pcm_ops = {
+	.hw_params	= tegra_machine_pcm_hw_params,
+	.startup	= tegra_machine_pcm_startup,
+	.shutdown	= tegra_machine_pcm_shutdown,
+};
+
+#if IS_ENABLED(CONFIG_SND_SOC_TEGRA210_ADSP_ALT)
+static struct snd_soc_compr_ops tegra_machine_compr_ops = {
+	.set_params	= tegra_machine_compr_set_params,
+	.startup	= tegra_machine_compr_startup,
+	.shutdown	= tegra_machine_compr_shutdown,
+};
+#endif
+
 static void set_dai_ops(struct tegra_machine *machine)
 {
 	int i;
@@ -744,6 +690,23 @@ static int add_dai_links(struct platform_device *pdev)
 
 	return 0;
 }
+
+static const struct snd_kcontrol_new tegra_machine_controls[] = {
+	SOC_ENUM_EXT("codec-x rate", tegra_machine_codec_rate,
+		tegra_machine_codec_get_rate, tegra_machine_codec_put_rate),
+	SOC_ENUM_EXT("codec-x format", tegra_machine_codec_format,
+		tegra_machine_codec_get_format, tegra_machine_codec_put_format),
+};
+
+static struct snd_soc_card snd_soc_tegra_card = {
+	.owner = THIS_MODULE,
+	.controls = tegra_machine_controls,
+	.num_controls = ARRAY_SIZE(tegra_machine_controls),
+	.dapm_widgets = tegra_machine_dapm_widgets,
+	.num_dapm_widgets = ARRAY_SIZE(tegra_machine_dapm_widgets),
+	.suspend_pre = tegra_machine_suspend_pre,
+	.fully_routed = true,
+};
 
 /* structure to match device tree node */
 static const struct of_device_id tegra_machine_of_match[] = {

@@ -72,7 +72,6 @@ static int tegra210_mvc_runtime_resume(struct device *dev)
 
 	if (!mvc->is_shutdown) {
 		regcache_sync(mvc->regmap);
-
 		regmap_update_bits(mvc->regmap, TEGRA210_MVC_CTRL,
 			TEGRA210_MVC_CURVE_TYPE_MASK,
 			mvc->curve_type << TEGRA210_MVC_CURVE_TYPE_SHIFT);
@@ -152,9 +151,7 @@ static int tegra210_mvc_get_vol(struct snd_kcontrol *kcontrol,
 	} else {
 		u32 val;
 
-		pm_runtime_get_sync(codec->dev);
 		regmap_read(mvc->regmap, reg, &val);
-		pm_runtime_put(codec->dev);
 		ucontrol->value.integer.value[0] =
 			((val & TEGRA210_MVC_MUTE_MASK) != 0);
 	}
@@ -212,6 +209,10 @@ static int tegra210_mvc_put_vol(struct snd_kcontrol *kcontrol,
 
 end:
 	pm_runtime_put(codec->dev);
+
+	if (reg == TEGRA210_MVC_TARGET_VOL)
+		ret |= regmap_update_bits(mvc->regmap, TEGRA210_MVC_CTRL,
+				TEGRA210_MVC_MUTE_MASK, 0);
 
 	return ret;
 }
@@ -610,7 +611,6 @@ static bool tegra210_mvc_volatile_reg(struct device *dev, unsigned int reg)
 	case TEGRA210_MVC_AHUBRAMCTL_CONFIG_RAM_CTRL:
 	case TEGRA210_MVC_AHUBRAMCTL_CONFIG_RAM_DATA:
 	case TEGRA210_MVC_PEAK_VALUE:
-	case TEGRA210_MVC_CTRL:
 		return true;
 	default:
 		return false;

@@ -95,7 +95,8 @@ nvgpu-y += \
 	os/linux/nvlink.o \
 	os/linux/dt.o \
 	os/linux/ecc_sysfs.o \
-	os/linux/ltc.o
+	os/linux/ltc.o \
+	os/linux/vpr.o
 
 nvgpu-$(CONFIG_GK20A_VIDMEM) += \
 	os/linux/dmabuf_vidmem.o

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2018-2019, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -26,6 +26,7 @@
 #include <nvgpu/os_sched.h>
 #include <nvgpu/utils.h>
 #include <nvgpu/channel_sync.h>
+#include <nvgpu/vpr.h>
 
 #include <nvgpu/hw/gk20a/hw_pbdma_gk20a.h>
 
@@ -387,6 +388,7 @@ static int nvgpu_submit_channel_gpfifo(struct channel_gk20a *c,
 	 *  - pre- or post-fence functionality
 	 *  - channel wdt
 	 *  - GPU rail-gating with non-deterministic channels
+	 *  - VPR resize enabled with non-deterministic channels
 	 *  - buffer refcounting
 	 *
 	 * If none of the conditions are met, then job tracking is not
@@ -396,8 +398,9 @@ static int nvgpu_submit_channel_gpfifo(struct channel_gk20a *c,
 	need_job_tracking = (flags & NVGPU_SUBMIT_FLAGS_FENCE_WAIT) ||
 			(flags & NVGPU_SUBMIT_FLAGS_FENCE_GET) ||
 			c->timeout.enabled ||
-			(nvgpu_is_enabled(g, NVGPU_CAN_RAILGATE)
-			 && !c->deterministic) ||
+			((nvgpu_is_enabled(g, NVGPU_CAN_RAILGATE) ||
+				nvgpu_is_vpr_resize_enabled()) &&
+				!c->deterministic) ||
 			!skip_buffer_refcounting;
 
 	if (need_job_tracking) {

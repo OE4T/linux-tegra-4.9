@@ -81,6 +81,24 @@ static int tegra210_mvc_runtime_resume(struct device *dev)
 	return 0;
 }
 
+static int tegra210_mvc_soft_reset(struct tegra210_mvc *mvc)
+{
+	int value;
+	int dcnt = 10;
+	/* issue soft reset */
+	regmap_write(mvc->regmap, TEGRA210_MVC_SOFT_RESET, 1);
+	/* wait for soft reset bit to clear */
+	do {
+		udelay(10);
+		regmap_read(mvc->regmap, TEGRA210_MVC_SOFT_RESET, &value);
+		dcnt--;
+		if (dcnt < 0)
+			return -EINVAL;
+	} while (value);
+
+	return 0;
+}
+
 static int tegra210_mvc_write_ram(struct tegra210_mvc *mvc,
 				unsigned int addr,
 				unsigned int val)
@@ -215,9 +233,7 @@ static int tegra210_mvc_put_curve_type(struct snd_kcontrol *kcontrol,
 	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
 	struct tegra210_mvc *mvc = snd_soc_codec_get_drvdata(codec);
 	unsigned int reg = TEGRA210_MVC_CTRL;
-	int dcnt = 10;
 	int ret = 0;
-	u32 value;
 
 	/* if no change in curve type, do nothing */
 	if (mvc->curve_type == ucontrol->value.integer.value[0])
@@ -232,18 +248,11 @@ static int tegra210_mvc_put_curve_type(struct snd_kcontrol *kcontrol,
 			TEGRA210_MVC_CURVE_TYPE_SHIFT);
 	mvc->curve_type = ucontrol->value.integer.value[0];
 
-	/* issue soft reset */
-	regmap_write(mvc->regmap, TEGRA210_MVC_SOFT_RESET, 1);
-	/* wait for soft reset bit to clear */
-	do {
-		udelay(10);
-		ret = regmap_read(mvc->regmap, TEGRA210_MVC_SOFT_RESET, &value);
-		dcnt--;
-		if (dcnt < 0) {
-			ret = -EINVAL;
-			goto end;
-		}
-	} while (value);
+	ret = tegra210_mvc_soft_reset(mvc);
+	if (ret < 0) {
+		dev_err(codec->dev, "SOFT_RESET error: %d\n", ret);
+		return ret;
+	}
 
 	/* change volume to default init for new curve type */
 	if (ucontrol->value.integer.value[0] == CURVE_POLY)
@@ -256,7 +265,6 @@ static int tegra210_mvc_put_curve_type(struct snd_kcontrol *kcontrol,
 			TEGRA210_MVC_VOLUME_SWITCH_MASK,
 			TEGRA210_MVC_VOLUME_SWITCH_TRIGGER);
 
-end:
 	pm_runtime_put(codec->dev);
 
 	return ret;
@@ -382,6 +390,12 @@ static int tegra210_mvc_hw_params(struct snd_pcm_substream *substream,
 	struct tegra210_mvc *mvc = snd_soc_dai_get_drvdata(dai);
 	int i, ret;
 
+	ret = tegra210_mvc_soft_reset(mvc);
+	if (ret < 0) {
+		dev_err(dev, "SOFT_RESET error: %d\n", ret);
+		return ret;
+	}
+
 	/* set RX cif and TX cif */
 	ret = tegra210_mvc_set_audio_cif(mvc, params,
 				TEGRA210_MVC_AXBAR_RX_CIF_CTRL);
@@ -402,22 +416,13 @@ static int tegra210_mvc_hw_params(struct snd_pcm_substream *substream,
 		~(TEGRA210_MVC_PER_CHAN_CTRL_EN_MASK));
 
 	/* init the default volume=1 for MVC */
-	regmap_write(mvc->regmap, TEGRA210_MVC_INIT_VOL,
-		(mvc->curve_type == CURVE_POLY) ?
-		TEGRA210_MVC_INIT_VOL_DEFAULT_POLY :
-		TEGRA210_MVC_INIT_VOL_DEFAULT_LINEAR);
+	regmap_write(mvc->regmap, TEGRA210_MVC_INIT_VOL, mvc->volume);
 
 	regmap_write(mvc->regmap, TEGRA210_MVC_TARGET_VOL, mvc->volume);
-	/* trigger volume switch */
-	ret |= regmap_update_bits(mvc->regmap, TEGRA210_MVC_SWITCH,
-			TEGRA210_MVC_VOLUME_SWITCH_MASK,
-			TEGRA210_MVC_VOLUME_SWITCH_TRIGGER);
-
 
 	/* program the poly coefficients */
 	for (i = 0; i < 9; i++)
 		tegra210_mvc_write_ram(mvc, i, mvc->poly_coeff[i]);
-
 
 	/* program poly_n1, poly_n2, duration */
 	regmap_write(mvc->regmap, TEGRA210_MVC_POLY_N1, mvc->poly_n1);
@@ -427,6 +432,10 @@ static int tegra210_mvc_hw_params(struct snd_pcm_substream *substream,
 	/* program duration_inv */
 	regmap_write(mvc->regmap, TEGRA210_MVC_DURATION_INV, mvc->duration_inv);
 
+	/* trigger volume switch */
+	ret |= regmap_update_bits(mvc->regmap, TEGRA210_MVC_SWITCH,
+			TEGRA210_MVC_VOLUME_SWITCH_MASK,
+			TEGRA210_MVC_VOLUME_SWITCH_TRIGGER);
 	return ret;
 }
 

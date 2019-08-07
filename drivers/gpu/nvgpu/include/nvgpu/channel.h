@@ -38,11 +38,11 @@ struct fifo_profile_gk20a;
 struct nvgpu_channel_sync;
 struct nvgpu_gpfifo_userdata;
 
-/* Flags to be passed to gk20a_channel_alloc_gpfifo() */
-#define NVGPU_GPFIFO_FLAGS_SUPPORT_VPR			(1U << 0U)
-#define NVGPU_GPFIFO_FLAGS_SUPPORT_DETERMINISTIC	(1U << 1U)
-#define NVGPU_GPFIFO_FLAGS_REPLAYABLE_FAULTS_ENABLE	(1U << 2U)
-#define NVGPU_GPFIFO_FLAGS_USERMODE_SUPPORT		(1U << 3U)
+/* Flags to be passed to nvgpu_channel_setup_bind() */
+#define NVGPU_SETUP_BIND_FLAGS_SUPPORT_VPR		(1U << 0U)
+#define NVGPU_SETUP_BIND_FLAGS_SUPPORT_DETERMINISTIC	(1U << 1U)
+#define NVGPU_SETUP_BIND_FLAGS_REPLAYABLE_FAULTS_ENABLE	(1U << 2U)
+#define NVGPU_SETUP_BIND_FLAGS_USERMODE_SUPPORT		(1U << 3U)
 
 /* Flags to be passed to nvgpu_submit_channel_gpfifo() */
 #define NVGPU_SUBMIT_FLAGS_FENCE_WAIT	(1U << 0U)
@@ -91,8 +91,8 @@ struct gpfifo_desc {
 	void *pipe;
 };
 
-struct nvgpu_gpfifo_args {
-	u32 num_entries;
+struct nvgpu_setup_bind_args {
+	u32 num_gpfifo_entries;
 	u32 num_inflight_jobs;
 	u32 userd_dmabuf_fd;
 	u32 gpfifo_dmabuf_fd;
@@ -407,8 +407,8 @@ struct channel_gk20a *gk20a_open_new_channel(struct gk20a *g,
 		bool is_privileged_channel,
 		pid_t pid, pid_t tid);
 
-int gk20a_channel_alloc_gpfifo(struct channel_gk20a *c,
-		struct nvgpu_gpfifo_args *gpfifo_args);
+int nvgpu_channel_setup_bind(struct channel_gk20a *c,
+		struct nvgpu_setup_bind_args *args);
 
 void gk20a_channel_timeout_restart_all_channels(struct gk20a *g);
 

@@ -1131,8 +1131,8 @@ static void channel_gk20a_free_prealloc_resources(struct channel_gk20a *c)
 	c->joblist.pre_alloc.enabled = false;
 }
 
-int gk20a_channel_alloc_gpfifo(struct channel_gk20a *c,
-		struct nvgpu_gpfifo_args *gpfifo_args)
+int nvgpu_channel_setup_bind(struct channel_gk20a *c,
+		struct nvgpu_setup_bind_args *args)
 {
 	struct gk20a *g = c->g;
 	struct vm_gk20a *ch_vm;
@@ -1141,14 +1141,14 @@ int gk20a_channel_alloc_gpfifo(struct channel_gk20a *c,
 	int err = 0;
 	unsigned long acquire_timeout;
 
-	gpfifo_size = gpfifo_args->num_entries;
+	gpfifo_size = args->num_gpfifo_entries;
 	gpfifo_entry_size = nvgpu_get_gpfifo_entry_size();
 
-	if (gpfifo_args->flags & NVGPU_GPFIFO_FLAGS_SUPPORT_VPR) {
+	if (args->flags & NVGPU_SETUP_BIND_FLAGS_SUPPORT_VPR) {
 		c->vpr = true;
 	}
 
-	if (gpfifo_args->flags & NVGPU_GPFIFO_FLAGS_SUPPORT_DETERMINISTIC) {
+	if (args->flags & NVGPU_SETUP_BIND_FLAGS_SUPPORT_DETERMINISTIC) {
 		nvgpu_rwsem_down_read(&g->deterministic_busy);
 		/*
 		 * Railgating isn't deterministic; instead of disallowing
@@ -1172,8 +1172,7 @@ int gk20a_channel_alloc_gpfifo(struct channel_gk20a *c,
 	/* an address space needs to have been bound at this point. */
 	if (!gk20a_channel_as_bound(c)) {
 		nvgpu_err(g,
-			    "not bound to an address space at time of gpfifo"
-			    " allocation.");
+			"not bound to an address space at time of setup_bind");
 		err = -EINVAL;
 		goto clean_up_idle;
 	}
@@ -1187,10 +1186,9 @@ int gk20a_channel_alloc_gpfifo(struct channel_gk20a *c,
 		goto clean_up_idle;
 	}
 
-	if (gpfifo_args->flags & NVGPU_GPFIFO_FLAGS_USERMODE_SUPPORT) {
+	if (args->flags & NVGPU_SETUP_BIND_FLAGS_USERMODE_SUPPORT) {
 		if (g->os_channel.alloc_usermode_buffers) {
-			err = g->os_channel.alloc_usermode_buffers(c,
-					gpfifo_args);
+			err = g->os_channel.alloc_usermode_buffers(c, args);
 			if (err) {
 				nvgpu_err(g, "Usermode buffer alloc failed");
 				goto clean_up;
@@ -1258,23 +1256,23 @@ int gk20a_channel_alloc_gpfifo(struct channel_gk20a *c,
 
 	err = g->ops.fifo.setup_ramfc(c, gpfifo_gpu_va,
 					c->gpfifo.entry_num,
-					acquire_timeout, gpfifo_args->flags);
+					acquire_timeout, args->flags);
 	if (err) {
 		goto clean_up_sync;
 	}
 
 	/* TBD: setup engine contexts */
 
-	if (c->deterministic && gpfifo_args->num_inflight_jobs != 0U) {
+	if (c->deterministic && args->num_inflight_jobs != 0U) {
 		err = channel_gk20a_prealloc_resources(c,
-				gpfifo_args->num_inflight_jobs);
+				args->num_inflight_jobs);
 		if (err) {
 			goto clean_up_sync;
 		}
 	}
 
 	err = channel_gk20a_alloc_priv_cmdbuf(c,
-				gpfifo_args->num_inflight_jobs);
+				args->num_inflight_jobs);
 	if (err) {
 		goto clean_up_prealloc;
 	}
@@ -1292,7 +1290,7 @@ int gk20a_channel_alloc_gpfifo(struct channel_gk20a *c,
 clean_up_priv_cmd:
 	channel_gk20a_free_priv_cmdbuf(c);
 clean_up_prealloc:
-	if (c->deterministic && gpfifo_args->num_inflight_jobs != 0U) {
+	if (c->deterministic && args->num_inflight_jobs != 0U) {
 		channel_gk20a_free_prealloc_resources(c);
 	}
 clean_up_sync:

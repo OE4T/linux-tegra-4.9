@@ -1468,22 +1468,32 @@ struct nvgpu_alloc_obj_ctx_args {
 	__u64 obj_id;    /* output, used to free later       */
 };
 
+/* Deprecated. Use the SETUP_BIND IOCTL instead. */
 struct nvgpu_alloc_gpfifo_args {
 	__u32 num_entries;
-#define NVGPU_ALLOC_GPFIFO_FLAGS_VPR_ENABLED	(1 << 0) /* set owner channel of this gpfifo as a vpr channel */
-/*
- * this flag is used in struct nvgpu_alloc_gpfifo_args
- * to enable re-playable faults for that channel
- */
+#define NVGPU_ALLOC_GPFIFO_FLAGS_VPR_ENABLED	(1 << 0)
 #define NVGPU_ALLOC_GPFIFO_FLAGS_REPLAYABLE_FAULTS_ENABLE   (1 << 2)
 	__u32 flags;
 };
 
+/* Deprecated. Use the SETUP_BIND IOCTL instead. */
 struct nvgpu_alloc_gpfifo_ex_args {
 	__u32 num_entries;
 	__u32 num_inflight_jobs;
-/* Set owner channel of this gpfifo as a vpr channel. */
 #define NVGPU_ALLOC_GPFIFO_EX_FLAGS_VPR_ENABLED		(1 << 0)
+#define NVGPU_ALLOC_GPFIFO_EX_FLAGS_DETERMINISTIC	(1 << 1)
+	__u32 flags;
+	__u32 reserved[5];
+};
+
+/*
+ * Setup the channel and bind it (enable).
+ */
+struct nvgpu_channel_setup_bind_args {
+	__u32 num_gpfifo_entries;
+	__u32 num_inflight_jobs;
+/* Set owner channel of this gpfifo as a vpr channel. */
+#define NVGPU_CHANNEL_SETUP_BIND_FLAGS_VPR_ENABLED		(1 << 0)
 /*
  * Channel shall exhibit deterministic behavior in the submit path.
  *
@@ -1501,11 +1511,12 @@ struct nvgpu_alloc_gpfifo_ex_args {
  * NVGPU_GPU_FLAGS_SUPPORT_DETERMINISTIC_SUBMIT_NO_JOBTRACKING; this flag or
  * num_inflight_jobs are not necessary in that case.
  */
-#define NVGPU_ALLOC_GPFIFO_EX_FLAGS_DETERMINISTIC	(1 << 1)
+#define NVGPU_CHANNEL_SETUP_BIND_FLAGS_DETERMINISTIC	(1 << 1)
+/* enable replayable gmmu faults for this channel */
+#define NVGPU_CHANNEL_SETUP_BIND_FLAGS_REPLAYABLE_FAULTS_ENABLE   (1 << 2)
 	__u32 flags;
-	__u32 reserved[5];
+	__u32 reserved[16];
 };
-
 struct nvgpu_fence {
 	__u32 id;        /* syncpoint id or sync fence fd */
 	__u32 value;     /* syncpoint value (discarded when using sync fence) */
@@ -1763,10 +1774,13 @@ struct nvgpu_reschedule_runlist_args {
 	_IOR(NVGPU_IOCTL_MAGIC, 126, struct nvgpu_get_user_syncpoint_args)
 #define NVGPU_IOCTL_CHANNEL_RESCHEDULE_RUNLIST	\
 	_IOW(NVGPU_IOCTL_MAGIC, 127, struct nvgpu_reschedule_runlist_args)
+#define NVGPU_IOCTL_CHANNEL_SETUP_BIND	\
+	_IOWR(NVGPU_IOCTL_MAGIC, 128, struct nvgpu_channel_setup_bind_args)
 
 #define NVGPU_IOCTL_CHANNEL_LAST	\
-	_IOC_NR(NVGPU_IOCTL_CHANNEL_RESCHEDULE_RUNLIST)
-#define NVGPU_IOCTL_CHANNEL_MAX_ARG_SIZE sizeof(struct nvgpu_alloc_gpfifo_ex_args)
+	_IOC_NR(NVGPU_IOCTL_CHANNEL_SETUP_BIND)
+#define NVGPU_IOCTL_CHANNEL_MAX_ARG_SIZE \
+	sizeof(struct nvgpu_channel_setup_bind_args)
 
 /*
  * /dev/nvhost-as-gpu device

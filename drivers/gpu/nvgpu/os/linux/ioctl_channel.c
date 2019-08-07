@@ -577,45 +577,59 @@ clean_up:
 	return err;
 }
 
-static u32 nvgpu_gpfifo_user_flags_to_common_flags(u32 user_flags)
+static u32 nvgpu_setup_bind_user_flags_to_common_flags(u32 user_flags)
 {
 	u32 flags = 0;
 
-	if (user_flags & NVGPU_ALLOC_GPFIFO_EX_FLAGS_VPR_ENABLED)
-		flags |= NVGPU_GPFIFO_FLAGS_SUPPORT_VPR;
+	if (user_flags & NVGPU_CHANNEL_SETUP_BIND_FLAGS_VPR_ENABLED)
+		flags |= NVGPU_SETUP_BIND_FLAGS_SUPPORT_VPR;
 
-	if (user_flags & NVGPU_ALLOC_GPFIFO_EX_FLAGS_DETERMINISTIC)
-		flags |= NVGPU_GPFIFO_FLAGS_SUPPORT_DETERMINISTIC;
+	if (user_flags & NVGPU_CHANNEL_SETUP_BIND_FLAGS_DETERMINISTIC)
+		flags |= NVGPU_SETUP_BIND_FLAGS_SUPPORT_DETERMINISTIC;
 
-	if (user_flags & NVGPU_ALLOC_GPFIFO_FLAGS_REPLAYABLE_FAULTS_ENABLE)
-		flags |= NVGPU_GPFIFO_FLAGS_REPLAYABLE_FAULTS_ENABLE;
+	if (user_flags & NVGPU_CHANNEL_SETUP_BIND_FLAGS_REPLAYABLE_FAULTS_ENABLE)
+		flags |= NVGPU_SETUP_BIND_FLAGS_REPLAYABLE_FAULTS_ENABLE;
 
 	return flags;
 }
 
+static void nvgpu_get_setup_bind_args(
+		struct nvgpu_channel_setup_bind_args *channel_setup_bind_args,
+		struct nvgpu_setup_bind_args *setup_bind_args)
+{
+	setup_bind_args->num_gpfifo_entries =
+		channel_setup_bind_args->num_gpfifo_entries;
+	setup_bind_args->num_inflight_jobs =
+		channel_setup_bind_args->num_inflight_jobs;
+	setup_bind_args->flags = nvgpu_setup_bind_user_flags_to_common_flags(
+			channel_setup_bind_args->flags);
+}
+
 static void nvgpu_get_gpfifo_ex_args(
 		struct nvgpu_alloc_gpfifo_ex_args *alloc_gpfifo_ex_args,
-		struct nvgpu_gpfifo_args *gpfifo_args)
+		struct nvgpu_setup_bind_args *setup_bind_args)
 {
-	gpfifo_args->num_entries = alloc_gpfifo_ex_args->num_entries;
-	gpfifo_args->num_inflight_jobs = alloc_gpfifo_ex_args->num_inflight_jobs;
-	gpfifo_args->flags = nvgpu_gpfifo_user_flags_to_common_flags(
-							alloc_gpfifo_ex_args->flags);
+	setup_bind_args->num_gpfifo_entries = alloc_gpfifo_ex_args->num_entries;
+	setup_bind_args->num_inflight_jobs =
+		alloc_gpfifo_ex_args->num_inflight_jobs;
+	setup_bind_args->flags = nvgpu_setup_bind_user_flags_to_common_flags(
+			alloc_gpfifo_ex_args->flags);
 }
 
 static void nvgpu_get_gpfifo_args(
 		struct nvgpu_alloc_gpfifo_args *alloc_gpfifo_args,
-		struct nvgpu_gpfifo_args *gpfifo_args)
+		struct nvgpu_setup_bind_args *setup_bind_args)
 {
 	/*
 	 * Kernel can insert one extra gpfifo entry before user
 	 * submitted gpfifos and another one after, for internal usage.
 	 * Triple the requested size.
 	 */
-	gpfifo_args->num_entries = alloc_gpfifo_args->num_entries * 3;
-	gpfifo_args->num_inflight_jobs = 0;
-	gpfifo_args->flags = nvgpu_gpfifo_user_flags_to_common_flags(
-							alloc_gpfifo_args->flags);
+	setup_bind_args->num_gpfifo_entries =
+		alloc_gpfifo_args->num_entries * 3;
+	setup_bind_args->num_inflight_jobs = 0;
+	setup_bind_args->flags = nvgpu_setup_bind_user_flags_to_common_flags(
+			alloc_gpfifo_args->flags);
 }
 
 static void nvgpu_get_fence_args(
@@ -1119,13 +1133,39 @@ long gk20a_channel_ioctl(struct file *filp,
 		gk20a_idle(ch->g);
 		break;
 	}
+	case NVGPU_IOCTL_CHANNEL_SETUP_BIND:
+	{
+		struct nvgpu_channel_setup_bind_args *channel_setup_bind_args =
+			(struct nvgpu_channel_setup_bind_args *)buf;
+		struct nvgpu_setup_bind_args setup_bind_args;
+
+		nvgpu_get_setup_bind_args(channel_setup_bind_args,
+				&setup_bind_args);
+
+		err = gk20a_busy(ch->g);
+		if (err) {
+			dev_err(dev,
+				"%s: failed to host gk20a for ioctl cmd: 0x%x",
+				__func__, cmd);
+			break;
+		}
+
+		if (!is_power_of_2(setup_bind_args.num_gpfifo_entries)) {
+			err = -EINVAL;
+			gk20a_idle(ch->g);
+			break;
+		}
+		err = nvgpu_channel_setup_bind(ch, &setup_bind_args);
+		gk20a_idle(ch->g);
+		break;
+	}
 	case NVGPU_IOCTL_CHANNEL_ALLOC_GPFIFO_EX:
 	{
 		struct nvgpu_alloc_gpfifo_ex_args *alloc_gpfifo_ex_args =
 			(struct nvgpu_alloc_gpfifo_ex_args *)buf;
-		struct nvgpu_gpfifo_args gpfifo_args;
+		struct nvgpu_setup_bind_args setup_bind_args;
 
-		nvgpu_get_gpfifo_ex_args(alloc_gpfifo_ex_args, &gpfifo_args);
+		nvgpu_get_gpfifo_ex_args(alloc_gpfifo_ex_args, &setup_bind_args);
 
 		err = gk20a_busy(ch->g);
 		if (err) {
@@ -1140,7 +1180,7 @@ long gk20a_channel_ioctl(struct file *filp,
 			gk20a_idle(ch->g);
 			break;
 		}
-		err = gk20a_channel_alloc_gpfifo(ch, &gpfifo_args);
+		err = nvgpu_channel_setup_bind(ch, &setup_bind_args);
 		gk20a_idle(ch->g);
 		break;
 	}
@@ -1148,9 +1188,9 @@ long gk20a_channel_ioctl(struct file *filp,
 	{
 		struct nvgpu_alloc_gpfifo_args *alloc_gpfifo_args =
 			(struct nvgpu_alloc_gpfifo_args *)buf;
-		struct nvgpu_gpfifo_args gpfifo_args;
+		struct nvgpu_setup_bind_args setup_bind_args;
 
-		nvgpu_get_gpfifo_args(alloc_gpfifo_args, &gpfifo_args);
+		nvgpu_get_gpfifo_args(alloc_gpfifo_args, &setup_bind_args);
 
 		err = gk20a_busy(ch->g);
 		if (err) {
@@ -1160,7 +1200,7 @@ long gk20a_channel_ioctl(struct file *filp,
 			break;
 		}
 
-		err = gk20a_channel_alloc_gpfifo(ch, &gpfifo_args);
+		err = nvgpu_channel_setup_bind(ch, &setup_bind_args);
 		gk20a_idle(ch->g);
 		break;
 	}

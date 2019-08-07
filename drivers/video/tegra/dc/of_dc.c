@@ -651,7 +651,11 @@ static int parse_disp_default_out(struct platform_device *ndev,
 		OF_DC_LOG("hdcp_policy = %u\n", default_out->hdcp_policy);
 	} else {
 		pdata->default_out->hdcp_policy =
+#if defined(CONFIG_ANDROID)
 			TEGRA_DC_HDCP_POLICY_ALWAYS_ON;
+#else
+			TEGRA_DC_HDCP_POLICY_ALWAYS_OFF;
+#endif
 	}
 
 	if (tegra_platform_is_sim())

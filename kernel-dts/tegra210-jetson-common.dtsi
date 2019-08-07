@@ -65,6 +65,10 @@
 		status = "okay";
 	};
 
+	tegra_udrm: tegra_udrm {
+		compatible = "nvidia,tegra-udrm";
+	};
+
 	pmc@7000e400 {
 		nvidia,suspend-mode = <0>;
 		nvidia,cpu-pwr-good-time = <0>;

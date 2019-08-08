@@ -309,6 +309,8 @@ static int hv_wdt_h_init(struct platform_device *pdev,
 	uint32_t id;
 	int err = 0;
 
+	init_waitqueue_head(&hv->wq);
+	mutex_init(&hv->mutex_lock);
 	hv->pdev = pdev;
 	dn = pdev->dev.of_node;
 	if (of_property_read_u32_index(dn, "ivc", 1, &id) != 0) {
@@ -354,8 +356,6 @@ static int hv_wdt_h_chrdev_init(struct platform_device *pdev,
 	struct device *chr_dev;
 
 	platform_set_drvdata(pdev, hv);
-	init_waitqueue_head(&hv->wq);
-	mutex_init(&hv->mutex_lock);
 
 	hv->class = class_create(THIS_MODULE, DRV_NAME);
 	if (IS_ERR(hv->class)) {

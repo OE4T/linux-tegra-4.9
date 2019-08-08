@@ -64,6 +64,12 @@ struct tegra_hv_wdt_h {
 	struct mutex mutex_lock;
 };
 
+static const char * const guest_state_string[] = {
+	"GUEST_STATE_INIT",
+	"GUEST_STATE_TIMER_EXPIRED",
+	"GUEST_STATE_WAIT_FOR_ACK",
+};
+
 static int hv_wdt_h_get_exp_guest_cnt(struct tegra_hv_wdt_h *hv)
 {
 	int i;
@@ -78,15 +84,15 @@ static int hv_wdt_h_get_exp_guest_cnt(struct tegra_hv_wdt_h *hv)
 	return count;
 }
 
-static long hv_wdt_h_get_guest_state(struct file *filp,
+static long hv_wdt_h_get_guest_state(struct tegra_hv_wdt_h *hv,
+				bool non_blocking,
 				struct hv_wdt_h_state_array __user *state_array)
 {
 	int i, ret = 0;
-	struct tegra_hv_wdt_h *hv = filp->private_data;
 
 	/* If any of the VM is expired dont wait */
 	if (!hv_wdt_h_get_exp_guest_cnt(hv)) {
-		if (filp->f_flags & O_NONBLOCK)
+		if (non_blocking)
 			return -EAGAIN;
 
 		ret = wait_event_interruptible(hv->wq,
@@ -114,11 +120,10 @@ out:
 	return ret;
 }
 
-static long hv_wdt_h_send_guest_cmd(struct file *filp,
+static long hv_wdt_h_send_guest_cmd(struct tegra_hv_wdt_h *hv,
 				struct tegra_hv_wdt_h_cmd_array *cmds)
 {
 	int i, ret = 0, write_possible_loop_cnt = 0;
-	struct tegra_hv_wdt_h *hv = filp->private_data;
 
 	ret = tegra_hv_ivc_channel_notified(hv->ivck);
 	if (ret != 0) {
@@ -223,6 +228,7 @@ static long hv_wdt_h_ioctl(struct file *file,
 				unsigned int cmd,
 				unsigned long arg)
 {
+	struct tegra_hv_wdt_h *hv = file->private_data;
 	int ret = 0;
 	void __user *argp = (void __user *)arg;
 	struct hv_wdt_h_state_array __user *state_array;
@@ -231,7 +237,8 @@ static long hv_wdt_h_ioctl(struct file *file,
 	switch (cmd) {
 	case TEGRA_HV_WDT_H_GET_STATE:
 		state_array = argp;
-		ret = hv_wdt_h_get_guest_state(file, state_array);
+		ret = hv_wdt_h_get_guest_state(hv, (file->f_flags & O_NONBLOCK),
+								state_array);
 		break;
 	case TEGRA_HV_WDT_H_CMD:
 		if (copy_from_user(&cmds, argp, sizeof(cmds))) {
@@ -239,7 +246,7 @@ static long hv_wdt_h_ioctl(struct file *file,
 			goto out;
 		}
 
-		ret = hv_wdt_h_send_guest_cmd(file, &cmds);
+		ret = hv_wdt_h_send_guest_cmd(hv, &cmds);
 		break;
 	default:
 		ret = -EINVAL;
@@ -339,13 +346,114 @@ static int hv_wdt_h_init(struct platform_device *pdev,
 	return 0;
 }
 
+static ssize_t guest_cmd_store(struct device *dev,
+					  struct device_attribute *attr,
+					  const char *buf, size_t count)
+{
+	struct tegra_hv_wdt_h *hv = dev_get_drvdata(dev);
+	char local_buf[128] = {0};
+	char *b = local_buf;
+	char *guest_token;
+	char *cmd_token;
+	int guest_id, cmd, err;
+	struct tegra_hv_wdt_h_cmd_array cmd_array;
+
+	memcpy(local_buf, buf, min_t(size_t, count, sizeof(local_buf) - 1));
+
+	guest_token = strsep(&b, " ");
+	if (!guest_token)
+		goto wrong_cmd;
+
+	cmd_token = strsep(&b, " ");
+	if (!cmd_token)
+		goto wrong_cmd;
+
+	err = kstrtouint(guest_token, 10, &guest_id);
+
+	if (err)  {
+		dev_err(dev, "Not a number for guest\n");
+		return -EINVAL;
+	} else if (guest_id > (MAX_GUESTS_NUM - 1)) {
+		dev_err(dev, "Guest number: %d > %d max supported guests\n",
+						guest_id, MAX_GUESTS_NUM - 1);
+		return -EINVAL;
+	}
+
+	if (!(strcmp(cmd_token, "MESSAGE_HANDLED_SYNC")))
+		cmd = MESSAGE_HANDLED_SYNC;
+	else if (!(strcmp(cmd_token, "MESSAGE_HANDLED_ASYNC")))
+		cmd = MESSAGE_HANDLED_ASYNC;
+	else
+		goto wrong_cmd;
+
+	cmd_array.num_vmids = 1;
+	cmd_array.commands[0].command = cmd;
+	cmd_array.commands[0].vmid = guest_id;
+	err = hv_wdt_h_send_guest_cmd(hv, &cmd_array);
+	if (err) {
+		dev_err(dev, "Error in sending command %d\n", err);
+		return err;
+	}
+
+	return count;
+
+wrong_cmd:
+	dev_err(dev, "cmd not supported, cmd: echo -n \"guest_id MESSAGE_HANDLED_SYNC | MESSAGE_HANDLED_ASYNC\"\n");
+	return -EINVAL;
+}
+
+static ssize_t guest_state_show(struct device *dev,
+			struct device_attribute *attr, char *buf)
+{
+	struct tegra_hv_wdt_h *hv = dev_get_drvdata(dev);
+	int i, count = 0, bytes;
+	const char *st_str;
+
+	mutex_lock(&hv->mutex_lock);
+	for (i = 0; i < MAX_GUESTS_NUM; i++) {
+		st_str = guest_state_string[hv->state_array.guest_state[i]];
+		bytes = snprintf(buf + count, PAGE_SIZE - count,
+						"GUEST%d\tstate:\t %s\n",
+						i, st_str);
+		count +=  bytes;
+	}
+
+	/* Mark all the expired states as sent to user */
+	for (i = 0; i < MAX_GUESTS_NUM; i++) {
+		if (hv->state_array.guest_state[i] == GUEST_STATE_TIMER_EXPIRED)
+			hv->state_array.guest_state[i] =
+						GUEST_STATE_WAIT_FOR_ACK;
+	}
+	mutex_unlock(&hv->mutex_lock);
+	return count;
+}
+
+static DEVICE_ATTR_RO(guest_state);
+static DEVICE_ATTR_WO(guest_cmd);
+
+static struct attribute *hv_wdt_ctl_attrs[] = {
+	&dev_attr_guest_state.attr,
+	&dev_attr_guest_cmd.attr,
+	NULL
+};
+ATTRIBUTE_GROUPS(hv_wdt_ctl);
+static const struct attribute_group hv_wdt_ctl_attr_group = {
+	.attrs = hv_wdt_ctl_attrs,
+};
+
+static struct class wdt_handler_class = {
+	.name = DRV_NAME,
+	.owner = THIS_MODULE,
+	.dev_groups = hv_wdt_ctl_groups,
+};
+
 static void hv_wdt_h_chrdev_cleanup(struct  platform_device *pdev,
 						struct tegra_hv_wdt_h *hv)
 {
 	device_destroy(hv->class, hv->char_devt);
 	cdev_del(&hv->cdev);
 	unregister_chrdev_region(MAJOR(hv->char_devt), 1);
-	class_destroy(hv->class);
+	class_unregister(&wdt_handler_class);
 	platform_set_drvdata(pdev, NULL);
 }
 
@@ -357,21 +465,19 @@ static int hv_wdt_h_chrdev_init(struct platform_device *pdev,
 
 	platform_set_drvdata(pdev, hv);
 
-	hv->class = class_create(THIS_MODULE, DRV_NAME);
-	if (IS_ERR(hv->class)) {
-		dev_err(&pdev->dev, "%s: Failed to create class, %ld\n",
-			__func__, PTR_ERR(hv->class));
-		return PTR_ERR(hv->class);
-	}
+	class_register(&wdt_handler_class);
+	hv->class = &wdt_handler_class;
 
 	err = alloc_chrdev_region(&hv->char_devt, 0, 1,
 				  DRV_NAME);
 	if (err < 0) {
 		dev_err(&pdev->dev, "%s: Failed to alloc chrdev region, %d\n",
 			__func__, err);
-		goto error_class_destroy;
+		goto error_unregister_class;
 	}
+
 	cdev_init(&hv->cdev, &hv_wdt_h_ops);
+
 	hv->cdev.owner = THIS_MODULE;
 	err = cdev_add(&hv->cdev, hv->char_devt, 1);
 	if (err) {
@@ -395,8 +501,8 @@ error_cdev_del:
 	cdev_del(&hv->cdev);
 error_unregister_chrdev_region:
 	unregister_chrdev_region(MAJOR(hv->char_devt), 1);
-error_class_destroy:
-	class_destroy(hv->class);
+error_unregister_class:
+	class_unregister(&wdt_handler_class);
 
 	return err;
 

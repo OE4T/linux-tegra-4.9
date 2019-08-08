@@ -295,6 +295,10 @@ static irqreturn_t hv_wdt_h_ivc_irq(int irq, void *data)
 static void hv_wdt_h_cleanup(struct platform_device *pdev,
 					struct tegra_hv_wdt_h *hv)
 {
+	/* Channel reset is required to make sure that other side is aware that
+	 * peer is going down.
+	 */
+	tegra_hv_ivc_channel_reset(hv->ivck);
 	tegra_hv_ivc_unreserve(hv->ivck);
 }
 

@@ -267,18 +267,28 @@ set_parameters(struct quadd_parameters *p)
 	ctx.mode_is_trace_tree =
 		extra & QUADD_PARAM_EXTRA_TRACE_TREE ? 1 : 0;
 
+	ctx.mode_is_sampling_timer =
+		extra & QUADD_PARAM_EXTRA_SAMPLING_TIMER ? 1 : 0;
+	ctx.mode_is_sampling_sched =
+		extra & QUADD_PARAM_EXTRA_SAMPLING_SCHED_OUT ? 1 : 0;
+
+	if (!ctx.mode_is_sampling_timer && !ctx.mode_is_sampling_sched)
+		ctx.mode_is_sampling = 0;
+
 	if (ctx.mode_is_sample_all)
 		ctx.mode_is_sample_tree = 0;
 	if (ctx.mode_is_trace_all)
 		ctx.mode_is_trace_tree = 0;
 
-	pr_info("flags: s/t/sa/ta/st/tt: %u/%u/%u/%u/%u/%u\n",
+	pr_info("flags: s/t/sa/ta/st/tt: %u/%u/%u/%u/%u/%u, st/ss: %u/%u\n",
 		ctx.mode_is_sampling,
 		ctx.mode_is_tracing,
 		ctx.mode_is_sample_all,
 		ctx.mode_is_trace_all,
 		ctx.mode_is_sample_tree,
-		ctx.mode_is_trace_tree);
+		ctx.mode_is_trace_tree,
+		ctx.mode_is_sampling_timer,
+		ctx.mode_is_sampling_sched);
 
 	if ((ctx.mode_is_trace_all || ctx.mode_is_sample_all) &&
 	    !capable(CAP_SYS_ADMIN)) {

@@ -93,6 +93,9 @@ struct quadd_ctx {
 	unsigned int mode_is_sample_tree:1;
 	unsigned int mode_is_trace_tree:1;
 
+	unsigned int mode_is_sampling_timer:1;
+	unsigned int mode_is_sampling_sched:1;
+
 	struct list_head mmap_areas;
 	raw_spinlock_t mmaps_lock;
 };
@@ -135,6 +138,16 @@ static inline bool quadd_mode_is_process_tree(struct quadd_ctx *ctx)
 static inline bool quadd_mode_is_process_all(struct quadd_ctx *ctx)
 {
 	return (ctx->mode_is_sample_all != 0 || ctx->mode_is_trace_all != 0);
+}
+
+static inline bool quadd_mode_is_sampling_timer(struct quadd_ctx *ctx)
+{
+	return ctx->mode_is_sampling_timer != 0;
+}
+
+static inline bool quadd_mode_is_sampling_sched(struct quadd_ctx *ctx)
+{
+	return ctx->mode_is_sampling_sched != 0;
 }
 
 void quadd_get_state(struct quadd_module_state *state);

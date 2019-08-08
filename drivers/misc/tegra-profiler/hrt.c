@@ -292,7 +292,7 @@ static void put_header(int cpuid)
 }
 
 static void
-put_sched_sample(struct task_struct *task, int is_sched_in)
+put_sched_sample(struct task_struct *task, bool is_sched_in, u64 ts)
 {
 	int vec_idx = 0;
 	u32 vpid, vtgid;
@@ -301,7 +301,7 @@ put_sched_sample(struct task_struct *task, int is_sched_in)
 	struct quadd_record_data record;
 	struct quadd_sched_data *s = &record.sched;
 
-	s->time = quadd_get_time();
+	s->time = ts;
 	s->flags = 0;
 	s->cpu_id = quadd_get_processor_id(NULL, &flags);
 
@@ -459,7 +459,7 @@ get_stack_offset(struct task_struct *task,
 }
 
 static void
-read_all_sources(struct pt_regs *regs, struct task_struct *task, int is_sched)
+read_all_sources(struct pt_regs *regs, struct task_struct *task, u64 ts)
 {
 	u32 vpid, vtgid;
 	u32 state, extra_data = 0, urcs = 0, ts_delta;
@@ -485,7 +485,7 @@ read_all_sources(struct pt_regs *regs, struct task_struct *task, int is_sched)
 	if (task->flags & PF_EXITING)
 		return;
 
-	s->time = ts_start = quadd_get_time();
+	s->time = ts_start = ts;
 	s->flags = 0;
 
 	if (ctx->pmu && ctx->get_pmu_info()->active)
@@ -517,7 +517,7 @@ read_all_sources(struct pt_regs *regs, struct task_struct *task, int is_sched)
 	event_ctx.regs = user_regs;
 	event_ctx.task = task;
 	event_ctx.user_mode = user_mode(regs);
-	event_ctx.is_sched = is_sched;
+	event_ctx.is_sched = !in_interrupt();
 
 	if (ctx->param.backtrace) {
 		cc->um = hrt.um;
@@ -630,7 +630,7 @@ static enum hrtimer_restart hrtimer_handler(struct hrtimer *hrtimer)
 	qm_debug_handler_sample(regs);
 
 	if (regs)
-		read_all_sources(regs, current, 0);
+		read_all_sources(regs, current, quadd_get_time());
 
 	hrtimer_forward_now(hrtimer, ns_to_ktime(hrt.sample_period));
 	qm_debug_timer_forward(regs, hrt.sample_period);
@@ -762,7 +762,7 @@ is_task_active(struct quadd_cpu_context *cpu_ctx, struct task_struct *task)
 void __quadd_task_sched_in(struct task_struct *prev,
 			   struct task_struct *task)
 {
-	int trace_flag, sample_flag;
+	bool trace_flag, sample_flag;
 	struct quadd_cpu_context *cpu_ctx = this_cpu_ptr(hrt.cpu_ctx);
 	struct quadd_ctx *ctx = hrt.quadd_ctx;
 	struct event_data events[QUADD_MAX_COUNTERS];
@@ -777,7 +777,7 @@ void __quadd_task_sched_in(struct task_struct *prev,
 		add_active_thread(cpu_ctx, task->pid, task->tgid);
 
 	if (trace_flag) {
-		put_sched_sample(task, 1);
+		put_sched_sample(task, true, quadd_get_time());
 		cpu_ctx->is_tracing_enabled = 1;
 	}
 
@@ -789,7 +789,9 @@ void __quadd_task_sched_in(struct task_struct *prev,
 			if (ctx->pl310)
 				ctx->pl310->read(events, 1);
 
-			start_hrtimer(cpu_ctx);
+			if (quadd_mode_is_sampling_timer(ctx))
+				start_hrtimer(cpu_ctx);
+
 			cpu_ctx->is_sampling_enabled = 1;
 		} else
 			pr_warn_once("warning: sampling is already enabled\n");
@@ -799,6 +801,7 @@ void __quadd_task_sched_in(struct task_struct *prev,
 void __quadd_task_sched_out(struct task_struct *prev,
 			    struct task_struct *next)
 {
+	u64 ts;
 	struct pt_regs *user_regs;
 	struct quadd_cpu_context *cpu_ctx = this_cpu_ptr(hrt.cpu_ctx);
 	struct quadd_ctx *ctx = hrt.quadd_ctx;
@@ -806,14 +809,18 @@ void __quadd_task_sched_out(struct task_struct *prev,
 	if (likely(!atomic_read(&hrt.active)))
 		return;
 
+	ts = quadd_get_time();
+
 	if (quadd_mode_is_sampling(ctx) && cpu_ctx->is_sampling_enabled) {
-		if (is_task_active(cpu_ctx, prev)) {
+		if (quadd_mode_is_sampling_sched(ctx) &&
+		    is_task_active(cpu_ctx, prev)) {
 			user_regs = task_pt_regs(prev);
 			if (user_regs)
-				read_all_sources(user_regs, prev, 1);
+				read_all_sources(user_regs, prev, ts);
 		}
 
-		cancel_hrtimer(cpu_ctx);
+		if (quadd_mode_is_sampling_timer(ctx))
+			cancel_hrtimer(cpu_ctx);
 
 		if (ctx->pmu)
 			ctx->pmu->stop();
@@ -823,7 +830,7 @@ void __quadd_task_sched_out(struct task_struct *prev,
 
 	if (quadd_mode_is_tracing(ctx) && cpu_ctx->is_tracing_enabled) {
 		if (is_task_active(cpu_ctx, prev))
-			put_sched_sample(prev, 0);
+			put_sched_sample(prev, false, ts);
 		cpu_ctx->is_tracing_enabled = 0;
 	}
 

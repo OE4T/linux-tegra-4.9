@@ -767,16 +767,9 @@ static int tegra_machine_driver_probe(struct platform_device *pdev)
 		return ret;
 
 	memset(&machine->audio_clock, 0, sizeof(machine->audio_clock));
-	if (of_property_read_u32(np, "nvidia,mclk-rate",
-				 &machine->audio_clock.mclk_rate) < 0)
-		dev_dbg(&pdev->dev, "Missing property nvidia,mclk-rate\n");
-
 	if (of_property_read_u32(np, "mclk-fs",
-				 &machine->audio_clock.mclk_scale) < 0) {
-		/* TODO: fix clock in DT and remove usage of default scale */
-		machine->audio_clock.mclk_scale = 256;
+				 &machine->audio_clock.mclk_scale) < 0)
 		dev_dbg(&pdev->dev, "Missing property mclk-fs\n");
-	}
 
 	tegra_machine_dma_set_mask(pdev);
 

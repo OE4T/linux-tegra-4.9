@@ -87,11 +87,6 @@ int tegra_alt_asoc_utils_set_rate(struct tegra_asoc_audio_clock_info *data,
 		pll_out = pll_out >> 1;
 	if (data->mclk_scale)
 		aud_mclk = srate * data->mclk_scale;
-	/*
-	 * mclk_rate is the fixed clock from DT, this overrides mclk_scale.
-	 * TODO: manage MCLK fixed or dynamic rate from a single DT property.
-	 */
-	aud_mclk = data->mclk_rate ? data->mclk_rate : aud_mclk;
 
 	if (data->set_pll_base_rate != new_pll_base) {
 		err = clk_set_rate(data->clk_pll_base, new_pll_base);

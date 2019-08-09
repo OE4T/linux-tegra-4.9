@@ -25,6 +25,7 @@
 #include <linux/err.h>
 #include <linux/version.h>
 #include <linux/rculist.h>
+#include <linux/random.h>
 #include <clocksource/arm_arch_timer.h>
 
 #include <asm/cputype.h>
@@ -640,7 +641,7 @@ static enum hrtimer_restart hrtimer_handler(struct hrtimer *hrtimer)
 
 static void start_hrtimer(struct quadd_cpu_context *cpu_ctx)
 {
-	u64 period = hrt.sample_period;
+	u32 period = prandom_u32_max(hrt.sample_period);
 
 	hrtimer_start(&cpu_ctx->hrtimer, ns_to_ktime(period),
 		      HRTIMER_MODE_REL_PINNED);

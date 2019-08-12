@@ -1,7 +1,7 @@
 /*
  * tegra_asoc_util_virt_alt.h - Tegra xbar dai link for machine drivers
  *
- * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2019, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -189,7 +189,7 @@
 
 #define I2S_SET_RATE(ename, reg) \
 	SOC_SINGLE_EXT(ename, reg,	\
-	0, 48000, 0,	\
+	0, 96000, 0,	\
 	tegra_virt_i2s_get_rate,	\
 	tegra_virt_i2s_set_rate)
 

@@ -128,6 +128,7 @@
 			<&{/xusb_padctl@3520000/pads/usb2/lanes/usb2-2}>,
 			<&{/xusb_padctl@3520000/pads/usb3/lanes/usb3-0}>;
 		phy-names = "usb2-0", "usb2-1", "usb2-2", "usb3-0";
+		nvidia,boost_cpu_freq = <1200>;
 	};
 
 	xusb_padctl@3520000 {

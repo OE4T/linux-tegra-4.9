@@ -516,17 +516,22 @@ static int tegra_udrm_probe(struct platform_device *pdev)
 	/* Register hotplug notifiers */
 	priv = drm->dev_private;
 	edev = extcon_get_extcon_dev("external-connection:disp-state");
-	if (!IS_ERR(edev)) {
+	if (IS_ERR_OR_NULL(edev)) {
+		// disp-state device name on older platforms is
+		// "extcon:disp-state", so try that.
+		edev = extcon_get_extcon_dev("extcon:disp-state");
+	}
+	if (!IS_ERR_OR_NULL(edev)) {
 		priv->hdmi_nb.notifier_call = tegra_udrm_hdmi_notifier;
 		ret = devm_extcon_register_notifier(drm->dev, edev,
 				EXTCON_DISP_HDMI, &priv->hdmi_nb);
-		if (!ret)
+		if (ret < 0)
 			dev_warn(drm->dev, "HDMI HOTPLUG event is not supported\n");
 
 		priv->dp_nb.notifier_call = tegra_udrm_dp_notifier;
 		ret = devm_extcon_register_notifier(drm->dev, edev,
 				EXTCON_DISP_DP, &priv->dp_nb);
-		if (!ret)
+		if (ret < 0)
 			dev_warn(drm->dev, "DP HOTPLUG event is not supported\n");
 	} else {
 		dev_warn(drm->dev, "HDMI/DP HOTPLUG event is not supported\n");

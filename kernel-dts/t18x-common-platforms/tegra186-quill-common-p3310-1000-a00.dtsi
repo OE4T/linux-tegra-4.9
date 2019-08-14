@@ -45,6 +45,16 @@
 
 	spi@3240000 {
 		status = "okay";
+		spi@0 {
+			compatible = "spidev";
+			reg = <0x0>;
+			spi-max-frequency = <20000000>;
+			nvidia,enable-hw-based-cs;
+			nvidia,cs-setup-clk-count = <0x1e>;
+			nvidia,cs-hold-clk-count = <0x1e>;
+			nvidia,rx-clk-tap-delay = <0x1f>;
+			nvidia,tx-clk-tap-delay = <0x0>;
+		};
 	};
 
 	gpio@2200000 {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2019, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2020, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -1324,6 +1324,9 @@ static int __init tegra186_cpufreq_probe(struct platform_device *pdev)
 	if (of_device_is_compatible(dn, "nvidia,tegra18x-cpufreq-hv")) {
 		tegra_cpufreq_hv_mode = true;
 		pr_info("tegra18x-cpufreq: Using hv path\n");
+		ret = parse_hv_dt_data(dn);
+		if (ret)
+			goto err_out;
 	} else {
 		res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 		regs = devm_ioremap_resource(&pdev->dev, res);
@@ -1344,11 +1347,6 @@ static int __init tegra186_cpufreq_probe(struct platform_device *pdev)
 		spin_lock_init(&per_cpu(pcpu_slock, cpu));
 	}
 
-	if (tegra_cpufreq_hv_mode) {
-		ret = parse_hv_dt_data(dn);
-		if (ret)
-			goto err_free_res;
-	}
 	tfreq_data.pcluster[B_CLUSTER].cluster_present = false;
 	tfreq_data.pcluster[M_CLUSTER].cluster_present = false;
 	for_each_possible_cpu(cpu) {

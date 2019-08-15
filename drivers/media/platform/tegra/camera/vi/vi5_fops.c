@@ -806,10 +806,15 @@ static int vi5_channel_stop_streaming(struct vb2_queue *vq)
 	struct tegra_channel *chan = vb2_get_drv_priv(vq);
 	long err;
 
-	if (!chan->bypass) {
+	if (!chan->bypass)
 		vi5_channel_stop_kthreads(chan);
 
-		err = vi_capture_release(chan->tegra_vi_channel, 0);
+	/* csi stream/sensor(s) devices to be closed before vi channel */
+	tegra_channel_set_stream(chan, false);
+
+	if (!chan->bypass) {
+		err = vi_capture_release(chan->tegra_vi_channel,
+			CAPTURE_CHANNEL_RESET_FLAG_IMMEDIATE);
 		if (err)
 			dev_err(&chan->video.dev,
 				"vi capture release failed\n");
@@ -819,9 +824,6 @@ static int vi5_channel_stop_streaming(struct vb2_queue *vq)
 		/* release all remaining buffers to v4l2 */
 		tegra_channel_queued_buf_done(chan, VB2_BUF_STATE_ERROR, false);
 	}
-
-	/* csi stream/sensor should be streamoff after vi channel close */
-	tegra_channel_set_stream(chan, false);
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
 	media_entity_pipeline_stop(&chan->video.entity);

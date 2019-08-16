@@ -41,6 +41,8 @@
 #include <linux/tegra-cpufreq.h>
 #include <soc/tegra/chip-id.h>
 
+#include "cpufreq_cpu_emc_table.h"
+
 #define MAX_NDIV		512 /* No of NDIV */
 #define MAX_VINDEX		80 /* No of voltage index */
 /* cpufreq transisition latency */
@@ -137,7 +139,6 @@ struct tegra_cpufreq_data {
 	uint32_t freq_compute_delay; /* delay in reading clock counters */
 	uint32_t cpu_freq[CONFIG_NR_CPUS];
 	uint32_t last_hint[CONFIG_NR_CPUS];
-	unsigned long emc_max_rate; /* Hz */
 	void *__iomem *regs;
 };
 
@@ -245,17 +246,13 @@ err_out:
 	return (unsigned int) (rate_mhz * 1000); /* in KHz */
 }
 
-static unsigned long cpu_to_emc_freq(uint32_t cpu_rate)
-{
-	if (cpu_rate >= 1400000)
-		return tfreq_data.emc_max_rate;	/* cpu >= 1.4GHz, emc max */
-	else if (cpu_rate >= 800000)
-		return 660000000;	/* cpu >= 800 MHz, emc 660 MHz */
-	else if (cpu_rate >= 450000)
-		return  408000000;	/* cpu >= 450 MHz, emc 408 MHz */
-	else
-		return  0;		/* no freq request */
-}
+static struct cpu_emc_mapping dflt_t186_cpu_emc_mapping[] = {
+	{ 450000,   408000},
+	{ 800000,   660000},
+	{1400000, UINT_MAX},
+	{}, /* termination entry */
+};
+
 
 /**
  * get_cluster_freq - returns max freq among all the cpus in a cluster.
@@ -283,14 +280,18 @@ static uint32_t get_cluster_freq(struct cpufreq_policy *policy)
 /* Set emc clock by referring cpu_to_emc freq mapping */
 static void set_cpufreq_to_emcfreq(struct cpufreq_policy *policy)
 {
-	unsigned long emc_freq;
+	unsigned long emc_freq, freq_khz;
 	uint32_t cluster_freq;
 	int cl;
+	struct cpu_emc_mapping *mapping = dflt_t186_cpu_emc_mapping;
 
-	tfreq_data.emc_max_rate = tegra_bwmgr_get_max_emc_rate();
 	cluster_freq = get_cluster_freq(policy);
 
-	emc_freq = cpu_to_emc_freq(cluster_freq);
+	freq_khz = tegra_cpu_to_emc_freq(cluster_freq, mapping);
+	if (freq_khz == UINT_MAX)
+		emc_freq = tegra_bwmgr_get_max_emc_rate();
+	else
+		emc_freq = freq_khz * KHZ_TO_HZ;
 
 	cl = tegra18_logical_to_cluster(policy->cpu);
 	tegra_bwmgr_set_emc(tfreq_data.pcluster[cl].bwmgr, emc_freq,

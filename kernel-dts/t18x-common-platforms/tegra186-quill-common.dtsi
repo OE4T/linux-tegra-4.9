@@ -732,6 +732,7 @@
 			"d3 Headphone",		"d3 OUT";
 
 		nvidia,xbar = <&tegra_axbar>;
+		mclk-fs = <256>;
 
 		rt565x_dai_link: nvidia,dai-link-1 {
 			link-name = "spdif-dit-0";

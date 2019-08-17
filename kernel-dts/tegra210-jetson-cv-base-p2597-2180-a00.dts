@@ -392,6 +392,7 @@
 			"n IN",			"n Mic";
 
 		nvidia,xbar = <&tegra_axbar>;
+		mclk-fs = <256>;
 
 		nvidia,dai-link-1 {
 			link-name = "spdif-dit-0";

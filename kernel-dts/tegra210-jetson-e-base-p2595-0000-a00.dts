@@ -411,6 +411,7 @@
 			"z IN",		"z OUT";
 
 		nvidia,xbar = <&tegra_axbar>;
+		mclk-fs = <256>;
 
 		nvidia,dai-link-1 {
 			link-name = "rt5640-playback";

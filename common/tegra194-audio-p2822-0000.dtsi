@@ -104,6 +104,8 @@
 			"d1 Headphone",         "d1 OUT",
 			"d2 Headphone",         "d2 OUT";
 
+		mclk-fs = <256>;
+
 			/*
 			 * Default config for all I2S dai links are
 			 * format = "i2s", bitclock-slave, frame-slave,

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2019, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -253,6 +253,7 @@ static struct cpu_emc_mapping dflt_t186_cpu_emc_mapping[] = {
 	{}, /* termination entry */
 };
 
+static struct cpu_emc_mapping *cpu_emc_mapping_dt;
 
 /**
  * get_cluster_freq - returns max freq among all the cpus in a cluster.
@@ -283,7 +284,8 @@ static void set_cpufreq_to_emcfreq(struct cpufreq_policy *policy)
 	unsigned long emc_freq, freq_khz;
 	uint32_t cluster_freq;
 	int cl;
-	struct cpu_emc_mapping *mapping = dflt_t186_cpu_emc_mapping;
+	struct cpu_emc_mapping *mapping = cpu_emc_mapping_dt ?
+		cpu_emc_mapping_dt : dflt_t186_cpu_emc_mapping;
 
 	cluster_freq = get_cluster_freq(policy);
 
@@ -838,6 +840,11 @@ static int __init tegra_cpufreq_debug_init(void)
 	if (cc3_debug_init())
 		goto err_out;
 
+	if (!tegra_debugfs_create_cpu_emc_map(tegra_cpufreq_debugfs_root,
+		cpu_emc_mapping_dt ? cpu_emc_mapping_dt :
+		dflt_t186_cpu_emc_mapping))
+		goto err_out;
+
 	for_each_possible_cpu(cpu) {
 		snprintf(buff, sizeof(buff), "cpu%llu", cpu);
 		dir = debugfs_create_dir(buff, tegra_cpufreq_debugfs_root);
@@ -1074,6 +1081,10 @@ static void free_resources(struct device *dev)
 		/* unregister from emc bw manager */
 		tegra_bwmgr_unregister(tfreq_data.pcluster[cl].bwmgr);
 	}
+
+	/* kfree handles NULL just well */
+	kfree(cpu_emc_mapping_dt);
+	cpu_emc_mapping_dt = NULL;
 }
 
 static int __init init_freqtbls(struct device_node *dn)
@@ -1346,6 +1357,10 @@ static int __init tegra186_cpufreq_probe(struct platform_device *pdev)
 		else if (tegra18_logical_to_cluster(cpu) == M_CLUSTER)
 			tfreq_data.pcluster[M_CLUSTER].cluster_present = true;
 	}
+
+	cpu_emc_mapping_dt = tegra_cpufreq_cpu_emc_map_dt_init(dn);
+	pr_info("CPU EMC frequency mapping table: %s\n",
+		cpu_emc_mapping_dt ?  "from device tree" : "default setting");
 
 #ifdef CONFIG_DEBUG_FS
 	tegra_cpufreq_debug_init();

@@ -464,6 +464,7 @@ static int tegra_channel_capture_frame_single_thread(
 		}
 	}
 
+	set_timestamp(buf, &ts);
 	tegra_channel_ring_buffer(chan, vb, &ts, state);
 	trace_tegra_channel_capture_frame("sof", ts);
 	return 0;
@@ -791,12 +792,12 @@ static void tegra_channel_capture_done(struct tegra_channel *chan)
 		}
 	}
 
+	set_timestamp(buf, &ts);
 	/* Mark capture state to IDLE as capture is finished */
 	chan->capture_state = CAPTURE_IDLE;
 
 	if (chan->low_latency) {
 		buf->state = VB2_BUF_STATE_DONE;
-		set_timestamp(buf, &ts);
 		release_buffer(chan, buf);
 	} else
 		tegra_channel_ring_buffer(chan, &buf->buf, &ts, state);

@@ -16,8 +16,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _DLA_OS_INTERFACE_H_
-#define _DLA_OS_INTERFACE_H_
+#ifndef DLA_OS_INTERFACE_H
+#define DLA_OS_INTERFACE_H
 
 /**
  * @ingroup Task
@@ -54,9 +54,9 @@
  *        specifies contents in mailbox register for a response
  * @{
  */
-#define DLA_RESPONSE_MSG_MASK		0xff
-#define DLA_RESPONSE_CMD_MASK		0xff
-#define DLA_RESPONSE_ERROR_MASK		0xff
+#define DLA_RESPONSE_MSG_MASK		0xffU
+#define DLA_RESPONSE_CMD_MASK		0xffU
+#define DLA_RESPONSE_ERROR_MASK		0xffU
 /** @} */
 
 /**
@@ -87,7 +87,7 @@
 /* write actions */
 #define ACTION_WRITE_SEM	0x80
 #define ACTION_WRITE_TS_SEM	0x83
-#define ACTION_WRITE_TIMESTAMP  	0x87
+#define ACTION_WRITE_TIMESTAMP	0x87
 #define ACTION_WRITE_GOS	0xA0
 #define ACTION_WRITE_TASK_STATUS	0xC1
 
@@ -95,22 +95,22 @@
 #define BUFFER_MULTIPLIER	4
 #define MAX_NUM_GRIDS		6
 
-#define ERR(code) -DLA_ERR_##code
+#define ERR(code) (-DLA_ERR_##code)
 
-#define DLA_CMD_PING			1
-#define DLA_CMD_GET_STATUS		2
-#define DLA_CMD_RESET			3
-#define DLA_CMD_DLA_CONTROL		4
-#define DLA_CMD_GET_QUEUE_STATUS	5
-#define DLA_CMD_GET_STATISTICS		6
-#define DLA_CMD_SUBMIT_TASK		7
-#define DLA_CMD_SET_SCHEDULER		8
-#define DLA_CMD_READ_INFO		9
-#define DLA_CMD_SET_DEBUG		10
-#define DLA_CMD_SET_REGIONS		11
-#define DLA_CMD_QUEUE_SUSPEND		12
-#define DLA_CMD_QUEUE_RESUME		13
-#define DLA_CMD_QUEUE_FLUSH		14
+#define DLA_CMD_PING			1U
+#define DLA_CMD_GET_STATUS		2U
+#define DLA_CMD_RESET			3U
+#define DLA_CMD_DLA_CONTROL		4U
+#define DLA_CMD_GET_QUEUE_STATUS	5U
+#define DLA_CMD_GET_STATISTICS		6U
+#define DLA_CMD_SUBMIT_TASK		7U
+#define DLA_CMD_SET_SCHEDULER		8U
+#define DLA_CMD_READ_INFO		9U
+#define DLA_CMD_SET_DEBUG		10U
+#define DLA_CMD_SET_REGIONS		11U
+#define DLA_CMD_QUEUE_SUSPEND		12U
+#define DLA_CMD_QUEUE_RESUME		13U
+#define DLA_CMD_QUEUE_FLUSH		14U
 
 #define DLA_ERR_NONE			0
 #define DLA_ERR_INVALID_METHOD		1
@@ -130,14 +130,14 @@
 #define DLA_ERR_ENGINE_TIMEOUT		15
 #define DLA_ERR_DATA_MISMATCH		16
 
-#define DLA_MSG_CMD_ERROR		1
-#define DLA_MSG_CMD_COMPLETE		2
-#define DLA_MSG_EXCEPTION		3
-#define DLA_MSG_SWBREAKPT		4
-#define DLA_MSG_UNHANDLED_INTERRUPT	5
-#define DLA_MSG_UNUSED			6
-#define DLA_MSG_DEBUG_PRINT		7
-#define DLA_MSG_TASK_TIMEOUT		8
+#define DLA_MSG_CMD_ERROR		1U
+#define DLA_MSG_CMD_COMPLETE		2U
+#define DLA_MSG_EXCEPTION		3U
+#define DLA_MSG_SWBREAKPT		4U
+#define DLA_MSG_UNHANDLED_INTERRUPT	5U
+#define DLA_MSG_UNUSED			6U
+#define DLA_MSG_DEBUG_PRINT		7U
+#define DLA_MSG_TASK_TIMEOUT		8U
 
 /**
  * Task descriptor for DLA_CMD_SUBMIT_TASK
@@ -233,12 +233,12 @@ struct dla_action_task_status {
 } __attribute__ ((packed));
 
 /**
- * Timestamp update action structure
- *
- * OPCODE = 0x87
- *
- * @address: Address to write timestamp
- */
+* Timestamp update action structure
+*
+* OPCODE = 0x87
+*
+* @address: Address to write timestamp value
+*/
 struct dla_action_timestamp {
 	uint64_t address;
 } __attribute__ ((packed));
@@ -343,12 +343,12 @@ static inline uint32_t dla_command(uint32_t method_id)
 
 static inline uint32_t is_int_on_complete(uint32_t method_id)
 {
-	return !!((method_id >> DLA_INT_ON_COMPLETE_SHIFT) & 0x1);
+	return ((method_id >> DLA_INT_ON_COMPLETE_SHIFT) & 0x1U);
 }
 
 static inline uint32_t is_int_on_error(uint32_t method_id)
 {
-	return !!((method_id >> DLA_INT_ON_ERROR_SHIFT) & 0x1);
+	return ((method_id >> DLA_INT_ON_ERROR_SHIFT) & 0x1U);
 }
 
 #endif

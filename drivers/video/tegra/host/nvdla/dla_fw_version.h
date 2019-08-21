@@ -16,18 +16,18 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _DLA_FW_VERSION_H_
-#define _DLA_FW_VERSION_H_
+#ifndef DLA_FW_VERSION_H
+#define DLA_FW_VERSION_H
 
-#define FIRMWARE_VERSION_MAJOR		0x1
-#define FIRMWARE_VERSION_MINOR		0x1
-#define FIRMWARE_VERSION_SUBMINOR	0x0
+#define FIRMWARE_VERSION_MAJOR		0x1UL
+#define FIRMWARE_VERSION_MINOR		0x1UL
+#define FIRMWARE_VERSION_SUBMINOR	0x3UL
 
 static inline uint32_t dla_version(void)
 {
-	return (uint32_t)(((FIRMWARE_VERSION_MAJOR & 0xff) << 16) |
-				((FIRMWARE_VERSION_MINOR & 0xff) << 8) |
-				((FIRMWARE_VERSION_SUBMINOR & 0xff)));
+	return (((FIRMWARE_VERSION_MAJOR & 0xffU) << 16) |
+			((FIRMWARE_VERSION_MINOR & 0xffU) << 8) |
+			((FIRMWARE_VERSION_SUBMINOR & 0xffU)));
 }
 
 #endif

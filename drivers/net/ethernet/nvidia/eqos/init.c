@@ -749,7 +749,16 @@ static struct thermal_cooling_device_ops eqos_cdev_ops = {
 static int eqos_therm_init(struct eqos_prv_data *pdata)
 {
 #ifdef CONFIG_THERMAL
-	pdata->cdev = thermal_cooling_device_register("tegra-eqos", pdata,
+	struct device_node *np = NULL;
+
+	np = of_find_node_by_name(NULL, "eqos-cool-dev");
+	if (!np) {
+		pr_err("failed to get eqos-cool-dev\n");
+		return -ENODEV;
+	}
+
+	pdata->cdev = thermal_of_cooling_device_register(np,
+			"tegra-eqos", pdata,
 			&eqos_cdev_ops);
 	if (IS_ERR(pdata->cdev))
 		return PTR_ERR(pdata->cdev);

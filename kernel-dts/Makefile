@@ -29,14 +29,18 @@ dtb-$(CONFIG_ARCH_TEGRA_18x_SOC) += tegra186-quill-p3489-1000-a00-00-ucm2.dtb
 dtb-$(CONFIG_ARCH_TEGRA_18x_SOC) += tegra186-quill-p3489-1000-a00-00-e2598.dtb
 dtb-$(CONFIG_ARCH_TEGRA_18x_SOC) += tegra186-quill-p3489-0888-a00-00-base.dtb
 dtb-$(CONFIG_ARCH_TEGRA_18x_SOC) += tegra186-quill-p3489-0888-a00-00-e2598.dtb
-
-dtbo-$(CONFIG_ARCH_TEGRA_18x_SOC) += tegra186-quill-p3310-1000-a00-overlay.dtbo
 dtb-$(CONFIG_ARCH_TEGRA_18x_SOC) += tegra186-quill-p3310-1000-as-0888.dtb
+dtbo-$(CONFIG_ARCH_TEGRA_18x_SOC) += tegra186-quill-p3310-1000-a00-overlay.dtbo
+dtbo-$(CONFIG_ARCH_TEGRA_18x_SOC) += tegra186-quill-p3310-1000-c03-00-base-hdr40.dtbo
+dtbo-$(CONFIG_ARCH_TEGRA_18x_SOC) += tegra186-quill-p3310-1000-c03-00-base-adafruit-sph0645lm4h.dtbo
+dtbo-$(CONFIG_ARCH_TEGRA_18x_SOC) += tegra186-quill-p3310-1000-c03-00-base-fe-pi-audio-z-v2.dtbo
 
 ifneq ($(dtb-y),)
 dtb-y := $(addprefix $(makefile-path)/,$(dtb-y))
-dtbo-y := $(addprefix $(makefile-path)/,$(dtbo-y))
 dts-include += $(makefile-path)
+endif
+ifneq ($(dtbo-y),)
+dtbo-y := $(addprefix $(makefile-path)/,$(dtbo-y))
 endif
 
 dtb-y += $(old-dtb)

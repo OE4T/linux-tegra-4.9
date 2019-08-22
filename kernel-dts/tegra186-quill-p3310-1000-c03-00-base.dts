@@ -54,7 +54,7 @@
 		nvidia,cd-wakeup-capable;
 	};
 
-	i2c@3160000 {
+	hdr40_i2c0: i2c@3160000 {
 		ina3221x@40 {
 			channel@0 {
 				ti,shunt-resistor-mohm = <10>;
@@ -77,7 +77,7 @@
 		};
 	};
 
-	i2c@c240000 {
+	hdr40_i2c1: i2c@c240000 {
 		bmi160@69 {
 			compatible = "bmi,bmi160";
 			reg = <0x69>;
@@ -184,5 +184,9 @@
 				};
 			};
 		};
+	};
+
+	sound {
+		hdr40_snd_link_i2s: nvidia,dai-link-1 { };
 	};
 };

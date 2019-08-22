@@ -94,7 +94,7 @@
 		nvidia,invert-interrupt;
 	};
 
-	i2c@c240000 {
+	hdr40_i2c0: i2c@c240000 {
 		bmi160@69 {
 			compatible = "bmi,bmi160";
 			reg = <0x69>;
@@ -297,7 +297,7 @@
 		status = "okay";
 	};
 
-	i2c@31e0000 {
+	hdr40_i2c1: i2c@31e0000 {
 		pinctrl-names = "default";
 		pinctrl-0 = <&dpaux_default>;
 		bmi160@69 {

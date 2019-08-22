@@ -121,6 +121,8 @@
 				codec-dai-name = "rt5659-aif1";
 			};
 
+			hdr40_snd_link_i2s: nvidia,dai-link-2 { };
+
 			/* Override with BT SCO entries */
 			nvidia,dai-link-4 {
 				format = "dsp_a";

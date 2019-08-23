@@ -59,13 +59,11 @@ static int nvgpu_submit_prepare_syncs(struct channel_gk20a *c,
 			c->sync = nvgpu_channel_sync_create(c, false);
 			if (!c->sync) {
 				err = -ENOMEM;
-				nvgpu_mutex_release(&c->sync_lock);
 				goto fail;
 			}
 			new_sync_created = true;
 		}
 		nvgpu_atomic_inc(&c->sync->refcount);
-		nvgpu_mutex_release(&c->sync_lock);
 	}
 
 	if (g->ops.fifo.resetup_ramfc && new_sync_created) {
@@ -151,6 +149,9 @@ static int nvgpu_submit_prepare_syncs(struct channel_gk20a *c,
 		goto clean_up_incr_cmd;
 	}
 
+	if (g->aggressive_sync_destroy_thresh) {
+		nvgpu_mutex_release(&c->sync_lock);
+	}
 	return 0;
 
 clean_up_incr_cmd:
@@ -169,6 +170,9 @@ clean_up_wait_cmd:
 		job->wait_cmd = NULL;
 	}
 fail:
+	if (g->aggressive_sync_destroy_thresh) {
+		nvgpu_mutex_release(&c->sync_lock);
+	}
 	*wait_cmd = NULL;
 	return err;
 }

@@ -1,6 +1,9 @@
 config RTL8822CE
 	tristate "Realtek 8822C PCIE WiFi"
 	depends on PCI
+	default n
 	---help---
-	  Help message of RTL8822CE
+	  This module adds support for RTL8822CE chipset
 
+	  This driver module will be called rtl8822ce
+	  Use m if unsure

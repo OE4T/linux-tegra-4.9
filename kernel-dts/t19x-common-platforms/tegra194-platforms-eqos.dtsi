@@ -59,7 +59,7 @@
 	};
 
 	thermal-zones {
-		Tdiode_tegra {
+		CPU-therm {
 			trips {
 				MAKE_EQOS_TRIP(m40, -40000, 5000);
 				MAKE_EQOS_TRIP(m5, -5000, 5000);

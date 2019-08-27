@@ -446,13 +446,14 @@ void gk20a_tsg_update_sm_error_state_locked(struct tsg_gk20a *tsg,
 			sm_error_state->hww_warp_esr_report_mask;
 }
 
-int nvgpu_tsg_set_mmu_debug_mode(struct tsg_gk20a *tsg,
-		struct channel_gk20a *ch, bool enable)
+int nvgpu_tsg_set_mmu_debug_mode(struct channel_gk20a *ch, bool enable)
 {
 	struct gk20a *g;
 	int err = 0;
+	u32 ch_refcnt;
 	u32 tsg_refcnt;
 	u32 fb_refcnt;
+	struct tsg_gk20a *tsg = tsg_gk20a_from_ch(ch);
 
 	if ((ch == NULL) || (tsg == NULL)) {
 		return -EINVAL;
@@ -465,17 +466,11 @@ int nvgpu_tsg_set_mmu_debug_mode(struct tsg_gk20a *tsg,
 	}
 
 	if (enable) {
-		if (ch->mmu_debug_mode_enabled) {
-			/* already enabled for this channel */
-			return 0;
-		}
+		ch_refcnt = ch->mmu_debug_mode_refcnt + 1U;
 		tsg_refcnt = tsg->mmu_debug_mode_refcnt + 1U;
 		fb_refcnt = g->mmu_debug_mode_refcnt + 1U;
 	} else {
-		if (!ch->mmu_debug_mode_enabled) {
-			/* already disabled for this channel */
-			return 0;
-		}
+		ch_refcnt = ch->mmu_debug_mode_refcnt - 1U;
 		tsg_refcnt = tsg->mmu_debug_mode_refcnt - 1U;
 		fb_refcnt = g->mmu_debug_mode_refcnt - 1U;
 	}
@@ -500,7 +495,7 @@ int nvgpu_tsg_set_mmu_debug_mode(struct tsg_gk20a *tsg,
 		g->ops.fb.set_mmu_debug_mode(g, fb_refcnt > 0U);
 	}
 
-	ch->mmu_debug_mode_enabled = enable;
+	ch->mmu_debug_mode_refcnt = ch_refcnt;
 	tsg->mmu_debug_mode_refcnt = tsg_refcnt;
 	g->mmu_debug_mode_refcnt = fb_refcnt;
 

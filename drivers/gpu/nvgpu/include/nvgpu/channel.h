@@ -328,7 +328,11 @@ struct channel_gk20a {
 	bool has_os_fence_framework_support;
 
 	bool is_privileged_channel;
-	bool mmu_debug_mode_enabled;
+
+	/**
+	 * MMU Debugger Mode is enabled for this channel if refcnt > 0
+	 */
+	u32 mmu_debug_mode_refcnt;
 };
 
 static inline struct channel_gk20a *

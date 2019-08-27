@@ -127,7 +127,6 @@ gk20a_event_id_data_from_event_id_node(struct nvgpu_list_node *node)
 		((uintptr_t)node - offsetof(struct gk20a_event_id_data, event_id_node));
 };
 
-int nvgpu_tsg_set_mmu_debug_mode(struct tsg_gk20a *tsg,
-		struct channel_gk20a *ch, bool enable);
+int nvgpu_tsg_set_mmu_debug_mode(struct channel_gk20a *ch, bool enable);
 
 #endif /* TSG_GK20A_H */

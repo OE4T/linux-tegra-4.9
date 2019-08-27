@@ -1,7 +1,7 @@
 /*
  * GK20A Graphics FIFO (gr host)
  *
- * Copyright (c) 2011-2019, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2020, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -2248,6 +2248,15 @@ int gk20a_fifo_tsg_unbind_channel(struct channel_gk20a *ch)
 	err = channel_gk20a_update_runlist(ch, false);
 	if (err) {
 		goto fail_enable_tsg;
+	}
+
+	while (ch->mmu_debug_mode_refcnt > 0U) {
+		err = nvgpu_tsg_set_mmu_debug_mode(ch, false);
+		if (err != 0) {
+			nvgpu_err(g, "disable mmu debug mode failed ch:%u",
+				ch->chid);
+			break;
+		}
 	}
 
 	/* Remove channel from TSG and re-enable rest of the channels */

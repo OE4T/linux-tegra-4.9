@@ -799,6 +799,7 @@ static int gk20a_tegra_probe(struct device *dev)
 
 	if (joint_xpu_rail) {
 		nvgpu_log_info(g, "XPU rails are joint\n");
+		platform->can_railgate_init = false;
 		__nvgpu_set_enabled(g, NVGPU_CAN_RAILGATE, false);
 	}
 

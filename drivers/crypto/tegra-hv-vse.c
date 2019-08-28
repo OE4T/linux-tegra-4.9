@@ -3772,7 +3772,13 @@ static int tegra_hv_vse_probe(struct platform_device *pdev)
 		se_dev->disable_keyslot_label = true;
 
 	g_virtual_se_dev[engine_id] = se_dev;
+	se_dev->engine_id = engine_id;
 	mutex_init(&se_dev->mtx);
+	mutex_init(&se_dev->server_lock);
+	platform_set_drvdata(pdev, se_dev);
+
+	/* Set Engine suspended state to false*/
+	atomic_set(&se_dev->se_suspended, 0);
 
 	if (engine_id == VIRTUAL_SE_AES0) {
 		err = crypto_register_rng(&rng_alg[0]);
@@ -3845,12 +3851,6 @@ static int tegra_hv_vse_probe(struct platform_device *pdev)
 		}
 		is_rng1_registered = true;
 	}
-	se_dev->engine_id = engine_id;
-
-	/* Set Engine suspended state to false*/
-	atomic_set(&se_dev->se_suspended, 0);
-	platform_set_drvdata(pdev, se_dev);
-	mutex_init(&se_dev->server_lock);
 
 	return 0;
 

@@ -32,7 +32,7 @@
 	nvidia,fastboot-usb-pid = <0xee1e>;
 	model = "Jetson-AGX";
 
-	compatible = "nvidia,jetson-xavier", "nvidia,tegra194";
+	compatible = "nvidia,galen", "nvidia,jetson-xavier", "nvidia,tegra194";
 
 	chosen {
 		bootargs ="console=ttyTCU0,115200";

@@ -202,6 +202,8 @@ static int extract_pixel_format(
 		*format = V4L2_PIX_FMT_SRGGB10;
 	else if (strncmp(pixel_t, "bayer_grbg10", size) == 0)
 		*format = V4L2_PIX_FMT_SGRBG10;
+	else if (strncmp(pixel_t, "bayer_gbrg10", size) == 0)
+		*format = V4L2_PIX_FMT_SGBRG10;
 	else if (strncmp(pixel_t, "bayer_bggr12", size) == 0)
 		*format = V4L2_PIX_FMT_SBGGR12;
 	else if (strncmp(pixel_t, "bayer_rggb12", size) == 0)

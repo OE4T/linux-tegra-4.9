@@ -1148,6 +1148,24 @@ static int uas_post_reset(struct usb_interface *intf)
 
 	scsi_unblock_requests(shost);
 
+	/*
+	 * This function should be called with usb dev locked.
+	 * devinfo->resetting is also protected by usb dev lock, and will
+	 * only be altered when usb dev is locked.
+	 * So, it's safe to access devinfo->resetting here.
+	 */
+	if (devinfo->resetting && err) {
+		/*
+		 * If devinfo->resetting is set, it means this function
+		 * is called from uas_eh_bus_reset_handler.
+		 * In order to avoid deadlock, return 0 to avoid unmount &
+		 * remount operations. But also trigger an asynchronous
+		 * usb reset to do the unmount & remount.
+		 */
+		usb_queue_reset_device(devinfo->intf);
+		return 0;
+	}
+
 	return err ? 1 : 0;
 }
 

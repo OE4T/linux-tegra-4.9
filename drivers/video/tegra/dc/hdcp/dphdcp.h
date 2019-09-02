@@ -79,6 +79,7 @@ struct tegra_dphdcp {
 
 #ifdef CONFIG_DPHDCP
 void tegra_dphdcp_set_plug(struct tegra_dphdcp *dphdcp, bool hpd);
+int tegra_dphdcp_set_policy(struct tegra_dphdcp *nvhdcp, int pol);
 struct tegra_dphdcp *tegra_dphdcp_create(struct tegra_dc_dp_data *dp,
 						int id, int bus);
 void tegra_dphdcp_debugfs_init(struct tegra_dphdcp *dphdcp);

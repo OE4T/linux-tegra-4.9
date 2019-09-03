@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2019, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -37,6 +37,7 @@ struct gk20a;
 #define NVGPU_FECS_TRACE_VA			4
 #define NVGPU_CAN_RAILGATE			5
 #define NVGPU_KERNEL_IS_DYING			6
+#define NVGPU_FECS_TRACE_FEATURE_CONTROL	7
 
 /*
  * ECC flags

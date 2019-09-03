@@ -1,7 +1,7 @@
 /*
  * GV100 Tegra HAL interface
  *
- * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2019, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -1039,6 +1039,7 @@ int gv100_init_hal(struct gk20a *g)
 	__nvgpu_set_enabled(g, NVGPU_PMU_FECS_BOOTSTRAP_DONE, false);
 	__nvgpu_set_enabled(g, NVGPU_SUPPORT_MULTIPLE_WPR, false);
 	__nvgpu_set_enabled(g, NVGPU_FECS_TRACE_VA, true);
+	__nvgpu_set_enabled(g, NVGPU_FECS_TRACE_FEATURE_CONTROL, false);
 
 	/* for now */
 	__nvgpu_set_enabled(g, NVGPU_PMU_PSTATE, true);

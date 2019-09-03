@@ -1,7 +1,7 @@
 /*
  * GV11B Tegra HAL interface
  *
- * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2019, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -949,6 +949,7 @@ int gv11b_init_hal(struct gk20a *g)
 
 	__nvgpu_set_enabled(g, NVGPU_PMU_FECS_BOOTSTRAP_DONE, false);
 	__nvgpu_set_enabled(g, NVGPU_FECS_TRACE_VA, true);
+	__nvgpu_set_enabled(g, NVGPU_FECS_TRACE_FEATURE_CONTROL, true);
 
 	__nvgpu_set_enabled(g, NVGPU_SUPPORT_MULTIPLE_WPR, false);
 

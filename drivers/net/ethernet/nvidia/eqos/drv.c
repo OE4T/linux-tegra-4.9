@@ -5181,7 +5181,7 @@ void eqos_mmc_read(struct eqos_mmc_counters *mmc)
 	    eqos_reg_read(MMC_RXBROADCASTPACKETS_G_OFFSET);
 	mmc->mmc_rx_multicastframe_g +=
 	    eqos_reg_read(MMC_RXMULTICASTPACKETS_G_OFFSET);
-	mmc->mmc_rx_crc_errror += eqos_reg_read(MMC_RXCRCERROR_OFFSET);
+	mmc->mmc_rx_crc_error += eqos_reg_read(MMC_RXCRCERROR_OFFSET);
 	mmc->mmc_rx_align_error += eqos_reg_read(MMC_RXALIGNMENTERROR_OFFSET);
 	mmc->mmc_rx_run_error += eqos_reg_read(MMC_RXRUNTERROR_OFFSET);
 	mmc->mmc_rx_jabber_error += eqos_reg_read(MMC_RXJABBERERROR_OFFSET);

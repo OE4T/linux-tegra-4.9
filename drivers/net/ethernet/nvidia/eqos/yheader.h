@@ -29,7 +29,7 @@
  * DAMAGE.
  * ========================================================================= */
 /*
- * Copyright (c) 2015-2018, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2019, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -1138,8 +1138,8 @@ struct eqos_mmc_counters {
 	unsigned long mmc_rx_octetcount_g;
 	unsigned long mmc_rx_broadcastframe_g;
 	unsigned long mmc_rx_multicastframe_g;
-	unsigned long mmc_rx_crc_errror;
-	unsigned long mmc_rx_crc_errror_pre_recalib;
+	unsigned long mmc_rx_crc_error;
+	unsigned long mmc_rx_crc_error_pre_recalib;
 	unsigned long mmc_rx_align_error;
 	unsigned long mmc_rx_align_error_pre_recalib;
 	unsigned long mmc_rx_run_error;

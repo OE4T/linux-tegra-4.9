@@ -3094,7 +3094,7 @@ static void eqos_read_err_counter(struct eqos_prv_data *pdata, bool save)
 		MMC_TXEXCESSDEF_RD(val);
 		pdata->mmc.mmc_tx_excessdef_pre_recalib += val;
 		MMC_RXCRCERROR_RD(val);
-		pdata->mmc.mmc_rx_crc_errror_pre_recalib += val;
+		pdata->mmc.mmc_rx_crc_error_pre_recalib += val;
 		MMC_RXALIGNMENTERROR_RD(val);
 		pdata->mmc.mmc_rx_align_error_pre_recalib += val;
 		MMC_RXRUNTERROR_RD(val);

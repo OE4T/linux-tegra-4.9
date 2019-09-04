@@ -206,7 +206,7 @@ static const struct eqos_stats eqos_mmc[] = {
 	EQOS_MMC_STAT(mmc_rx_octetcount_g),
 	EQOS_MMC_STAT(mmc_rx_broadcastframe_g),
 	EQOS_MMC_STAT(mmc_rx_multicastframe_g),
-	EQOS_MMC_STAT(mmc_rx_crc_errror),
+	EQOS_MMC_STAT(mmc_rx_crc_error),
 	EQOS_MMC_STAT(mmc_rx_align_error),
 	EQOS_MMC_STAT(mmc_rx_run_error),
 	EQOS_MMC_STAT(mmc_rx_jabber_error),

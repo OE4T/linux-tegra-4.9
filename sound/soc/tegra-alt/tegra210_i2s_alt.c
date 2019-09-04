@@ -66,23 +66,39 @@ static int tegra210_i2s_set_clock_rate(struct device *dev, int clock_rate)
 {
 	unsigned int val;
 	struct tegra210_i2s *i2s = dev_get_drvdata(dev);
-	int ret = 0;
+	int ret;
 
 	regmap_read(i2s->regmap, TEGRA210_I2S_CTRL, &val);
+	val &= TEGRA210_I2S_CTRL_MASTER_EN;
 
-	if (!(tegra_platform_is_unit_fpga() || tegra_platform_is_fpga())) {
-		if (((val & TEGRA210_I2S_CTRL_MASTER_EN_MASK) ==
-				TEGRA210_I2S_CTRL_MASTER_EN)) {
-			ret = clk_set_rate(i2s->clk_i2s, clock_rate);
-			if (ret) {
-				dev_err(dev,
-					"Can't set I2S clock rate: %d\n", ret);
-				return ret;
-			}
+	/* no need to set rates if I2S is being operated in slave */
+	if (!val)
+		return 0;
+
+	/* skip for fpga units */
+	if (tegra_platform_is_unit_fpga() || tegra_platform_is_fpga())
+		return 0;
+
+	ret = clk_set_rate(i2s->clk_i2s, clock_rate);
+	if (ret) {
+		dev_err(dev, "Can't set I2S clock rate: %d\n", ret);
+		return ret;
+	}
+
+	if (!IS_ERR(i2s->clk_sync_input)) {
+		/*
+		 * other I/O modules in AHUB can use i2s bclk as reference
+		 * clock. Below sets sync input clock rate as per bclk,
+		 * which can be used as input to other I/O modules.
+		 */
+		ret = clk_set_rate(i2s->clk_sync_input, clock_rate);
+		if (ret) {
+			dev_err(dev, "Can't set I2S sync input clock rate\n");
+			return ret;
 		}
 	}
 
-	return ret;
+	return 0;
 }
 
 static int tegra210_i2s_sw_reset(struct tegra210_i2s *i2s,
@@ -1043,6 +1059,10 @@ static int tegra210_i2s_platform_probe(struct platform_device *pdev)
 			dev_err(&pdev->dev, "Can't retrieve i2s clock\n");
 			return PTR_ERR(i2s->clk_i2s);
 		}
+		i2s->clk_sync_input =
+			devm_clk_get(&pdev->dev, "clk_sync_input");
+		if (IS_ERR(i2s->clk_sync_input))
+			dev_dbg(&pdev->dev, "Can't get i2s sync input clock\n");
 	}
 
 	mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);

@@ -199,6 +199,7 @@ enum tegra210_i2s_path {
 
 struct tegra210_i2s {
 	struct clk *clk_i2s;
+	struct clk *clk_sync_input;
 	struct regmap *regmap;
 	const char *prod_name;
 	struct regulator_bulk_data *supplies;

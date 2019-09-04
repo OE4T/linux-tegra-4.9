@@ -593,6 +593,9 @@ get_capabilities(struct quadd_comm_cap *cap)
 			extra |= QUADD_COMM_CAP_EXTRA_ARCH_TIMER_USR;
 	}
 
+	if (ctx.pclk_cpufreq)
+		extra |= QUADD_COMM_CAP_EXTRA_CPUFREQ;
+
 	cap->reserved[QUADD_COMM_CAP_IDX_EXTRA] = extra;
 	cap->reserved[QUADD_COMM_CAP_IDX_CPU_MASK] = get_possible_cpu();
 }

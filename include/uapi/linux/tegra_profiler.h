@@ -394,6 +394,7 @@ struct quadd_debug_data {
 #define QUADD_HDR_FLAG_MODE_TRACE_ALL	(1ULL << 15)
 #define QUADD_HDR_FLAG_MODE_SAMPLE_TREE	(1ULL << 16)
 #define QUADD_HDR_FLAG_MODE_TRACE_TREE	(1ULL << 17)
+#define QUADD_HDR_FLAG_CPUFREQ		(1ULL << 18)
 
 struct quadd_header_data {
 	__u16 magic;
@@ -538,6 +539,7 @@ enum {
 #define QUADD_COMM_CAP_EXTRA_RB_MMAP_OP		(1 << 9)
 #define QUADD_COMM_CAP_EXTRA_CPU_MASK		(1 << 10)
 #define QUADD_COMM_CAP_EXTRA_ARCH_TIMER_USR	(1 << 11)
+#define QUADD_COMM_CAP_EXTRA_CPUFREQ		(1 << 12)
 
 struct quadd_comm_cap {
 	__u32	pmu:1,

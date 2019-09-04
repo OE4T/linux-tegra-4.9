@@ -274,6 +274,9 @@ static void put_header(int cpuid)
 	if (quadd_mode_is_trace_tree(ctx))
 		hdr->flags |= QUADD_HDR_FLAG_MODE_TRACE_TREE;
 
+	if (ctx->pclk_cpufreq)
+		hdr->flags |= QUADD_HDR_FLAG_CPUFREQ;
+
 	if (pmu)
 		nr_events += pmu->get_current_events(cpuid, events + nr_events,
 						     max_events - nr_events);

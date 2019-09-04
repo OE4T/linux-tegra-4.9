@@ -1,7 +1,7 @@
 /*
  * drivers/misc/tegra-profiler/quadd_proc.c
  *
- * Copyright (c) 2014-2018, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2019, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -67,6 +67,8 @@ static int show_capabilities(struct seq_file *f, void *offset)
 		   YES_NO(cap->tegra_lp_cluster));
 	seq_printf(f, "power rate samples:      %s\n",
 		   YES_NO(cap->power_rate));
+	seq_printf(f, "collect cpufreq:         %s\n",
+		   YES_NO(extra & QUADD_COMM_CAP_EXTRA_CPUFREQ));
 	seq_printf(f, "arch timer is available: %s\n",
 		   YES_NO(extra & QUADD_COMM_CAP_EXTRA_ARCH_TIMER));
 	seq_printf(f, "arch timer user access:  %s\n",

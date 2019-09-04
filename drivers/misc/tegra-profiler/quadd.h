@@ -96,6 +96,8 @@ struct quadd_ctx {
 	unsigned int mode_is_sampling_timer:1;
 	unsigned int mode_is_sampling_sched:1;
 
+	unsigned int pclk_cpufreq:1;
+
 	struct list_head mmap_areas;
 	raw_spinlock_t mmaps_lock;
 };

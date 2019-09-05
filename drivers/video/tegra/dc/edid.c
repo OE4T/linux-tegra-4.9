@@ -785,10 +785,9 @@ int tegra_edid_get_monspecs(struct tegra_edid *edid, struct fb_monspecs *specs)
 	memset(specs, 0x0, sizeof(struct fb_monspecs));
 	memset(&new_data->eld, 0x0, sizeof(new_data->eld));
 	fb_edid_to_monspecs(data, specs);
-	if (specs->modedb == NULL) {
-		ret = -EINVAL;
-		goto fail;
-	}
+	if (specs->modedb == NULL)
+		pr_info("%s: no modes in EDID base block\n", __func__);
+
 	memcpy(new_data->eld.monitor_name, specs->monitor, sizeof(specs->monitor));
 	new_data->eld.mnl = strlen(new_data->eld.monitor_name) + 1;
 	new_data->eld.product_id[0] = data[0x8];
@@ -853,6 +852,12 @@ int tegra_edid_get_monspecs(struct tegra_edid *edid, struct fb_monspecs *specs)
 				data + i * EDID_BYTES_PER_BLOCK, specs,
 				new_data);
 		}
+	}
+
+	if (specs->modedb == NULL) {
+		pr_err("%s: EDID has no valid modes\n", __func__);
+		ret = -EINVAL;
+		goto fail;
 	}
 
 	/* T210 and T186 supports fractional divider and hence can support the * 1000 / 1001 modes.

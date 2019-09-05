@@ -3386,17 +3386,29 @@ static bool tegra_dc_is_out_type_connected(int out_type)
 	return ret;
 }
 
+static const char * const extcon_cable_strings[] = {
+	[TEGRA_DC_OUT_HDMI] = "HDMI",
+	[TEGRA_DC_OUT_DSI] = "DSI",
+	[TEGRA_DC_OUT_DP] = "DP"
+};
+
 void tegra_dc_extcon_hpd_notify(struct tegra_dc *dc)
 {
 	unsigned int cable = 0;
 
 	mutex_lock(&tegra_dc_extcon_lock);
 	if (dc && dc->out) {
-		if (dc->out->type == TEGRA_DC_OUT_HDMI) {
+		switch (dc->out->type) {
+		case TEGRA_DC_OUT_HDMI:
 			cable = EXTCON_DISP_HDMI;
-		} else if (dc->out->type == TEGRA_DC_OUT_DP) {
+			break;
+		case TEGRA_DC_OUT_DP:
 			cable = EXTCON_DISP_DP;
-		} else {
+			break;
+		case TEGRA_DC_OUT_DSI:
+			cable = EXTCON_DISP_DSIHPD;
+			break;
+		default:
 			mutex_unlock(&tegra_dc_extcon_lock);
 			return;
 		}
@@ -3405,7 +3417,7 @@ void tegra_dc_extcon_hpd_notify(struct tegra_dc *dc)
 			disp_state_extcon_switch_report(cable,
 				EXTCON_DISP_HPD_STATE_ENABLED);
 			pr_info("Extcon %s: HPD enabled\n",
-				cable == EXTCON_DISP_HDMI ? "HDMI" : "DP");
+				extcon_cable_strings[dc->out->type]);
 		} else {
 			/*
 			 * send hpd disable notification only when all
@@ -3415,7 +3427,7 @@ void tegra_dc_extcon_hpd_notify(struct tegra_dc *dc)
 				disp_state_extcon_switch_report(cable,
 					EXTCON_DISP_HPD_STATE_DISABLED);
 				pr_info("Extcon %s: HPD disabled\n",
-					cable == EXTCON_DISP_HDMI ? "HDMI" : "DP");
+					extcon_cable_strings[dc->out->type]);
 			}
 		}
 	}

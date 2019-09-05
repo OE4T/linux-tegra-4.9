@@ -28,6 +28,7 @@ apply_rt_patches()
 			--enable PREEMPT_RT_FULL\
 			--disable CPU_IDLE_TEGRA18X\
 			--disable CPU_IDLE_TEGRA19X\
+			--disable CPU_FREQ_GOV_SCHEDUTIL\
 			--disable CPU_FREQ_GOV_INTERACTIVE || any_failure=1
 		echo "PREEMPT RT patches successfully applied for Auto!"
 
@@ -38,6 +39,7 @@ apply_rt_patches()
 			--enable PREEMPT_RT_FULL\
 			--disable CPU_IDLE_TEGRA18X\
 			--disable CPU_IDLE_TEGRA19X\
+			--disable CPU_FREQ_GOV_SCHEDUTIL\
 			--disable CPU_FREQ_GOV_INTERACTIVE || any_failure=1
 		echo "PREEMPT RT patches successfully applied for L4T!"
 	fi

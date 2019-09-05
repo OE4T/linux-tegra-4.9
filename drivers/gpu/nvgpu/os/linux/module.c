@@ -107,7 +107,10 @@ struct device_node *nvgpu_get_node(struct gk20a *g)
 
 void gk20a_busy_noresume(struct gk20a *g)
 {
-	pm_runtime_get_noresume(dev_from_gk20a(g));
+	int ret = pm_runtime_get_if_in_use(dev_from_gk20a(g));
+
+	if (ret <= 0)
+		pm_runtime_get_noresume(dev_from_gk20a(g));
 }
 
 /*

@@ -1,7 +1,7 @@
 /*
  * dc_config.c: Functions required for dc configuration.
  *
- * Copyright (c) 2012-2019, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2012-2020, NVIDIA CORPORATION, All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -130,7 +130,7 @@ static struct tegra_dc_feature_entry t210_feature_entries_b[] = {
 		{4096, 1, 4096, 1} },
 
 	{ 2, TEGRA_DC_FEATURE_FORMATS,
-			{ TEGRA_WIN_FMT_T210_LOW, TEGRA_WIN_FMT_T124_HIGH } },
+			{ TEGRA_WIN_FMT_T210_LOW, TEGRA_WIN_FMT_T210_HIGH } },
 	{ 2, TEGRA_DC_FEATURE_BLEND_TYPE, {2} },
 	{ 2, TEGRA_DC_FEATURE_MAXIMUM_SIZE, {4096, 1, 4096, 1} },
 	{ 2, TEGRA_DC_FEATURE_MAXIMUM_SCALE, {2, 2, 2, 2} },

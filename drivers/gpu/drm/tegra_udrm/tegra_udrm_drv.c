@@ -40,10 +40,11 @@ MODULE_PARM_DESC(
 static bool tegra_udrm_modeset_module_param;
 module_param_named(modeset, tegra_udrm_modeset_module_param, bool, 0400);
 
+static const unsigned int cable_ids[] = {
+	EXTCON_DISP_HDMI, EXTCON_DISP_DP, EXTCON_DISP_DSIHPD};
 struct tegra_udrm_private {
 	struct drm_device *drm;
-	struct notifier_block hdmi_nb;
-	struct notifier_block dp_nb;
+	struct notifier_block hpd_nb[ARRAY_SIZE(cable_ids)];
 };
 
 struct tegra_udrm_device {
@@ -471,7 +472,7 @@ static int tegra_udrm_hdmi_notifier(struct notifier_block *nb,
 		unsigned long event, void *unused)
 {
 	struct tegra_udrm_private *priv = container_of(nb,
-			struct tegra_udrm_private, hdmi_nb);
+			struct tegra_udrm_private, hpd_nb[0]);
 
 	drm_sysfs_hotplug_event(priv->drm);
 
@@ -482,7 +483,18 @@ static int tegra_udrm_dp_notifier(struct notifier_block *nb,
 		unsigned long event, void *unused)
 {
 	struct tegra_udrm_private *priv = container_of(nb,
-			struct tegra_udrm_private, dp_nb);
+			struct tegra_udrm_private, hpd_nb[1]);
+
+	drm_sysfs_hotplug_event(priv->drm);
+
+	return NOTIFY_DONE;
+}
+
+static int tegra_udrm_dsi_notifier(struct notifier_block *nb,
+		unsigned long event, void *unused)
+{
+	struct tegra_udrm_private *priv = container_of(nb,
+			struct tegra_udrm_private, hpd_nb[2]);
 
 	drm_sysfs_hotplug_event(priv->drm);
 
@@ -495,7 +507,7 @@ static int tegra_udrm_probe(struct platform_device *pdev)
 	struct drm_device *drm;
 	struct tegra_udrm_private *priv;
 	struct extcon_dev *edev;
-	int ret;
+	int ret, i;
 
 	drm = drm_dev_alloc(driver, &pdev->dev);
 	if (IS_ERR(drm))
@@ -522,19 +534,19 @@ static int tegra_udrm_probe(struct platform_device *pdev)
 		edev = extcon_get_extcon_dev("extcon:disp-state");
 	}
 	if (!IS_ERR_OR_NULL(edev)) {
-		priv->hdmi_nb.notifier_call = tegra_udrm_hdmi_notifier;
-		ret = devm_extcon_register_notifier(drm->dev, edev,
-				EXTCON_DISP_HDMI, &priv->hdmi_nb);
-		if (ret < 0)
-			dev_warn(drm->dev, "HDMI HOTPLUG event is not supported\n");
-
-		priv->dp_nb.notifier_call = tegra_udrm_dp_notifier;
-		ret = devm_extcon_register_notifier(drm->dev, edev,
-				EXTCON_DISP_DP, &priv->dp_nb);
-		if (ret < 0)
-			dev_warn(drm->dev, "DP HOTPLUG event is not supported\n");
+		priv->hpd_nb[0].notifier_call = tegra_udrm_hdmi_notifier;
+		priv->hpd_nb[1].notifier_call = tegra_udrm_dp_notifier;
+		priv->hpd_nb[2].notifier_call = tegra_udrm_dsi_notifier;
+		for (i = 0; i < ARRAY_SIZE(cable_ids); i++) {
+			ret = devm_extcon_register_notifier(drm->dev, edev,
+				cable_ids[i], &priv->hpd_nb[i]);
+			if (ret < 0)
+				dev_warn(drm->dev,
+					"HOTPLUG is not supported for id %u\n",
+					cable_ids[i]);
+		}
 	} else {
-		dev_warn(drm->dev, "HDMI/DP HOTPLUG event is not supported\n");
+		dev_warn(drm->dev, "DISP HOTPLUG event is not supported\n");
 	}
 
 	return 0;

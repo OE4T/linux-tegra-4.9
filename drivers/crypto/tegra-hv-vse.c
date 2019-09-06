@@ -3582,7 +3582,15 @@ MODULE_DEVICE_TABLE(of, tegra_hv_vse_of_match);
 
 static irqreturn_t tegra_vse_irq_handler(int irq, void *data)
 {
-	complete(&tegra_vse_complete);
+	int notified;
+
+	notified = tegra_hv_ivc_channel_notified(g_ivck);
+	if (notified != 0) // Channel is not in sync.
+		return IRQ_HANDLED;
+
+	if (tegra_hv_ivc_can_read(g_ivck))
+		complete(&tegra_vse_complete);
+
 	return IRQ_HANDLED;
 }
 

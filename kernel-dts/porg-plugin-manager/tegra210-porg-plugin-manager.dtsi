@@ -61,7 +61,7 @@
 			};
 
 			override@2 {
-				target = <&sound_card>;
+				target = <&tegra_sound>;
 				_overlay_ {
 					nvidia,dai-link-1 {
 						cpu-dai = <&tegra_i2s1>;

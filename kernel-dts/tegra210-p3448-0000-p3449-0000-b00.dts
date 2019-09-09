@@ -24,7 +24,7 @@
 
 / {
 	model = "NVIDIA Jetson Nano Developer Kit";
-	compatible = "nvidia,jetson-nano", "nvidia,tegra210";
+	compatible = "nvidia,p3449-0000-b00+p3448-0000-b00", "nvidia,jetson-nano", "nvidia,tegra210";
 	nvidia,dtsfilename = __FILE__;
 
 	spi@70410000 {

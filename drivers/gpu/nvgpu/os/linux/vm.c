@@ -281,6 +281,7 @@ int nvgpu_vm_map_buffer(struct vm_gk20a *vm,
 	    (buffer_offset || *map_addr)) {
 		nvgpu_err(g,
 			  "Regular map with addr/buf offset is not supported!");
+		dma_buf_put(dmabuf);
 		return -EINVAL;
 	}
 
@@ -290,6 +291,7 @@ int nvgpu_vm_map_buffer(struct vm_gk20a *vm,
 	 */
 	if (mapping_size && !(flags & NVGPU_AS_MAP_BUFFER_FLAGS_FIXED_OFFSET)) {
 		nvgpu_err(g, "map_size && non-fixed-mapping!");
+		dma_buf_put(dmabuf);
 		return -EINVAL;
 	}
 

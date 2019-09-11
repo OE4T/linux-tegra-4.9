@@ -272,6 +272,7 @@ static int tegra_vi4_probe(struct platform_device *pdev)
 	int err;
 	struct tegra_camera_dev_info vi_info;
 
+	dma_set_mask_and_coherent(&pdev->dev, DMA_BIT_MASK(39));
 	memset(&vi_info, 0, sizeof(vi_info));
 
 	match = of_match_device(tegra_vi4_of_match, &pdev->dev);

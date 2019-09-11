@@ -222,7 +222,7 @@ static LIST_HEAD(hub_downgraded_list);
 
 /* default parameters for boosting CPU freq */
 #define XHCI_BOOST_TIMEOUT		2000 /* 2 seconds */
-#define XHCI_BOOST_TRIGGER_SIZE		16384 /* 16KB */
+#define XHCI_BOOST_TRIGGER_SIZE		4096 /* 4KB */
 
 static struct usb_device_id disable_usb_persist_quirk_list[] = {
 	/* Sandisk Extreme USB 3.0 pen drive, SuperSpeed */
@@ -5159,7 +5159,7 @@ static int tegra_xhci_urb_enqueue(struct usb_hcd *hcd, struct urb *urb,
 	case USB_ENDPOINT_XFER_BULK:
 		if (!tegra->cpu_boost_enabled)
 			break;
-		if (urb->transfer_buffer_length > tegra->boost_cpu_trigger) {
+		if (urb->transfer_buffer_length >= tegra->boost_cpu_trigger) {
 			/* break, if last boost was done within 1 sec back,
 			 * because previous boost lasts for XHCI_BOOST_TIMEOUT
 			 * i.e 2 sec and no need to schedule work for every

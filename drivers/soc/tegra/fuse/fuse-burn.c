@@ -46,6 +46,7 @@
 #define TEGRA_FUSE_CTRL_STATE_MASK		0x1f
 #define TEGRA_FUSE_CTRL_STATE_SHIFT		16
 #define TEGRA_FUSE_CTRL_PD			BIT(26)
+#define TEGRA_FUSE_CTRL_DISABLE_MIRROR		BIT(28)
 #define TEGRA_FUSE_CTRL_SENSE_DONE		BIT(30)
 #define TEGRA_FUSE_ADDR				0x4
 #define TEGRA_FUSE_RDATA			0x8
@@ -86,6 +87,7 @@ struct fuse_burn_data {
 struct tegra_fuse_hw_feature {
 	bool power_down_mode;
 	bool mirroring_support;
+	bool fuse_ctrl_has_disable_mirror;
 	int pgm_time;
 	struct fuse_burn_data burn_data[TEGRA_FUSE_BURN_MAX_FUSES];
 };
@@ -310,6 +312,15 @@ static int tegra_fuse_pre_burn_process(struct tegra_fuse_burn_dev *fuse_dev)
 	if (fuse_dev->hw->mirroring_support)
 		tegra_pmc_fuse_disable_mirroring();
 
+	if (fuse_dev->hw->fuse_ctrl_has_disable_mirror) {
+		if (tegra_pmc_fuse_is_redirection_enabled()) {
+			/* Sticky bit is already set, use fuse_ctrl */
+			tegra_fuse_control_read(TEGRA_FUSE_CTRL, &reg);
+			reg |= TEGRA_FUSE_CTRL_DISABLE_MIRROR;
+			tegra_fuse_control_write(reg, TEGRA_FUSE_CTRL);
+		}
+	}
+
 	tegra_pmc_fuse_control_ps18_latch_set();
 
 	/* Enable fuse program */
@@ -344,6 +355,14 @@ static void tegra_fuse_post_burn_process(struct tegra_fuse_burn_dev *fuse_dev)
 		tegra_fuse_control_write(reg, TEGRA_FUSE_CTRL);
 	}
 	tegra_pmc_fuse_control_ps18_latch_clear();
+
+	if (fuse_dev->hw->fuse_ctrl_has_disable_mirror) {
+		if (tegra_pmc_fuse_is_redirection_enabled()) {
+			tegra_fuse_control_read(TEGRA_FUSE_CTRL, &reg);
+			reg &= ~TEGRA_FUSE_CTRL_DISABLE_MIRROR;
+			tegra_fuse_control_write(reg, TEGRA_FUSE_CTRL);
+		}
+	}
 
 	if (fuse_dev->hw->mirroring_support)
 		tegra_pmc_fuse_enable_mirroring();
@@ -624,6 +643,7 @@ static ssize_t tegra_fuse_read_opt_tpc_disable(struct device *dev,
 static struct tegra_fuse_hw_feature tegra210_fuse_chip_data = {
 	.power_down_mode = true,
 	.mirroring_support = true,
+	.fuse_ctrl_has_disable_mirror = false,
 	.pgm_time = 5,
 	.burn_data = {
 		FUSE_BURN_DATA(reserved_odm0, 0x2e, 17, 32, 0xc8, true, false),
@@ -652,6 +672,7 @@ static struct tegra_fuse_hw_feature tegra210_fuse_chip_data = {
 static struct tegra_fuse_hw_feature tegra186_fuse_chip_data = {
 	.power_down_mode = true,
 	.mirroring_support = true,
+	.fuse_ctrl_has_disable_mirror = false,
 	.pgm_time = 5,
 	.burn_data = {
 		FUSE_BURN_DATA(reserved_odm0, 0x2, 2, 32, 0xc8, true, false),
@@ -683,6 +704,7 @@ static struct tegra_fuse_hw_feature tegra186_fuse_chip_data = {
 static struct tegra_fuse_hw_feature tegra210b01_fuse_chip_data = {
 	.power_down_mode = true,
 	.mirroring_support = true,
+	.fuse_ctrl_has_disable_mirror = false,
 	.pgm_time = 5,
 	.burn_data = {
 		FUSE_BURN_DATA(reserved_odm0, 0x62, 27, 32, 0xc8, true, false),
@@ -712,6 +734,7 @@ static struct tegra_fuse_hw_feature tegra210b01_fuse_chip_data = {
 static struct tegra_fuse_hw_feature tegra194_fuse_chip_data = {
 	.power_down_mode = true,
 	.mirroring_support = true,
+	.fuse_ctrl_has_disable_mirror = true,
 	.pgm_time = 5,
 	.burn_data = {
 		FUSE_BURN_DATA(reserved_odm0, 0x2, 2, 32, 0xc8, true, false),

@@ -1,5 +1,5 @@
 /*
- * tegra194-p3449-disp.dtsi:
+ * tegra194-p3509-disp.dtsi:
  *
  * Copyright (c) 2019, NVIDIA CORPORATION.  All rights reserved.
  *
@@ -23,7 +23,7 @@
 #include <dt-bindings/display/tegra-panel.h>
 #include <t19x-common-platforms/tegra194-hdmi.dtsi>
 #include <t19x-common-platforms/tegra194-dp.dtsi>
-#include "tegra194-fixed-regulator-p3449-0000-b01.dtsi"
+#include "tegra194-fixed-regulator-p3509-0000-a00.dtsi"
 #include "tegra194-spmic-p3668.dtsi"
 
 &head0 {
@@ -37,7 +37,7 @@
 	nvidia,dc-flags = <TEGRA_DC_FLAG_ENABLED>;
 	avdd_hdmi-supply = <&p3668_spmic_sd0>; /* 1v0 */
 	avdd_hdmi_pll-supply = <&p3668_spmic_sd1>; /* 1v8 */
-	vdd_hdmi_5v0-supply = <&p3449_vdd_hdmi_5v0>; /* 5v0 */
+	vdd_hdmi_5v0-supply = <&p3509_vdd_hdmi_5v0>; /* 5v0 */
 };
 
 &head1 {
@@ -53,7 +53,7 @@
 	avdd-dp-pll-supply = <&p3668_spmic_sd1>;
 	vdd-edp-sec-mode-supply = <&battery_reg>;
 	vdd-dp-pad-supply = <&battery_reg>;
-	vdd_hdmi_5v0-supply = <&p3449_vdd_hdmi_5v0>;
+	vdd_hdmi_5v0-supply = <&p3509_vdd_hdmi_5v0>;
 };
 
 &sor0 {

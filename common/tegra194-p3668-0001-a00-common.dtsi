@@ -16,13 +16,14 @@
 #include "dt-bindings/extcon-ids.h"
 #include "dt-bindings/gpio/tegra194-gpio.h"
 #include <dt-bindings/pwm/pwm.h>
-#include "tegra194-fixed-regulator-p3668-0000-a00.dtsi"
+#include "tegra194-fixed-regulator-p3668.dtsi"
 #include <tegra194-soc/tegra194-soc-cvm.dtsi>
 #include <t19x-common-platforms/tegra194-comms.dtsi>
-#include "tegra194-plugin-manager-p3668-0000-a00.dtsi"
+#include "tegra194-plugin-manager-p3668-0001-a00.dtsi"
 #include <t19x-common-platforms/tegra194-platforms-eqos.dtsi>
 #include "tegra194-powermon-p3668.dtsi"
-#include "tegra194-power-tree-p3668-0000.dtsi"
+#include "tegra194-power-tree-p3668-0001.dtsi"
+#include "tegra194-thermal-p3668.dtsi"
 
 / {
 	nvidia,dtsfilename = __FILE__;
@@ -31,7 +32,7 @@
 	nvidia,fastboot-usb-pid = <0xee1e>;
 	model = "NVIDIA Jetson Nano-Next Developer Kit";
 
-	compatible = "nvidia,p3518-0001", "nvidia,tegra194";
+	compatible = "nvidia,p3509-0000-a00+p3668-0001-a00", "nvidia,tegra194";
 
 	chosen {
 		bootargs ="console=ttyTCU0,115200";

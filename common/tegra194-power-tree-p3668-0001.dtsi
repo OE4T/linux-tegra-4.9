@@ -12,8 +12,8 @@
  * more details.
  */
 
-#include "tegra194-spmic-p3668-0000.dtsi"
-#include "tegra194-fixed-regulator-p3668-0000-a00.dtsi"
+#include "tegra194-spmic-p3668.dtsi"
+#include "tegra194-fixed-regulator-p3668.dtsi"
 #include "dt-bindings/gpio/tegra194-gpio.h"
 
 / {

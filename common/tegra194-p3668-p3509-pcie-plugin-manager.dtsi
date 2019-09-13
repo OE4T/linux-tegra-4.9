@@ -1,11 +1,10 @@
 /*
- * Top level DTS file for CVM:P3668-0001 and CVB:P3499-0000.
- *
  * Copyright (c) 2019, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; version 2 of the License.
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful, but WITHOUT
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
@@ -13,6 +12,16 @@
  * more details.
  */
 
-/dts-v1/;
-#include "common/tegra194-p3668-0000-a00-common.dtsi"
-#include "common/tegra194-p3449-0000-b01.dtsi"
+/ {
+	plugin-manager {
+		fragment-disable-uphy-rx-idle {
+			ids = "<=3668-0001";
+			override@0 {
+				target = <&{/hsio_p2u/p2u@03e10000}>;
+				_overlay_ {
+					append-string-property = "nvidia,disable-uphy-rx-idle";
+				};
+			};
+		};
+	};
+};

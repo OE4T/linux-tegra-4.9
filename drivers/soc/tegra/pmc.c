@@ -2,7 +2,7 @@
  * drivers/soc/tegra/pmc.c
  *
  * Copyright (c) 2010 Google, Inc
- * Copyright (c) 2012-2019, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2012-2020, NVIDIA CORPORATION. All rights reserved.
  *
  * Author:
  *	Colin Cross <ccross@google.com>
@@ -1670,10 +1670,13 @@ bool tegra_pmc_fuse_is_redirection_enabled(void)
 {
 	u32 val;
 
-	val = tegra_pmc_reg_readl(TEGRA_PMC_FUSE_CTRL);
+	if (pmc->soc->has_misc_base_address)
+		val = tegra_pmc_misc_readl(TEGRA_PMC_FUSE_CTRL);
+	else
+		val = tegra_pmc_reg_readl(TEGRA_PMC_FUSE_CTRL);
+
 	if (val & PMC_FUSE_CTRL_ENABLE_REDIRECTION_STICKY)
 		return true;
-
 	return false;
 }
 EXPORT_SYMBOL(tegra_pmc_fuse_is_redirection_enabled);

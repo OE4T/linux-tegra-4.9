@@ -60,6 +60,11 @@ enum tegra_vi_pg_mode {
 	TEGRA_VI_PG_PATCH,
 };
 
+enum interlaced_type {
+	Top_Bottom = 0,
+	Interleaved,
+};
+
 /**
  * struct tegra_channel_buffer - video channel buffer
  * @buf: vb2 buffer base object
@@ -251,6 +256,9 @@ struct tegra_channel {
 	struct tegra_vi_channel *tegra_vi_channel;
 	struct capture_descriptor *request;
 	bool is_slvsec;
+	int is_interlaced;
+	enum interlaced_type interlace_type;
+	int interlace_bplfactor;
 };
 
 #define to_tegra_channel(vdev) \

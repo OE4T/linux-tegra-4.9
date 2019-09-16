@@ -97,7 +97,8 @@ static int sensor_common_parse_signal_props(
 
 	if (signal->serdes_pixel_clock.val != 0ULL &&
 		signal->serdes_pixel_clock.val < signal->pixel_clock.val) {
-		dev_err(dev, "%s: serdes_pix_clk_hz is lower than pix_clk_hz!\n", __func__);
+		dev_err(dev, "%s: serdes_pix_clk_hz is lower than pix_clk_hz!\n",
+				__func__);
 		return -EINVAL;
 	}
 
@@ -515,6 +516,18 @@ static int sensor_common_parse_control_props(
 		control->default_exp_time.val = 0;
 	} else
 		control->default_exp_time.val = val64;
+
+	err = read_property_u32(node, "is_interlaced", &value);
+	if (err)
+		control->is_interlaced = 0;
+	else
+		control->is_interlaced = value;
+
+	err = read_property_u32(node, "interlaced_type", &value);
+	if (err)
+		control->interlace_type = 0;
+	else
+		control->interlace_type = value;
 
 	return 0;
 }

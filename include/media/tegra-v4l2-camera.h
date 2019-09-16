@@ -146,6 +146,8 @@ struct sensor_control_properties {
 	__u32 default_gain;
 	__u32 default_framerate;
 	union __u64val default_exp_time;
+	__u32 is_interlaced;
+	__u32 interlace_type;
 	__u32 reserved[10];
 };
 

@@ -2217,6 +2217,8 @@ int tegra_channel_init(struct tegra_channel *chan)
 				&chan->fmtinfo->bpp, 0);
 
 	chan->buffer_offset[0] = 0;
+	/* Init bpl factor to 1, will be overidden based on interlace_type */
+	chan->interlace_bplfactor = 1;
 
 	/* Initialize the media entity... */
 	chan->pad.flags = MEDIA_PAD_FL_SINK;

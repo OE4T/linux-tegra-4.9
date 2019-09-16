@@ -27,6 +27,8 @@
 #include <trace/events/camera_common.h>
 #define BPP_MEM		2
 #define MAX_VI_CHANNEL 12
+#define NUM_FIELDS_INTERLACED 2
+#define NUM_FIELDS_SINGLE 1
 #define SOF_SYNCPT_IDX	0
 #define FE_SYNCPT_IDX	1
 
@@ -245,7 +247,8 @@ static void tegra_channel_surface_setup(
 	vi4_channel_write(chan, vnc_id,
 		ATOMP_SURFACE_OFFSET0, buf->addr + offset);
 	vi4_channel_write(chan, vnc_id,
-		ATOMP_SURFACE_STRIDE0, chan->format.bytesperline);
+		ATOMP_SURFACE_STRIDE0,
+		chan->format.bytesperline * chan->interlace_bplfactor);
 	vi4_channel_write(chan, vnc_id, ATOMP_SURFACE_OFFSET0_H, 0x0);
 
 	if (chan->fmtinfo->fourcc == V4L2_PIX_FMT_NV16) {
@@ -255,7 +258,8 @@ static void tegra_channel_surface_setup(
 		vi4_channel_write(chan, vnc_id,
 			ATOMP_SURFACE_OFFSET1_H, 0x0);
 		vi4_channel_write(chan, vnc_id,
-			ATOMP_SURFACE_STRIDE1, chan->format.bytesperline);
+			ATOMP_SURFACE_STRIDE1,
+			chan->format.bytesperline * chan->interlace_bplfactor);
 
 	} else {
 		vi4_channel_write(chan, vnc_id, ATOMP_SURFACE_OFFSET1, 0x0);
@@ -525,48 +529,74 @@ static int tegra_channel_capture_frame_single_thread(
 	int state = VB2_BUF_STATE_DONE;
 	unsigned long flags;
 	int err = false;
+	int run_captures = 0;
 	int i;
+	int j;
 
-	spin_lock_irqsave(&chan->capture_state_lock, flags);
-	chan->capture_state = CAPTURE_IDLE;
-	spin_unlock_irqrestore(&chan->capture_state_lock, flags);
+	if (chan->is_interlaced)
+		run_captures = NUM_FIELDS_INTERLACED;
+	else
+		run_captures = NUM_FIELDS_SINGLE;
 
-	for (i = 0; i < chan->valid_ports; i++)
-		tegra_channel_surface_setup(chan, buf, i);
+	for (j = 0 ; j < run_captures; j++) {
+		state = VB2_BUF_STATE_DONE;
+		spin_lock_irqsave(&chan->capture_state_lock, flags);
+		chan->capture_state = CAPTURE_IDLE;
+		spin_unlock_irqrestore(&chan->capture_state_lock, flags);
 
-	if (!chan->bfirst_fstart) {
-		err = tegra_channel_set_stream(chan, true);
-		if (err < 0)
-			return err;
+		if (chan->is_interlaced) {
+			if (chan->interlace_type == Interleaved) {
+				chan->buffer_offset[0] =
+					j * chan->format.bytesperline;
+				chan->interlace_bplfactor =
+						NUM_FIELDS_INTERLACED;
+			} else {
+				chan->buffer_offset[0] = j *
+				chan->format.bytesperline * chan->format.height;
 
-		err = tegra_channel_write_blobs(chan);
-		if (err < 0)
-			return err;
-	}
+				chan->interlace_bplfactor = NUM_FIELDS_SINGLE;
+			}
+		}
 
-	for (i = 0; i < chan->valid_ports; i++) {
-		vi4_channel_write(chan, chan->vnc_id[i], CHANNEL_COMMAND, LOAD);
-		vi4_channel_write(chan, chan->vnc_id[i],
-			CONTROL, SINGLESHOT | MATCH_STATE_EN);
-	}
+		for (i = 0; i < chan->valid_ports; i++)
+			tegra_channel_surface_setup(chan, buf, i);
 
-	/* wait for vi notifier events */
-	if (!vi_notify_wait(chan, buf, &ts)) {
-		tegra_channel_error_recovery(chan);
+		if (!chan->bfirst_fstart) {
+			err = tegra_channel_set_stream(chan, true);
+			if (err < 0)
+				return err;
 
-		state = VB2_BUF_STATE_REQUEUEING;
+			err = tegra_channel_write_blobs(chan);
+			if (err < 0)
+				return err;
+		}
+
+		for (i = 0; i < chan->valid_ports; i++) {
+			vi4_channel_write(chan, chan->vnc_id[i],
+						CHANNEL_COMMAND, LOAD);
+			vi4_channel_write(chan, chan->vnc_id[i],
+				CONTROL, SINGLESHOT | MATCH_STATE_EN);
+		}
+
+		/* wait for vi notifier events */
+		if (!vi_notify_wait(chan, buf, &ts)) {
+			tegra_channel_error_recovery(chan);
+
+			state = VB2_BUF_STATE_REQUEUEING;
+
+			spin_lock_irqsave(&chan->capture_state_lock, flags);
+			chan->capture_state = CAPTURE_TIMEOUT;
+			spin_unlock_irqrestore(&chan->capture_state_lock,
+									flags);
+		}
+
+		vi4_check_status(chan);
 
 		spin_lock_irqsave(&chan->capture_state_lock, flags);
-		chan->capture_state = CAPTURE_TIMEOUT;
+		if (chan->capture_state == CAPTURE_IDLE)
+			chan->capture_state = CAPTURE_GOOD;
 		spin_unlock_irqrestore(&chan->capture_state_lock, flags);
 	}
-
-	vi4_check_status(chan);
-
-	spin_lock_irqsave(&chan->capture_state_lock, flags);
-	if (chan->capture_state == CAPTURE_IDLE)
-		chan->capture_state = CAPTURE_GOOD;
-	spin_unlock_irqrestore(&chan->capture_state_lock, flags);
 
 	set_timestamp(buf, &ts);
 	tegra_channel_ring_buffer(chan, vb, &ts, state);
@@ -686,7 +716,7 @@ static void tegra_channel_release_frame(struct tegra_channel *chan,
 				"ATOMP_FE syncpt timeout! err = %d\n", err);
 		else
 			dev_dbg(&chan->video.dev,
-				"%s: vi4 got EOF syncpt buf[%p]\n", __func__, buf);
+			"%s: vi4 got EOF syncpt buf[%p]\n", __func__, buf);
 	}
 
 	if (err) {
@@ -1023,6 +1053,28 @@ static int vi4_channel_start_streaming(struct vb2_queue *vq, u32 count)
 			}
 			chan->vi->emb_buf_size = emb_buf_size;
 		}
+	}
+	/* Check if sensor mode is interlaced and the type of interlaced mode */
+	sd = chan->subdev_on_csi;
+	node = sd->dev->of_node;
+	s_data = to_camera_common_data(sd->dev);
+
+	/* get sensor properties from DT */
+	if (s_data != NULL && node != NULL) {
+	int idx = s_data->mode_prop_idx;
+
+	if (idx < s_data->sensor_props.num_modes) {
+		sensor_mode =
+			&s_data->sensor_props.sensor_modes[idx];
+		chan->is_interlaced =
+			sensor_mode->control_properties.is_interlaced;
+		if (chan->is_interlaced) {
+			if (sensor_mode->control_properties.interlace_type)
+				chan->interlace_type = Interleaved;
+			else
+				chan->interlace_type = Top_Bottom;
+		}
+	}
 	}
 
 	for (i = 0; i < chan->valid_ports; i++) {

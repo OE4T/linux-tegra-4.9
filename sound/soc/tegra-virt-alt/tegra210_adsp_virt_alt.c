@@ -3286,7 +3286,47 @@ static int tegra210_adsp_init_put(struct snd_kcontrol *kcontrol,
 
 	return 1;
 }
+#ifdef CONFIG_TEGRA_ADSP_LPTHREAD
+static int tegra210_adsp_lpthread_init_get(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_component *cmpnt = snd_soc_kcontrol_component(kcontrol);
+	struct tegra210_adsp *adsp = snd_soc_component_get_drvdata(cmpnt);
 
+	if (!adsp->adsp_started)
+		goto exit;
+
+	ucontrol->value.enumerated.item[0] = adsp_usage_get();
+exit:
+	return 0;
+}
+
+static int tegra210_adsp_lpthread_init_put(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_component *cmpnt = snd_soc_kcontrol_component(kcontrol);
+	struct tegra210_adsp *adsp = snd_soc_component_get_drvdata(cmpnt);
+	unsigned int init = ucontrol->value.enumerated.item[0];
+
+	if (!adsp->init_done)
+		return -ENODEV;
+
+	if (init) {
+		pm_runtime_get_sync(adsp->dev);
+		if (!adsp->adsp_started)
+			goto exit;
+		adsp_usage_set(init);
+
+	} else {
+		if (!adsp->adsp_started)
+			goto exit;
+		adsp_usage_set(init);
+		pm_runtime_put_sync(adsp->dev);
+	}
+exit:
+	return 0;
+}
+#endif
 /*
  * ADSP FE DAPM Widget Event
  * Widget event allows realizing ADSP FE switch use cases
@@ -5507,6 +5547,10 @@ static struct snd_kcontrol_new tegra210_adsp_controls[] = {
 	ADSP_FE_STATUS_CTRL_DECL("ADSP-FE13 status", TEGRA210_ADSP_FRONT_END13),
 	ADSP_FE_STATUS_CTRL_DECL("ADSP-FE14 status", TEGRA210_ADSP_FRONT_END14),
 	ADSP_FE_STATUS_CTRL_DECL("ADSP-FE15 status", TEGRA210_ADSP_FRONT_END15),
+#ifdef CONFIG_TEGRA_ADSP_LPTHREAD
+	SOC_SINGLE_BOOL_EXT("lpthread init", 0,
+	tegra210_adsp_lpthread_init_get, tegra210_adsp_lpthread_init_put),
+#endif
 };
 
 

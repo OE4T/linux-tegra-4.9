@@ -81,6 +81,18 @@ static const struct of_device_id tegra_disb_pd[] = {
 #define HDA_IPFS_INTR_MASK        0x188
 #define HDA_IPFS_EN_INTR          (1 << 16)
 
+/* FPCI */
+#define FPCI_DBG_CFG_2		  0xF4
+#define FPCI_FIFO_WATERMARK	  0x7c
+#define FPCI_BUFSZ_NUM_OF_FRAMES  0x80
+
+#define FPCI_GCAP_NSDO_SHIFT	  18
+#define FPCI_GCAP_NSDO_MASK	  (0x3 << FPCI_GCAP_NSDO_SHIFT)
+
+/* default values for watermark registers */
+#define FIFO_WATERMARK_VAL	  0x07070707
+#define BUFSZ_NUM_FRAMES_VAL	  0x000a0a0a
+
 /* max number of SDs */
 #define NUM_CAPTURE_SD 1
 #define NUM_PLAYBACK_SD 1
@@ -116,6 +128,7 @@ struct hda_tegra {
 	struct clk *hda2hdmi_clk;
 	int partition_id;
 	void __iomem *regs;
+	void __iomem *regs_fpci;
 	struct work_struct probe_work;
 	struct kobject *kobj;
 	struct hda_pcm_devices *hda_pcm_dev;
@@ -452,7 +465,7 @@ static int hda_tegra_init_chip(struct azx *chip, struct platform_device *pdev)
 
 	bus->remap_addr = hda->regs + HDA_BAR0;
 	bus->addr = res->start + HDA_BAR0;
-	bus->remap_addr_fpci = hda->regs + HDA_DFPCI_CFG;
+	hda->regs_fpci = hda->regs + HDA_DFPCI_CFG;
 
 	hda_tegra_init(hda);
 
@@ -492,11 +505,16 @@ static int hda_tegra_first_init(struct azx *chip, struct platform_device *pdev)
 	 * 0 for 1 SDO, 1 for 2 SDO, 2 for 4 SDO lines
 	 */
 	if (hda->cdata && hda->cdata->war_sdo_lines) {
+		u32 val;
+
 		num_sdo_lines = hda->cdata->war_sdo_lines;
 		dev_info(card->dev, "Override SDO lines to %u\n",
-			num_sdo_lines);
-		azx_fpci_updatel(chip, DBG_CFG_2, AZX_FPCI_GCAP_NSDO,
-				(((num_sdo_lines / 2) & 0x3) << 18));
+			 num_sdo_lines);
+		val = readl(hda->regs_fpci + FPCI_DBG_CFG_2);
+		val &= ~FPCI_GCAP_NSDO_MASK;
+		val |= ((num_sdo_lines >> 1) << FPCI_GCAP_NSDO_SHIFT) &
+		       FPCI_GCAP_NSDO_MASK;
+		writel(val, hda->regs_fpci + FPCI_DBG_CFG_2);
 	}
 
 	gcap = azx_readw(chip, GCAP);
@@ -814,11 +832,15 @@ static void hda_tegra_probe_work(struct work_struct *work)
 	if (hda->cdata)
 		bus->avoid_compact_sdo_bw = hda->cdata->war_sdo_bw;
 
-	/* Below code sets watermark registers to maximum   */
-	/* value (same as default); only applicable to T194 */
+	/*
+	 * Below code sets watermark registers to maximum
+	 * value (same as default); only applicable to T194
+	 */
 	if (hda->cdata && hda->cdata->set_watermark) {
-		azx_fpci_writel(chip, FIFO_WATERMARK, 0x07070707);
-		azx_fpci_writel(chip, BUFSZ_NUM_OF_FRAMES, 0x000a0a0a);
+		writel(FIFO_WATERMARK_VAL,
+		       hda->regs_fpci + FPCI_FIFO_WATERMARK);
+		writel(BUFSZ_NUM_FRAMES_VAL,
+		       hda->regs_fpci + FPCI_BUFSZ_NUM_OF_FRAMES);
 	}
 
 	/* program HDA_GSC_ID to get access to APR */

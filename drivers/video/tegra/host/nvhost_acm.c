@@ -59,6 +59,7 @@
 #define MAX_DEVID_LENGTH			32
 
 static void nvhost_module_load_regs(struct platform_device *pdev, bool prod);
+static void nvhost_module_set_actmon_regs(struct platform_device *pdev);
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4, 14, 0)
 static int nvhost_module_toggle_slcg(struct notifier_block *nb,
@@ -140,6 +141,9 @@ void nvhost_module_reset(struct platform_device *dev, bool reboot)
 	if (reboot) {
 		/* Load clockgating registers */
 		nvhost_module_load_regs(dev, pdata->engine_can_cg);
+
+		/* Set actmon registers */
+		nvhost_module_set_actmon_regs(dev);
 
 		/* initialize device vm */
 		nvhost_vm_init_device(dev);
@@ -970,6 +974,23 @@ static void nvhost_module_load_regs(struct platform_device *pdev, bool prod)
 	}
 }
 
+static void nvhost_module_set_actmon_regs(struct platform_device *pdev)
+{
+	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
+	struct nvhost_actmon_register *regs = pdata->actmon_setting_regs;
+
+	if (!regs)
+		return;
+
+	if (nvhost_dev_is_virtual(pdev))
+		return;
+
+	while (regs->addr) {
+		host1x_writel(pdev, regs->addr, regs->val);
+		regs++;
+	}
+}
+
 static int nvhost_module_runtime_suspend(struct device *dev)
 {
 	int err;
@@ -1191,6 +1212,10 @@ static int nvhost_module_finalize_poweron(struct device *dev)
 		nvhost_err(dev, "failed to start the device");
 		goto out;
 	}
+
+
+	/* Set actmon registers */
+	nvhost_module_set_actmon_regs(pdev);
 
 	/* set default EMC rate to zero */
 	if (pdata->bwmgr_handle) {

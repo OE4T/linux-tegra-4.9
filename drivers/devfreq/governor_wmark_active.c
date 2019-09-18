@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2019, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -46,6 +46,9 @@ struct wmark_gov_info {
 
 	/* variable for keeping the average frequency request */
 	unsigned long long	average_target_freq;
+
+	/* devfreq notifier_block */
+	struct notifier_block nb;
 };
 
 static unsigned long freqlist_up(struct wmark_gov_info *wmarkinfo,
@@ -185,9 +188,6 @@ static int devfreq_watermark_target_freq(struct devfreq *df,
 		(wmarkinfo->p_smooth * wmarkinfo->average_target_freq +
 		 ideal_freq) / (wmarkinfo->p_smooth + 1);
 
-	/* update watermarks to match the ideal frequency */
-	update_watermarks(df, dev_stat.current_frequency, ideal_freq);
-
 	/* do not scale too often */
 	if (dt < wmarkinfo->p_block_window)
 		return 0;
@@ -276,11 +276,38 @@ static int devfreq_watermark_start(struct devfreq *df)
 	return 0;
 }
 
+static int devfreq_watermark_notifier_call(struct notifier_block *nb,
+			unsigned long event, void *ptr)
+{
+	struct wmark_gov_info *data
+				= container_of(nb, struct wmark_gov_info, nb);
+	struct devfreq *df = (struct devfreq *)data->df;
+	unsigned long freq = 0;
+
+	switch (event) {
+	case DEVFREQ_PRECHANGE:
+		break;
+	case DEVFREQ_POSTCHANGE:
+		/* get device freq. */
+		df->profile->get_cur_freq(df->dev.parent, &freq);
+
+		/* update watermarks by current device freq. */
+		if (freq)
+			update_watermarks(df, freq, freq);
+		break;
+	default:
+		break;
+	}
+
+	return NOTIFY_DONE;
+}
+
 static int devfreq_watermark_event_handler(struct devfreq *df,
 			unsigned int event, void *wmark_type)
 {
 	struct wmark_gov_info *wmarkinfo;
 	int ret = 0;
+	struct notifier_block *nb;
 
 	switch (event) {
 	case DEVFREQ_GOV_START:
@@ -300,10 +327,20 @@ static int devfreq_watermark_event_handler(struct devfreq *df,
 
 		update_watermarks(df, dev_stat.current_frequency,
 					dev_stat.current_frequency);
+
+		nb = &wmarkinfo->nb;
+		nb->notifier_call = devfreq_watermark_notifier_call;
+		ret = devm_devfreq_register_notifier(df->dev.parent,
+				df, nb, DEVFREQ_TRANSITION_NOTIFIER);
 		break;
 	}
 	case DEVFREQ_GOV_STOP:
 		devfreq_watermark_debug_stop(df);
+
+		wmarkinfo = df->data;
+		nb = &wmarkinfo->nb;
+		devm_devfreq_unregister_notifier(df->dev.parent,
+				df, nb, DEVFREQ_TRANSITION_NOTIFIER);
 		break;
 	case DEVFREQ_GOV_SUSPEND:
 		devfreq_monitor_suspend(df);

@@ -108,6 +108,11 @@ struct nvhost_gating_register {
 	u32 disable;
 };
 
+struct nvhost_actmon_register {
+	u32 addr;
+	u32 val;
+};
+
 struct nvhost_clock {
 	char *name;
 	unsigned long default_rate;
@@ -244,6 +249,9 @@ struct nvhost_device_data {
 	bool				linear_emc;
 	/* Offset to actmon registers */
 	u32				actmon_regs;
+	/* WEIGHT_COUNT of actmon */
+	u32				actmon_weight_count;
+	struct nvhost_actmon_register	*actmon_setting_regs;
 	/* Devfreq governor name */
 	const char			*devfreq_governor;
 	unsigned long freqs[NVHOST_MODULE_MAX_FREQS];

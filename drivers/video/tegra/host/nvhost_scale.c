@@ -1,7 +1,7 @@
 /*
  * Tegra Graphics Host Unit clock scaling
  *
- * Copyright (c) 2010-2018, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2010-2019, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -288,6 +288,17 @@ static int nvhost_scale_get_dev_status(struct device *dev,
 	return 0;
 }
 
+static int nvhost_scale_get_cur_freq(struct device *dev, unsigned long *freq)
+{
+	struct nvhost_device_data *pdata = dev_get_drvdata(dev);
+	struct nvhost_device_profile *profile = pdata->power_profile;
+
+	if (freq)
+		*freq = clk_get_rate(profile->clk);
+
+	return 0;
+}
+
 /*
  * nvhost_scale_set_low_wmark(dev, threshold)
  *
@@ -417,6 +428,8 @@ void nvhost_scale_init(struct platform_device *pdev)
 		profile->devfreq_profile.target = nvhost_scale_target;
 		profile->devfreq_profile.get_dev_status =
 			nvhost_scale_get_dev_status;
+		profile->devfreq_profile.get_cur_freq =
+			nvhost_scale_get_cur_freq;
 		profile->devfreq_profile.set_low_wmark =
 			nvhost_scale_set_low_wmark;
 		profile->devfreq_profile.set_high_wmark =

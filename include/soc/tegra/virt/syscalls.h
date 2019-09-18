@@ -47,6 +47,8 @@
 #define HVC_NR_GUEST_RESET		10
 #define HVC_NR_SYSINFO_IPA		13
 #define HVC_NR_UART_RELAY_INFO		518
+#define HVC_NR_NVLOG_WRITER_INFO	519
+#define HVC_NR_NVLOG_READER_INFO	520
 
 #define GUEST_PRIMARY		0
 #define GUEST_IVC_SERVER	0
@@ -349,6 +351,52 @@ static inline int hyp_read_uart_relay_info(uint64_t *ipa, uint64_t *size,
 
 	return (int)x0;
 }
+
+
+static inline int hyp_read_nvlog_reader_info(uint64_t *ipa, uint64_t *size,
+					uint64_t *num_vms)
+{
+	register uint64_t x0 asm("x0");
+	register uint64_t x1 asm("x1");
+	register uint64_t x2 asm("x2");
+	register uint64_t x3 asm("x3");
+	register uint64_t x4 asm("x4");
+
+	asm("hvc %5"
+		: "=r"(x0), "=r"(x1),
+		  "=r"(x2), "=r"(x3),
+		  "=r"(x4)
+		: "i"(HVC_NR_NVLOG_READER_INFO)
+		: _X5_X17);
+
+	*ipa = x1;
+	*size = x2;
+	*num_vms = x3;
+
+	return (int)x0;
+}
+
+static inline int hyp_read_nvlog_writer_info(uint64_t *ipa, uint64_t *size)
+{
+	register uint64_t x0 asm("x0");
+	register uint64_t x1 asm("x1");
+	register uint64_t x2 asm("x2");
+	register uint64_t x3 asm("x3");
+	register uint64_t x4 asm("x4");
+
+	asm("hvc %5"
+		: "=r"(x0), "=r"(x1),
+		  "=r"(x2), "=r"(x3),
+		  "=r"(x4)
+		: "i"(HVC_NR_NVLOG_WRITER_INFO)
+		: _X5_X17);
+
+	*ipa = x1;
+	*size = x2;
+
+	return (int)x0;
+}
+
 
 #undef _X3_X17
 #undef _X4_X17

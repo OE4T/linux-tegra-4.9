@@ -38,7 +38,12 @@ struct uart_relay_info_t {
 	uint32_t max_msg_size;
 };
 
+struct nvlog_reader_info_t {
+	uint32_t num_vms;
+};
+
 static struct uart_relay_info_t uart_relay_info;
+static struct nvlog_reader_info_t nvlog_reader_info;
 
 struct hyp_shared_memory_info {
 	const char *node_name;
@@ -48,6 +53,7 @@ struct hyp_shared_memory_info {
 	ssize_t (*read)(struct file *, struct kobject *, struct bin_attribute *,
 			char *, loff_t, size_t);
 	bool available;
+	bool write_mode;
 };
 
 static struct hyp_shared_memory_info hyp_shared_memory_attrs[ATTRS_MAX];
@@ -59,6 +65,21 @@ static ssize_t uart_relay_read(struct file *filp, struct kobject *kobj,
 	ssize_t num_bytes;
 	size_t last_byte_index = min_t(size_t,
 		sizeof(struct uart_relay_info_t), count + off);
+
+	if (off >= last_byte_index)
+		return -ESPIPE;
+	num_bytes = last_byte_index - off;
+	memcpy(buf, attr->private + off, num_bytes);
+	return num_bytes;
+}
+
+static ssize_t nvlog_reader_read(struct file *filp, struct kobject *kobj,
+			struct bin_attribute *attr, char *buf,
+			loff_t off, size_t count)
+{
+	ssize_t num_bytes;
+	size_t last_byte_index = min_t(size_t,
+		sizeof(struct nvlog_reader_info_t), count + off);
 
 	if (off >= last_byte_index)
 		return -ESPIPE;
@@ -98,6 +119,10 @@ static int hvc_create_sysfs(
 
 	hyp_shm_info->attr.attr.name = hyp_shm_info->node_name;
 	hyp_shm_info->attr.attr.mode = S_IRUSR | S_IRGRP | S_IROTH;
+
+	if (hyp_shm_info->write_mode)
+		hyp_shm_info->attr.attr.mode |= S_IWUSR | S_IWGRP | S_IWOTH;
+
 	hyp_shm_info->attr.mmap = hvc_sysfs_mmap;
 	hyp_shm_info->attr.size = (size_t)hyp_shm_info->size;
 
@@ -129,6 +154,7 @@ static int __init hvc_sysfs_register_log(struct kobject *kobj, int index)
 		hyp_shared_memory_attrs[index].size = (size_t)info->log_size;
 		hyp_shared_memory_attrs[index].node_name = "log";
 		hyp_shared_memory_attrs[index].available = true;
+		hyp_shared_memory_attrs[index].write_mode = false;
 		index = index + 1;
 	}
 
@@ -137,6 +163,7 @@ static int __init hvc_sysfs_register_log(struct kobject *kobj, int index)
 		hyp_shared_memory_attrs[index].size = (size_t)info->pct_size;
 		hyp_shared_memory_attrs[index].node_name = "pct";
 		hyp_shared_memory_attrs[index].available = true;
+		hyp_shared_memory_attrs[index].write_mode = false;
 		index = index + 1;
 	}
 
@@ -164,6 +191,59 @@ static int __init hvc_sysfs_register_uartrelay(struct kobject *kobj, int index)
 		hyp_shared_memory_attrs[index].attr.private = &uart_relay_info;
 		hyp_shared_memory_attrs[index].read = uart_relay_read;
 		hyp_shared_memory_attrs[index].available = true;
+		hyp_shared_memory_attrs[index].write_mode = false;
+		index = index + 1;
+	}
+
+	return index;
+}
+
+static int __init hvc_sysfs_register_nvlog_reader(struct kobject *kobj,
+								int index)
+{
+	uint64_t ipa;
+	uint64_t size, vms;
+
+	if (hyp_read_nvlog_reader_info(&ipa, &size, &vms)) {
+		pr_info("nvlog: Reader feature not enabled for this VM\n");
+		return -ENXIO;
+	}
+
+	nvlog_reader_info.num_vms = (uint32_t)vms;
+
+	if (index < ATTRS_MAX) {
+		hyp_shared_memory_attrs[index].ipa = ipa;
+		hyp_shared_memory_attrs[index].size = size;
+		hyp_shared_memory_attrs[index].node_name = "nvlog_reader";
+		hyp_shared_memory_attrs[index].attr.private =
+							&nvlog_reader_info;
+		hyp_shared_memory_attrs[index].read = nvlog_reader_read;
+		hyp_shared_memory_attrs[index].available = true;
+		hyp_shared_memory_attrs[index].write_mode = false;
+		index = index + 1;
+	}
+
+	return index;
+}
+
+static int __init hvc_sysfs_register_nvlog_writer(struct kobject *kobj,
+								int index)
+{
+	uint64_t ipa;
+	uint64_t size;
+
+	if (hyp_read_nvlog_writer_info(&ipa, &size)) {
+		pr_info("nvlog: Writer feature not enabled for this VM\n");
+		return -ENXIO;
+	}
+	if (index < ATTRS_MAX) {
+		hyp_shared_memory_attrs[index].ipa = ipa;
+		hyp_shared_memory_attrs[index].size = size;
+		hyp_shared_memory_attrs[index].node_name = "nvlog_writer";
+		hyp_shared_memory_attrs[index].attr.private = NULL;
+		hyp_shared_memory_attrs[index].read = NULL;
+		hyp_shared_memory_attrs[index].available = true;
+		hyp_shared_memory_attrs[index].write_mode = true;
 		index = index + 1;
 	}
 
@@ -192,6 +272,12 @@ static int __init hvc_sysfs_register(void)
 	if (ret >= 0)
 		index = ret;
 	ret = hvc_sysfs_register_uartrelay(kobj, index);
+	if (ret >= 0)
+		index = ret;
+	ret = hvc_sysfs_register_nvlog_reader(kobj, index);
+	if (ret >= 0)
+		index = ret;
+	ret = hvc_sysfs_register_nvlog_writer(kobj, index);
 	if (ret >= 0)
 		index = ret;
 

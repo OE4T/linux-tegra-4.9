@@ -53,8 +53,6 @@
 #define APPL_PINMUX_CLKREQ_OVERRIDE		BIT(3)
 #define APPL_PINMUX_CLK_OUTPUT_IN_OVERRIDE_EN	BIT(4)
 #define APPL_PINMUX_CLK_OUTPUT_IN_OVERRIDE	BIT(5)
-#define APPL_PINMUX_CLKREQ_OUT_OVRD_EN		BIT(9)
-#define APPL_PINMUX_CLKREQ_OUT_OVRD		BIT(10)
 
 #define APPL_CTRL				(0X4)
 #define APPL_CTRL_HW_HOT_RST_MODE_MASK		(0X3)
@@ -3286,8 +3284,8 @@ static int tegra_pcie_dw_runtime_resume(struct device *dev)
 
 	if (pcie->disable_clock_request) {
 		val = readl(pcie->appl_base + APPL_PINMUX);
-		val |= APPL_PINMUX_CLKREQ_OUT_OVRD_EN;
-		val |= APPL_PINMUX_CLKREQ_OUT_OVRD;
+		val |= APPL_PINMUX_CLKREQ_OVERRIDE_EN;
+		val &= ~APPL_PINMUX_CLKREQ_OVERRIDE;
 		writel(val, pcie->appl_base + APPL_PINMUX);
 	}
 
@@ -3489,8 +3487,8 @@ static int tegra_pcie_dw_resume_noirq(struct device *dev)
 
 	if (pcie->disable_clock_request) {
 		val = readl(pcie->appl_base + APPL_PINMUX);
-		val |= APPL_PINMUX_CLKREQ_OUT_OVRD_EN;
-		val |= APPL_PINMUX_CLKREQ_OUT_OVRD;
+		val |= APPL_PINMUX_CLKREQ_OVERRIDE_EN;
+		val &= ~APPL_PINMUX_CLKREQ_OVERRIDE;
 		writel(val, pcie->appl_base + APPL_PINMUX);
 	}
 

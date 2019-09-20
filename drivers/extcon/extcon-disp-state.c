@@ -45,6 +45,7 @@ static const unsigned int disp_state_extcon_cables[] = {
 	EXTCON_DISP_AUDIO_AUX2,
 	EXTCON_DISP_AUDIO_AUX3,
 	EXTCON_DISP_DSIHPD,
+	EXTCON_DISP_HDMI2,
 	EXTCON_NONE,
 };
 

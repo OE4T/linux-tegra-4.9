@@ -3392,15 +3392,30 @@ static const char * const extcon_cable_strings[] = {
 	[TEGRA_DC_OUT_DP] = "DP"
 };
 
+static const int hdmi_extcon_cable_id[] = {
+	EXTCON_DISP_HDMI,
+	EXTCON_DISP_HDMI2
+};
+/* the map of dc->ctrl_num to the index of tegra_hdmi_extcon_cable_id[] */
+unsigned long extcon_hdmi_dc_map[ARRAY_SIZE(hdmi_extcon_cable_id)] = {
+	[0 ... (ARRAY_SIZE(hdmi_extcon_cable_id) - 1)] = -1};
+
 void tegra_dc_extcon_hpd_notify(struct tegra_dc *dc)
 {
 	unsigned int cable = 0;
+	int i;
 
 	mutex_lock(&tegra_dc_extcon_lock);
 	if (dc && dc->out) {
 		switch (dc->out->type) {
 		case TEGRA_DC_OUT_HDMI:
-			cable = EXTCON_DISP_HDMI;
+			cable = EXTCON_NONE;
+			for (i = 0; i < ARRAY_SIZE(hdmi_extcon_cable_id); i++) {
+				if (extcon_hdmi_dc_map[i] == dc->ctrl_num) {
+					cable = hdmi_extcon_cable_id[i];
+					break;
+				}
+			}
 			break;
 		case TEGRA_DC_OUT_DP:
 			cable = EXTCON_DISP_DP;
@@ -4032,9 +4047,30 @@ static int tegra_dc_set_out(struct tegra_dc *dc, struct tegra_dc_out *out,
 {
 	struct tegra_dc_mode *mode = NULL;
 	int err = 0;
+	int i, free_slot = -1;
 
 	dc->out = out;
 	dc->hotplug_supported = tegra_dc_hotplug_supported(dc);
+
+	if (dc->out->type == TEGRA_DC_OUT_HDMI) {
+		for (i = 0; i < ARRAY_SIZE(hdmi_extcon_cable_id); i++) {
+			/* bail out if the map has already been done */
+			if (extcon_hdmi_dc_map[i] == dc->ctrl_num) {
+				free_slot = i;
+				break;
+			} else if (extcon_hdmi_dc_map[i] == -1) {
+				free_slot = i;
+			}
+		}
+
+		if (unlikely(free_slot == -1)) {
+			dev_err(&dc->ndev->dev,
+				"No free extcon HDMI slot for DC %d\n",
+				dc->ctrl_num);
+		} else {
+			extcon_hdmi_dc_map[free_slot] = dc->ctrl_num;
+		}
+	}
 
 	if (initialized) {
 		dc->initialized = false;
@@ -6942,9 +6978,17 @@ err_free:
 static int tegra_dc_remove(struct platform_device *ndev)
 {
 	struct tegra_dc *dc = platform_get_drvdata(ndev);
+	int i;
 
 	if (!dc)
 		return 0;
+
+	if (dc->out->type == TEGRA_DC_OUT_HDMI)
+		for (i = 0; i < ARRAY_SIZE(hdmi_extcon_cable_id); i++)
+			if (extcon_hdmi_dc_map[i] == dc->ctrl_num) {
+				extcon_hdmi_dc_map[i] = -1;
+				break;
+			}
 
 	tegra_dc_remove_sysfs(&dc->ndev->dev);
 	tegra_dc_remove_debugfs(dc);

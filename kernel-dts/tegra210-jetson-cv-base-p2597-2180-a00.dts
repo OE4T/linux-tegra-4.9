@@ -758,6 +758,7 @@
 				PMC_WAKE_TYPE_EVENT 41 PMC_TRIGGER_TYPE_HIGH>,
 			<&tegra_pmc
 				PMC_WAKE_TYPE_EVENT 44 PMC_TRIGGER_TYPE_HIGH>;
+		nvidia,boost_cpu_freq = <1200>;
 	};
 
 	xudc@700d0000 {

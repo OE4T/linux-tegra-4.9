@@ -249,7 +249,8 @@ static void tegra_channel_surface_setup(
 	vi4_channel_write(chan, vnc_id,
 		ATOMP_SURFACE_STRIDE0,
 		chan->format.bytesperline * chan->interlace_bplfactor);
-	vi4_channel_write(chan, vnc_id, ATOMP_SURFACE_OFFSET0_H, 0x0);
+	vi4_channel_write(chan, vnc_id,
+		ATOMP_SURFACE_OFFSET0_H, (buf->addr >> 32) & 0xFF);
 
 	if (chan->fmtinfo->fourcc == V4L2_PIX_FMT_NV16) {
 		vi4_channel_write(chan, vnc_id,

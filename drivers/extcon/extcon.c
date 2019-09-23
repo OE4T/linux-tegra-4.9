@@ -200,6 +200,11 @@ struct __extcon_info {
 		.id = EXTCON_DISP_DSIHPD,
 		.name = "DSIHPD",
 	},
+	[EXTCON_DISP_HDMI2] = {
+		.type = EXTCON_TYPE_DISP,
+		.id = EXTCON_DISP_HDMI2,
+		.name = "HDMI2",
+	},
 
 	/* Miscellaneous external connector */
 	[EXTCON_DOCK] = {

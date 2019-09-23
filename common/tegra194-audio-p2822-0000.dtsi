@@ -67,14 +67,11 @@
 		nvidia,model = "tegra-snd-t19x-mobile-rt565x";
 		clocks = <&bpmp_clks TEGRA194_CLK_PLLA>,
 			 <&bpmp_clks TEGRA194_CLK_PLLA_OUT0>,
-			 <&bpmp_clks TEGRA194_CLK_AHUB>,
 			 <&bpmp_clks TEGRA194_CLK_AUD_MCLK>;
-		clock-names = "pll_a", "pll_a_out0", "ahub", "extern1";
+		clock-names = "pll_a", "pll_a_out0", "extern1";
 		assigned-clocks = <&bpmp_clks TEGRA194_CLK_PLLA_OUT0>,
-				  <&bpmp_clks TEGRA194_CLK_AHUB>,
 				  <&bpmp_clks TEGRA194_CLK_AUD_MCLK>;
 		assigned-clock-parents = <&bpmp_clks TEGRA194_CLK_PLLA>,
-					 <&bpmp_clks TEGRA194_CLK_PLLA_OUT0>,
 					 <&bpmp_clks TEGRA194_CLK_PLLA_OUT0>;
 
 		nvidia,audio-routing =

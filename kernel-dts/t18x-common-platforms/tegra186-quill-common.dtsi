@@ -698,14 +698,11 @@
 		nvidia,num-codec-link = <12>;
 		clocks = <&tegra_car TEGRA186_CLK_PLLA>,
 			 <&tegra_car TEGRA186_CLK_PLL_A_OUT0>,
-			 <&tegra_car TEGRA186_CLK_AHUB>,
 			 <&tegra_car TEGRA186_CLK_AUD_MCLK>;
-		clock-names = "pll_a", "pll_a_out0", "ahub", "extern1";
+		clock-names = "pll_a", "pll_a_out0", "extern1";
 		assigned-clocks = <&tegra_car TEGRA186_CLK_PLL_A_OUT0>,
-				  <&tegra_car TEGRA186_CLK_AHUB>,
 				  <&tegra_car TEGRA186_CLK_AUD_MCLK>;
 		assigned-clock-parents = <&tegra_car TEGRA186_CLK_PLLA>,
-					 <&tegra_car TEGRA186_CLK_PLL_A_OUT0>,
 					 <&tegra_car TEGRA186_CLK_PLL_A_OUT0>;
 		resets = <&tegra_car TEGRA186_RESET_AUD_MCLK>;
 		reset-names = "extern1_rst";

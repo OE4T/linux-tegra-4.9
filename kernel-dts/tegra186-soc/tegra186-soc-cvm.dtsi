@@ -209,6 +209,10 @@
 	};
 
 	ahub {
+		assigned-clocks = <&tegra_car TEGRA186_CLK_AHUB>;
+		assigned-clock-parents = <&tegra_car TEGRA186_CLK_PLLP_OUT0>;
+		assigned-clock-rates = <45333333>;
+
 		status = "okay";
 
 		dmic@2904200 {

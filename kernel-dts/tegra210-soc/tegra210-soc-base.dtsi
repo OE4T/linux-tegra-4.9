@@ -1548,8 +1548,8 @@
 				<&tegra_car TEGRA210_CLK_APB2APE>;
 		clock-names = "ahub", "parent", "xbar.ape", "apb2ape";
 		assigned-clocks = <&tegra_car TEGRA210_CLK_D_AUDIO>;
-		assigned-parent-clocks =
-			<&tegra_car TEGRA210_CLK_PLL_A_OUT0>;
+		assigned-clock-parents = <&tegra_car TEGRA210_CLK_PLL_P>;
+		assigned-clock-rates = <81600000>;
 		status = "disabled";
 
 		#address-cells = <1>;

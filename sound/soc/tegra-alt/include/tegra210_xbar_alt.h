@@ -191,7 +191,6 @@ struct tegra_xbar_soc_data {
 
 struct tegra_xbar {
 	struct clk *clk;
-	struct clk *clk_parent;
 	struct regmap *regmap;
 	const struct tegra_xbar_soc_data *soc_data;
 };

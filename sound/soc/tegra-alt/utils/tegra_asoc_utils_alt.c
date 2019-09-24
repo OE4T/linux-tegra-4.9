@@ -106,14 +106,6 @@ int tegra_alt_asoc_utils_set_rate(struct tegra_asoc_audio_clock_info *data,
 			return err;
 		}
 
-		/* TODO: remove below once ahub rate is fixed from DT */
-		err = clk_set_rate(data->clk_ahub, pll_out);
-		if (err) {
-			dev_err(data->dev, "Can't set ahub rate: %d\n",
-				err);
-			return err;
-		}
-
 		data->set_pll_out_rate = pll_out;
 	}
 
@@ -191,12 +183,6 @@ int tegra_alt_asoc_utils_init(struct tegra_asoc_audio_clock_info *data,
 	if (IS_ERR(data->clk_aud_mclk)) {
 		dev_err(data->dev, "Can't retrieve clk cdev1\n");
 		return PTR_ERR(data->clk_aud_mclk);
-	}
-
-	data->clk_ahub = devm_clk_get(dev, "ahub");
-	if (IS_ERR(data->clk_ahub)) {
-		dev_err(data->dev, "Can't retrieve clk ahub\n");
-		return PTR_ERR(data->clk_ahub);
 	}
 
 	if (data->soc == TEGRA_ASOC_UTILS_SOC_TEGRA186) {

@@ -55,7 +55,6 @@ struct tegra_asoc_audio_clock_info {
 	struct clk *clk_pll_base;
 	struct clk *clk_pll_out;
 	struct clk *clk_aud_mclk;
-	struct clk *clk_ahub;
 	struct reset_control *clk_cdev1_rst;
 	int clk_cdev1_state;
 	unsigned int *pll_base_rate;

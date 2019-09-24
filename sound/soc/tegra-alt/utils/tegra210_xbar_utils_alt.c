@@ -289,12 +289,6 @@ int tegra_xbar_probe(struct platform_device *pdev,
 			dev_err(&pdev->dev, "Can't retrieve ahub clock\n");
 			return PTR_ERR(xbar->clk);
 		}
-
-		xbar->clk_parent = devm_clk_get(&pdev->dev, "parent");
-		if (IS_ERR(xbar->clk_parent)) {
-			dev_err(&pdev->dev, "Can't retrieve parent clock\n");
-			return PTR_ERR(xbar->clk_parent);
-		}
 	}
 
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);

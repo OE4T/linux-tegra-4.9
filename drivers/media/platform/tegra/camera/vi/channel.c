@@ -209,6 +209,38 @@ static void tegra_channel_fmt_align(struct tegra_channel *chan,
 	*bytesperline = clamp(temp_bpl, min_bpl, max_bpl);
 }
 
+/* Check if sensor mode is interlaced and the type of interlaced mode */
+
+void tegra_channel_set_interlace_mode(struct tegra_channel *chan)
+{
+	struct v4l2_subdev *sd = NULL;
+	struct camera_common_data *s_data = NULL;
+	struct device_node *node = NULL;
+	struct sensor_mode_properties *s_mode = NULL;
+
+	if (chan->subdev_on_csi) {
+		sd = chan->subdev_on_csi;
+		s_data = to_camera_common_data(sd->dev);
+		node = sd->dev->of_node;
+	}
+
+	if (s_data != NULL && node != NULL) {
+		int idx = s_data->mode_prop_idx;
+
+		if (idx < s_data->sensor_props.num_modes) {
+			s_mode = &s_data->sensor_props.sensor_modes[idx];
+			chan->is_interlaced =
+				s_mode->control_properties.is_interlaced;
+			if (chan->is_interlaced) {
+				if (s_mode->control_properties.interlace_type)
+					chan->interlace_type = Interleaved;
+				else
+					chan->interlace_type = Top_Bottom;
+			}
+		}
+	}
+}
+
 static void tegra_channel_update_format(struct tegra_channel *chan,
 		u32 width, u32 height, u32 fourcc,
 		const struct tegra_frac *bpp,
@@ -235,6 +267,11 @@ static void tegra_channel_update_format(struct tegra_channel *chan,
 	/* Calculate the sizeimage per plane */
 	chan->format.sizeimage = get_aligned_buffer_size(chan,
 			chan->format.bytesperline, chan->format.height);
+
+	tegra_channel_set_interlace_mode(chan);
+	/* Double the size of allocated buffer for interlaced sensor modes */
+	if (chan->is_interlaced)
+		chan->format.sizeimage *= 2;
 
 	if (fourcc == V4L2_PIX_FMT_NV16)
 		chan->format.sizeimage *= 2;
@@ -1878,7 +1915,6 @@ __tegra_channel_set_format(struct tegra_channel *chan,
 		return -ENOTTY;
 
 	v4l2_fill_pix_format(pix, &fmt.format);
-
 	if (!ret) {
 		chan->format = *pix;
 		chan->fmtinfo = vfmt;

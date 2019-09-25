@@ -96,12 +96,6 @@
 	tegra_virt_t210mvc_get_mute,	\
 	tegra_virt_t210mvc_set_mute)
 
-#define ASRC_RATIO_INT_CTRL_DECL(ename, reg) \
-	SOC_SINGLE_EXT(ename, reg,	\
-	0, TEGRA186_ASRC_STREAM_RATIO_INTEGER_PART_MASK, 0,	\
-	tegra186_virt_asrc_get_int_ratio,	\
-	tegra186_virt_asrc_set_int_ratio)
-
 #define SOC_SINGLE_EXT_FRAC(xname, xregbase, xmax, xget, xput) \
 {       .iface = SNDRV_CTL_ELEM_IFACE_MIXER, .name = (xname), \
 	.info = snd_soc_info_xr_sx, .get = xget, \
@@ -115,12 +109,6 @@
 	TEGRA186_ASRC_STREAM_RATIO_MASK,	\
 	tegra186_virt_asrc_get_ratio,	\
 	tegra186_virt_asrc_set_ratio)
-
-#define ASRC_RATIO_FRAC_CTRL_DECL(ename, reg) \
-	SOC_SINGLE_EXT_FRAC(ename, reg,	\
-	TEGRA186_ASRC_STREAM_RATIO_FRAC_PART_MASK,	\
-	tegra186_virt_asrc_get_frac_ratio,	\
-	tegra186_virt_asrc_set_frac_ratio)
 
 #define ASRC_STREAM_RATIO_CTRL_DECL(ename, reg, src) \
 	SOC_ENUM_EXT_REG(ename, reg,	\
@@ -331,17 +319,6 @@ int tegra186_virt_asrc_get_ratio(struct snd_kcontrol *kcontrol,
 int tegra186_virt_asrc_set_ratio(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol);
 
-int tegra186_virt_asrc_get_int_ratio(struct snd_kcontrol *kcontrol,
-	struct snd_ctl_elem_value *ucontrol);
-
-int tegra186_virt_asrc_set_int_ratio(struct snd_kcontrol *kcontrol,
-	struct snd_ctl_elem_value *ucontrol);
-
-int tegra186_virt_asrc_get_frac_ratio(struct snd_kcontrol *kcontrol,
-	struct snd_ctl_elem_value *ucontrol);
-
-int tegra186_virt_asrc_set_frac_ratio(struct snd_kcontrol *kcontrol,
-	struct snd_ctl_elem_value *ucontrol);
 int tegra186_virt_asrc_get_ratio_source(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol);
 int tegra186_virt_asrc_set_ratio_source(struct snd_kcontrol *kcontrol,

@@ -37,6 +37,7 @@
 	chosen {
 		bootargs ="console=ttyTCU0,115200";
 		board-has-eeprom;
+		nvidia,tegra-joint_xpu_rail;
 	};
 
 	pmc@c370000 {

@@ -871,9 +871,8 @@ void tegra_dc_program_bandwidth(struct tegra_dc *dc, bool use_new)
 		if (max_emc_freq_hz < emc_freq_hz_limit)
 			max_emc_freq_hz = emc_freq_hz_limit;
 	}
-	if (max_emc_freq_hz)
-		tegra_bwmgr_set_emc(dc->emc_la_handle, max_emc_freq_hz,
-			 TEGRA_BWMGR_SET_EMC_FLOOR);
+	tegra_bwmgr_set_emc(dc->emc_la_handle, max_emc_freq_hz,
+			TEGRA_BWMGR_SET_EMC_FLOOR);
 }
 
 int tegra_dc_set_dynamic_emc(struct tegra_dc *dc)

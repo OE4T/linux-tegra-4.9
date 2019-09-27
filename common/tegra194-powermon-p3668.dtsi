@@ -29,7 +29,7 @@
 			};
 			channel@1 {
 				reg = <0x1>;
-				ti,rail-name = "VDD_CPU_GPU";
+				ti,rail-name = "VDD_CPU_GPU_CV";
 				ti,shunt-resistor-mohm = <5>;
 			};
 			channel@2 {

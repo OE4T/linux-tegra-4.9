@@ -52,6 +52,21 @@ struct nvdla_ping_args {
 	__u32 out_response;
 };
 
+/**
+ * struct nvdla_mem_share_handle structure for sharing memory identifier
+ * and its properties
+ *
+ * @share_id		identifier of handle to be shared
+ * @offset		offset within the shared memory
+ * @access_flags	access with which memory is intended to be shared
+ * @reserved		reserved for future use
+ **/
+struct nvdla_mem_share_handle {
+	__u32 share_id;
+	__u32 offset;
+	__u32 access_flags;
+	__u32 reserved;
+};
 
 /**
  * struct nvdla_pin_unpin_args strcture args for buffer pin/unpin

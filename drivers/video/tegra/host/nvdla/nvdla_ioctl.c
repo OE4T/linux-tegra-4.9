@@ -167,7 +167,7 @@ fail_to_send_fence:
 
 static int nvdla_pin(struct nvdla_private *priv, void *arg)
 {
-	u32 handles[MAX_NVDLA_PIN_BUFFERS];
+	struct nvdla_mem_share_handle handles[MAX_NVDLA_PIN_BUFFERS];
 	struct dma_buf *dmabufs[MAX_NVDLA_PIN_BUFFERS];
 	int err = 0;
 	int i = 0;
@@ -194,14 +194,14 @@ static int nvdla_pin(struct nvdla_private *priv, void *arg)
 	nvdla_dbg_info(pdev, "num of buffers [%d]", count);
 
 	if (copy_from_user(handles, (void __user *)buf_list->buffers,
-			(count * sizeof(u32)))) {
+			(count * sizeof(struct nvdla_mem_share_handle)))) {
 		err = -EFAULT;
 		goto nvdla_buffer_cpy_err;
 	}
 
 	/* get the dmabuf pointer from the fd handle */
 	for (i = 0; i < count; i++) {
-		dmabufs[i] = dma_buf_get(handles[i]);
+		dmabufs[i] = dma_buf_get(handles[i].share_id);
 		if (IS_ERR_OR_NULL(dmabufs[i])) {
 			err = -EFAULT;
 			goto fail_to_get_dma_buf;
@@ -222,7 +222,7 @@ fail_to_get_val_arg:
 
 static int nvdla_unpin(struct nvdla_private *priv, void *arg)
 {
-	u32 handles[MAX_NVDLA_PIN_BUFFERS];
+	struct nvdla_mem_share_handle handles[MAX_NVDLA_PIN_BUFFERS];
 	struct dma_buf *dmabufs[MAX_NVDLA_PIN_BUFFERS];
 	int err = 0;
 	int i = 0;
@@ -249,14 +249,14 @@ static int nvdla_unpin(struct nvdla_private *priv, void *arg)
 	nvdla_dbg_info(pdev, "num of buffers [%d]", count);
 
 	if (copy_from_user(handles, (void __user *)buf_list->buffers,
-		(count * sizeof(u32)))) {
+		(count * sizeof(struct nvdla_mem_share_handle)))) {
 		err = -EFAULT;
 		goto nvdla_buffer_cpy_err;
 	}
 
 	/* get the dmabuf pointer and clean valid ones */
 	for (i = 0; i < count; i++) {
-		dmabufs[i] = dma_buf_get(handles[i]);
+		dmabufs[i] = dma_buf_get(handles[i].share_id);
 		if (IS_ERR_OR_NULL(dmabufs[i]))
 			continue;
 	}

@@ -122,10 +122,20 @@ static int nvgpu_linux_predict_mv_at_hz_cur_tfloor(struct clk_gk20a *clk,
 static unsigned long nvgpu_linux_get_maxrate(struct gk20a *g, u32 api_domain)
 {
 	int ret;
+	u16 min_mhz, max_mhz;
 
 	switch (api_domain) {
 	case CTRL_CLK_DOMAIN_GPCCLK:
 		ret = tegra_dvfs_get_maxrate(g->clk.tegra_clk_parent);
+		/* If dvfs not supported */
+		if (ret == 0) {
+			int err = nvgpu_clk_arb_get_arbiter_clk_range(g,
+					NVGPU_CLK_DOMAIN_GPCCLK,
+					&min_mhz, &max_mhz);
+			if (err == 0) {
+				ret = max_mhz * 1000000L;
+			}
+		}
 		break;
 	default:
 		nvgpu_err(g, "unknown clock: %u", api_domain);

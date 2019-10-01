@@ -263,6 +263,18 @@ struct nvmap_heap_size {
 	__u64 size;
 };
 
+/**
+ * Struct used while querying heap parameters
+ */
+struct nvmap_query_heap_params {
+	__u32 heap_mask;
+	__u32 flags;
+	__u8 contig;
+	__u64 total;
+	__u64 free;
+	__u64 largest_free_block;
+};
+
 #define NVMAP_IOC_MAGIC 'N'
 
 /* Creates a new memory handle. On input, the argument is the size of the new
@@ -371,6 +383,10 @@ struct nvmap_heap_size {
 /* Allocate seperate memory for VPR */
 #define NVMAP_IOC_VPR_FLOOR_SIZE _IOW(NVMAP_IOC_MAGIC, 102, __u32)
 
-#define NVMAP_IOC_MAXNR (_IOC_NR(NVMAP_IOC_VPR_FLOOR_SIZE))
+/* Get heap parameters such as total and frre size */
+#define NVMAP_IOC_QUERY_HEAP_PARAMS _IOR(NVMAP_IOC_MAGIC, 105, \
+		struct nvmap_query_heap_params)
+
+#define NVMAP_IOC_MAXNR (_IOC_NR(NVMAP_IOC_QUERY_HEAP_PARAMS))
 
 #endif /* __UAPI_LINUX_NVMAP_H */

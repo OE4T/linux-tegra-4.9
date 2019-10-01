@@ -922,3 +922,72 @@ int nvmap_ioctl_get_heap_size(struct file *filp, void __user *arg)
 	return -ENODEV;
 
 }
+
+static unsigned long system_heap_free_mem(void)
+{
+	struct sysinfo sys_heap;
+
+	si_meminfo(&sys_heap);
+
+	return sys_heap.freeram << PAGE_SHIFT;
+}
+
+static unsigned long system_heap_total_mem(void)
+{
+	struct sysinfo sys_heap;
+
+	si_meminfo(&sys_heap);
+
+	return sys_heap.totalram << PAGE_SHIFT;
+}
+
+int nvmap_ioctl_query_heap_params(struct file *filp, void __user *arg)
+{
+	unsigned int carveout_mask = NVMAP_HEAP_CARVEOUT_MASK;
+	unsigned int iovmm_mask = NVMAP_HEAP_IOVMM;
+	struct nvmap_query_heap_params op;
+	struct nvmap_heap *heap;
+	unsigned int type;
+	int ret = 0;
+	int i;
+
+	memset(&op, 0, sizeof(op));
+	if (copy_from_user(&op, arg, sizeof(op))) {
+		ret =  -EFAULT;
+		goto exit;
+	}
+
+	type = op.heap_mask;
+	WARN_ON(type & (type - 1));
+
+	if (nvmap_convert_carveout_to_iovmm) {
+		carveout_mask &= ~NVMAP_HEAP_CARVEOUT_GENERIC;
+		iovmm_mask |= NVMAP_HEAP_CARVEOUT_GENERIC;
+	} else if (nvmap_convert_iovmm_to_carveout) {
+		if (type & NVMAP_HEAP_IOVMM) {
+			type &= ~NVMAP_HEAP_IOVMM;
+			type |= NVMAP_HEAP_CARVEOUT_GENERIC;
+		}
+	}
+
+	/* To Do: select largest free block */
+	op.largest_free_block = PAGE_SIZE;
+
+	if (type & NVMAP_HEAP_CARVEOUT_MASK) {
+		for (i = 0; i < nvmap_dev->nr_carveouts; i++) {
+			if (type & nvmap_dev->heaps[i].heap_bit) {
+				heap = nvmap_dev->heaps[i].carveout;
+				op.total = nvmap_query_heap_size(heap);
+				break;
+			}
+		}
+	} else if (type & iovmm_mask) {
+		op.total = system_heap_total_mem();
+		op.free = system_heap_free_mem();
+	}
+
+	if (copy_to_user(arg, &op, sizeof(op)))
+		ret = -EFAULT;
+exit:
+	return ret;
+}

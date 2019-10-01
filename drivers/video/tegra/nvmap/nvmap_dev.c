@@ -469,6 +469,10 @@ static long nvmap_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		err = nvmap_ioctl_get_heap_size(filp, uarg);
 		break;
 
+	case NVMAP_IOC_QUERY_HEAP_PARAMS:
+		err = nvmap_ioctl_query_heap_params(filp, uarg);
+		break;
+
 	default:
 		pr_warn("Unknown NVMAP_IOC = 0x%x\n", cmd);
 	}

@@ -41,7 +41,7 @@ static bool tegra_udrm_modeset_module_param;
 module_param_named(modeset, tegra_udrm_modeset_module_param, bool, 0400);
 
 static const unsigned int cable_ids[] = {
-	EXTCON_DISP_HDMI, EXTCON_DISP_DP, EXTCON_DISP_DSIHPD};
+	EXTCON_DISP_HDMI, EXTCON_DISP_DP, EXTCON_DISP_DSIHPD, EXTCON_DISP_HDMI2};
 struct tegra_udrm_private {
 	struct drm_device *drm;
 	struct notifier_block hpd_nb[ARRAY_SIZE(cable_ids)];
@@ -501,6 +501,17 @@ static int tegra_udrm_dsi_notifier(struct notifier_block *nb,
 	return NOTIFY_DONE;
 }
 
+static int tegra_udrm_hdmi2_notifier(struct notifier_block *nb,
+		unsigned long event, void *unused)
+{
+	struct tegra_udrm_private *priv = container_of(nb,
+			struct tegra_udrm_private, hpd_nb[3]);
+
+	drm_sysfs_hotplug_event(priv->drm);
+
+	return NOTIFY_DONE;
+}
+
 static int tegra_udrm_probe(struct platform_device *pdev)
 {
 	struct drm_driver *driver = &tegra_udrm_driver;
@@ -537,6 +548,7 @@ static int tegra_udrm_probe(struct platform_device *pdev)
 		priv->hpd_nb[0].notifier_call = tegra_udrm_hdmi_notifier;
 		priv->hpd_nb[1].notifier_call = tegra_udrm_dp_notifier;
 		priv->hpd_nb[2].notifier_call = tegra_udrm_dsi_notifier;
+		priv->hpd_nb[3].notifier_call = tegra_udrm_hdmi2_notifier;
 		for (i = 0; i < ARRAY_SIZE(cable_ids); i++) {
 			ret = devm_extcon_register_notifier(drm->dev, edev,
 				cable_ids[i], &priv->hpd_nb[i]);

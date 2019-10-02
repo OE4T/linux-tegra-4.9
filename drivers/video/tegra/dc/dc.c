@@ -3369,23 +3369,6 @@ unsigned int tegra_dc_has_multiple_dc(void)
 	return (cnt > 1);
 }
 
-static bool tegra_dc_is_out_type_connected(int out_type)
-{
-	unsigned int idx;
-	bool ret = false;
-
-	for (idx = 0; idx < tegra_dc_get_numof_dispheads(); idx++) {
-		struct tegra_dc *dc = tegra_dcs[idx];
-
-		if (dc && dc->out && dc->out->type == out_type
-			&& dc->connected) {
-			ret = true;
-			break;
-		}
-	}
-	return ret;
-}
-
 static const char * const extcon_cable_strings[] = {
 	[TEGRA_DC_OUT_HDMI] = "HDMI",
 	[TEGRA_DC_OUT_DSI] = "DSI",
@@ -3434,16 +3417,10 @@ void tegra_dc_extcon_hpd_notify(struct tegra_dc *dc)
 			pr_info("Extcon %s: HPD enabled\n",
 				extcon_cable_strings[dc->out->type]);
 		} else {
-			/*
-			 * send hpd disable notification only when all
-			 * instances of the given out type are disconnected
-			 */
-			if (!tegra_dc_is_out_type_connected(dc->out->type)) {
-				disp_state_extcon_switch_report(cable,
-					EXTCON_DISP_HPD_STATE_DISABLED);
-				pr_info("Extcon %s: HPD disabled\n",
-					extcon_cable_strings[dc->out->type]);
-			}
+			disp_state_extcon_switch_report(cable,
+				EXTCON_DISP_HPD_STATE_DISABLED);
+			pr_info("Extcon %s: HPD disabled\n",
+				extcon_cable_strings[dc->out->type]);
 		}
 	}
 	mutex_unlock(&tegra_dc_extcon_lock);

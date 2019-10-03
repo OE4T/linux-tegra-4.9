@@ -2035,20 +2035,22 @@ DEFINE_SIMPLE_ATTRIBUTE(mr4_force_poll_fops,
 
 static int dram_info_show(struct seq_file *s, void *data)
 {
-	uint32_t mr5, mr6, mr7, mr8;
+	uint32_t mr5, mr6, mr7, mr8, strap;
 	unsigned long flags;
 
+	strap = tegra_read_ram_code();
 	spin_lock_irqsave(&emc_access_lock, flags);
 	mr5 = emc_read_mrr(0, 5) & 0xffU;
 	mr6 = emc_read_mrr(0, 6) & 0xffU;
 	mr7 = emc_read_mrr(0, 7) & 0xffU;
 	mr8 = emc_read_mrr(0, 8) & 0xffU;
 	spin_unlock_irqrestore(&emc_access_lock, flags);
-	seq_printf(s,	"Manufacturer ID (MR5): %u\n"
-			"Revision ID-1 (MR6): %u\n"
-			"Revision ID-2 (MR7): %u\n"
-			"IO Width/Density/Type (MR8): 0x%02x\n",
-			mr5, mr6, mr7, mr8);
+	seq_printf(s, "DRAM strap: %u\n"
+		      "Manufacturer ID (MR5): %u\n"
+		      "Revision ID-1 (MR6): %u\n"
+		      "Revision ID-2 (MR7): %u\n"
+		      "IO Width/Density/Type (MR8): 0x%02x\n",
+		      strap, mr5, mr6, mr7, mr8);
 
 	return 0;
 }

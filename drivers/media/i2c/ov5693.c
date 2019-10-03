@@ -1229,6 +1229,7 @@ ov5693_remove(struct i2c_client *client)
 	tegracam_v4l2subdev_unregister(priv->tc_dev);
 	ov5693_power_put(priv->tc_dev);
 	tegracam_device_unregister(priv->tc_dev);
+	ov5693_eeprom_device_release(priv);
 
 	mutex_destroy(&priv->streaming_lock);
 

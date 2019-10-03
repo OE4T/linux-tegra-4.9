@@ -773,6 +773,7 @@ static int imx318_remove(struct i2c_client *client)
 
 	tegracam_v4l2subdev_unregister(priv->tc_dev);
 	tegracam_device_unregister(priv->tc_dev);
+	imx318_eeprom_device_release(priv);
 
 	return 0;
 }

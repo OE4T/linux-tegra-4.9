@@ -1319,6 +1319,7 @@ static int imx274_remove(struct i2c_client *client)
 
 	tegracam_v4l2subdev_unregister(priv->tc_dev);
 	tegracam_device_unregister(priv->tc_dev);
+	imx274_eeprom_device_release(priv);
 
 	mutex_destroy(&priv->streaming_lock);
 

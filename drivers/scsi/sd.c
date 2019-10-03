@@ -55,6 +55,7 @@
 #include <linux/t10-pi.h>
 #include <asm/uaccess.h>
 #include <asm/unaligned.h>
+#include <linux/ctype.h>
 
 #include <scsi/scsi.h>
 #include <scsi/scsi_cmnd.h>
@@ -73,6 +74,17 @@
 MODULE_AUTHOR("Eric Youngdale");
 MODULE_DESCRIPTION("SCSI disk (sd) driver");
 MODULE_LICENSE("GPL");
+
+#define MAX_RESERVE_INDEX 4
+
+static int scsi_index_num;
+
+/* Pass scsi device addresses to reserve index(/dev/<name>).
+ * Strictly use following format.
+ * sd_mod.scsi_addr="0:0:0:0,0:0:0:1,0:0:0:2,1:0:0:0"
+ */
+static char *scsi_addr[MAX_RESERVE_INDEX];
+module_param_array(scsi_addr, charp, &scsi_index_num, 0644);
 
 MODULE_ALIAS_BLOCKDEV_MAJOR(SCSI_DISK0_MAJOR);
 MODULE_ALIAS_BLOCKDEV_MAJOR(SCSI_DISK1_MAJOR);
@@ -3077,6 +3089,7 @@ static int sd_probe(struct device *dev)
 	struct gendisk *gd;
 	int index;
 	int error;
+	const char * const *scsi_addr_p = (const char * const *)scsi_addr;
 
 	scsi_autopm_get_device(sdp);
 	error = -ENODEV;
@@ -3095,20 +3108,26 @@ static int sd_probe(struct device *dev)
 	if (!gd)
 		goto out_free;
 
-	do {
-		if (!ida_pre_get(&sd_index_ida, GFP_KERNEL))
-			goto out_put;
+	index = match_string(scsi_addr_p, scsi_index_num,
+		dev_name(&sdp->sdev_gendev));
+	if (index >= 0) {
+		error = 0;
+	} else {
+		do {
+			if (!ida_pre_get(&sd_index_ida, GFP_KERNEL))
+				goto out_put;
 
-		spin_lock(&sd_index_lock);
-		error = ida_get_new(&sd_index_ida, &index);
-		spin_unlock(&sd_index_lock);
-	} while (error == -EAGAIN);
+			spin_lock(&sd_index_lock);
+			error = ida_get_new_above(&sd_index_ida,
+				scsi_index_num, &index);
+			spin_unlock(&sd_index_lock);
+		} while (error == -EAGAIN);
+	}
 
 	if (error) {
 		sdev_printk(KERN_WARNING, sdp, "sd_probe: memory exhausted.\n");
 		goto out_put;
 	}
-
 	error = sd_format_disk_name("sd", index, gd->disk_name, DISK_NAME_LEN);
 	if (error) {
 		sdev_printk(KERN_WARNING, sdp, "SCSI disk (sd) name length exceeded.\n");
@@ -3378,6 +3397,24 @@ static int __init init_sd(void)
 		printk(KERN_ERR "sd: can't init extended cdb pool\n");
 		err = -ENOMEM;
 		goto err_out_cache;
+	}
+
+	if (!scsi_index_num) {
+		printk(KERN_INFO "sd: No Scsi addr parsed to reserve index\n");
+	} else {
+		for (i = 0; i < scsi_index_num; i++) {
+			err = ida_simple_get(&sd_index_ida, i, i+1, GFP_KERNEL);
+			if (err < 0) {
+				printk(KERN_ERR
+				"sd: Failed to reserve index %d\n", i);
+			/* Fallback to last successful reserved index */
+					scsi_index_num = i;
+					break;
+			} else {
+				printk(KERN_INFO
+			"sd: %s addr reserved index %d\n", scsi_addr[i], i);
+			}
+		}
 	}
 
 	err = scsi_register_driver(&sd_template.gendrv);

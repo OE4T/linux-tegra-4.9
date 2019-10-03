@@ -421,13 +421,13 @@ static int imx219_power_put(struct tegracam_device *tc_dev)
 		return -EFAULT;
 
 	if (likely(pw->dvdd))
-		regulator_disable(pw->dvdd);
+		devm_regulator_put(pw->dvdd);
 
 	if (likely(pw->avdd))
-		regulator_put(pw->avdd);
+		devm_regulator_put(pw->avdd);
 
 	if (likely(pw->iovdd))
-		regulator_put(pw->iovdd);
+		devm_regulator_put(pw->iovdd);
 
 	pw->dvdd = NULL;
 	pw->avdd = NULL;

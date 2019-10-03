@@ -650,15 +650,18 @@ static void set_dai_ops(struct tegra_machine *machine)
 			&tegra_machine_compr_ops;
 #endif
 #if IS_ENABLED(CONFIG_SND_SOC_TEGRA186_ASRC_ALT)
-	/* set ASRC params. The default is 2 channels */
-	for (i = 0; i < 6; i++) {
-		int tx = TEGRA186_DAI_LINK_ASRC1_TX1 + i;
-		int rx = TEGRA186_DAI_LINK_ASRC1_RX1 + i;
+	if (!(of_machine_is_compatible("nvidia,tegra210")  ||
+		of_machine_is_compatible("nvidia,tegra210b01"))) {
+		/* set ASRC params. The default is 2 channels */
+		for (i = 0; i < 6; i++) {
+			int tx = TEGRA186_DAI_LINK_ASRC1_TX1 + i;
+			int rx = TEGRA186_DAI_LINK_ASRC1_RX1 + i;
 
-		machine->asoc->dai_links[tx].params =
-			&tegra_machine_asrc_link_params[i];
-		machine->asoc->dai_links[rx].params =
-			&tegra_machine_asrc_link_params[i];
+			machine->asoc->dai_links[tx].params =
+				&tegra_machine_asrc_link_params[i];
+			machine->asoc->dai_links[rx].params =
+				&tegra_machine_asrc_link_params[i];
+		}
 	}
 #endif
 }

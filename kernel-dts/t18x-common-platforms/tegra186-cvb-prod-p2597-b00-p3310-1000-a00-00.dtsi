@@ -105,7 +105,7 @@
 	};
 
 	fixed-regulators {
-		battery_reg: regulator@0 {
+		hdr40_vdd_5v0: battery_reg: regulator@0 {
 			compatible = "regulator-fixed";
 			reg = <0>;
 			regulator-name = "vdd-ac-bat";
@@ -251,7 +251,7 @@
 			gpio = <&gpio_i2c_0_74 4 0>;
 		};
 
-		vdd_3v3: regulator@14 {
+		hdr40_vdd_3v3: vdd_3v3: regulator@14 {
 			compatible = "regulator-fixed-sync";
 			reg = <14>;
 			regulator-name = "vdd-3v3";

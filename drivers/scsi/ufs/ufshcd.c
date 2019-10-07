@@ -40,9 +40,12 @@
 
 #include <linux/async.h>
 #include <linux/devfreq.h>
+#include <linux/genhd.h>
 #include <linux/nls.h>
 #include <linux/of.h>
 #include <linux/blkdev.h>
+#include <scsi/scsi_cmnd.h>
+#include "../sd.h"
 #include "ufshcd.h"
 #include "ufs_quirks.h"
 #include "unipro.h"
@@ -240,6 +243,7 @@ static int ufshcd_change_power_mode(struct ufs_hba *hba,
 			     struct ufs_pa_layer_attr *pwr_mode);
 static int ufshcd_set_dev_pwr_mode(struct ufs_hba *hba,
 				     enum ufs_dev_pwr_mode pwr_mode);
+static int ufshcd_realloc_host(struct ufs_hba *);
 
 static inline bool ufshcd_valid_tag(struct ufs_hba *hba, int tag)
 {
@@ -5929,6 +5933,11 @@ int ufshcd_rescan(struct ufs_hba *hba)
 
 		/* disable interrupts */
 		ufshcd_disable_intr(hba, hba->intr_mask);
+		ret = ufshcd_realloc_host(hba);
+		if (ret) {
+			dev_err(hba->dev, "SCSI host allocation failed,"
+					  "hotplug will fail\n");
+		}
 
 		ufshcd_hba_stop(hba, true);
 
@@ -7241,6 +7250,43 @@ static int ufshcd_set_dma_mask(struct ufs_hba *hba)
 			return 0;
 	}
 	return dma_set_mask_and_coherent(hba->dev, DMA_BIT_MASK(32));
+}
+
+
+/**
+ * ufshcd_realloc_host - reallocate Scsi_Host
+ * hba - pointer to ufs hba handle.
+ * Should be called only if card is hot un-plugged.
+ * returns 0 if successful, otherwise returns non-zero value.
+ */
+static int ufshcd_realloc_host(struct ufs_hba *hba)
+{
+	struct Scsi_Host *host = hba->host;
+	struct scsi_device *sdev;
+	struct scsi_disk *sdisk;
+	unsigned int max_channel = hba->host->max_channel;
+	unsigned int max_id = hba->host->max_id;
+	u64 max_lun = hba->host->max_lun;
+	int err = 0;
+
+	/*
+	 * Set media_present to 0. To avoid Hang during cache synchronization.
+	 */
+	shost_for_each_device(sdev, host) {
+		sdisk = dev_get_drvdata(&sdev->sdev_gendev);
+		sdisk->media_present = 0;
+	}
+
+	scsi_remove_host(host);
+	err = ufshcd_alloc_host(hba);
+	if (err)
+		return err;
+
+	hba->host->max_channel = max_channel;
+	hba->host->max_id = max_id;
+	hba->host->max_lun = max_lun;
+
+	return 0;
 }
 
 /**

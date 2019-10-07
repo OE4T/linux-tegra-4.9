@@ -27,7 +27,7 @@
 #define ON_LPDDR4() (tegra_emc_get_dram_type() == DRAM_TYPE_LPDDR4)
 
 #define LA_ST_LA_MINUS_SNAP_ARB_TO_ROW_SRT_EMCCLKS_FP	70000
-#define LA_DRAM_WIDTH_BITS				64
+#define LA_DRAM_WIDTH_BITS				128
 #define LA_DISP_CATCHUP_FACTOR_FP			1100
 #define MC_MAX_FREQ_MHZ					533
 #define MAX_GRANT_DEC					511

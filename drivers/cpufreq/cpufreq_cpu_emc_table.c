@@ -45,6 +45,8 @@ tegra_cpufreq_cpu_emc_map_dt_init(struct device_node *node)
 	if (!prop)
 		return NULL;
 
+	/* ignore incomplete entry */
+	len = rounddown(len, sizeof(struct cpu_emc_mapping));
 	entries = len / sizeof(struct cpu_emc_mapping);
 
 	/* append one zero'ed termination entry */

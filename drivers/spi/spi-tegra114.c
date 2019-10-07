@@ -185,6 +185,7 @@
 #define SPI_DEFAULT_RX_TAP_DELAY		10
 #define SPI_DEFAULT_TX_TAP_DELAY		0
 #define SPI_FIFO_FLUSH_MAX_DELAY		2000
+#define AUTOSUSPEND_TIMEOUT			300 /* in millisec */
 
 static bool prefer_last_used_cs;
 module_param_named(prefer_last_used_cs, prefer_last_used_cs, bool, 0644);
@@ -1313,8 +1314,8 @@ static int tegra_spi_setup(struct spi_device *spi)
 	if (tspi->def_chip_select == spi->chip_select)
 		tegra_spi_set_cmd2(spi, spi->max_speed_hz);
 	spin_unlock_irqrestore(&tspi->lock, flags);
-
-	pm_runtime_put(tspi->dev);
+	pm_runtime_mark_last_busy(tspi->dev);
+	pm_runtime_put_autosuspend(tspi->dev);
 	return 0;
 }
 
@@ -1357,7 +1358,8 @@ static  int tegra_spi_cs_low(struct spi_device *spi, bool state)
 	}
 
 	spin_unlock_irqrestore(&tspi->lock, flags);
-	pm_runtime_put(tspi->dev);
+	pm_runtime_mark_last_busy(tspi->dev);
+	pm_runtime_put_autosuspend(tspi->dev);
 	return 0;
 }
 
@@ -1823,7 +1825,8 @@ static int tegra_spi_slcg_show(struct seq_file *s, void *unused)
 	else
 		seq_puts(s, "enabled\n");
 
-	pm_runtime_put(tspi->dev);
+	pm_runtime_mark_last_busy(tspi->dev);
+	pm_runtime_put_autosuspend(tspi->dev);
 
 	return 0;
 }
@@ -1969,6 +1972,8 @@ static int tegra_spi_probe(struct platform_device *pdev)
 		}
 	}
 
+	pm_runtime_set_autosuspend_delay(&pdev->dev, AUTOSUSPEND_TIMEOUT);
+	pm_runtime_use_autosuspend(&pdev->dev);
 	pm_runtime_enable(&pdev->dev);
 	if (!pm_runtime_enabled(&pdev->dev)) {
 		ret = tegra_spi_runtime_resume(&pdev->dev);
@@ -1992,7 +1997,9 @@ static int tegra_spi_probe(struct platform_device *pdev)
 	tegra_spi_writel(tspi, tspi->def_command1_reg, SPI_COMMAND1);
 	tspi->command2_reg = tegra_spi_readl(tspi, SPI_COMMAND2);
 	tegra_spi_set_slcg(tspi);
-	pm_runtime_put(&pdev->dev);
+
+	pm_runtime_mark_last_busy(&pdev->dev);
+	pm_runtime_put_autosuspend(&pdev->dev);
 
 	ret = request_threaded_irq(tspi->irq, tegra_spi_isr,
 				   tegra_spi_isr_thread, IRQF_ONESHOT,
@@ -2021,6 +2028,7 @@ exit_pm_disable:
 		tegra_spi_runtime_suspend(&pdev->dev);
 	if (tspi->clock_always_on)
 		clk_disable_unprepare(tspi->clk);
+	pm_runtime_dont_use_autosuspend(&pdev->dev);
 exit_tx_dma_free:
 	tegra_spi_deinit_dma_param(tspi, false);
 exit_rx_dma_free:
@@ -2094,7 +2102,9 @@ static int tegra_spi_resume(struct device *dev)
 	tspi->last_used_cs = master->num_chipselect + 1;
 	tegra_spi_set_intr_mask(tspi);
 	tegra_spi_set_slcg(tspi);
-	pm_runtime_put(dev);
+
+	pm_runtime_mark_last_busy(dev);
+	pm_runtime_put_autosuspend(dev);
 
 	return spi_master_resume(master);
 }
@@ -2107,7 +2117,6 @@ static int tegra_spi_runtime_suspend(struct device *dev)
 
 	/* Flush all write which are in PPSB queue by reading back */
 	tegra_spi_readl(tspi, SPI_COMMAND1);
-
 	if (!tspi->clock_always_on)
 		clk_disable_unprepare(tspi->clk);
 	return 0;
@@ -2118,7 +2127,6 @@ static int tegra_spi_runtime_resume(struct device *dev)
 	struct spi_master *master = dev_get_drvdata(dev);
 	struct tegra_spi_data *tspi = spi_master_get_devdata(master);
 	int ret;
-
 	if (!tspi->clock_always_on) {
 		ret = clk_prepare_enable(tspi->clk);
 		if (ret < 0) {

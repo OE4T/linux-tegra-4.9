@@ -44,6 +44,7 @@
 		bootargs ="console=ttyS0,115200";
 #endif
 		stdout-path = &uarta;
+		nvidia,tegra-joint_xpu_rail;
 	};
 
 	firmware {

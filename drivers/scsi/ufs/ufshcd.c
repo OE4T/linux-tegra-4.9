@@ -4,7 +4,7 @@
  * This code is based on drivers/scsi/ufs/ufshcd.c
  * Copyright (C) 2011-2013 Samsung India Software Operations
  * Copyright (c) 2013-2016, The Linux Foundation. All rights reserved.
- * Copyright (c) 2015-2018, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2019, NVIDIA CORPORATION.  All rights reserved.
  *
  * Authors:
  *	Santosh Yaraganavi <santosh.sy@samsung.com>
@@ -1458,12 +1458,13 @@ static inline u16 ufshcd_upiu_wlun_to_scsi_wlun(u8 upiu_wlun_id)
 static int ufshcd_queuecommand(struct Scsi_Host *host, struct scsi_cmnd *cmd)
 {
 	struct ufshcd_lrb *lrbp;
+	struct ufs_hba **hba_handle = shost_priv(host);
 	struct ufs_hba *hba;
 	unsigned long flags;
 	int tag;
 	int err = 0;
 
-	hba = shost_priv(host);
+	hba = *hba_handle;
 
 	tag = cmd->request->tag;
 	if (!ufshcd_valid_tag(hba, tag)) {
@@ -3497,9 +3498,10 @@ static void ufshcd_set_queue_depth(struct scsi_device *sdev)
 {
 	int ret = 0;
 	u8 lun_qdepth;
+	struct ufs_hba **hba_handle = shost_priv(sdev->host);
 	struct ufs_hba *hba;
 
-	hba = shost_priv(sdev->host);
+	hba = *hba_handle;
 
 	lun_qdepth = hba->nutrs;
 	ret = ufshcd_read_unit_desc_param(hba,
@@ -3586,9 +3588,10 @@ static inline void ufshcd_get_lu_power_on_wp_status(struct ufs_hba *hba,
  */
 static int ufshcd_slave_alloc(struct scsi_device *sdev)
 {
+	struct ufs_hba **hba_handle = shost_priv(sdev->host);
 	struct ufs_hba *hba;
 
-	hba = shost_priv(sdev->host);
+	hba = *hba_handle;
 
 	/* Mode sense(6) is not supported by UFS, so use Mode sense(10) */
 	sdev->use_10_for_ms = 1;
@@ -3618,7 +3621,10 @@ static int ufshcd_slave_alloc(struct scsi_device *sdev)
  */
 static int ufshcd_change_queue_depth(struct scsi_device *sdev, int depth)
 {
-	struct ufs_hba *hba = shost_priv(sdev->host);
+	struct ufs_hba **hba_handle = shost_priv(sdev->host);
+	struct ufs_hba *hba;
+
+	hba = *hba_handle;
 
 	if (depth > hba->nutrs)
 		depth = hba->nutrs;
@@ -3645,9 +3651,10 @@ static int ufshcd_slave_configure(struct scsi_device *sdev)
  */
 static void ufshcd_slave_destroy(struct scsi_device *sdev)
 {
+	struct ufs_hba **hba_handle = shost_priv(sdev->host);
 	struct ufs_hba *hba;
 
-	hba = shost_priv(sdev->host);
+	hba = *hba_handle;
 	/* Drop the reference as it won't be needed anymore */
 	if (ufshcd_scsi_to_upiu_lun(sdev->lun) == UFS_UPIU_UFS_DEVICE_WLUN) {
 		unsigned long flags;
@@ -4724,6 +4731,7 @@ static int ufshcd_issue_tm_cmd(struct ufs_hba *hba, int lun_id, int task_id,
 static int ufshcd_eh_device_reset_handler(struct scsi_cmnd *cmd)
 {
 	struct Scsi_Host *host;
+	struct ufs_hba **hba_handle;
 	struct ufs_hba *hba;
 	unsigned int tag;
 	u32 pos;
@@ -4733,7 +4741,8 @@ static int ufshcd_eh_device_reset_handler(struct scsi_cmnd *cmd)
 	unsigned long flags;
 
 	host = cmd->device->host;
-	hba = shost_priv(host);
+	hba_handle = shost_priv(host);
+	hba = *hba_handle;
 	tag = cmd->request->tag;
 
 	lrbp = &hba->lrb[tag];
@@ -4780,6 +4789,7 @@ out:
 static int ufshcd_abort(struct scsi_cmnd *cmd)
 {
 	struct Scsi_Host *host;
+	struct ufs_hba **hba_handle;
 	struct ufs_hba *hba;
 	unsigned long flags;
 	unsigned int tag;
@@ -4790,7 +4800,8 @@ static int ufshcd_abort(struct scsi_cmnd *cmd)
 	u32 reg;
 
 	host = cmd->device->host;
-	hba = shost_priv(host);
+	hba_handle = shost_priv(host);
+	hba = *hba_handle;
 	tag = cmd->request->tag;
 	if (!ufshcd_valid_tag(hba, tag)) {
 		dev_err(hba->dev,
@@ -4964,9 +4975,10 @@ static int ufshcd_eh_host_reset_handler(struct scsi_cmnd *cmd)
 {
 	int err = 0;
 	unsigned long flags;
+	struct ufs_hba **hba_handle = shost_priv(cmd->device->host);
 	struct ufs_hba *hba;
 
-	hba = shost_priv(cmd->device->host);
+	hba = *hba_handle;
 	if (!hba->card_present)
 		goto ret;
 	ufshcd_hold(hba, false);
@@ -5838,8 +5850,11 @@ out:
 
 static int ufshcd_ioctl(struct scsi_device *dev, int cmd, void __user *buf)
 {
-	struct ufs_hba *hba = shost_priv(dev->host);
+	struct ufs_hba **hba_handle = shost_priv(dev->host);
+	struct ufs_hba *hba;
 	int err = 0;
+
+	hba = *hba_handle;
 
 	switch (cmd) {
 	case UFS_IOCTL_COMBO_QUERY:
@@ -5965,6 +5980,7 @@ static enum blk_eh_timer_return ufshcd_eh_timed_out(struct scsi_cmnd *scmd)
 {
 	unsigned long flags;
 	struct Scsi_Host *host;
+	struct ufs_hba **hba_handle;
 	struct ufs_hba *hba;
 	int index;
 	bool found = false;
@@ -5973,7 +5989,8 @@ static enum blk_eh_timer_return ufshcd_eh_timed_out(struct scsi_cmnd *scmd)
 		return BLK_EH_NOT_HANDLED;
 
 	host = scmd->device->host;
-	hba = shost_priv(host);
+	hba_handle = shost_priv(host);
+	hba = *hba_handle;
 	if (!hba)
 		return BLK_EH_NOT_HANDLED;
 
@@ -7199,6 +7216,7 @@ void ufshcd_remove(struct ufs_hba *hba)
 	if (ufshcd_is_clkscaling_enabled(hba))
 		devfreq_remove_device(hba->devfreq);
 	ufshcd_hba_exit(hba);
+	kfree(hba);
 }
 EXPORT_SYMBOL_GPL(ufshcd_remove);
 
@@ -7234,33 +7252,23 @@ static int ufshcd_set_dma_mask(struct ufs_hba *hba)
  * @hba_handle: driver private handle
  * Returns 0 on success, non-zero value on failure
  */
-int ufshcd_alloc_host(struct device *dev, struct ufs_hba **hba_handle)
+int ufshcd_alloc_host(struct ufs_hba *hba)
 {
 	struct Scsi_Host *host;
-	struct ufs_hba *hba;
-	int err = 0;
-
-	if (!dev) {
-		dev_err(dev,
-		"Invalid memory reference for dev is NULL\n");
-		err = -ENODEV;
-		goto out_error;
-	}
+	struct ufs_hba **hba_handle;
 
 	host = scsi_host_alloc(&ufshcd_driver_template,
 				sizeof(struct ufs_hba));
 	if (!host) {
-		dev_err(dev, "scsi_host_alloc failed\n");
-		err = -ENOMEM;
-		goto out_error;
+		dev_err(hba->dev, "scsi_host_alloc failed\n");
+		return -ENOMEM;
 	}
-	hba = shost_priv(host);
-	hba->host = host;
-	hba->dev = dev;
-	*hba_handle = hba;
 
-out_error:
-	return err;
+	hba_handle = shost_priv(host);
+	*hba_handle = hba;
+	hba->host = host;
+
+	return 0;
 }
 EXPORT_SYMBOL(ufshcd_alloc_host);
 

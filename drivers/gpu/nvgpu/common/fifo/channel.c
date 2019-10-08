@@ -1136,6 +1136,7 @@ int nvgpu_channel_setup_bind(struct channel_gk20a *c,
 {
 	struct gk20a *g = c->g;
 	struct vm_gk20a *ch_vm;
+	struct tsg_gk20a *tsg;
 	u32 gpfifo_size, gpfifo_entry_size;
 	u64 gpfifo_gpu_va;
 	int err = 0;
@@ -1176,6 +1177,16 @@ int nvgpu_channel_setup_bind(struct channel_gk20a *c,
 		err = -EINVAL;
 		goto clean_up_idle;
 	}
+
+	/* The channel needs to be bound to a tsg at this point */
+	tsg = tsg_gk20a_from_ch(c);
+	if (tsg == NULL) {
+		nvgpu_err(g,
+			"not bound to tsg at time of setup_bind");
+		err = -EINVAL;
+		goto clean_up_idle;
+	}
+
 	ch_vm = c->vm;
 
 	if (nvgpu_mem_is_valid(&c->gpfifo.mem) ||

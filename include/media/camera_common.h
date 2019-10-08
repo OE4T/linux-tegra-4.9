@@ -31,6 +31,7 @@
 #include <linux/v4l2-mediabus.h>
 #include <linux/version.h>
 #include <linux/videodev2.h>
+#include <linux/module.h>
 
 #include <media/camera_version_utils.h>
 #include <media/nvc_focus.h>
@@ -227,6 +228,7 @@ struct camera_common_data {
 
 	struct v4l2_subdev			subdev;
 	struct v4l2_ctrl			**ctrls;
+	struct module				*owner;
 
 	struct sensor_properties		sensor_props;
 	/* TODO: cleanup neeeded once all the sensors adapt new framework */

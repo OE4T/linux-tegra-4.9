@@ -121,8 +121,8 @@ static unsigned int num_active_external_wins(struct tegra_dc *dc)
  *    - la_params.la_fp_to_real(fp_val)
  */
 
-#define T12X_LA_BW_DISRUPTION_TIME_EMCCLKS_FP			2362000
-#define T12X_LA_STATIC_LA_SNAP_ARB_TO_ROW_SRT_EMCCLKS_FP	54000
+#define T12X_LA_BW_DISRUPTION_TIME_EMCCLK_FP			2362000
+#define T12X_LA_STATIC_LA_SNAP_ARB_TO_ROW_SRT_EMCCLK_FP	54000
 #define T12X_LA_CONS_MEM_EFFICIENCY_FP				500
 #define T12X_LA_ROW_SRT_SZ_BYTES	(64 * (T12X_LA_MC_EMEM_NUM_SLOTS + 1))
 #define T12X_LA_MC_EMEM_NUM_SLOTS				63
@@ -185,30 +185,33 @@ static void calc_disp_params(struct tegra_dc *dc,
 	unsigned long emc_freq_khz = emc_freq_hz / 1000;
 	unsigned long emc_freq_mhz = emc_freq_khz / 1000;
 	unsigned int bw_disruption_time_usec_fp =
-					T12X_LA_BW_DISRUPTION_TIME_EMCCLKS_FP /
+					T12X_LA_BW_DISRUPTION_TIME_EMCCLK_FP /
 					emc_freq_mhz;
 	unsigned int effective_row_srt_sz_bytes_fp =
 		min((unsigned long)la_params.la_real_to_fp(min(
-					(unsigned long)T12X_LA_ROW_SRT_SZ_BYTES,
-					16 * min(emc_freq_mhz + 50,
-						400ul))),
-			(T12X_LA_MAX_DRAIN_TIME_USEC *
-			emc_freq_mhz -
+			(unsigned long)T12X_LA_ROW_SRT_SZ_BYTES *
+			(la_params.dram_width_bits /
+			(T12X_LA_MC_EMEM_NUM_SLOTS + 1)),
+			(2 * la_params.dram_width_bits / 8) *
+			min(emc_freq_mhz + 50, 400ul))),
+			(T12X_LA_MAX_DRAIN_TIME_USEC * emc_freq_mhz -
 			la_params.la_fp_to_real(
-			T12X_LA_STATIC_LA_SNAP_ARB_TO_ROW_SRT_EMCCLKS_FP)) *
+			T12X_LA_STATIC_LA_SNAP_ARB_TO_ROW_SRT_EMCCLK_FP)) *
 			2 *
 			la_params.dram_width_bits /
 			8 *
 			T12X_LA_CONS_MEM_EFFICIENCY_FP);
+	unsigned long helper_1st =
+		(unsigned long)effective_row_srt_sz_bytes_fp *
+		la_params.fp_factor;
+	unsigned long helper_2nd =
+		(unsigned long)(emc_freq_mhz * la_params.dram_width_bits / 4 *
+		 T12X_LA_CONS_MEM_EFFICIENCY_FP);
+	unsigned long helper_3rd =
+		(unsigned long)T12X_LA_STATIC_LA_SNAP_ARB_TO_ROW_SRT_EMCCLK_FP /
+		emc_freq_mhz;
 	unsigned int drain_time_usec_fp =
-			effective_row_srt_sz_bytes_fp *
-			la_params.fp_factor /
-			(emc_freq_mhz *
-				la_params.dram_width_bits /
-				4 *
-				T12X_LA_CONS_MEM_EFFICIENCY_FP) +
-			T12X_LA_STATIC_LA_SNAP_ARB_TO_ROW_SRT_EMCCLKS_FP /
-			emc_freq_mhz;
+		(unsigned int) (helper_1st / helper_2nd + helper_3rd);
 	unsigned int total_latency_usec_fp =
 		drain_time_usec_fp +
 		la_params.static_la_minus_snap_arb_to_row_srt_emcclks_fp /

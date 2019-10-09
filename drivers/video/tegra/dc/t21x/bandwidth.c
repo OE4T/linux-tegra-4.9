@@ -121,8 +121,8 @@ static unsigned int num_active_external_wins(struct tegra_dc *dc)
  *    - la_params.la_fp_to_real(fp_val)
  */
 
-#define T12X_LA_BW_DISRUPTION_TIME_EMCCLK_FP			2362000
-#define T12X_LA_STATIC_LA_SNAP_ARB_TO_ROW_SRT_EMCCLK_FP		54000
+#define T12X_LA_BW_DISRUPTION_TIME_EMCCLKS_FP			2362000
+#define T12X_LA_STATIC_LA_SNAP_ARB_TO_ROW_SRT_EMCCLKS_FP	54000
 #define T12X_LA_CONS_MEM_EFFICIENCY_FP				500
 #define T12X_LA_ROW_SRT_SZ_BYTES	(64 * (T12X_LA_MC_EMEM_NUM_SLOTS + 1))
 #define T12X_LA_MC_EMEM_NUM_SLOTS				63
@@ -185,32 +185,30 @@ static void calc_disp_params(struct tegra_dc *dc,
 	unsigned long emc_freq_khz = emc_freq_hz / 1000;
 	unsigned long emc_freq_mhz = emc_freq_khz / 1000;
 	unsigned int bw_disruption_time_usec_fp =
-					T12X_LA_BW_DISRUPTION_TIME_EMCCLK_FP /
+					T12X_LA_BW_DISRUPTION_TIME_EMCCLKS_FP /
 					emc_freq_mhz;
 	unsigned int effective_row_srt_sz_bytes_fp =
 		min((unsigned long)la_params.la_real_to_fp(min(
-			(unsigned long)T12X_LA_ROW_SRT_SZ_BYTES *
-			(la_params.dram_width_bits /
-			(T12X_LA_MC_EMEM_NUM_SLOTS + 1)),
-			32 * min(emc_freq_mhz + 50, 400ul))),
-			(T12X_LA_MAX_DRAIN_TIME_USEC * emc_freq_mhz -
+					(unsigned long)T12X_LA_ROW_SRT_SZ_BYTES,
+					16 * min(emc_freq_mhz + 50,
+						400ul))),
+			(T12X_LA_MAX_DRAIN_TIME_USEC *
+			emc_freq_mhz -
 			la_params.la_fp_to_real(
-			T12X_LA_STATIC_LA_SNAP_ARB_TO_ROW_SRT_EMCCLK_FP)) *
+			T12X_LA_STATIC_LA_SNAP_ARB_TO_ROW_SRT_EMCCLKS_FP)) *
 			2 *
 			la_params.dram_width_bits /
 			8 *
 			T12X_LA_CONS_MEM_EFFICIENCY_FP);
-	unsigned long helper_1st =
-		(unsigned long)effective_row_srt_sz_bytes_fp *
-		la_params.fp_factor;
-	unsigned long helper_2nd =
-		(unsigned long)(emc_freq_mhz * la_params.dram_width_bits / 4 *
-		 T12X_LA_CONS_MEM_EFFICIENCY_FP);
-	unsigned long helper_3rd =
-		(unsigned long)T12X_LA_STATIC_LA_SNAP_ARB_TO_ROW_SRT_EMCCLK_FP /
-		emc_freq_mhz;
 	unsigned int drain_time_usec_fp =
-		(unsigned int) (helper_1st / helper_2nd + helper_3rd);
+			effective_row_srt_sz_bytes_fp *
+			la_params.fp_factor /
+			(emc_freq_mhz *
+				la_params.dram_width_bits /
+				4 *
+				T12X_LA_CONS_MEM_EFFICIENCY_FP) +
+			T12X_LA_STATIC_LA_SNAP_ARB_TO_ROW_SRT_EMCCLKS_FP /
+			emc_freq_mhz;
 	unsigned int total_latency_usec_fp =
 		drain_time_usec_fp +
 		la_params.static_la_minus_snap_arb_to_row_srt_emcclks_fp /
@@ -393,6 +391,7 @@ static void calc_disp_params(struct tegra_dc *dc,
 			latency_buffering_available_in_reqd_buffering_fp) : 0);
 	disp_params->thresh_lwm_bytes = thresh_lwm_bytes;
 
+
 	if (is_internal_win(la_id)) {
 		int i = 0;
 
@@ -440,6 +439,7 @@ static void calc_disp_params(struct tegra_dc *dc,
 			total_active_space_bw += curr_win_bw;
 		}
 	}
+
 
 	if ((disp_clients_info[DISP_CLIENT_LA_ID(la_id)].win_type  ==
 						TEGRA_LA_DISP_WIN_TYPE_FULL) ||
@@ -505,6 +505,7 @@ static void calc_disp_params(struct tegra_dc *dc,
 		disp_params->total_dc1_bw = curr_dc_head_bw;
 	else
 		disp_params->total_dc0_bw = curr_dc_head_bw;
+
 	mutex_unlock(&tegra_dcs_total_bw_lock);
 }
 
@@ -523,7 +524,7 @@ static void tegra_dc_process_bandwidth_renegotiate(struct tegra_dc *dc,
 
 /* uses the larger of w->bandwidth or w->new_bandwidth */
 static int tegra_dc_handle_latency_allowance(struct tegra_dc *dc,
-	struct tegra_dc_win *w, int set_la, unsigned long *emc_freq_hz_limit)
+	struct tegra_dc_win *w, int set_la)
 {
 	int ret = 0;
 	unsigned long bw;
@@ -568,8 +569,9 @@ static int tegra_dc_handle_latency_allowance(struct tegra_dc *dc,
 			emc_freq_hz, bw, disp_params);
 
 		if (!err) {
-			/* la allowed, record emc freq required */
-			*emc_freq_hz_limit = emc_freq_hz;
+			tegra_bwmgr_set_emc(dc->emc_la_handle, emc_freq_hz,
+						TEGRA_BWMGR_SET_EMC_FLOOR);
+			break;
 		}
 
 		next_freq = clk_round_rate(emc_clk, emc_freq_hz + 1000000);
@@ -588,16 +590,16 @@ static int tegra_dc_handle_latency_allowance(struct tegra_dc *dc,
 }
 
 static int tegra_dc_set_latency_allowance(struct tegra_dc *dc,
-	struct tegra_dc_win *w, unsigned long *emc_freq_hz_limit)
+	struct tegra_dc_win *w)
 {
-	return tegra_dc_handle_latency_allowance(dc, w, 1, emc_freq_hz_limit);
+	return tegra_dc_handle_latency_allowance(dc, w, 1);
 }
 
 #ifdef CONFIG_TEGRA_ISOMGR
 static int tegra_dc_check_latency_allowance(struct tegra_dc *dc,
 	struct tegra_dc_win *w)
 {
-	return tegra_dc_handle_latency_allowance(dc, w, 0, NULL);
+	return tegra_dc_handle_latency_allowance(dc, w, 0);
 }
 #endif
 
@@ -806,8 +808,6 @@ static inline unsigned long tegra_dc_kbps_to_emc(unsigned long bw)
 void tegra_dc_program_bandwidth(struct tegra_dc *dc, bool use_new)
 {
 	unsigned i;
-	unsigned long max_emc_freq_hz = 0;
-	unsigned long emc_freq_hz_limit = 0;
 
 	if (tegra_dc_is_nvdisplay())
 		return;
@@ -864,16 +864,10 @@ void tegra_dc_program_bandwidth(struct tegra_dc *dc, bool use_new)
 
 		if ((use_new || w->bandwidth != w->new_bandwidth) &&
 			w->new_bandwidth != 0)
-			tegra_dc_set_latency_allowance(dc, w,
-				&emc_freq_hz_limit);
+			tegra_dc_set_latency_allowance(dc, w);
 		trace_program_bandwidth(dc);
 		w->bandwidth = w->new_bandwidth;
-		if (max_emc_freq_hz < emc_freq_hz_limit)
-			max_emc_freq_hz = emc_freq_hz_limit;
 	}
-	if (max_emc_freq_hz)
-		tegra_bwmgr_set_emc(dc->emc_la_handle, max_emc_freq_hz,
-			 TEGRA_BWMGR_SET_EMC_FLOOR);
 }
 
 int tegra_dc_set_dynamic_emc(struct tegra_dc *dc)

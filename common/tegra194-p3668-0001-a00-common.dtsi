@@ -312,6 +312,10 @@
 		phy-names = "pcie-p2u-0";
 	};
 
+	pcie@14120000 {
+		nvidia,max-speed = <3>;
+	};
+
 	pcie@14140000 {
 		status = "disabled";
 
@@ -320,9 +324,18 @@
 		vddio-pex-ctl-supply = <&p3668_spmic_sd3>;
 		nvidia,disable-aspm-states = <0xf>;
 		nvidia,enable-power-down;
+		nvidia,max-speed = <3>;
 
 		phys = <&p2u_7>;
 		phy-names = "pcie-p2u-0";
+	};
+
+	pcie@14160000 {
+		nvidia,max-speed = <3>;
+	};
+
+	pcie@14180000 {
+		nvidia,max-speed = <3>;
 	};
 
 	pcie@141a0000 {
@@ -331,6 +344,7 @@
 		vddio-pex-ctl-supply = <&p3668_spmic_sd3>;
 		nvidia,disable-aspm-states = <0xf>;
 		nvidia,enable-power-down;
+		nvidia,max-speed = <3>;
 
 		nvidia,plat-gpios =
 			<&tegra_main_gpio TEGRA194_MAIN_GPIO(Z, 2) GPIO_ACTIVE_HIGH    /* 3V3 */

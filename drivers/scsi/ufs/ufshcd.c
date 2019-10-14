@@ -5912,6 +5912,12 @@ int ufshcd_rescan(struct ufs_hba *hba)
 				goto disable_irqs_clks;
 		}
 
+		ret = scsi_add_host(hba->host, hba->dev);
+		if (ret) {
+			dev_err(hba->dev, "scsi_add_host failed\n");
+			goto disable_irqs_clks;
+		}
+
 		ret = ufshcd_hba_enable(hba);
 		if (ret) {
 			dev_err(hba->dev, "%s: controller init failed,ret:%d\n",

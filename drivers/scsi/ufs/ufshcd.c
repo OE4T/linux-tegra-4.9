@@ -5887,7 +5887,8 @@ int ufshcd_rescan(struct ufs_hba *hba)
 
 	if (hba->card_present) {
 		dev_info(hba->dev, "UFS card inserted\n");
-		pm_runtime_get_sync(hba->dev);
+		if (atomic_read(&hba->dev->power.usage_count) != 1)
+			pm_runtime_get_sync(hba->dev);
 
 		/* Make sure clocks are enabled before accessing controller */
 		ret = ufshcd_setup_clocks(hba, true);
@@ -5935,6 +5936,8 @@ int ufshcd_rescan(struct ufs_hba *hba)
 			goto disable_irqs_clks;
 		}
 		ufshcd_enable_intr(hba, UFSHCD_ENABLE_INTRS);
+		hba->rpm_lvl = UFS_PM_LVL_3;
+		hba->spm_lvl = UFS_PM_LVL_3;
 	} else {
 
 		/* disable interrupts */
@@ -5957,6 +5960,8 @@ int ufshcd_rescan(struct ufs_hba *hba)
 		ufshcd_disable_irq(hba);
 
 		ufshcd_setup_clocks(hba, false);
+		hba->rpm_lvl = UFS_PM_LVL_5;
+		hba->spm_lvl = UFS_PM_LVL_5;
 
 		pm_runtime_put_sync(hba->dev);
 
@@ -7555,6 +7560,12 @@ int ufshcd_init(struct ufs_hba *hba, void __iomem *mmio_base, unsigned int irq)
 		hba->is_irq_enabled = true;
 	}
 
+	/* If UFS device/card not present then skip ufs scan */
+	if (!hba->card_present) {
+		pm_runtime_get_sync(dev);
+		return 0;
+	}
+
 	err = scsi_add_host(host, hba->dev);
 	if (err) {
 		dev_err(hba->dev, "scsi_add_host failed\n");
@@ -7581,10 +7592,6 @@ int ufshcd_init(struct ufs_hba *hba, void __iomem *mmio_base, unsigned int irq)
 		devfreq_suspend_device(hba->devfreq);
 		hba->clk_scaling.window_start_t = 0;
 	}
-
-	/* If UFS device/card not present then skip ufs scan */
-	if (!hba->card_present)
-		return 0;
 
 	/* Hold auto suspend until async scan completes */
 	pm_runtime_get_sync(dev);

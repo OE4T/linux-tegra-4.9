@@ -2406,13 +2406,12 @@
 
 	nvpmodel {
 		compatible = "nvidia,nvpmodel";
-		clocks = <&bpmp_clks TEGRA194_CLK_EMC>,
-				<&bpmp_clks TEGRA194_CLK_NAFLL_DLA>,
+		clocks = <&bpmp_clks TEGRA194_CLK_NAFLL_DLA>,
 				<&bpmp_clks TEGRA194_CLK_NAFLL_DLA_FALCON>,
 				<&bpmp_clks TEGRA194_CLK_NAFLL_PVA_VPS>,
 				<&bpmp_clks TEGRA194_CLK_NAFLL_PVA_CORE>,
 				<&bpmp_clks TEGRA194_CLK_NAFLL_CVNAS>;
-		clock-names = "emc", "nafll_dla", "nafll_dla_falcon",
+		clock-names = "nafll_dla", "nafll_dla_falcon",
 				"nafll_pva_vps", "nafll_pva_core", "nafll_cvnas";
 		status = "okay";
 	};

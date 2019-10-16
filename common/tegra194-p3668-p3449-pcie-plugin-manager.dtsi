@@ -14,35 +14,17 @@
 
 / {
 	plugin-manager {
-		/* FIXME: need to check this uphy lane */
-		fragment-disable-uphy-rx-idle {
-			ids = "<=2822-0000-300";
-			override@0 {
-				target = <&{/hsio_p2u/p2u@03e10000}>;
-				_overlay_ {
-					append-string-property = "nvidia,disable-uphy-rx-idle";
-				};
-			};
-		};
-
-		/* pcie@141a0000 is not being used in Jakku, disabled them */
 		fragment-pcie-c5-rp {
 			odm-anded-override;
 			odm-data = "disable-pcie-c5-endpoint", "enable-nvhs-uphy-pcie-c5";
 			override@0 {
 				target = <&{/pcie@141a0000}>;
 				_overlay_ {
-					status = "disabled";
+					status = "okay";
 				};
 			};
 			override@1 {
 				target = <&{/pcie_ep@141a0000}>;
-				_overlay_ {
-					status = "disabled";
-				};
-			};
-			override@2 {
-				target = <&{/gpio@c2f0000/pex-refclk-sel-low}>;
 				_overlay_ {
 					status = "disabled";
 				};
@@ -61,13 +43,7 @@
 			override@1 {
 				target = <&{/pcie_ep@141a0000}>;
 				_overlay_ {
-					status = "disabled";
-				};
-			};
-			override@2 {
-				target = <&{/gpio@c2f0000/pex-refclk-sel-high}>;
-				_overlay_ {
-					status = "disabled";
+					status = "okay";
 				};
 			};
 		};

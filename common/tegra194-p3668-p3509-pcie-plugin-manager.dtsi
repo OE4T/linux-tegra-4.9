@@ -14,12 +14,36 @@
 
 / {
 	plugin-manager {
-		fragment-disable-uphy-rx-idle {
-			ids = "<=3668-0001";
+		fragment-pcie-c5-rp {
+			odm-anded-override;
+			odm-data = "disable-pcie-c5-endpoint", "enable-nvhs-uphy-pcie-c5";
 			override@0 {
-				target = <&{/hsio_p2u/p2u@03e10000}>;
+				target = <&{/pcie@141a0000}>;
 				_overlay_ {
-					append-string-property = "nvidia,disable-uphy-rx-idle";
+					status = "okay";
+				};
+			};
+			override@1 {
+				target = <&{/pcie_ep@141a0000}>;
+				_overlay_ {
+					status = "disabled";
+				};
+			};
+		};
+
+		fragment-pcie-c5-ep {
+			odm-anded-override;
+			odm-data = "enable-pcie-c5-endpoint", "enable-nvhs-uphy-pcie-c5";
+			override@0 {
+				target = <&{/pcie@141a0000}>;
+				_overlay_ {
+					status = "disabled";
+				};
+			};
+			override@1 {
+				target = <&{/pcie_ep@141a0000}>;
+				_overlay_ {
+					status = "okay";
 				};
 			};
 		};

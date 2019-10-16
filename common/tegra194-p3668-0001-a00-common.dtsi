@@ -285,7 +285,7 @@
 
 	/* Jakku using only PCIE0 and routed to Porgs's M.2-Key-E */
 	pcie@14180000 {
-		status = "okay";
+		status = "disabled";
 
 		vddio-pex-ctl-supply = <&p3668_spmic_sd3>;
 		nvidia,disable-aspm-states = <0xf>;
@@ -339,18 +339,12 @@
 	};
 
 	pcie@141a0000 {
-		status = "disabled";
+		status = "okay";
 
 		vddio-pex-ctl-supply = <&p3668_spmic_sd3>;
 		nvidia,disable-aspm-states = <0xf>;
 		nvidia,enable-power-down;
 		nvidia,max-speed = <3>;
-
-		nvidia,plat-gpios =
-			<&tegra_main_gpio TEGRA194_MAIN_GPIO(Z, 2) GPIO_ACTIVE_HIGH    /* 3V3 */
-			 &tegra_main_gpio TEGRA194_MAIN_GPIO(A, 1) GPIO_ACTIVE_LOW     /* 12V */
-		       /*&tegra_main_gpio TEGRA194_MAIN_GPIO(Y, 4) GPIO_ACTIVE_HIGH */ /* I2C */
-			>;
 
 		phys = <&p2u_12>,
 		       <&p2u_13>,

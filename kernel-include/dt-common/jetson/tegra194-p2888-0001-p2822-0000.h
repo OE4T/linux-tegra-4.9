@@ -6,7 +6,7 @@
  *
  */
 
-#define JETSON_COMPATIBLE	"nvidia,jetson-xavier"
+#define JETSON_COMPATIBLE	"nvidia,p2822-0000+p2888-0001"
 
 /* SoC function name for clock signal on 40-pin header pin 7 */
 #define HDR40_CLK	"extperiph4"

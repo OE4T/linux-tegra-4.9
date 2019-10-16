@@ -1504,7 +1504,7 @@ static void eqos_set_rx_mode(struct net_device *dev)
 	unsigned char hmc_mode = 0;
 	unsigned char pm_mode = 0;
 	unsigned char hpf_mode = 0;
-	unsigned int mac_addr_idx = 0;
+	unsigned int mac_addr_idx = 1;
 	int mode, i;
 
 	DBGPR_FILTER("-->eqos_set_rx_mode\n");

@@ -125,6 +125,7 @@
 			nvidia,fb-flags = <TEGRA_FB_FLIP_ON_PROBE>;
 			nvidia,dc-or-node = "/host1x/sor1";
 			nvidia,dc-connector = <&sor1>;
+			win-mask = <0x7>; /* Assign only wins A/B/C */
 		};
 		dc@54240000 {
 			status = "okay";
@@ -135,6 +136,7 @@
 			nvidia,fb-flags = <TEGRA_FB_FLIP_ON_PROBE>;
 			nvidia,dc-or-node = "/host1x/sor";
 			nvidia,dc-connector = <&sor0>;
+			win-mask = <0x7>; /* Assign only wins A/B/C */
 		};
 		sor {
 			status = "okay";

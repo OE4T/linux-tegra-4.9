@@ -19,9 +19,9 @@
 #include "dt-bindings/soc/gv11b-fuse.h"
 
 / {
-	model = "NVIDIA Jetson AGX Xavier as Jakku Developer Kit";
+	model = "NVIDIA Jetson-Xavier as Jetson-Nano-Next Developer Kit";
 
-	compatible = "nvidia,p3518-0001", "nvidia,tegra194";
+	compatible = "nvidia,p3668-0001", "nvidia,tegra194";
 
 	gv11b {
 		fuse-overrides = <GV11B_FUSE_OPT_TPC_DISABLE 0x1>;

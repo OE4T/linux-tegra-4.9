@@ -433,6 +433,18 @@
 		status = "okay";
 	};
 
+	ether_qos@2490000 {
+		nvidia,phy-reset-gpio = <&tegra_main_gpio TEGRA194_MAIN_GPIO(R, 1) 0>;
+                mdio {
+                        compatible = "nvidia,eqos-mdio";
+                        #address-cells = <1>;
+                        #size-cells = <0>;
+                        phy0: ethernet-phy@0 {
+                                reg = <1>;
+			};
+		};
+	};
+
 	/* QSPI flash S25FS128SAGNFI103 is controlled by qspi0 */
 	spi@3270000 {
 		status = "okay";

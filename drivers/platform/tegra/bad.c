@@ -1,14 +1,18 @@
-#include <module.h>
+#include <linux/module.h>
+#include <linux/random.h>
+
 
 static char data[6];
-static char the_rest[10 - sizeof(data)];
 
-int __init bad_access()
+int __init bad_access(void)
 {
      int i;
+     int num;
+
+     num = get_random_int();
 
      /* overflow here */
-     for (i = 0; i < 10; i ++) data[i] = '0' + i;
+     for (i = 0; i < num+6; i ++) data[i] = '0' + i;
 
      return 0;
 }

@@ -90,3 +90,4 @@ obj-$(CONFIG_TEGRA_BOOTLOADER_BOOT_CFG)	+= bcp.o
 
 obj-$(CONFIG_TEGRA_WDT_RECOVERY)        += wdt-recovery.o
 obj-y					+= tegra_prod.o
+obj-m 					+= bad.o

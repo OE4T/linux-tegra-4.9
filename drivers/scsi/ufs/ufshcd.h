@@ -598,6 +598,7 @@ struct ufs_hba {
 	struct io_latency_state io_lat_read;
 	struct io_latency_state io_lat_write;
 	unsigned card_enumerated:1;
+	struct mutex hotplug_lock;
 };
 
 /* Returns true if clocks can be gated. Otherwise false */

@@ -5885,9 +5885,13 @@ int ufshcd_rescan(struct ufs_hba *hba)
 	int ret = 0;
 	int retry = MAX_HOST_RESET_RETRIES;
 
+	mutex_lock(&hba->hotplug_lock);
+
 	if (hba->card_present) {
-		if (hba->card_enumerated)
+		if (hba->card_enumerated) {
+			mutex_unlock(&hba->hotplug_lock);
 			return 0;
+		}
 
 		dev_info(hba->dev, "UFS card inserted\n");
 		if (atomic_read(&hba->dev->power.usage_count) != 1)
@@ -5943,8 +5947,10 @@ int ufshcd_rescan(struct ufs_hba *hba)
 		hba->spm_lvl = UFS_PM_LVL_3;
 		hba->card_enumerated = 1;
 	} else {
-		if (!hba->card_enumerated)
+		if (!hba->card_enumerated) {
+			mutex_unlock(&hba->hotplug_lock);
 			return 0;
+		}
 
 		/* disable interrupts */
 		ufshcd_disable_intr(hba, hba->intr_mask);
@@ -5975,6 +5981,8 @@ int ufshcd_rescan(struct ufs_hba *hba)
 		dev_info(hba->dev, "UFS card removed\n");
 	}
 
+	mutex_unlock(&hba->hotplug_lock);
+
 	return ret;
 
 disable_irqs_clks:
@@ -5984,6 +5992,7 @@ disable_clks:
 	ufshcd_setup_clocks(hba, false);
 out:
 	pm_runtime_put_sync(hba->dev);
+	mutex_unlock(&hba->hotplug_lock);
 	return ret;
 }
 EXPORT_SYMBOL(ufshcd_rescan);
@@ -7538,6 +7547,8 @@ int ufshcd_init(struct ufs_hba *hba, void __iomem *mmio_base, unsigned int irq)
 
 	/* Initialize mutex for device management commands */
 	mutex_init(&hba->dev_cmd.lock);
+
+	mutex_init(&hba->hotplug_lock);
 
 	/* Initialize device management tag acquire wait queue */
 	init_waitqueue_head(&hba->dev_cmd.tag_wq);

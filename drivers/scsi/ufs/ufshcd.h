@@ -4,7 +4,7 @@
  * This code is based on drivers/scsi/ufs/ufshcd.h
  * Copyright (C) 2011-2013 Samsung India Software Operations
  * Copyright (c) 2013-2016, The Linux Foundation. All rights reserved.
- * Copyright (c) 2015-2018, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2019, NVIDIA CORPORATION.  All rights reserved.
  *
  * Authors:
  *	Santosh Yaraganavi <santosh.sy@samsung.com>
@@ -597,6 +597,7 @@ struct ufs_hba {
 	bool card_present;
 	struct io_latency_state io_lat_read;
 	struct io_latency_state io_lat_write;
+	unsigned card_enumerated:1;
 };
 
 /* Returns true if clocks can be gated. Otherwise false */

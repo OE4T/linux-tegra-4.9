@@ -5886,6 +5886,9 @@ int ufshcd_rescan(struct ufs_hba *hba)
 	int retry = MAX_HOST_RESET_RETRIES;
 
 	if (hba->card_present) {
+		if (hba->card_enumerated)
+			return 0;
+
 		dev_info(hba->dev, "UFS card inserted\n");
 		if (atomic_read(&hba->dev->power.usage_count) != 1)
 			pm_runtime_get_sync(hba->dev);
@@ -5938,7 +5941,10 @@ int ufshcd_rescan(struct ufs_hba *hba)
 		ufshcd_enable_intr(hba, UFSHCD_ENABLE_INTRS);
 		hba->rpm_lvl = UFS_PM_LVL_3;
 		hba->spm_lvl = UFS_PM_LVL_3;
+		hba->card_enumerated = 1;
 	} else {
+		if (!hba->card_enumerated)
+			return 0;
 
 		/* disable interrupts */
 		ufshcd_disable_intr(hba, hba->intr_mask);
@@ -5965,6 +5971,7 @@ int ufshcd_rescan(struct ufs_hba *hba)
 
 		pm_runtime_put_sync(hba->dev);
 
+		hba->card_enumerated = 0;
 		dev_info(hba->dev, "UFS card removed\n");
 	}
 
@@ -7607,6 +7614,7 @@ int ufshcd_init(struct ufs_hba *hba, void __iomem *mmio_base, unsigned int irq)
 	ufshcd_set_ufs_dev_active(hba);
 
 	async_schedule(ufshcd_async_scan, hba);
+	hba->card_enumerated = 1;
 
 	return 0;
 

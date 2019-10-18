@@ -51,7 +51,8 @@
 		__overlay__ {
 			nvidia,audio-routing =
 				"x Headphone",		"x HP_OUT",
-				"x MIC_IN",		"x Mic";
+				"x MIC_IN",		"x Mic",
+				"x ADC",		"x Mic Bias";
 		};
 	};
 

@@ -45,6 +45,7 @@
 		};
 	};
 	pwm-fan {
+		pwms = <&tegra_pwm6 0 45334>;
 		vdd-fan-supply = <&p3509_vdd_fan>;
 	};
 	serial@3110000 {
@@ -58,6 +59,10 @@
 	};
 
 	pwm@32c0000 {
+		status = "okay";
+	};
+
+	pwm@32d0000 {
 		status = "okay";
 	};
 

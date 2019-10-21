@@ -120,6 +120,12 @@
 	print_hex_dump(KERN_ERR, prefix_str, DUMP_PREFIX_OFFSET,	\
 			16, 4, buf, len, false)
 
+/* maximum number of retries for resetting the chip and
+ * probe before giving up
+ */
+#define MAX_PROBE_TRY 5
+
+
 enum {
 	UFSHCD_MAX_CHANNEL	= 0,
 	UFSHCD_MAX_ID		= 1,
@@ -138,6 +144,7 @@ enum {
 /* UFSHCD error handling flags */
 enum {
 	UFSHCD_EH_IN_PROGRESS = (1 << 0),
+	UFSHCD_SCAN_IN_PROGRESS = (1 << 1),
 };
 
 /* UFSHCD UIC layer error flags */
@@ -156,6 +163,13 @@ enum {
 	UFSHCD_INT_ENABLE,
 	UFSHCD_INT_CLEAR,
 };
+
+#define ufshcd_set_scan_in_progress(h) \
+	(h->eh_flags |= UFSHCD_SCAN_IN_PROGRESS)
+#define ufshcd_scan_in_progress(h) \
+	(h->eh_flags & UFSHCD_SCAN_IN_PROGRESS)
+#define ufshcd_clear_scan_in_progress(h) \
+	(h->eh_flags &= ~UFSHCD_SCAN_IN_PROGRESS)
 
 #define ufshcd_set_eh_in_progress(h) \
 	(h->eh_flags |= UFSHCD_EH_IN_PROGRESS)
@@ -3483,8 +3497,13 @@ static int ufshcd_verify_dev_init(struct ufs_hba *hba)
 	mutex_unlock(&hba->dev_cmd.lock);
 	ufshcd_release(hba);
 
-	if (err)
+	if (err) {
+		ufshcd_set_scan_in_progress(hba);
 		dev_err(hba->dev, "%s: NOP OUT failed %d\n", __func__, err);
+	} else {
+		ufshcd_clear_scan_in_progress(hba);
+	}
+
 	return err;
 }
 
@@ -5586,7 +5605,8 @@ out:
 	 * If we failed to initialize the device or the device is not
 	 * present, turn off the power/clocks etc.
 	 */
-	if (ret && !ufshcd_eh_in_progress(hba) && !hba->pm_op_in_progress) {
+	if (ret && !ufshcd_eh_in_progress(hba) &&
+	!hba->pm_op_in_progress && !ufshcd_scan_in_progress(hba)) {
 		pm_runtime_put_sync(hba->dev);
 		ufshcd_hba_exit(hba);
 	}
@@ -6004,9 +6024,15 @@ EXPORT_SYMBOL(ufshcd_rescan);
  */
 static void ufshcd_async_scan(void *data, async_cookie_t cookie)
 {
+	int max_probe = MAX_PROBE_TRY;
 	struct ufs_hba *hba = (struct ufs_hba *)data;
-
-	ufshcd_probe_hba(hba);
+	if (ufshcd_probe_hba(hba)) {
+		while (max_probe && ufshcd_host_reset_and_restore(hba))
+			max_probe--;
+		if (!max_probe)
+			dev_err(hba->dev,
+			"ufshcd_probe_hba failed after maximum reset and probe tries\n");
+	}
 }
 
 static enum blk_eh_timer_return ufshcd_eh_timed_out(struct scsi_cmnd *scmd)

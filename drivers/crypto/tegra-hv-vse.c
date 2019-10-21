@@ -3594,7 +3594,6 @@ static int tegra_vse_kthread(void *unused)
 	int err = 0;
 	struct tegra_vse_tag *p_dat;
 	struct tegra_vse_priv_data *priv;
-	int timeout;
 	struct tegra_virtual_se_ivc_resp_msg_t *ivc_rx;
 	struct tegra_virtual_se_ivc_rng *rng_res;
 	int ret;
@@ -3619,33 +3618,17 @@ static int tegra_vse_kthread(void *unused)
 			reinit_completion(&tegra_vse_complete);
 			continue;
 		}
-		timeout = TEGRA_VIRTUAL_SE_TIMEOUT_1S;
-		while (tegra_hv_ivc_channel_notified(pivck) != 0) {
-			if (!timeout) {
-				reinit_completion(
-					&tegra_vse_complete);
-				pr_err("%s:%d ivc channel_notifier timeout\n",
-					__func__, __LINE__);
-				err = -EAGAIN;
+
+		while (tegra_hv_ivc_can_read(pivck)) {
+			read_size = tegra_hv_ivc_read(pivck,
+					ivc_resp_msg,
+					sizeof(struct tegra_virtual_se_ivc_msg_t));
+			if (read_size <= 0) {
+				dev_err(se_dev->dev,
+					"tegra_hv_ivc_read returned error %d\n", read_size);
 				break;
 			}
-			udelay(1);
-			timeout--;
-		}
-
-		if (err == -EAGAIN) {
-			err = 0;
-			continue;
-		}
-
-		if (!tegra_hv_ivc_can_read(pivck)) {
-			reinit_completion(&tegra_vse_complete);
-			continue;
-		}
-		while ((read_size = tegra_hv_ivc_read(pivck,
-			ivc_resp_msg,
-			sizeof(struct tegra_virtual_se_ivc_msg_t))) > 0) {
-			if (read_size < TEGRA_HV_VSE_IVC_FRAME_SIZE) {
+			if (read_size < sizeof(struct tegra_virtual_se_ivc_msg_t)) {
 				dev_err(se_dev->dev,
 					"Wrong read msg len %d\n", read_size);
 				continue;
@@ -3693,7 +3676,6 @@ static int tegra_vse_kthread(void *unused)
 				dev_err(se_dev->dev, "Unknown command\n");
 			}
 		}
-		reinit_completion(&tegra_vse_complete);
 	}
 	kfree(ivc_resp_msg);
 	return 0;

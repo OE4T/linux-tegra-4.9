@@ -236,12 +236,16 @@ static void tegra_channel_surface_setup(
 	int vnc_id = chan->vnc_id[index];
 	unsigned int offset = chan->buffer_offset[index];
 
-	if (chan->embedded_data_height > 0)
+	if (chan->embedded_data_height > 0) {
 		vi4_channel_write(chan, vnc_id, ATOMP_EMB_SURFACE_OFFSET0,
 						  chan->vi->emb_buf);
-	else
+		vi4_channel_write(chan, vnc_id, ATOMP_EMB_SURFACE_OFFSET0_H,
+					  (chan->vi->emb_buf) >> 32 & 0xFF);
+	} else {
 		vi4_channel_write(chan, vnc_id, ATOMP_EMB_SURFACE_OFFSET0, 0);
-	vi4_channel_write(chan, vnc_id, ATOMP_EMB_SURFACE_OFFSET0_H, 0x0);
+		vi4_channel_write(chan, vnc_id, ATOMP_EMB_SURFACE_OFFSET0_H, 0x0);
+	}
+
 	vi4_channel_write(chan, vnc_id, ATOMP_EMB_SURFACE_STRIDE0,
 					  chan->embedded_data_width * BPP_MEM);
 	vi4_channel_write(chan, vnc_id,

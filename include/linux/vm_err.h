@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2019-2020 NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -38,6 +38,7 @@ static const char * const tegra_hv_err_reason_desc[] = {
 	"SMMU Global",
 	"Bridge",
 	"Memory Controller",
+	"Central Back Bone",
 	"Instruction Abort",
 	"Data Abort",
 	"Other synchronous exception",

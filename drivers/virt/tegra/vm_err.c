@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2019-2020, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -388,6 +388,8 @@ static void shared_structs_check(struct device *dev)
 		sizeof(struct async_metadata_t));
 	dev_info(dev, "async_bridge_err size 0x%lx\n",
 		sizeof(struct async_bridge_err_t));
+	dev_info(dev, "async_cbb_err size 0x%lx\n",
+		sizeof(struct async_cbb_err_t));
 	dev_info(dev, "async_smmu_err size 0x%lx\n",
 		sizeof(struct async_smmu_err_t));
 	dev_info(dev, "async_mc_err size 0x%lx\n",
@@ -399,10 +401,11 @@ static void shared_structs_check(struct device *dev)
 	/* Ensure common structures shared by HV and Linux are in sync */
 	BUILD_BUG_ON(sizeof(struct async_metadata_t) != 0x10);
 	BUILD_BUG_ON(sizeof(struct async_bridge_err_t) != 0x74);
+	BUILD_BUG_ON(sizeof(struct async_cbb_err_t) != 0x259);
 	BUILD_BUG_ON(sizeof(struct async_smmu_err_t) != 0x1C);
 	BUILD_BUG_ON(sizeof(struct async_mc_err_t) != 0x24);
 	BUILD_BUG_ON(sizeof(struct sync_data_abort_t) != 0x11B);
-	BUILD_BUG_ON(sizeof(struct err_data_t) != 0x127);
+	BUILD_BUG_ON(sizeof(struct err_data_t) != 0x265);
 }
 
 static int vm_err_handler_init(struct platform_device *pdev)

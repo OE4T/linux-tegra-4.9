@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2019-2020, NVIDIA CORPORATION.  All rights reserved.
  *
  * NVIDIA CORPORATION and its licensors retain all intellectual property
  * and proprietary rights in and to this software, related documentation
@@ -18,6 +18,7 @@ enum err_reason {
 	REASON_ASYNC_SMMU_GLOBAL,
 	REASON_ASYNC_BRIDGE,
 	REASON_ASYNC_MC,
+	REASON_ASYNC_CBB,
 	REASON_SYNC_INSTR_ABORT,
 	REASON_SYNC_DATA_ABORT,
 	REASON_SYNC_OTHER,
@@ -51,6 +52,38 @@ struct __attribute__((__packed__)) async_bridge_err_t {
 	unsigned int	protection;
 	unsigned int	burst;
 	unsigned int	cache;
+};
+
+struct __attribute__((__packed__)) async_cbb_err_t {
+	char		cbb_name[NAME_SIZE];
+	unsigned int	error_logger;
+	unsigned int	errlog0;
+	char		transaction_type[NAME_SIZE];
+	char		error_code[NAME_SIZE];
+	char		error_source[NAME_SIZE];
+	char		error_description[NAME_SIZE];
+	bool		header_format;
+	unsigned int	packet_header_lock;
+	unsigned int	packet_header_len1;
+	unsigned int	errlog1;
+	unsigned int	errlog2;
+	uint64_t	route_id;
+	char		initflow[NAME_SIZE];
+	char		targflow[NAME_SIZE];
+	unsigned int	targ_subrange;
+	unsigned int	seqid;
+	unsigned int	errlog3;
+	unsigned int	errlog4;
+	uint64_t	address;
+	unsigned int	errlog5;
+	char		master_id[NAME_SIZE];
+	unsigned int	non_mod;
+	unsigned int	axi_id;
+	unsigned int	security_group;
+	uint32_t	cache;
+	uint32_t	protection;
+	unsigned int	falconsec;
+	unsigned int	virtual_q_channel;
 };
 
 struct __attribute__((__packed__)) async_smmu_err_t {
@@ -93,6 +126,7 @@ struct __attribute__((__packed__)) err_data_t {
 		struct async_bridge_err_t	async_bridge_err;
 		struct async_smmu_err_t		async_smmu_err;
 		struct async_mc_err_t		async_mc_err;
+		struct async_cbb_err_t		async_cbb_err;
 		/* Synchronous */
 		struct sync_data_abort_t	sync_data_abort;
 	};

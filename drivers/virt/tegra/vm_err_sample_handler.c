@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2019-2020, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -68,6 +68,99 @@ static void print_bridge_error(const struct err_data_t * const err_data)
 	pr_crit("\tAXI_ID: 0x%x\n", br_err_data->axi_id);
 	pr_crit("\tCache: 0x%x\n", br_err_data->cache);
 	pr_crit("\tBurst: 0x%x\n", br_err_data->burst);
+	pr_crit("--------------------------------------\n");
+}
+
+static void print_cache(uint32_t cache)
+{
+	if ((cache & 0x3) == 0x0) {
+		pr_crit("\t Cache\t\t\t: 0x%x--Non-cacheable/Non-Bufferable)\n",
+			cache);
+		return;
+	}
+	if ((cache & 0x3) == 0x1) {
+		pr_crit("\t  Cache\t\t\t: 0x%x -- Device\n",
+			cache);
+		return;
+	}
+
+	switch (cache) {
+	case 0x2:
+		pr_crit("\t  Cache\t\t\t: 0x%x -- Cacheable/Non-Bufferable\n",
+			cache);
+		break;
+	case 0x3:
+		pr_crit("\t  Cache\t\t\t: 0x%x -- Cacheable/Bufferable\n",
+			cache);
+		break;
+	default:
+		pr_crit("\t  Cache\t\t\t: 0x%x -- Cacheable\n",
+			cache);
+	}
+}
+
+static void print_prot(uint32_t prot)
+{
+	char *data_str;
+	char *secure_str;
+	char *priv_str;
+
+	data_str = (prot & 0x4) ? "Instruction" : "Data";
+	secure_str = (prot & 0x2) ? "Non-Secure" : "Secure";
+	priv_str = (prot & 0x1) ? "Privileged" : "Unprivileged";
+
+	pr_crit("\t  Protection\t\t: 0x%x -- %s, %s, %s Access\n",
+		prot, priv_str, secure_str, data_str);
+}
+
+static void print_cbb_error(const struct err_data_t * const err_data)
+{
+	const struct async_cbb_err_t * const cbb_err_data =
+		&err_data->async_cbb_err;
+
+	pr_crit("Control Back Bone(CBB) error details\n");
+	pr_crit("--------------------------------------\n");
+	pr_crit("Error:%s\n", cbb_err_data->cbb_name);
+	pr_crit("\tError Logger\t\t: %d\n", cbb_err_data->error_logger);
+	pr_crit("\tErrLog0\t\t\t: 0x%x\n", cbb_err_data->errlog0);
+	pr_crit("\t  Transaction Type\t: %s\n", cbb_err_data->transaction_type);
+	pr_crit("\t  Error Code\t\t: %s\n", cbb_err_data->error_code);
+	pr_crit("\t  Error Source\t\t: %s\n",
+		cbb_err_data->error_source);
+	pr_crit("\t  Error Description\t: %s\n",
+		cbb_err_data->error_description);
+	pr_crit("\t  Packet header Lock\t: %d\n",
+			cbb_err_data->packet_header_lock);
+	pr_crit("\t  Packet header Len1\t: %d\n",
+			cbb_err_data->packet_header_len1);
+
+	if (cbb_err_data->header_format)
+		pr_crit("\t  NOC protocol version\t: %s\n", "version >= 2.7");
+	else
+		pr_crit("\t  NOC protocol version\t: %s\n", "version < 2.7");
+	pr_crit("\tErrLog1\t\t\t: 0x%x\n", cbb_err_data->errlog1);
+	pr_crit("\tErrLog2\t\t\t: 0x%x\n", cbb_err_data->errlog2);
+	pr_crit("\t  RouteId\t\t: 0x%llx\n", cbb_err_data->route_id);
+	pr_crit("\t  InitFlow\t\t: %s\n", cbb_err_data->initflow);
+	pr_crit("\t  Targflow\t\t: %s\n", cbb_err_data->targflow);
+	pr_crit("\t  TargSubRange\t\t: %d\n", cbb_err_data->targ_subrange);
+	pr_crit("\t  SeqId\t\t\t: %d\n", cbb_err_data->seqid);
+	pr_crit("\tErrLog3\t\t\t: 0x%x\n", cbb_err_data->errlog3);
+	pr_crit("\tErrLog4\t\t\t: 0x%x\n", cbb_err_data->errlog4);
+	pr_crit("\t  Address\t\t: 0x%llx\n", cbb_err_data->address);
+	pr_crit("\tErrLog5\t\t\t: 0x%x\n", cbb_err_data->errlog5);
+	pr_crit("\t  Master ID\t\t: %s\n", cbb_err_data->master_id);
+	pr_crit("\t  Non-Modify\t\t: 0x%x\n", cbb_err_data->non_mod);
+	pr_crit("\t  AXI ID\t\t: 0x%x\n", cbb_err_data->axi_id);
+	pr_crit("\t  Security Group(GRPSEC): 0x%x\n",
+			cbb_err_data->security_group);
+
+	print_cache(cbb_err_data->cache);
+	print_prot(cbb_err_data->protection);
+
+	pr_crit("\t  FALCONSEC\t\t: 0x%x\n", cbb_err_data->falconsec);
+	pr_crit("\t  Virtual Queuing Channel(VQC): 0x%x\n",
+		cbb_err_data->virtual_q_channel);
 	pr_crit("--------------------------------------\n");
 }
 
@@ -152,6 +245,12 @@ static bool handle_async_err_details(const struct err_data_t * const err_data)
 		enter_bad_mode = false;
 		break;
 
+	case REASON_ASYNC_CBB:
+		print_cbb_error(err_data);
+		/* CBB error may not be fatal */
+		enter_bad_mode = false;
+		break;
+
 	case REASON_ASYNC_SMMU_CB:
 		print_smmu_error(err_data, err_data->err_reason);
 		/* SMMU context bank error may not be fatal */
@@ -228,6 +327,11 @@ static bool handle_peer_err_details(const struct err_data_t * const err_data)
 	switch (err_data->err_reason) {
 	case REASON_ASYNC_BRIDGE:
 		print_bridge_error(err_data);
+		enter_bad_mode = false;
+		break;
+
+	case REASON_ASYNC_CBB:
+		print_cbb_error(err_data);
 		enter_bad_mode = false;
 		break;
 

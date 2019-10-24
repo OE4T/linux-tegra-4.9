@@ -38,6 +38,7 @@ static const char * const tegra_hv_err_reason_desc[] = {
 	"SMMU Global",
 	"Bridge",
 	"Memory Controller",
+	"Memory Controller T19X",
 	"Central Back Bone",
 	"Instruction Abort",
 	"Data Abort",

@@ -394,6 +394,8 @@ static void shared_structs_check(struct device *dev)
 		sizeof(struct async_smmu_err_t));
 	dev_info(dev, "async_mc_err size 0x%lx\n",
 		sizeof(struct async_mc_err_t));
+	dev_info(dev, "async_mc_err_t19x size 0x%lx\n",
+		sizeof(struct async_mc_err_t19x_t));
 	dev_info(dev, "sync_data_abort size 0x%lx\n",
 		sizeof(struct sync_data_abort_t));
 	dev_info(dev, "err_data size 0x%lx\n", sizeof(struct err_data_t));
@@ -404,6 +406,7 @@ static void shared_structs_check(struct device *dev)
 	BUILD_BUG_ON(sizeof(struct async_cbb_err_t) != 0x259);
 	BUILD_BUG_ON(sizeof(struct async_smmu_err_t) != 0x1C);
 	BUILD_BUG_ON(sizeof(struct async_mc_err_t) != 0x24);
+	BUILD_BUG_ON(sizeof(struct async_mc_err_t19x_t) != 0xBB);
 	BUILD_BUG_ON(sizeof(struct sync_data_abort_t) != 0x11B);
 	BUILD_BUG_ON(sizeof(struct err_data_t) != 0x265);
 }

@@ -18,6 +18,7 @@ enum err_reason {
 	REASON_ASYNC_SMMU_GLOBAL,
 	REASON_ASYNC_BRIDGE,
 	REASON_ASYNC_MC,
+	REASON_ASYNC_MC_T19X,
 	REASON_ASYNC_CBB,
 	REASON_SYNC_INSTR_ABORT,
 	REASON_SYNC_DATA_ABORT,
@@ -105,6 +106,23 @@ struct __attribute__((__packed__)) async_mc_err_t {
 	int32_t		peripheral_id;
 };
 
+struct __attribute__((__packed__)) async_mc_err_t19x_t {
+	bool		vpr_violation;
+	unsigned int	vpr_base[2];
+	unsigned int	vpr_size;
+	unsigned int	vpr_ctrl;
+	unsigned int	vpr_override[4];
+	bool		no_status;
+	bool		two_status;
+	int		client_swgid;
+	char		client_name[NAME_SIZE];
+	char		fault_msg[NAME_SIZE];
+	unsigned int	status;
+	uint64_t	address;
+	unsigned int	secure;
+	unsigned int	write;
+};
+
 struct __attribute__((__packed__)) sync_data_abort_t {
 	bool		is_filled;	/* metadata field per vcpu */
 	bool		is_write;
@@ -127,6 +145,7 @@ struct __attribute__((__packed__)) err_data_t {
 		struct async_smmu_err_t		async_smmu_err;
 		struct async_mc_err_t		async_mc_err;
 		struct async_cbb_err_t		async_cbb_err;
+		struct async_mc_err_t19x_t	async_mc_err_t19x;
 		/* Synchronous */
 		struct sync_data_abort_t	sync_data_abort;
 	};

@@ -187,6 +187,47 @@ static void print_smmu_error(const struct err_data_t * const err_data,
 	pr_crit("--------------------------------------\n");
 }
 
+static void print_t19x_mc_error(const struct err_data_t * const err_data)
+{
+	const struct async_mc_err_t19x_t * const mc_err_data_t19x =
+					&err_data->async_mc_err_t19x;
+
+	pr_crit("Memory Controller error details\n");
+	pr_crit("--------------------------------------\n");
+
+	if (mc_err_data_t19x->vpr_violation) {
+		pr_crit("vpr base=%x:%x, size=%x, ctrl=%x, override:(%x, %x, %x, %x)\n",
+			mc_err_data_t19x->vpr_base[0],
+			mc_err_data_t19x->vpr_base[1],
+			mc_err_data_t19x->vpr_size,
+			mc_err_data_t19x->vpr_ctrl,
+			mc_err_data_t19x->vpr_override[0],
+			mc_err_data_t19x->vpr_override[1],
+			mc_err_data_t19x->vpr_override[2],
+			mc_err_data_t19x->vpr_override[3]);
+	}
+
+	if (mc_err_data_t19x->no_status) {
+		pr_crit("MC fault - no status: %s\n",
+			mc_err_data_t19x->fault_msg);
+	} else if (mc_err_data_t19x->two_status) {
+		pr_crit("MC fault - %s\n", mc_err_data_t19x->fault_msg);
+		pr_crit("status: 0x%08x status2: 0x%08llx\n",
+			mc_err_data_t19x->status,
+			(unsigned long long int)mc_err_data_t19x->address);
+	} else {
+		pr_crit("(%d) %s: %s\n", mc_err_data_t19x->client_swgid,
+			mc_err_data_t19x->client_name,
+			mc_err_data_t19x->fault_msg);
+		pr_crit("  status = 0x%08x; addr = 0x%08llx\n",
+			mc_err_data_t19x->status,
+			(unsigned long long int)mc_err_data_t19x->address);
+		pr_crit("  secure: %s, access-type: %s\n",
+			mc_err_data_t19x->secure ? "yes" : "no",
+			mc_err_data_t19x->write ? "write" : "read");
+	}
+}
+
 static void print_mc_error(const struct err_data_t * const err_data)
 {
 	const struct async_mc_err_t * const mc_err_data =
@@ -268,6 +309,11 @@ static bool handle_async_err_details(const struct err_data_t * const err_data)
 		enter_bad_mode = false;
 		break;
 
+	case REASON_ASYNC_MC_T19X:
+		print_t19x_mc_error(err_data);
+		enter_bad_mode = false;
+		break;
+
 	default:
 		pr_crit("%s: unhandled error. Reason id %d\n", __func__,
 			err_data->err_reason);
@@ -343,6 +389,11 @@ static bool handle_peer_err_details(const struct err_data_t * const err_data)
 
 	case REASON_ASYNC_MC:
 		print_mc_error(err_data);
+		enter_bad_mode = false;
+		break;
+
+	case REASON_ASYNC_MC_T19X:
+		print_t19x_mc_error(err_data);
 		enter_bad_mode = false;
 		break;
 

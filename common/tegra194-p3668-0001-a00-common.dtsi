@@ -386,6 +386,30 @@
 		};
 	};
 
+	i2c@31e0000 {
+		pinctrl-names = "default";
+		pinctrl-0 = <&dpaux_default>;
+	};
+
+	host1x {
+		dpaux@155F0000 {
+			status = "okay";
+			compatible = "nvidia,tegra194-dpaux3-padctl";
+			dpaux_default: pinmux@0 {
+				dpaux3_pins {
+					pins = "dpaux3-3";
+					function = "i2c";
+				};
+			};
+		};
+	};
+
+	dpaux3 {
+		compatible = "nvidia,tegra194-dpaux3-pinctrl";
+		status = "okay";
+	};
+
+
 	/* QSPI flash S25FS128SAGNFI103 is controlled by qspi0 */
 	spi@3270000 {
 		status = "okay";

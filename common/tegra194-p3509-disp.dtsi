@@ -46,7 +46,7 @@
 	nvidia,fbmem-size = <265420800>; /* 8K (7680*4320) 32bpp double buffered */
 	nvidia,fb-flags = <TEGRA_FB_FLIP_ON_PROBE>;
 	win-mask = <0x38>;
-	nvidia,fb-win = <2>;
+	nvidia,fb-win = <3>;
 	nvidia,dc-connector = <&sor0>;
 	nvidia,dc-flags = <TEGRA_DC_FLAG_ENABLED>;
 	vdd-dp-pwr-supply = <&p3668_spmic_sd0>;

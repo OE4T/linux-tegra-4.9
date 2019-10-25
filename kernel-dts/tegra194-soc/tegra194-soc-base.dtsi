@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2018, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2020, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -768,6 +768,7 @@
 		clocks = <&bpmp_clks TEGRA194_CLK_FUSE>,
 		         <&bpmp_clks TEGRA194_CLK_CLK_M>;
 		clock-names = "fuse", "clk_m";
+		nvidia,clock-always-on;
 		status = "disabled";
 		efuse-burn {
 			compatible = "nvidia,tegra194-efuse-burn";

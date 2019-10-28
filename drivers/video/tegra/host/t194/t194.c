@@ -64,8 +64,11 @@
 
 #include "chip_support.h"
 
+#include "scale_emc.h"
+
 #include "streamid_regs.c"
 #include "cg_regs.c"
+#include "actmon_regs.c"
 
 /*
  * TODO: Move following functions to the corresponding files under
@@ -575,6 +578,9 @@ struct nvhost_device_data t19_vic_info = {
 	.transcfg_addr		= 0x2044,
 	.transcfg_val		= 0x20,
 	.bwmgr_client_id	= TEGRA_BWMGR_CLIENT_VIC,
+	.scaling_init		= nvhost_scale_emc_init,
+	.scaling_deinit		= nvhost_scale_emc_deinit,
+	.scaling_post_cb	= &nvhost_scale_emc_callback,
 	.get_reloc_phys_addr	= nvhost_t194_get_reloc_phys_addr,
 	.get_dma_direction	= nvhost_t194_get_dma_direction,
 	.module_irq		= 1,
@@ -582,6 +588,14 @@ struct nvhost_device_data t19_vic_info = {
 	.engine_can_cg		= true,
 	.can_powergate		= true,
 	.isolate_contexts	= true,
+	.actmon_regs		= HOST1X_THOST_ACTMON_VIC,
+	.actmon_enabled         = false,
+	.actmon_irq		= 3,
+	.actmon_weight_count	= 216,
+	.actmon_setting_regs	= t19x_vic_actmon_registers,
+	.devfreq_governor	= "wmark_active",
+	.freqs			= {100000000, 200000000, 300000000,
+					400000000, 500000000, 600000000},
 };
 #endif
 

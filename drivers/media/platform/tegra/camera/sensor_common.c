@@ -548,7 +548,6 @@ int sensor_common_parse_num_modes(const struct device *dev)
 	for (i = 0; num_modes < MAX_NUM_SENSOR_MODES; i++) {
 		snprintf(temp_str, sizeof(temp_str), "%s%d",
 			OF_SENSORMODE_PREFIX, i);
-		of_node_get(np);
 		node = of_get_child_by_name(np, temp_str);
 		of_node_put(node);
 		if (node == NULL)
@@ -571,7 +570,6 @@ static int sensor_common_init_i2c_device_config(
 	u32 value = 0;
 	bool is_mux_valid = 0;
 
-	of_node_get(np);
 	cfg->type = CAMERA_DEVICE_I2C_SENSOR;
 	err = of_property_read_u32(np, "reg", &value);
 	if (err) {
@@ -588,7 +586,6 @@ static int sensor_common_init_i2c_device_config(
 	is_mux_valid =
 		of_property_read_bool(parent, "i2c-mux,deselect-on-exit");
 	i2c_sensor->mux.is_mux_valid = is_mux_valid;
-	of_node_put(np);
 
 	if (is_mux_valid) {
 
@@ -602,13 +599,13 @@ static int sensor_common_init_i2c_device_config(
 
 		/* move to mux node */
 		node = of_get_parent(parent);
+		of_node_put(parent);
 		err = of_property_read_u32(node, "reg", &value);
 		if (err) {
 			dev_err(dev, "mux address unavailable\n");
 			return err;
 		}
 		i2c_sensor->mux.mux_addr = value;
-		of_node_put(parent);
 
 		/* move to i2c bus node */
 		parent = of_get_parent(node);
@@ -618,9 +615,10 @@ static int sensor_common_init_i2c_device_config(
 		 * if it is a gpio based i2c mux
 		 */
 		node = of_get_parent(parent);
-		of_node_put(parent);
 
 		if (of_device_is_compatible(node, "i2c-mux-gpio")) {
+			of_node_put(parent);
+
 			/* move to i2c bus node */
 			parent = of_parse_phandle(node, "i2c-parent", 0);
 		}
@@ -660,7 +658,6 @@ static int sensor_common_init_spi_device_config(
 	int err = 0;
 	u32 value = 0;
 
-	of_node_get(np);
 	cfg->type = CAMERA_DEVICE_SPI_SENSOR;
 	err = of_property_read_u32(np, "reg", &value);
 	if (err) {
@@ -673,7 +670,7 @@ static int sensor_common_init_spi_device_config(
 	spi_sensor->sd[0].addr = value;
 
 	parent = of_get_parent(np);
-	of_node_put(np);
+
 	/* TODO: Add logic for spi mux if available */
 
 	/* read parent which is spi bus */
@@ -751,7 +748,6 @@ int sensor_common_init_sensor_properties(
 	for (i = 0; num_modes < MAX_NUM_SENSOR_MODES; i++) {
 		snprintf(temp_str, sizeof(temp_str), "%s%d",
 			OF_SENSORMODE_PREFIX, i);
-		of_node_get(np);
 		node = of_get_child_by_name(np, temp_str);
 		of_node_put(node);
 		if (node == NULL)
@@ -772,7 +768,6 @@ int sensor_common_init_sensor_properties(
 	for (i = 0; i < num_modes; i++) {
 		snprintf(temp_str, sizeof(temp_str), "%s%d",
 			OF_SENSORMODE_PREFIX, i);
-		of_node_get(np);
 		node = of_get_child_by_name(np, temp_str);
 		if (node == NULL) {
 			dev_err(dev, "Failed to find %s\n", temp_str);

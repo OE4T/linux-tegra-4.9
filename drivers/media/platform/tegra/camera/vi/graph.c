@@ -474,8 +474,8 @@ static void tegra_vi_graph_notify_unbind(struct v4l2_async_notifier *notifier,
 
 	/* cleanup for complete */
 	if (chan->link_status) {
-		tegra_channel_cleanup_video(chan);
 		tegra_vi_graph_remove_links(chan);
+		tegra_channel_cleanup_video(chan);
 		chan->link_status--;
 	}
 

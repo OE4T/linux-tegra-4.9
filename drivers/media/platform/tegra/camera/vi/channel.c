@@ -1487,24 +1487,27 @@ error:
 static void tegra_channel_free_sensor_properties(
 		const struct v4l2_subdev *sensor_sd)
 {
-	struct device *sensor_dev;
 	struct camera_common_data *s_data;
+	struct tegra_csi_device *csi = tegra_get_mc_csi();
+	struct tegra_csi_channel *chan;
 
 	if (sensor_sd == NULL)
 		return;
 
-	sensor_dev = sensor_sd->dev;
-	if (sensor_dev == NULL)
-		return;
-
-	s_data = to_camera_common_data(sensor_dev);
+	s_data = container_of(sensor_sd, struct camera_common_data, subdev);
 	if (s_data == NULL)
 		return;
 
 	if (s_data->sensor_props.sensor_modes)
-		devm_kfree(sensor_dev, s_data->sensor_props.sensor_modes);
+		devm_kfree(s_data->dev, s_data->sensor_props.sensor_modes);
 
 	s_data->sensor_props.sensor_modes = NULL;
+
+	/* remove reference to s_data */
+	list_for_each_entry(chan, &csi->csi_chans, list) {
+		if (chan->sensor_sd == sensor_sd)
+			chan->s_data = NULL;
+	}
 }
 
 static int tegra_channel_connect_sensor(
@@ -1666,6 +1669,7 @@ static void tegra_channel_populate_dev_info(struct tegra_camera_dev_info *cdev,
 
 void tegra_channel_remove_subdevices(struct tegra_channel *chan)
 {
+	tegra_channel_free_sensor_properties(chan->subdev_on_csi);
 	video_unregister_device(chan->video);
 	chan->video = NULL;
 	chan->num_subdevs = 0;
@@ -2319,6 +2323,7 @@ int tegra_channel_cleanup_video(struct tegra_channel *chan)
 {
 	v4l2_ctrl_handler_free(&chan->ctrl_handler);
 	media_entity_cleanup(&chan->video->entity);
+	video_device_release(chan->video);
 	return 0;
 }
 

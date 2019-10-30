@@ -19,7 +19,7 @@
 #include "dt-bindings/soc/gv11b-fuse.h"
 
 / {
-	model = "NVIDIA Jetson-Xavier as Jetson-Nano-Next Developer Kit";
+	model = "NVIDIA Jetson-Xavier as Jetson-Xavier-NX Developer Kit";
 
 	compatible = "nvidia,p3668-0001", "nvidia,tegra194";
 

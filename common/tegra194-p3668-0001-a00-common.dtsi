@@ -429,6 +429,10 @@
 		status = "okay";
 	};
 
+	pcie@14100000 {
+		status = "okay";
+	};
+
 	spi@3230000{
 		status = "okay";
 	};

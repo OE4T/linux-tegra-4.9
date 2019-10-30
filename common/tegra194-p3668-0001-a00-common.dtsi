@@ -16,8 +16,8 @@
 #include "dt-bindings/extcon-ids.h"
 #include "dt-bindings/gpio/tegra194-gpio.h"
 #include <dt-bindings/pwm/pwm.h>
-#include "tegra194-fixed-regulator-p3668.dtsi"
 #include <tegra194-soc/tegra194-soc-cvm.dtsi>
+#include "tegra194-fixed-regulator-p3668.dtsi"
 #include <t19x-common-platforms/tegra194-comms.dtsi>
 #include "tegra194-plugin-manager-p3668-0001-a00.dtsi"
 #include <t19x-common-platforms/tegra194-platforms-eqos.dtsi>
@@ -43,6 +43,15 @@
 	pmc@c370000 {
 		nvidia,invert-interrupt;
 	};
+
+        pmc@c360000 {
+                 iopad_defaults: iopad-defaults {
+                         sdmmc-io-pads {
+                                 pins = "sdmmc1-hv", "sdmmc3-hv";
+                                 nvidia,enable-voltage-switching;
+                         };
+                 };
+         };
 
 	i2c@c240000 {
 		/* This I2C (GEN2) is routed only to 40-pin hdr
@@ -240,6 +249,17 @@
 		status = "okay";
 	};
 
+	sdhci@3400000 {
+		mmc-ocr-mask = <0x0>;
+		cd-inverted;
+		cd-gpios = <&tegra_main_gpio TEGRA194_MAIN_GPIO(G, 7) 0>;
+		nvidia,cd-wakeup-capable;
+		mmc-ocr-mask = <0>;
+		cd-inverted;
+		vmmc-supply = <&p3668_vdd_sdmmc1_sw>;
+		status = "okay";
+	};
+
 	mipical@3990000 {
 		status = "okay";
 	};
@@ -409,6 +429,9 @@
 		status = "okay";
 	};
 
+	spi@3230000{
+		status = "okay";
+	};
 
 	/* QSPI flash S25FS128SAGNFI103 is controlled by qspi0 */
 	spi@3270000 {

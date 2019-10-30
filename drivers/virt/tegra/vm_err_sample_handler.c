@@ -31,13 +31,13 @@ static const unsigned int BRIDGE_SRC_ID_CCPLEX = 1;
 /* This must match with corresponding HV definition in pct.h */
 static const unsigned int GUEST_UNASSIGNED = 18;
 
-static struct vm_err_handlers handlers;
+static struct tegra_hv_vm_err_handlers handlers;
 static struct tegra_hv_config config;
 
-static void print_bridge_error(const struct errData * const err_data)
+static void print_bridge_error(const struct err_data_t * const err_data)
 {
-	const struct async_bridgeErr * const br_err_data =
-		&err_data->async_bridgeErr;
+	const struct async_bridge_err_t * const br_err_data =
+		&err_data->async_bridge_err;
 	unsigned int protection;
 
 	pr_crit("Bridge error details\n");
@@ -71,11 +71,11 @@ static void print_bridge_error(const struct errData * const err_data)
 	pr_crit("--------------------------------------\n");
 }
 
-static void print_smmu_error(const struct errData * const err_data,
-				const enum errReason reason)
+static void print_smmu_error(const struct err_data_t * const err_data,
+				const enum err_reason reason)
 {
-	const struct async_smmuErr * const smmu_err_data =
-		&err_data->async_smmuErr;
+	const struct async_smmu_err_t * const smmu_err_data =
+		&err_data->async_smmu_err;
 
 	pr_crit("SMMU error details\n");
 	pr_crit("--------------------------------------\n");
@@ -94,9 +94,10 @@ static void print_smmu_error(const struct errData * const err_data,
 	pr_crit("--------------------------------------\n");
 }
 
-static void print_mc_error(const struct errData * const err_data)
+static void print_mc_error(const struct err_data_t * const err_data)
 {
-	const struct async_mcErr * const mc_err_data = &err_data->async_mcErr;
+	const struct async_mc_err_t * const mc_err_data =
+		&err_data->async_mc_err;
 
 	pr_crit("Memory Controller error details\n");
 	pr_crit("--------------------------------------\n");
@@ -110,41 +111,41 @@ static void print_mc_error(const struct errData * const err_data)
 	pr_crit("--------------------------------------\n");
 }
 
-static void print_data_abort(const struct errData *const err_data)
+static void print_data_abort(const struct err_data_t *const err_data)
 {
-	const struct sync_dataAbort * const data_abort =
-		&err_data->sync_dataAbort;
+	const struct sync_data_abort_t * const data_abort =
+		&err_data->sync_data_abort;
 
 	pr_crit("Data abort details\n");
 	pr_crit("--------------------------------------\n");
-	pr_crit("offending VCpu Id %u\n", data_abort->offendingVCpuId);
-	(data_abort->isWrite) ?
+	pr_crit("offending VCpu Id %u\n", data_abort->offending_vcpu_id);
+	(data_abort->is_write) ?
 		pr_crit("write access\n") : pr_crit("read access\n");
-	pr_crit("access size %u\n", data_abort->accessSize);
-	pr_crit("fault address: 0x%llx\n", data_abort->faultAddr);
-	pr_crit("esr: 0x%x\n", data_abort->esrEl2);
-	pr_crit("spsr_el2: 0x%llx\n", data_abort->spsrEl2);
-	pr_crit("elr_el1: 0x%llx\n", data_abort->elrEl1);
-	pr_crit("gprArray[0]: 0x%llx\n", data_abort->gprArray[0]);
-	pr_crit("gprArray[15]: 0x%llx\n", data_abort->gprArray[15]);
-	pr_crit("gprArray[30]: 0x%llx\n", data_abort->gprArray[30]);
+	pr_crit("access size %u\n", data_abort->access_size);
+	pr_crit("fault address: 0x%llx\n", data_abort->fault_addr);
+	pr_crit("esr: 0x%x\n", data_abort->esr_el2);
+	pr_crit("spsr_el2: 0x%llx\n", data_abort->spsr_el2);
+	pr_crit("elr_el1: 0x%llx\n", data_abort->elr_el1);
+	pr_crit("gpr_array[0]: 0x%llx\n", data_abort->gpr_array[0]);
+	pr_crit("gpr_array[15]: 0x%llx\n", data_abort->gpr_array[15]);
+	pr_crit("gpr_array[30]: 0x%llx\n", data_abort->gpr_array[30]);
 	pr_crit("--------------------------------------\n");
 }
 
-static bool handle_async_err_details(const struct errData * const err_data)
+static bool handle_async_err_details(const struct err_data_t * const err_data)
 {
 	bool enter_bad_mode;
 
-	if (err_data->errType != ASYNC) {
+	if (err_data->err_type != ASYNC) {
 		pr_crit("%s: incorrect error type: %d\n", __func__,
-			err_data->errType);
+			err_data->err_type);
 		/* Unexpected error type. Enter bad mode. */
 		return true;
 	}
 
 	pr_info("%s: error reason: %s\n", __func__,
-		fault_reason_desc[err_data->errReason]);
-	switch (err_data->errReason) {
+		tegra_hv_err_reason_desc[err_data->err_reason]);
+	switch (err_data->err_reason) {
 	case REASON_ASYNC_BRIDGE:
 		print_bridge_error(err_data);
 		/* Bridge error may not be fatal */
@@ -152,13 +153,13 @@ static bool handle_async_err_details(const struct errData * const err_data)
 		break;
 
 	case REASON_ASYNC_SMMU_CB:
-		print_smmu_error(err_data, err_data->errReason);
+		print_smmu_error(err_data, err_data->err_reason);
 		/* SMMU context bank error may not be fatal */
 		enter_bad_mode = false;
 		break;
 
 	case REASON_ASYNC_SMMU_GLOBAL:
-		print_smmu_error(err_data, err_data->errReason);
+		print_smmu_error(err_data, err_data->err_reason);
 		/* Can't recover from global SMMU error. */
 		enter_bad_mode = true;
 		break;
@@ -170,7 +171,7 @@ static bool handle_async_err_details(const struct errData * const err_data)
 
 	default:
 		pr_crit("%s: unhandled error. Reason id %d\n", __func__,
-			err_data->errReason);
+			err_data->err_reason);
 		enter_bad_mode = true;
 		break;
 	}
@@ -178,27 +179,27 @@ static bool handle_async_err_details(const struct errData * const err_data)
 	return enter_bad_mode;
 }
 
-static bool handle_sync_err_details(const struct errData * const err_data)
+static bool handle_sync_err_details(const struct err_data_t * const err_data)
 {
 	/* Currently only data abort error injection is supported */
-	if (err_data->errReason != REASON_SYNC_DATA_ABORT) {
+	if (err_data->err_reason != REASON_SYNC_DATA_ABORT) {
 		pr_crit("%s: unexpected reason id %u\n", __func__,
-			err_data->errReason);
+			err_data->err_reason);
 		/* Invalid reason. Enter bad mode. */
 		return true;
 	}
 	pr_info("%s: error reason: %s\n", __func__,
-		fault_reason_desc[err_data->errReason]);
+		tegra_hv_err_reason_desc[err_data->err_reason]);
 	print_data_abort(err_data);
 
 	/* Recovery from sync error could be impossible. Enter bad mode. */
 	return true;
 }
 
-static bool handle_peer_err_details(const struct errData * const err_data)
+static bool handle_peer_err_details(const struct err_data_t * const err_data)
 {
 	bool enter_bad_mode;
-	const unsigned int offender = err_data->offendingGuestId;
+	const unsigned int offender = err_data->offending_guest_id;
 
 	if (offender >= config.num_guests) {
 		if (offender != GUEST_UNASSIGNED) {
@@ -212,19 +213,19 @@ static bool handle_peer_err_details(const struct errData * const err_data)
 	} else
 		pr_crit("Peer error. Offending guest id = %u\n", offender);
 
-	pr_crit("Error Type: %s\n", (err_data->errType == SYNC) ?
+	pr_crit("Error Type: %s\n", (err_data->err_type == SYNC) ?
 		"Synchronous" : "Asynchronous");
 
-	if (err_data->errReason >= REASON_ENUM_SIZE) {
+	if (err_data->err_reason >= REASON_ENUM_SIZE) {
 		pr_crit("%s: unexpected reason id %u\n", __func__,
-			err_data->errReason);
+			err_data->err_reason);
 		/* Unexpected. Cause reboot. */
 		return true;
 	}
 	pr_crit("%s: error reason: %s\n", __func__,
-		fault_reason_desc[err_data->errReason]);
+		tegra_hv_err_reason_desc[err_data->err_reason]);
 
-	switch (err_data->errReason) {
+	switch (err_data->err_reason) {
 	case REASON_ASYNC_BRIDGE:
 		print_bridge_error(err_data);
 		enter_bad_mode = false;
@@ -232,7 +233,7 @@ static bool handle_peer_err_details(const struct errData * const err_data)
 
 	case REASON_ASYNC_SMMU_CB:
 	case REASON_ASYNC_SMMU_GLOBAL:
-		print_smmu_error(err_data, err_data->errReason);
+		print_smmu_error(err_data, err_data->err_reason);
 		enter_bad_mode = false;
 		break;
 
@@ -248,28 +249,25 @@ static bool handle_peer_err_details(const struct errData * const err_data)
 
 	default:
 		pr_crit("%s: unhandled error. Reason id %d\n", __func__,
-		err_data->errReason);
+		err_data->err_reason);
 		enter_bad_mode = false;
 		break;
 	}
 
-	if (offender == GUEST_UNASSIGNED)
-		enter_bad_mode = true;
-
 	return enter_bad_mode;
 }
 
-static bool self_async_err_handler(const struct errData *const err_data)
+static bool self_async_err_handler(const struct err_data_t *const err_data)
 {
 	return handle_async_err_details(err_data);
 }
 
-static bool self_sync_err_handler(const struct errData *const err_data)
+static bool self_sync_err_handler(const struct err_data_t *const err_data)
 {
 	return handle_sync_err_details(err_data);
 }
 
-static bool peer_err_handler(const struct errData *const err_data)
+static bool peer_err_handler(const struct err_data_t *const err_data)
 {
 	return handle_peer_err_details(err_data);
 }
@@ -299,7 +297,7 @@ static int hooks_init(void)
 
 static void hooks_exit(void)
 {
-	struct vm_err_handlers handlers;
+	struct tegra_hv_vm_err_handlers handlers;
 
 	handlers.fn_self_async = NULL;
 	handlers.fn_self_sync = NULL;

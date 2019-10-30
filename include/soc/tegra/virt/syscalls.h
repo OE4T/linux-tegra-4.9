@@ -457,12 +457,12 @@ static inline int hyp_send_async_err_ack(uint64_t local_rd_idx)
 	return (int)r0;
 }
 
-static inline int hyp_send_sync_err_ack(bool sync_err_ack) ///ToDo: remove param
+static inline int hyp_send_sync_err_ack(void)
 {
-	register uint64_t r0 asm("x0") = sync_err_ack;
+	register uint64_t r0 asm("x0");
 
 	asm volatile("hvc %1"
-		: "+r"(r0)
+		: "=r"(r0)
 		: "i"(HVC_NR_SYNC_ERR_GUEST_READ_ACK)
 		: "x1", "x2", "x3", _X4_X17);
 
@@ -471,6 +471,9 @@ static inline int hyp_send_sync_err_ack(bool sync_err_ack) ///ToDo: remove param
 
 #undef _X3_X17
 #undef _X4_X17
+#undef _X5_X17
+#undef _X6_X17
+#undef _X7_X17
 
 #else
 
@@ -486,7 +489,7 @@ int hyp_read_err_info_get(uint64_t *ipa, uint64_t *buff_size,
 	unsigned int *async_err_arr_size, int *peer_err_irq_id,
 	uint64_t *sync_err_offset, unsigned int  *vcpu_cnt);
 int hyp_send_async_err_ack(uint64_t local_rd_idx);
-int hyp_send_sync_err_ack(bool sync_err_ack);
+int hyp_send_sync_err_ack(void);
 
 /* ASM prototypes */
 extern int hvc_read_gid(void *);

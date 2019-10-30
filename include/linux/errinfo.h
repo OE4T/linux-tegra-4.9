@@ -8,10 +8,11 @@
  * license agreement from NVIDIA CORPORATION is strictly prohibited.
  */
 
-#ifndef __INCLUDED_ERRINFO_H__
-#define __INCLUDED_ERRINFO_H__
+#ifndef __TEGRA_HV_ERRINFO_H__
+#define __TEGRA_HV_ERRINFO_H__
 
-enum errReason {
+/* Supported synchronous and asynchronous errors */
+enum err_reason {
 	REASON_UNDEFINED = 0UL,
 	REASON_ASYNC_SMMU_CB,
 	REASON_ASYNC_SMMU_GLOBAL,
@@ -23,19 +24,19 @@ enum errReason {
 	REASON_ENUM_SIZE
 };
 
-enum errType {
+enum err_type {
 	SYNC = 0UL,
 	ASYNC
 };
 
-struct __attribute__((__packed__)) async_metaData {
-	uint64_t	rdIdx;
-	uint64_t	wrIdx;
+struct __attribute__((__packed__)) async_metadata_t {
+	uint64_t	rd_idx;
+	uint64_t	wr_idx;
 };
 
 #define NAME_SIZE 64
 
-struct __attribute__((__packed__)) async_bridgeErr {
+struct __attribute__((__packed__)) async_bridge_err_t {
 	char		br_name[NAME_SIZE];
 	unsigned int	err_addr;
 	unsigned int	err_status1;
@@ -52,7 +53,7 @@ struct __attribute__((__packed__)) async_bridgeErr {
 	unsigned int	cache;
 };
 
-struct __attribute__((__packed__)) async_smmuErr {
+struct __attribute__((__packed__)) async_smmu_err_t {
 	unsigned int	stream_id;
 	unsigned int	cb_id;
 	unsigned int	fsynr0;
@@ -61,39 +62,39 @@ struct __attribute__((__packed__)) async_smmuErr {
 	unsigned int	fsr;
 };
 
-struct __attribute__((__packed__))  async_mcErr {
+struct __attribute__((__packed__)) async_mc_err_t {
 	uint64_t	ch_base;
 	unsigned int	int_status;
 	unsigned int	err_status;
 	uint64_t	fault_addr;
-	unsigned int	vcpuid;		//0xffffU; /* IDLE_vCPU_ID */
+	unsigned int	vcpuid;		/* 0xffffU IDLE_vCPU_ID */
 	unsigned int	client_id;
 	int32_t		peripheral_id;
 };
 
-struct __attribute__((__packed__)) sync_dataAbort {
-	bool		isFilled;	//metadata field per VCpu
-	bool		isWrite;
-	uint8_t		accessSize;
-	unsigned int	offendingVCpuId;
-	unsigned int	esrEl2;
-	uint64_t	faultAddr;
-	uint64_t	spsrEl2;
-	uint64_t	elrEl1;
-	uint64_t	gprArray[31];
+struct __attribute__((__packed__)) sync_data_abort_t {
+	bool		is_filled;	/* metadata field per vcpu */
+	bool		is_write;
+	uint8_t		access_size;
+	unsigned int	offending_vcpu_id;
+	unsigned int	esr_el2;
+	uint64_t	fault_addr;
+	uint64_t	spsr_el2;
+	uint64_t	elr_el1;
+	uint64_t	gpr_array[31];
 };
 
-struct __attribute__((__packed__)) errData {
-	unsigned int	offendingGuestId;
-	enum errType	errType;
-	enum errReason	errReason;
+struct __attribute__((__packed__)) err_data_t {
+	unsigned int	offending_guest_id;
+	unsigned int	err_type;
+	unsigned int	err_reason;
 	union {
-		// *A*synchronous
-		struct async_bridgeErr	async_bridgeErr;
-		struct async_smmuErr	async_smmuErr;
-		struct async_mcErr	async_mcErr;
-		// Synchronous
-		struct sync_dataAbort	sync_dataAbort;
+		/* Asynchronous */
+		struct async_bridge_err_t	async_bridge_err;
+		struct async_smmu_err_t		async_smmu_err;
+		struct async_mc_err_t		async_mc_err;
+		/* Synchronous */
+		struct sync_data_abort_t	sync_data_abort;
 	};
 };
 
@@ -110,15 +111,15 @@ struct __attribute__((__packed__)) errData {
  *
  * So for a give VM, shared memory has:
  *
- * |--------ASyncErrInfo----------------|-------SyncErrInfo-------------------|
- * |--------1bufferPerVM----------------|---VCpu0-buffer---|--VCpuN-buffer----|
- * |---metaData----|---errData----------|-metaData+errData-|-metaData+errData-|
- * |-rdIdx-|-wrIdx-|-Err1-|-Err2-|-ErrN-|-isFilled-|-Err1--|-isFilled-|-Err1--|
+ * |--------ASyncErrInfo--------------|---------SyncErrInfo-------------------|
+ * |--------1bufferPerVM--------------|---VCpu0-buffer----|---VCpuN-buffer----|
+ * |---metadata---|---err_data--------|-metadata+err_data-|-metadata+err_data-|
+ * |rd_idx|wr_idx|-Err1-|-Err2-|-ErrN-|-is_filled-|-Err1--|-is_filled-|--Err1-|
  */
 
-struct __attribute__((__packed__)) errInfo {
-	struct async_metaData	async_metaData;
-	struct errData		errData[];
+struct __attribute__((__packed__)) err_info_t {
+	struct async_metadata_t	async_metadata;
+	struct err_data_t	err_data[];
 };
 
 #endif

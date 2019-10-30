@@ -24,19 +24,19 @@
 
 struct tegra_hv_err_ctrl {
 	struct device *dev;
-	struct errInfo *err_info;
+	struct err_info_t *err_info;
 	unsigned int async_err_arr_items;
 	int hv_peer_err_irq_id;
 	unsigned int vcpu_cnt;
 	struct serr_hook hook;
-	struct vm_err_handlers handlers;
+	struct tegra_hv_vm_err_handlers handlers;
 };
 
 static struct tegra_hv_config config;
 
-static unsigned int intr_info[3]; /* intr_property_size = 3 */
+static unsigned int tegra_hv_virq_intr_info[3]; /* intr_property_size = 3 */
 
-static struct property interrupts_prop = {
+static struct property tegra_hv_virq_intr_prop = {
 	.name = "interrupts",
 };
 
@@ -45,7 +45,7 @@ static bool check_sync_err(const unsigned int vcpu_id,
 	bool *send_sync_err_ack)
 {
 	uint64_t rd_idx;
-	const struct errData *err_data;
+	const struct err_data_t *err_data;
 
 	if (vcpu_id >= ctrl->vcpu_cnt) {
 		dev_crit(ctrl->dev, "%s: Invalid vcpu id %u\n", __func__,
@@ -66,8 +66,8 @@ static bool check_sync_err(const unsigned int vcpu_id,
 	 * allocated to hold async_err_arr_items + sync error per vcpu. Hence,
 	 * after validating the vcpu_id above, no need to validate rd_idx here.
 	 */
-	err_data = &(ctrl->err_info->errData[rd_idx]);
-	if (!err_data->sync_dataAbort.isFilled) {
+	err_data = &(ctrl->err_info->err_data[rd_idx]);
+	if (!err_data->sync_data_abort.is_filled) {
 		*send_sync_err_ack = false;
 		dev_info(ctrl->dev, "No synchronous error data on vcpu %u\n",
 			vcpu_id);
@@ -75,17 +75,17 @@ static bool check_sync_err(const unsigned int vcpu_id,
 		return false;
 	}
 
-	if (err_data->errType != SYNC) {
+	if (err_data->err_type != SYNC) {
 		dev_crit(ctrl->dev, "%s: unexpected error Type %d\n",
-			__func__, err_data->errType);
+			__func__, err_data->err_type);
 		*send_sync_err_ack = true;
 		/* Unexpected error id. Enter bad mode. */
 		return true;
 	}
 
-	if (err_data->offendingGuestId != config.guest_id_self) {
+	if (err_data->offending_guest_id != config.guest_id_self) {
 		dev_crit(ctrl->dev, "%s: invalid offender id %u\n", __func__,
-			err_data->offendingGuestId);
+			err_data->offending_guest_id);
 		*send_sync_err_ack = true;
 		/* Invalid id of offending guest. Enter bad mode. */
 		return true;
@@ -111,10 +111,10 @@ static irqreturn_t async_err_handler(int irq, void *context)
 	const struct tegra_hv_err_ctrl *const ctrl = context;
 	const unsigned int vcpu_id = hyp_read_vcpu_id();
 	uint64_t local_rd_idx, next_rd_idx;
-	const struct errData *err_data;
-	bool (*fn_self_async)(const struct errData *const err_data);
-	bool (*fn_peer)(const struct errData *const err_data);
-	bool (*handler)(const struct errData *const err_data);
+	const struct err_data_t *err_data;
+	bool (*fn_self_async)(const struct err_data_t *const err_data);
+	bool (*fn_peer)(const struct err_data_t *const err_data);
+	bool (*handler)(const struct err_data_t *const err_data);
 	struct pt_regs *regs;
 
 	if (vcpu_id != 0) {
@@ -131,16 +131,16 @@ static irqreturn_t async_err_handler(int irq, void *context)
 		return IRQ_HANDLED;
 	}
 
-	local_rd_idx = ctrl->err_info->async_metaData.rdIdx;
+	local_rd_idx = ctrl->err_info->async_metadata.rd_idx;
 	dev_dbg(ctrl->dev, "Local Rd Idx = %llu, shared Wr Idx = %llu\n",
-		local_rd_idx, ctrl->err_info->async_metaData.wrIdx);
+		local_rd_idx, ctrl->err_info->async_metadata.wr_idx);
 
 	/* Check async error. Read until error queue gets empty */
-	while (local_rd_idx != ctrl->err_info->async_metaData.wrIdx) {
+	while (local_rd_idx != ctrl->err_info->async_metadata.wr_idx) {
 		next_rd_idx = (local_rd_idx + 1) % ctrl->async_err_arr_items;
 
-		err_data = &(ctrl->err_info->errData[next_rd_idx]);
-		if (err_data->offendingGuestId == config.guest_id_self)
+		err_data = &(ctrl->err_info->err_data[next_rd_idx]);
+		if (err_data->offending_guest_id == config.guest_id_self)
 			handler = fn_self_async;
 		else
 			handler = fn_peer;
@@ -192,7 +192,7 @@ static int sync_err_handler(struct pt_regs *regs, int reason,
 
 	/* Send ack for error to HV. */
 	if (send_sync_err_ack) {
-		if (hyp_send_sync_err_ack(send_sync_err_ack) != 0) {
+		if (hyp_send_sync_err_ack() != 0) {
 			dev_crit(ctrl->dev,
 				"%s: Sending ack failed. Setting bad mode\n",
 				__func__);
@@ -228,21 +228,21 @@ static int virq_handler_init(const struct platform_device *pdev)
 		return 0;
 
 	/* Set indicate irq type 0 to indicate Shared Peripheral Irq */
-	intr_info[0] = cpu_to_be32(0);
+	tegra_hv_virq_intr_info[0] = cpu_to_be32(0);
 	/* Id in SPI namespace - subtract number of PPIs
 	 * (Private Peripheral Irqs) which is = 32
 	 */
-	intr_info[1] = cpu_to_be32(ctrl->hv_peer_err_irq_id - 32);
+	tegra_hv_virq_intr_info[1] = cpu_to_be32(ctrl->hv_peer_err_irq_id - 32);
 	/* Trigger irq on low-to-high edge (0x1) */
-	intr_info[2] = cpu_to_be32(IRQF_TRIGGER_RISING);
+	tegra_hv_virq_intr_info[2] = cpu_to_be32(IRQF_TRIGGER_RISING);
 
-	interrupts_prop.length = sizeof(intr_info);
-	dev_info(ctrl->dev, "interrupts_prop.length %u\n",
-		interrupts_prop.length);
+	tegra_hv_virq_intr_prop.length = sizeof(tegra_hv_virq_intr_info);
+	dev_info(ctrl->dev, "tegra_hv_virq_intr_prop.length %u\n",
+		tegra_hv_virq_intr_prop.length);
 
-	interrupts_prop.value = intr_info;
+	tegra_hv_virq_intr_prop.value = tegra_hv_virq_intr_info;
 
-	if (of_add_property(dev.of_node, &interrupts_prop)) {
+	if (of_add_property(dev.of_node, &tegra_hv_virq_intr_prop)) {
 		dev_err(ctrl->dev, "%s: failed to add interrupts property\n",
 			__func__);
 		return -EACCES;
@@ -326,8 +326,8 @@ static int shared_mem_map(struct platform_device *pdev)
 	 * Size of sync errors array = 1 error per VCPU * number of VCPUs on
 	 * a VM
 	 */
-	required_size = sizeof(struct async_metaData) +
-		(sizeof(struct errData) *
+	required_size = sizeof(struct async_metadata_t) +
+		(sizeof(struct err_data_t) *
 		(ctrl->async_err_arr_items + ctrl->vcpu_cnt));
 	if (buff_size < required_size) {
 		dev_err(ctrl->dev,
@@ -345,7 +345,7 @@ static int shared_mem_map(struct platform_device *pdev)
 		ctrl->async_err_arr_items, ctrl->vcpu_cnt);
 
 	/* Map shared memory */
-	ctrl->err_info = (struct errInfo *) ioremap_cache(ipa, buff_size);
+	ctrl->err_info = (struct err_info_t *) ioremap_cache(ipa, buff_size);
 	if (ctrl->err_info == NULL)
 		return -ENOMEM;
 
@@ -378,22 +378,31 @@ static int hyp_config_init(struct device *dev)
 static void shared_structs_check(struct device *dev)
 {
 	/* Ensure coherency with common header */
-	BUILD_BUG_ON(REASON_ENUM_SIZE != (ARRAY_SIZE(fault_reason_desc)));
+	BUILD_BUG_ON(REASON_ENUM_SIZE !=
+		(ARRAY_SIZE(tegra_hv_err_reason_desc)));
 
-	/* Manually compare these sizes with HV console dump to ensure
-	 * common structures shared by HV and Linux are in sync
+	/* Dump shared structures sizes. This is needed to manually compare
+	 * with HV console dump, if a build bug fires below.
 	 */
-	dev_info(dev, "async_metaData size 0x%lx\n",
-		sizeof(struct async_metaData));
-	dev_info(dev, "async_bridgeErr size 0x%lx\n",
-		sizeof(struct async_bridgeErr));
-	dev_info(dev, "async_smmuErr size 0x%lx\n",
-		sizeof(struct async_smmuErr));
-	dev_info(dev, "async_mcErr size 0x%lx\n",
-		sizeof(struct async_mcErr));
-	dev_info(dev, "sync_dataAbort size 0x%lx\n",
-		sizeof(struct sync_dataAbort));
-	dev_info(dev, "errData size 0x%lx\n", sizeof(struct errData));
+	dev_info(dev, "async_metadata size 0x%lx\n",
+		sizeof(struct async_metadata_t));
+	dev_info(dev, "async_bridge_err size 0x%lx\n",
+		sizeof(struct async_bridge_err_t));
+	dev_info(dev, "async_smmu_err size 0x%lx\n",
+		sizeof(struct async_smmu_err_t));
+	dev_info(dev, "async_mc_err size 0x%lx\n",
+		sizeof(struct async_mc_err_t));
+	dev_info(dev, "sync_data_abort size 0x%lx\n",
+		sizeof(struct sync_data_abort_t));
+	dev_info(dev, "err_data size 0x%lx\n", sizeof(struct err_data_t));
+
+	/* Ensure common structures shared by HV and Linux are in sync */
+	BUILD_BUG_ON(sizeof(struct async_metadata_t) != 0x10);
+	BUILD_BUG_ON(sizeof(struct async_bridge_err_t) != 0x74);
+	BUILD_BUG_ON(sizeof(struct async_smmu_err_t) != 0x1C);
+	BUILD_BUG_ON(sizeof(struct async_mc_err_t) != 0x24);
+	BUILD_BUG_ON(sizeof(struct sync_data_abort_t) != 0x11B);
+	BUILD_BUG_ON(sizeof(struct err_data_t) != 0x127);
 }
 
 static int vm_err_handler_init(struct platform_device *pdev)
@@ -477,8 +486,8 @@ static int tegra_hv_register_hooks_for_device(struct device *dev,
 	struct tegra_hv_err_ctrl *ctrl;
 	const struct platform_device *pd = container_of(dev,
 		struct platform_device, dev);
-	const struct vm_err_handlers *_handlers =
-		(struct vm_err_handlers *) handlers;
+	const struct tegra_hv_vm_err_handlers *_handlers =
+		(struct tegra_hv_vm_err_handlers *) handlers;
 
 	ctrl = platform_get_drvdata(pd);
 	if (!ctrl) {
@@ -498,7 +507,7 @@ static int tegra_hv_register_hooks_for_device(struct device *dev,
 	return 0;
 }
 
-int tegra_hv_register_vm_err_hooks(struct vm_err_handlers *handlers)
+int tegra_hv_register_vm_err_hooks(struct tegra_hv_vm_err_handlers *handlers)
 {
 	int ret;
 

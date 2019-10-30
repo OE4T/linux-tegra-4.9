@@ -12,19 +12,19 @@
  *
  */
 
-#ifndef __VM_ERR_H_
-#define __VM_ERR_H_
+#ifndef __TEGRA_HV_VM_ERR_H_
+#define __TEGRA_HV_VM_ERR_H_
 
 #if IS_ENABLED(CONFIG_TEGRA_VM_ERR_HANDLER)
 #include <linux/errinfo.h>
 
-struct vm_err_handlers {
+struct tegra_hv_vm_err_handlers {
 	/* return true, if error needs kernel to enter bad mode and reboot.
 	 * return false, if error doesn't need reboot.
 	 */
-	bool (*fn_self_async)(const struct errData *const err_data);
-	bool (*fn_self_sync)(const struct errData *const err_data);
-	bool (*fn_peer)(const struct errData *const err_data);
+	bool (*fn_self_async)(const struct err_data_t *const err_data);
+	bool (*fn_self_sync)(const struct err_data_t *const err_data);
+	bool (*fn_peer)(const struct err_data_t *const err_data);
 };
 
 struct tegra_hv_config {
@@ -32,9 +32,9 @@ struct tegra_hv_config {
 	unsigned int num_guests;
 };
 
-static const char * const fault_reason_desc[] = {
+static const char * const tegra_hv_err_reason_desc[] = {
 	"Undefined",
-	"SMMU CB",
+	"SMMU Context Bank",
 	"SMMU Global",
 	"Bridge",
 	"Memory Controller",
@@ -43,16 +43,16 @@ static const char * const fault_reason_desc[] = {
 	"Other synchronous exception",
 };
 
-int tegra_hv_register_vm_err_hooks(struct vm_err_handlers *custom_handlers);
+int tegra_hv_register_vm_err_hooks(struct tegra_hv_vm_err_handlers *handlers);
 void tegra_hv_get_config(struct tegra_hv_config *config);
 
 #else
 static inline int tegra_hv_register_vm_err_hooks(
-	struct vm_err_handlers *custom_handlers)
+	struct tegra_hv_vm_err_handlers *custom_handlers)
 {
 	pr_err("Can you please enable CONFIG_TEGRA_VM_ERR_HANDLER?");
 	return -EINVAL;
 }
 #endif
 
-#endif	/* __VM_ERR_H_ */
+#endif	/* __TEGRA_HV_VM_ERR_H_ */

@@ -14,6 +14,7 @@
 #include "dt-bindings/input/input.h"
 #include "tegra194-fixed-regulator-p3509-0000-a00.dtsi"
 #include "tegra194-p3509-disp.dtsi"
+#include "tegra194-audio-p3668.dtsi"
 #include "tegra194-p3668-p3509-pcie-plugin-manager.dtsi"
 
 / {

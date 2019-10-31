@@ -51,6 +51,8 @@
 #define HVC_NR_READ_VCPU_ID		19
 #define HVC_NR_SYNC_ERR_GUEST_READ_ACK	20
 
+#define HVC_NR_TRACE_GET_EVENT_MASK	289
+#define HVC_NR_TRACE_SET_EVENT_MASK	290
 #define HVC_NR_UART_RELAY_INFO		518
 #define HVC_NR_NVLOG_WRITER_INFO	519
 #define HVC_NR_NVLOG_READER_INFO	520
@@ -348,6 +350,39 @@ static inline uint64_t hyp_sysinfo_ipa(void)
 		: "x1", "x2", "x3", _X4_X17);
 
 	return r0;
+}
+
+static inline int hyp_trace_get_mask(uint64_t *mask)
+{
+	register uint64_t x0 asm("x0");
+	register uint64_t x1 asm("x1");
+
+	asm("hvc %[imm16]"
+		:
+		"=r"(x0), "=r"(x1)
+		:
+		[imm16] "i"(HVC_NR_TRACE_GET_EVENT_MASK)
+		:
+		"x2", _X3_X17);
+
+	*mask = x1;
+
+	return (int)x0;
+}
+
+static inline int hyp_trace_set_mask(uint64_t mask)
+{
+	register uint64_t x0 asm("x0") = mask;
+
+	asm volatile ("hvc %[imm16]"
+		:
+		"+r"(x0)
+		:
+		[imm16] "i"(HVC_NR_TRACE_SET_EVENT_MASK)
+		:
+		"x1", "x2", _X3_X17);
+
+	return (int)x0;
 }
 
 static inline int hyp_read_uart_relay_info(uint64_t *ipa, uint64_t *size,

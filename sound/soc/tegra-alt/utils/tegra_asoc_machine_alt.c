@@ -3624,7 +3624,7 @@ static int tegra_machine_codec_set_dai_fmt(struct snd_soc_pcm_runtime *rtd,
 					   unsigned int frame_mode,
 					   unsigned int master_mode)
 {
-	unsigned int shift, fmt = rtd->dai_link->dai_fmt;
+	unsigned int fmt = rtd->dai_link->dai_fmt;
 
 	if (frame_mode) {
 		fmt &= ~SND_SOC_DAIFMT_FORMAT_MASK;
@@ -3633,8 +3633,12 @@ static int tegra_machine_codec_set_dai_fmt(struct snd_soc_pcm_runtime *rtd,
 
 	if (master_mode) {
 		fmt &= ~SND_SOC_DAIFMT_MASTER_MASK;
-		shift = ffs(SND_SOC_DAIFMT_MASTER_MASK) - 1;
-		fmt |= master_mode << shift;
+		master_mode <<= ffs(SND_SOC_DAIFMT_MASTER_MASK) - 1;
+
+		if (master_mode == SND_SOC_DAIFMT_CBM_CFM)
+			fmt |= SND_SOC_DAIFMT_CBM_CFM;
+		else
+			fmt |= SND_SOC_DAIFMT_CBS_CFS;
 	}
 
 	return snd_soc_runtime_set_dai_fmt(rtd, fmt);
@@ -3681,16 +3685,9 @@ static int tegra_machine_codec_put_frame_mode(struct snd_kcontrol *kcontrol,
 	return 0;
 }
 
-/*
- * The order of the below must not be changed as this
- * aligns with the SND_SOC_DAIFMT_XXX definitions in
- * include/sound/soc-dai.h.
- */
 static const char * const tegra_machine_master_mode_text[] = {
 	"None",
 	"cbm-cfm",
-	"cbs-cfm",
-	"cbm-cfs",
 	"cbs-cfs",
 };
 

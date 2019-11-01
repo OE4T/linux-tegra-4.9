@@ -3616,8 +3616,29 @@ EXPORT_SYMBOL_GPL(tegra_machine_get_tx_mask_t18x);
 
 struct tegra_machine_control_data {
 	struct snd_soc_pcm_runtime *rtd;
-	unsigned int value;
+	unsigned int frame_mode;
+	unsigned int master_mode;
 };
+
+static int tegra_machine_codec_set_dai_fmt(struct snd_soc_pcm_runtime *rtd,
+					   unsigned int frame_mode,
+					   unsigned int master_mode)
+{
+	unsigned int shift, fmt = rtd->dai_link->dai_fmt;
+
+	if (frame_mode) {
+		fmt &= ~SND_SOC_DAIFMT_FORMAT_MASK;
+		fmt |= frame_mode;
+	}
+
+	if (master_mode) {
+		fmt &= ~SND_SOC_DAIFMT_MASTER_MASK;
+		shift = ffs(SND_SOC_DAIFMT_MASTER_MASK) - 1;
+		fmt |= master_mode << shift;
+	}
+
+	return snd_soc_runtime_set_dai_fmt(rtd, fmt);
+}
 
 /*
  * The order of the below must not be changed as this
@@ -3638,7 +3659,7 @@ static int tegra_machine_codec_get_frame_mode(struct snd_kcontrol *kcontrol,
 {
 	struct tegra_machine_control_data *data = kcontrol->private_data;
 
-	ucontrol->value.integer.value[0] = data->value;
+	ucontrol->value.integer.value[0] = data->frame_mode;
 
 	return 0;
 }
@@ -3647,19 +3668,15 @@ static int tegra_machine_codec_put_frame_mode(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
 	struct tegra_machine_control_data *data = kcontrol->private_data;
-	unsigned int fmt = data->rtd->dai_link->dai_fmt;
 	int err;
 
-	if (ucontrol->value.integer.value[0]) {
-		fmt &= ~SND_SOC_DAIFMT_FORMAT_MASK;
-		fmt |= ucontrol->value.integer.value[0];
-	}
-
-	err = snd_soc_runtime_set_dai_fmt(data->rtd, fmt);
+	err = tegra_machine_codec_set_dai_fmt(data->rtd,
+					      ucontrol->value.integer.value[0],
+					      data->master_mode);
 	if (err)
 		return err;
 
-	data->value = ucontrol->value.integer.value[0];
+	data->frame_mode = ucontrol->value.integer.value[0];
 
 	return 0;
 }
@@ -3682,7 +3699,7 @@ static int tegra_machine_codec_get_master_mode(struct snd_kcontrol *kcontrol,
 {
 	struct tegra_machine_control_data *data = kcontrol->private_data;
 
-	ucontrol->value.integer.value[0] = data->value;
+	ucontrol->value.integer.value[0] = data->master_mode;
 
 	return 0;
 }
@@ -3691,20 +3708,15 @@ static int tegra_machine_codec_put_master_mode(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
 	struct tegra_machine_control_data *data = kcontrol->private_data;
-	unsigned int shift, fmt = data->rtd->dai_link->dai_fmt;
 	int err;
 
-	if (ucontrol->value.integer.value[0]) {
-		fmt &= ~SND_SOC_DAIFMT_MASTER_MASK;
-		shift = ffs(SND_SOC_DAIFMT_MASTER_MASK) - 1;
-		fmt |= ucontrol->value.integer.value[0] << shift;
-	}
-
-	err = snd_soc_runtime_set_dai_fmt(data->rtd, fmt);
+	err = tegra_machine_codec_set_dai_fmt(data->rtd,
+					      data->frame_mode,
+					      ucontrol->value.integer.value[0]);
 	if (err)
 		return err;
 
-	data->value = ucontrol->value.integer.value[0];
+	data->master_mode = ucontrol->value.integer.value[0];
 
 	return 0;
 }
@@ -3737,10 +3749,9 @@ static int tegra_machine_add_ctl(struct snd_soc_card *card,
 }
 
 static int tegra_machine_add_frame_mode_ctl(struct snd_soc_card *card,
-					    struct snd_soc_pcm_runtime *rtd,
-					    const unsigned char *name)
+	struct snd_soc_pcm_runtime *rtd, const unsigned char *name,
+	struct tegra_machine_control_data *data)
 {
-	struct tegra_machine_control_data *data;
 	struct snd_kcontrol_new knew = {
 		.iface		= SNDRV_CTL_ELEM_IFACE_MIXER,
 		.name		= name,
@@ -3752,21 +3763,13 @@ static int tegra_machine_add_frame_mode_ctl(struct snd_soc_card *card,
 				(unsigned long)&tegra_machine_codec_frame_mode,
 	};
 
-	data = devm_kzalloc(card->dev, sizeof(*data), GFP_KERNEL);
-	if (!data)
-		return -ENOMEM;
-
-	data->rtd = rtd;
-	data->value = 0;
-
 	return tegra_machine_add_ctl(card, &knew, data, name);
 }
 
 static int tegra_machine_add_master_mode_ctl(struct snd_soc_card *card,
-					     struct snd_soc_pcm_runtime *rtd,
-					     const unsigned char *name)
+	struct snd_soc_pcm_runtime *rtd, const unsigned char *name,
+	struct tegra_machine_control_data *data)
 {
-	struct tegra_machine_control_data *data;
 	struct snd_kcontrol_new knew = {
 		.iface		= SNDRV_CTL_ELEM_IFACE_MIXER,
 		.name		= name,
@@ -3778,19 +3781,13 @@ static int tegra_machine_add_master_mode_ctl(struct snd_soc_card *card,
 				(unsigned long)&tegra_machine_codec_master_mode,
 	};
 
-	data = devm_kzalloc(card->dev, sizeof(*data), GFP_KERNEL);
-	if (!data)
-		return -ENOMEM;
-
-	data->rtd = rtd;
-	data->value = 0;
-
 	return tegra_machine_add_ctl(card, &knew, data, name);
 }
 
 int tegra_machine_add_i2s_codec_controls(struct snd_soc_card *card,
 					 unsigned int num_dai_links)
 {
+	struct tegra_machine_control_data *data;
 	struct snd_soc_pcm_runtime *rtd;
 	struct device_node *np;
 	char name[SNDRV_CTL_ELEM_ID_NAME_MAXLEN];
@@ -3809,19 +3806,27 @@ int tegra_machine_add_i2s_codec_controls(struct snd_soc_card *card,
 		if (!np)
 			continue;
 
+		data = devm_kzalloc(card->dev, sizeof(*data), GFP_KERNEL);
+		if (!data)
+			return -ENOMEM;
+
+		data->rtd = rtd;
+		data->frame_mode = 0;
+		data->master_mode = 0;
+
 		if (of_property_read_u32(np, "nvidia,ahub-i2s-id", &id) < 0)
 			continue;
 
 		snprintf(name, sizeof(name), "I2S%d codec frame mode", id+1);
 
-		ret = tegra_machine_add_frame_mode_ctl(card, rtd, name);
+		ret = tegra_machine_add_frame_mode_ctl(card, rtd, name, data);
 		if (ret)
 			dev_warn(card->dev, "Failed to add control: %s!\n",
 				 name);
 
 		snprintf(name, sizeof(name), "I2S%d codec master mode", id+1);
 
-		ret = tegra_machine_add_master_mode_ctl(card, rtd, name);
+		ret = tegra_machine_add_master_mode_ctl(card, rtd, name, data);
 		if (ret) {
 			dev_warn(card->dev, "Failed to add control: %s!\n",
 				 name);

@@ -153,11 +153,8 @@ static void tegra_channel_fmt_align(struct tegra_channel *chan,
 				const struct tegra_video_format *vfmt,
 				u32 *width, u32 *height, u32 *bytesperline)
 {
-	unsigned int min_width;
-	unsigned int max_width;
 	unsigned int min_bpl;
 	unsigned int max_bpl;
-	unsigned int temp_width;
 	unsigned int align, fmt_align;
 	unsigned int temp_bpl;
 	unsigned int bpl;
@@ -190,12 +187,10 @@ static void tegra_channel_fmt_align(struct tegra_channel *chan,
 	if (!*bytesperline)
 		*bytesperline = bpl;
 
-	min_width = roundup(TEGRA_MIN_WIDTH, align);
-	max_width = rounddown(TEGRA_MAX_WIDTH, align);
-	temp_width = roundup(bpl, align);
-
-	*width = (clamp(temp_width, min_width, max_width) * denominator) /
-			numerator;
+	/* Don't clamp the width based on bpl as stride and width can be
+	 * different. Aligned width also may force a sensor mode change other
+	 * than the requested one
+	 */
 	*height = clamp(*height, TEGRA_MIN_HEIGHT, TEGRA_MAX_HEIGHT);
 
 	/* Clamp the requested bytes per line value. If the maximum bytes per

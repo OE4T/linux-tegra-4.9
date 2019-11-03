@@ -31,6 +31,10 @@
 #define NUM_FIELDS_SINGLE 1
 #define SOF_SYNCPT_IDX	0
 #define FE_SYNCPT_IDX	1
+/* 256 byte alignment in accordance to NvRmSurface Pitch alignment.
+ * It is the worst case scenario considering VIC engine requirements
+ */
+#define RM_SURFACE_ALIGNMENT 256
 
 static void tegra_channel_error_recovery(struct tegra_channel *chan);
 static void tegra_channel_stop_kthreads(struct tegra_channel *chan);
@@ -1314,6 +1318,12 @@ static void tegra_channel_notify_error_callback(void *client_data)
 	schedule_work(&chan->error_work);
 }
 
+static void vi4_stride_align(unsigned int *bpl)
+{
+	*bpl = ((*bpl + (RM_SURFACE_ALIGNMENT) - 1) &
+			~((RM_SURFACE_ALIGNMENT) - 1));
+}
+
 struct tegra_vi_fops vi4_fops = {
 	.vi_power_on = vi4_power_on,
 	.vi_power_off = vi4_power_off,
@@ -1323,4 +1333,6 @@ struct tegra_vi_fops vi4_fops = {
 	.vi_add_ctrls = vi4_add_ctrls,
 	.vi_init_video_formats = vi4_init_video_formats,
 	.vi_mfi_work = vi4_mfi_work,
+	.vi_stride_align = vi4_stride_align,
+
 };

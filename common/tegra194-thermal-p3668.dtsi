@@ -22,30 +22,30 @@
 		CPU-therm {
 			trips {
 				trip_critical {
-					temperature = <95500>;
+					temperature = <96000>;
 				};
 				trip_bthrot {
-					temperature = <90000>;
+					temperature = <90500>;
 				};
 			};
 		};
 		GPU-therm {
 			trips {
 				trip_critical {
-					temperature = <98000>;
+					temperature = <97000>;
 				};
 				trip_bthrot {
-					temperature = <92500>;
+					temperature = <91500>;
 				};
 			};
 		};
 		AUX-therm {
 			trips {
 				trip_critical {
-					temperature = <94500>;
+					temperature = <95500>;
 				};
 				trip_bthrot {
-					temperature = <89000>;
+					temperature = <90000>;
 				};
 			};
 		};

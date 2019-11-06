@@ -861,6 +861,24 @@ static inline u32 eqos_get_mac_version(void)
 	}
 	return 0;
 }
+
+static void eqos_get_phy_delays(struct eqos_prv_data *pdata)
+{
+	struct platform_device *pdev = pdata->pdev;
+	struct device_node *node = pdev->dev.of_node;
+	int ret = 0;
+
+	ret = of_property_read_u32(node, "nvidia,phy-reset-duration",
+				   &pdata->phy_reset_duration);
+	if (ret < 0)
+		pdata->phy_reset_duration = 10;
+
+	ret = of_property_read_u32(node, "nvidia,phy-reset-post-delay",
+				   &pdata->phy_reset_post_delay);
+	if (ret < 0)
+		pdata->phy_reset_post_delay = 0;
+}
+
 /*!
 * \brief API to initialize the device.
 *
@@ -1021,13 +1039,18 @@ int eqos_probe(struct platform_device *pdev)
 		if (phyirq < 0)
 			phyirq = PHY_POLL;
 
+		/* read phy delays from DT */
+		eqos_get_phy_delays(pdata);
+
 		/* setup PHY reset gpio */
 		eqos_get_phyreset_from_gpio(pdata);
 		if (gpio_is_valid(pdata->phy_reset_gpio)) {
 			/* reset Broadcom PHY needs minimum of 2us delay */
 			gpio_set_value(pdata->phy_reset_gpio, 0);
-			usleep_range(10, 11);
+			usleep_range(pdata->phy_reset_duration,
+				     pdata->phy_reset_duration + 1);
 			gpio_set_value(pdata->phy_reset_gpio, 1);
+			msleep(pdata->phy_reset_post_delay);
 		}
 
 		/* CAR reset */

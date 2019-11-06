@@ -1115,8 +1115,10 @@ static int eqos_open(struct net_device *dev)
 	/* Reset the PHY */
 	if (gpio_is_valid(pdata->phy_reset_gpio)) {
 		gpio_set_value(pdata->phy_reset_gpio, 0);
-		usleep_range(10, 11);
+		usleep_range(pdata->phy_reset_duration,
+			     pdata->phy_reset_duration + 1);
 		gpio_set_value(pdata->phy_reset_gpio, 1);
+		msleep(pdata->phy_reset_post_delay);
 	}
 
 	ret = eqos_clock_enable(pdata);

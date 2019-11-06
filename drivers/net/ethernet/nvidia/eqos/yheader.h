@@ -1326,7 +1326,8 @@ struct eqos_prv_data {
 	INT tx_irqs[MAX_CHANS];
 	int phy_intr_gpio;
 	int phy_reset_gpio;
-
+	int phy_reset_post_delay;
+	int phy_reset_duration;
 	struct clk *pllrefe_clk;
 	struct clk *axi_clk;
 	struct clk *axi_cbb_clk;

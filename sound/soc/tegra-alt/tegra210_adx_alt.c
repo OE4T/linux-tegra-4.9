@@ -211,8 +211,8 @@ static int tegra210_adx_stop(struct snd_soc_dapm_widget *w,
 	return (dcnt < 0) ? -ETIMEDOUT : 0;
 }
 
-#ifdef TEGRA210_ADX_MAP_READ
-static unsigned int tegra210_adx_read_map_ram(struct tegra210_adx *adx,
+static unsigned int __maybe_unused tegra210_adx_read_map_ram(
+						struct tegra210_adx *adx,
 						unsigned int addr)
 {
 	unsigned int val, wait;
@@ -239,7 +239,6 @@ static unsigned int tegra210_adx_read_map_ram(struct tegra210_adx *adx,
 
 	return val;
 }
-#endif
 
 static int tegra210_adx_runtime_suspend(struct device *dev)
 {

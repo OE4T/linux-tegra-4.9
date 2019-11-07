@@ -245,8 +245,8 @@ static int tegra210_amx_runtime_suspend(struct device *dev)
 	return 0;
 }
 
-#ifdef TEGRA210_AMX_MAP_READ
-static unsigned int tegra210_amx_read_map_ram(struct tegra210_amx *amx,
+static unsigned int __maybe_unused tegra210_amx_read_map_ram(
+						struct tegra210_amx *amx,
 						unsigned int addr)
 {
 	unsigned int val, wait;
@@ -274,7 +274,6 @@ static unsigned int tegra210_amx_read_map_ram(struct tegra210_amx *amx,
 
 	return val;
 }
-#endif
 
 static int tegra210_amx_runtime_resume(struct device *dev)
 {

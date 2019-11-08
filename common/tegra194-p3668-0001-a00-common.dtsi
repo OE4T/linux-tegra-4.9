@@ -53,7 +53,7 @@
                  };
          };
 
-	i2c@c240000 {
+	hdr40_i2c0: i2c@c240000 {
 		/* This I2C (GEN2) is routed only to 40-pin hdr
 		 * Not being used in Jakku CVM/CVB/Porg-base-board
 		 * it seems "ucsi_ccg" for USB-TypeC which is not supported by Jakku */
@@ -406,7 +406,7 @@
 		};
 	};
 
-	i2c@31e0000 {
+	hdr40_i2c1: i2c@31e0000 {
 		pinctrl-names = "default";
 		pinctrl-0 = <&dpaux_default>;
 	};

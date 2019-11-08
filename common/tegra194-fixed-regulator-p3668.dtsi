@@ -16,7 +16,7 @@
 
 / {
 	fixed-regulators {
-		battery_reg: regulator@0 {
+		hdr40_vdd_5v0: battery_reg: regulator@0 {
 			compatible = "regulator-fixed";
 			reg = <0>;
 			regulator-name = "vdd-ac-bat";

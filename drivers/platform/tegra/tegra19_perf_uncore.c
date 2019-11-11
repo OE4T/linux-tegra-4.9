@@ -18,11 +18,11 @@
 
  #include <linux/version.h>
 
- #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
+ #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 9, 0)
 
 /*
-* perf events refactored include structure starting with 4.14
-* This driver is only valid with kernel version 4.14 and greater
+* perf events refactored include structure starting with 4.9
+* This driver is only valid with kernel version 4.9 and greater
 */
 #include <linux/of.h>
 #include <linux/platform_device.h>
@@ -35,7 +35,11 @@
 #include <linux/perf_event.h>
 #include <linux/platform_device.h>
 #include <linux/types.h>
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 0)
 #include <linux/sched/clock.h>
+#else
+#include <linux/sched_clock.h>
+#endif
 
 #include <asm/irq_regs.h>
 #include <asm/sysreg.h>

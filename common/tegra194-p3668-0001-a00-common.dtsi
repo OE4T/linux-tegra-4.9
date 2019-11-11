@@ -437,6 +437,14 @@
 		status = "okay";
 	};
 
+	spi@3210000{
+		status = "okay";
+	};
+
+	spi@3230000 {
+		status = "okay";
+	};
+
 	ether_qos@2490000 {
 		nvidia,phy-reset-gpio = <&tegra_main_gpio TEGRA194_MAIN_GPIO(R, 1) 0>;
 		nvidia,phy-reset-post-delay = <72>;

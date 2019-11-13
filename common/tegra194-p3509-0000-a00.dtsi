@@ -45,6 +45,13 @@
 				label = "cvb";
 			};
 		};
+		bus@1 {
+			i2c-bus = <&gen2_i2c>;
+			eeprom@1 {
+				slave-address = <0x50>;
+				label = "super-module";
+			};
+		};
 	};
 	pwm-fan {
 		pwms = <&tegra_pwm6 0 45334>;

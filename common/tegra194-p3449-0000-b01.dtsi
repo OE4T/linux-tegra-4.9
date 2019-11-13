@@ -45,6 +45,13 @@
 				label = "cvb";
 			};
 		};
+		bus@1 {
+			i2c-bus = <&gen2_i2c>;
+			eeprom@1 {
+				slave-address = <0x50>;
+				label = "super-module";
+			};
+		};
 	};
 	/* move this node to p3449-power-tree.dtsi file if there is any such
 	 * file exist

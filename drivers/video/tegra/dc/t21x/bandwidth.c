@@ -29,6 +29,7 @@
 #include <linux/platform/tegra/emc_bwmgr.h>
 #include <linux/platform/tegra/tegra_emc.h>
 #include <linux/platform/tegra/mc.h>
+#include <linux/platform/tegra/bwmgr_mc.h>
 
 #include <uapi/video/tegra_dc_ext.h>
 #include "dc.h"
@@ -532,8 +533,9 @@ static int tegra_dc_handle_latency_allowance(struct tegra_dc *dc,
 	int ret = 0;
 	unsigned long bw;
 	struct dc_to_la_params disp_params;
-	struct clk *emc_clk = NULL;
+	struct clk *dram_clk = NULL;
 	unsigned long emc_freq_hz = 0;
+	unsigned long dram_freq_hz = 0;
 
 	BUG_ON(dc->ctrl_num >= ARRAY_SIZE(la_id_tab));
 	BUG_ON(w->idx >= ARRAY_SIZE(*la_id_tab));
@@ -546,15 +548,17 @@ static int tegra_dc_handle_latency_allowance(struct tegra_dc *dc,
 	if (bw != ULONG_MAX)
 		bw = bw / 1000 + 1;
 
-	/* use clk_round_rate on root emc clock instead to get correct rate */
-	emc_clk = clk_get_sys("tegra_emc", "emc");
-	emc_freq_hz = set_la ?
+	/* use clk_round_rate on root dram clock instead to get correct rate */
+	dram_clk = clk_get_sys("tegra_emc", "emc");
+	dram_freq_hz = set_la ?
 		tegra_emc_bw_to_freq_req(bw * 1000000) : UINT_MAX;
-	emc_freq_hz = clk_round_rate(emc_clk, emc_freq_hz);
+	/* clk_round_rate returns the next dram frequency */
+	dram_freq_hz = clk_round_rate(dram_clk, dram_freq_hz);
+	emc_freq_hz = dram_freq_hz / bwmgr_get_emc_to_dram_freq_factor();
 
 	while (1) {
 		int err;
-		unsigned long next_freq = 0;
+		unsigned long next_emc_freq_hz = 0;
 		calc_disp_params(dc, w,
 				la_id_tab[dc->ctrl_num][w->idx],
 				emc_freq_hz, bw, &disp_params);
@@ -572,22 +576,26 @@ static int tegra_dc_handle_latency_allowance(struct tegra_dc *dc,
 			emc_freq_hz, bw, disp_params);
 
 		if (!err) {
-			tegra_bwmgr_set_emc(dc->emc_la_handle, emc_freq_hz,
-						TEGRA_BWMGR_SET_EMC_FLOOR);
+			/* tegra_bwmgr_set_emc sets dram frequency */
+			tegra_bwmgr_set_emc(dc->emc_la_handle,
+				dram_freq_hz, TEGRA_BWMGR_SET_EMC_FLOOR);
 			break;
 		}
 
-		next_freq = clk_round_rate(emc_clk, emc_freq_hz + 1000000);
+		dram_freq_hz = clk_round_rate(dram_clk, dram_freq_hz + 1000000);
 
-		if (emc_freq_hz == next_freq) {
+		next_emc_freq_hz = dram_freq_hz /
+			bwmgr_get_emc_to_dram_freq_factor();
+
+		if (emc_freq_hz == next_emc_freq_hz) {
 			ret = err;
 			break;
 		}
+		emc_freq_hz = next_emc_freq_hz;
 
-		emc_freq_hz = next_freq;
 	}
 
-	clk_put(emc_clk);
+	clk_put(dram_clk);
 
 	return ret;
 }

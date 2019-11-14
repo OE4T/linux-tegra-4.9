@@ -472,12 +472,12 @@
 		spiflash@0 {
 			#address-cells = <1>;
 			#size-cells = <1>;
-			compatible = "s25fl128s";
+			compatible = "s25fs256s";
 			reg = <0>;
 			spi-max-frequency = <136000000>;
 			partition@0 {
 				label = "Whole_flash0";
-				reg = <0x00000000 0x1000000>;	/* size of QSPI-NOR 16MB == 128Mb */
+				reg = <0x00000000 0x10000000>;	/* size of QSPI-NOR 32MB == 256Mb */
 			};
 			controller-data {
 				nvidia,x1-len-limit = <16>;

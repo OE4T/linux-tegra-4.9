@@ -81,6 +81,7 @@
 #define RDCR_DUMMY_CYCLE			(3<<6)
 
 #define JEDEC_ID_S25FX512S	0x010220
+#define JEDEC_ID_S25FS256S	0x010219
 #define JEDEC_ID_MX25U51279G	0xC2953A
 #define JEDEC_ID_MX25U3235F	0xC22536
 
@@ -1889,7 +1890,8 @@ static int qspi_probe(struct spi_device *spi)
 
 	if (info->jedec_id == JEDEC_ID_MX25U51279G)
 		flash->cmd_info_table = macronix_cmd_info_table;
-	else if (info->jedec_id == JEDEC_ID_S25FX512S)
+	else if (info->jedec_id == JEDEC_ID_S25FX512S ||
+					info->jedec_id == JEDEC_ID_S25FS256S)
 		flash->cmd_info_table = spansion_cmd_info_table;
 	else if (info->jedec_id == JEDEC_ID_MX25U3235F)
 		flash->cmd_info_table = macronix_porg_cmd_info_table;

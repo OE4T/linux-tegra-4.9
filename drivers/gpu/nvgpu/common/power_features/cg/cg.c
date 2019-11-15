@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2019-2020, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -80,6 +80,34 @@ void nvgpu_cg_elcg_disable_no_wait(struct gk20a *g)
 	nvgpu_mutex_acquire(&g->cg_pg_lock);
 	if (g->elcg_enabled) {
 		nvgpu_cg_set_mode(g, ELCG_MODE, ELCG_RUN);
+	}
+	nvgpu_mutex_release(&g->cg_pg_lock);
+}
+
+void nvgpu_cg_blcg_disable_no_wait(struct gk20a *g) {
+	nvgpu_log_fn(g, " ");
+
+	if (!nvgpu_is_enabled(g, NVGPU_GPU_CAN_BLCG)) {
+		return;
+	}
+
+	nvgpu_mutex_acquire(&g->cg_pg_lock);
+	if (g->blcg_enabled) {
+		nvgpu_cg_set_mode(g, BLCG_MODE, BLCG_RUN);
+	}
+	nvgpu_mutex_release(&g->cg_pg_lock);
+}
+
+void nvgpu_cg_blcg_enable_no_wait(struct gk20a *g) {
+	nvgpu_log_fn(g, " ");
+
+	if (!nvgpu_is_enabled(g, NVGPU_GPU_CAN_BLCG)) {
+		return;
+	}
+
+	nvgpu_mutex_acquire(&g->cg_pg_lock);
+	if (g->blcg_enabled) {
+		nvgpu_cg_set_mode(g, BLCG_MODE, BLCG_AUTO);
 	}
 	nvgpu_mutex_release(&g->cg_pg_lock);
 }

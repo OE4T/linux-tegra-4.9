@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2019, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2020, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -526,6 +526,13 @@ static int nvgpu_pg_init_task(void *arg)
 			nvgpu_pmu_dbg(g, "loaded zbc");
 			pmu_setup_hw_enable_elpg(g);
 			nvgpu_pmu_dbg(g, "PMU booted, thread exiting");
+
+			gk20a_gr_wait_initialized(g);
+
+			nvgpu_cg_blcg_enable_no_wait(g);
+
+			nvgpu_cg_elcg_enable_no_wait(g);
+
 			return 0;
 		default:
 			nvgpu_pmu_dbg(g, "invalid state");

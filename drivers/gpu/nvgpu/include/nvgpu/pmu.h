@@ -495,6 +495,7 @@ void nvgpu_pmu_setup_hw_load_zbc(struct gk20a *g);
 int nvgpu_pmu_reset(struct gk20a *g);
 
 /* PG enable/disable */
+int nvgpu_pmu_reenable_elpg(struct gk20a *g);
 int nvgpu_pmu_enable_elpg(struct gk20a *g);
 int nvgpu_pmu_disable_elpg(struct gk20a *g);
 int nvgpu_pmu_pg_global_enable(struct gk20a *g, u32 enable_pg);

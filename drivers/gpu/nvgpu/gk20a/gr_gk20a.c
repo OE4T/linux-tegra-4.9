@@ -1,7 +1,7 @@
 /*
  * GK20A Graphics
  *
- * Copyright (c) 2011-2018, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2019, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -3128,11 +3128,22 @@ int gk20a_alloc_obj_ctx(struct channel_gk20a  *c, u32 class_num, u32 flags)
 			goto out;
 		}
 
-		/* init golden image, ELPG enabled after this is done */
+		/* init golden image */
 		err = gr_gk20a_init_golden_ctx_image(g, c);
 		if (err != 0) {
 			nvgpu_err(g,
 				"fail to init golden ctx image");
+			goto out;
+		}
+
+		/* Re-enable ELPG now that golden image has been initialized.
+		 * The PMU PG init code may already have tried to enable elpg, but
+		 * would not have been able to complete this action since the golden
+		 * image hadn't been initialized yet, so do this now.
+		 */
+		err = nvgpu_pmu_reenable_elpg(g);
+		if (err != 0) {
+			nvgpu_err(g, "fail to re-enable elpg");
 			goto out;
 		}
 

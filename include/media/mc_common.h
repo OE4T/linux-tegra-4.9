@@ -208,6 +208,7 @@ struct tegra_channel {
 
 	void __iomem *csibase[TEGRA_CSI_BLOCKS];
 	unsigned int stride_align;
+	unsigned int preferred_stride;
 	unsigned int width_align;
 	unsigned int height_align;
 	unsigned int size_align;

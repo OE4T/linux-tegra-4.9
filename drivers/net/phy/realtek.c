@@ -30,6 +30,16 @@
 #define RTL8211F_PAGE_SELECT	0x1f
 #define RTL8211F_TX_DELAY	0x100
 #define RTL8211F_DEFAULT_PAGE	0xa42
+#define RTL8211F_LED_PAGE	0xd04
+
+#define RTL8211F_LED0_LINK_1000	0x8
+#define RTL8211F_LED1_LINK_1000	0x100
+#define RTL8211F_LED1_LINK_100	0x40
+#define RTL8211F_LED1_LINK_10	0x20
+#define RTL8211F_LED1_LINK_ACTIVE	0x200
+#define RTL8211F_PAGE_LCR_LED_CONTROL	0x10
+#define RTL8211F_PAGE_EEE_LED_CONTROL	0x11
+
 
 MODULE_DESCRIPTION("Realtek PHY driver");
 MODULE_AUTHOR("Johnson Leung");
@@ -123,6 +133,24 @@ static int rtl8211f_config_init(struct phy_device *phydev)
 		reg &= ~RTL8211F_TX_DELAY;
 
 	phy_write(phydev, 0x11, reg);
+
+	ret = phy_write(phydev, RTL8211F_PAGE_SELECT, RTL8211F_LED_PAGE);
+	if (ret)
+		return ret;
+
+	/* Enable all speeds for activity indicator  and LED0 for GBE */
+	reg = RTL8211F_LED0_LINK_1000 | RTL8211F_LED1_LINK_1000 |
+		RTL8211F_LED1_LINK_100 | RTL8211F_LED1_LINK_10 |
+		RTL8211F_LED1_LINK_ACTIVE;
+
+	ret = phy_write(phydev, RTL8211F_PAGE_LCR_LED_CONTROL, reg);
+	if (ret)
+		return ret;
+	/* disable EEE LED control */
+	ret = phy_write(phydev, RTL8211F_PAGE_EEE_LED_CONTROL, 0);
+	if (ret)
+		return ret;
+
 	/* restore to default page 0 */
 	phy_write(phydev, RTL8211F_PAGE_SELECT, 0x0);
 

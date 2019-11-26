@@ -6,6 +6,7 @@
  * Author: Johnson Leung <r58129@freescale.com>
  *
  * Copyright (c) 2004 Freescale Semiconductor, Inc.
+ * Copyright (c) 2019, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute  it and/or modify it
  * under  the terms of  the GNU General  Public License as published by the
@@ -28,6 +29,7 @@
 #define RTL8211F_INSR		0x1d
 #define RTL8211F_PAGE_SELECT	0x1f
 #define RTL8211F_TX_DELAY	0x100
+#define RTL8211F_DEFAULT_PAGE	0xa42
 
 MODULE_DESCRIPTION("Realtek PHY driver");
 MODULE_AUTHOR("Johnson Leung");
@@ -83,14 +85,22 @@ static int rtl8211e_config_intr(struct phy_device *phydev)
 static int rtl8211f_config_intr(struct phy_device *phydev)
 {
 	int err;
+	u16 reg;
+
+	err = phy_write(phydev, RTL8211F_PAGE_SELECT, RTL8211F_DEFAULT_PAGE);
+	if (err)
+		return err;
 
 	if (phydev->interrupts == PHY_INTERRUPT_ENABLED)
-		err = phy_write(phydev, RTL821x_INER,
-				RTL8211F_INER_LINK_STATUS);
+		reg = RTL8211F_INER_LINK_STATUS;
 	else
-		err = phy_write(phydev, RTL821x_INER, 0);
+		reg = 0;
 
-	return err;
+	err = phy_write(phydev, RTL821x_INER, reg);
+	if (err)
+		return err;
+
+	return phy_write(phydev, RTL8211F_PAGE_SELECT, 0);
 }
 
 static int rtl8211f_config_init(struct phy_device *phydev)

@@ -35,7 +35,7 @@
 	tegra_sound: sound {
 		status = "okay";
 		compatible = "nvidia,tegra-audio-t186ref-mobile-rt565x";
-		nvidia,model = "tegra-snd-t19x-mobile-rt565x";
+		nvidia,model = "jetson-xaviernx-ape";
 		clocks = <&bpmp_clks TEGRA194_CLK_PLLA>,
 			 <&bpmp_clks TEGRA194_CLK_PLLA_OUT0>,
 			 <&bpmp_clks TEGRA194_CLK_AHUB>,

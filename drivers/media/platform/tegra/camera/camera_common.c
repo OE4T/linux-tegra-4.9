@@ -608,11 +608,23 @@ int camera_common_try_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *mf)
 		s_data->sensor_mode_id >= 0 &&
 		s_data->sensor_mode_id < s_data->numfmts) {
 		dev_dbg(sd->dev, "%s: use_sensor_mode_id %d\n",
-				__func__, s_data->sensor_mode_id);
+				__func__, s_data->use_sensor_mode_id);
 		s_data->mode = frmfmt[s_data->sensor_mode_id].mode;
 		s_data->mode_prop_idx = s_data->sensor_mode_id;
-		s_data->fmt_width = mf->width;
-		s_data->fmt_height = mf->height;
+		if (mf->width == frmfmt[s_data->sensor_mode_id].size.width &&
+		    mf->height == frmfmt[s_data->sensor_mode_id].size.height) {
+			s_data->fmt_width = mf->width;
+			s_data->fmt_height = mf->height;
+		}
+		else
+		{
+			mf->width = s_data->fmt_width;
+			mf->height = s_data->fmt_height;
+			dev_dbg(sd->dev,
+				"%s: invalid resolution %d x %d\n",
+				__func__, mf->width, mf->height);
+			goto verify_code;
+		}
 	} else {
 		/* select mode based on format match first */
 		for (i = 0; i < s_data->numfmts; i++) {

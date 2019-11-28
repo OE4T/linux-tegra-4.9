@@ -396,7 +396,7 @@ static int sensor_common_parse_control_props(
 	err = read_property_u32(node, "exposure_factor", &value);
 	if (err) {
 		dev_err(dev, "%s:%s:property missing\n",
-			__func__, "framerate_factor");
+			__func__, "exposure_factor");
 		control->exposure_factor = 1;
 	} else
 		control->exposure_factor = value;

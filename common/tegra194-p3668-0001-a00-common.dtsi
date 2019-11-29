@@ -126,6 +126,7 @@
 			};
 			usb2-2 {
 				mode = "host";
+				vbus-supply = <&p3509_vdd_usb2_5v>;
 				status = "okay";
 			};
 			usb3-2 {

@@ -589,11 +589,11 @@ struct nvhost_device_data t19_vic_info = {
 	.can_powergate		= true,
 	.isolate_contexts	= true,
 	.actmon_regs		= HOST1X_THOST_ACTMON_VIC,
-	.actmon_enabled         = false,
+	.actmon_enabled         = true,
 	.actmon_irq		= 3,
 	.actmon_weight_count	= 216,
 	.actmon_setting_regs	= t19x_vic_actmon_registers,
-	.devfreq_governor	= "wmark_active",
+	.devfreq_governor	= "userspace",
 	.freqs			= {100000000, 200000000, 300000000,
 					400000000, 500000000, 600000000},
 };

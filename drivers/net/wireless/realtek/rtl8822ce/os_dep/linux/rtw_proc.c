@@ -399,6 +399,252 @@ static int proc_get_sdio_card_info(struct seq_file *m, void *v)
 
 	return 0;
 }
+
+#ifdef DBG_SDIO
+static int proc_get_sdio_dbg(struct seq_file *m, void *v)
+{
+	struct net_device *dev;
+	struct _ADAPTER *a;
+	struct dvobj_priv *d;
+	struct sdio_data *sdio;
+
+
+	dev = m->private;
+	a = (struct _ADAPTER *)rtw_netdev_priv(dev);
+	d = adapter_to_dvobj(a);
+	sdio = &d->intf_data;
+
+	dump_sdio_card_info(m, d);
+
+	RTW_PRINT_SEL(m, "CMD52 error cnt: %d\n", sdio->cmd52_err_cnt);
+	RTW_PRINT_SEL(m, "CMD53 error cnt: %d\n", sdio->cmd53_err_cnt);
+
+#if (DBG_SDIO >= 3)
+	RTW_PRINT_SEL(m, "dbg: %s\n", sdio->dbg_enable?"enable":"disable");
+	RTW_PRINT_SEL(m, "err_stop: %s\n", sdio->err_stop?"enable":"disable");
+	RTW_PRINT_SEL(m, "err_test: %s\n", sdio->err_test?"enable":"disable");
+	RTW_PRINT_SEL(m, "err_test_triggered: %s\n",
+		      sdio->err_test_triggered?"yes":"no");
+#endif /* DBG_SDIO >= 3 */
+
+#if (DBG_SDIO >= 2)
+	RTW_PRINT_SEL(m, "I/O error dump mark: %d\n", sdio->reg_dump_mark);
+	if (sdio->reg_dump_mark) {
+		if (sdio->dbg_msg)
+			RTW_PRINT_SEL(m, "debug messages: %s\n", sdio->dbg_msg);
+		if (sdio->reg_mac)
+			RTW_BUF_DUMP_SEL(_DRV_ALWAYS_, m, "MAC register:",
+					 _TRUE, sdio->reg_mac, 0x800);
+		if (sdio->reg_mac_ext)
+			RTW_BUF_DUMP_SEL(_DRV_ALWAYS_, m, "MAC EXT register:",
+					 _TRUE, sdio->reg_mac_ext, 0x800);
+		if (sdio->reg_local)
+			RTW_BUF_DUMP_SEL(_DRV_ALWAYS_, m, "SDIO Local register:",
+					 _TRUE, sdio->reg_local, 0x100);
+		if (sdio->reg_cia)
+			RTW_BUF_DUMP_SEL(_DRV_ALWAYS_, m, "SDIO CIA register:",
+					 _TRUE, sdio->reg_cia, 0x200);
+	}
+#endif /* DBG_SDIO >= 2 */
+
+	return 0;
+}
+
+#if (DBG_SDIO >= 2)
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 0, 0))
+#define strnicmp	strncasecmp
+#endif /* Linux kernel >= 4.0.0 */
+void rtw_sdio_dbg_reg_free(struct dvobj_priv *d);
+#endif /* DBG_SDIO >= 2 */
+
+ssize_t proc_set_sdio_dbg(struct file *file, const char __user *buffer,
+			  size_t count, loff_t *pos, void *data)
+{
+#if (DBG_SDIO >= 2)
+	struct net_device *dev = data;
+	struct dvobj_priv *d;
+	struct _ADAPTER *a;
+	struct sdio_data *sdio;
+	char tmp[32], cmd[32] = {0};
+	int num;
+
+
+	if (count < 1)
+		return -EFAULT;
+
+	if (count > sizeof(tmp)) {
+		rtw_warn_on(1);
+		return -EFAULT;
+	}
+
+	a = (struct _ADAPTER *)rtw_netdev_priv(dev);
+	d = adapter_to_dvobj(a);
+	sdio = &d->intf_data;
+
+	if (buffer && !copy_from_user(tmp, buffer, count)) {
+		num = sscanf(tmp, "%s", cmd);
+
+		if (num >= 1) {
+			if (strnicmp(cmd, "reg_reset", 10) == 0) {
+				sdio->reg_dump_mark = 0;
+				goto exit;
+			}
+			if (strnicmp(cmd, "reg_free", 9) == 0) {
+				rtw_sdio_dbg_reg_free(d);
+				sdio->reg_dump_mark = 0;
+				goto exit;
+			}
+#if (DBG_SDIO >= 3)
+			if (strnicmp(cmd, "dbg_enable", 11) == 0) {
+				sdio->dbg_enable = 1;
+				goto exit;
+			}
+			if (strnicmp(cmd, "dbg_disable", 12) == 0) {
+				sdio->dbg_enable = 0;
+				goto exit;
+			}
+			if (strnicmp(cmd, "err_stop", 9) == 0) {
+				sdio->err_stop = 1;
+				goto exit;
+			}
+			if (strnicmp(cmd, "err_stop_disable", 16) == 0) {
+				sdio->err_stop = 0;
+				goto exit;
+			}
+			if (strnicmp(cmd, "err_test", 9) == 0) {
+				sdio->err_test_triggered = 0;
+				sdio->err_test = 1;
+				goto exit;
+			}
+#endif /* DBG_SDIO >= 3 */
+		}
+
+		return -EINVAL;
+	}
+
+exit:
+#endif /* DBG_SDIO >= 2 */
+	return count;
+}
+#endif /* DBG_SDIO */
+
+#ifdef CONFIG_SDIO_MONITOR
+static int proc_get_sdio_monitor(struct seq_file *m, void *v)
+{
+	struct net_device *dev = m->private;
+	_adapter *adapter = (_adapter *)rtw_netdev_priv(dev);
+	HAL_DATA_TYPE *hal_data = GET_HAL_DATA(adapter);
+	const char *const sdio_monitor_mode_str[] = {
+		"SDIO_MONITOR_MODE_DISABLE",
+		"SDIO_MONITOR_MODE_INT_LAT",
+		"SDIO_MONITOR_MODE_CMD53W_INTVL",
+		"SDIO_MONITOR_MODE_SDIO_CLK_5US",
+		"SDIO_MONITOR_MODE_SDIO_CLK_50US",
+		"SDIO_MONITOR_MODE_SDIO_CLK_9MS"
+	};
+
+	RTW_PRINT_SEL(m, "sdio monitor mode is set to %s !\n", sdio_monitor_mode_str[hal_data->sdio_monitor_enable]);
+
+	if (hal_data->sdio_monitor_enable == SDIO_MONITOR_MODE_DISABLE)
+		return 0;
+
+	if ((hal_data->sdio_monitor_enable == SDIO_MONITOR_MODE_INT_LAT) || (hal_data->sdio_monitor_enable == SDIO_MONITOR_MODE_CMD53W_INTVL)) {
+		u32 i = 0, tmp_data = 0;
+		u32 sample_num = hal_data->sdio_monitor_sample_num;
+		u32 sample_data_avg = 0;
+
+		if (sample_num > 0) {
+			for (i = 0; i < sample_num; i++)
+				tmp_data += hal_data->sdio_monitor_sample_data[i];
+
+			sample_data_avg = tmp_data / sample_num;
+
+			if (hal_data->sdio_monitor_enable == SDIO_MONITOR_MODE_INT_LAT)
+				RTW_PRINT_SEL(m, "average INT latency is %d us in %d samples !\n", sample_data_avg, sample_num);
+			else
+				RTW_PRINT_SEL(m, "average CMD53 write interval between CMD and DATA is %d SDIO_CLK cycle in %d samples !\n", sample_data_avg, sample_num);
+
+			_rtw_memset(hal_data->sdio_monitor_sample_data, 0x00, sizeof(hal_data->sdio_monitor_sample_data));
+			hal_data->sdio_monitor_sample_num = 0;
+		}
+		else
+			RTW_PRINT_SEL(m, "sdio int lat num is 0 !\n");
+	}
+	else if (hal_data->sdio_monitor_enable >= SDIO_MONITOR_MODE_SDIO_CLK_5US) {
+		u32 clk_cnt = 0;
+		u32 clk_rate = 0;
+		
+		clk_cnt = sd_monitor_sdio_clk(adapter, hal_data->sdio_monitor_enable);
+		if (clk_cnt == 0)
+			RTW_PRINT_SEL(m, " polling timeout for SDIO CLK cnt  !\n");
+		else {
+			switch (hal_data->sdio_monitor_enable) {
+			case SDIO_MONITOR_MODE_SDIO_CLK_5US:
+				/* clk_rate = (clk_cnt * 200 * 1000) / (1000 * 1000) = (clk_cnt / 5) MHz */
+				clk_rate = clk_cnt / 5; 
+				break;
+			case SDIO_MONITOR_MODE_SDIO_CLK_50US:
+				/* clk_rate = (clk_cnt * 20 * 1000) / (1000 * 1000) = (clk_cnt / 50) MHz */
+				clk_rate = clk_cnt / 50; 
+				break;
+			case SDIO_MONITOR_MODE_SDIO_CLK_9MS:
+				/* clk_rate ~= (clk_cnt * 111) / (1000 * 1000) ~= (clk_cnt / 9009) MHz */
+				clk_rate = clk_cnt / 9009; 
+				break;
+			}
+
+			/* to compensate the 8822C timing */
+			clk_rate *= 2;
+			
+			RTW_PRINT_SEL(m, " SDIO CLK is %d MHz by HW measurement !\n", clk_rate);
+		}
+	}
+		
+	return 0;
+}
+
+static ssize_t proc_set_sdio_monitor(struct file *file, const char __user *buffer, size_t count, loff_t *pos, void *data)
+{
+
+	struct net_device *dev = data;
+	_adapter *padapter = (_adapter *)rtw_netdev_priv(dev);
+	HAL_DATA_TYPE *hal_data = GET_HAL_DATA(padapter);
+	char tmp[32] = {0};
+	int sdio_monitor_enable = 0;
+
+	if (!padapter)
+		return -EFAULT;
+
+	if (count < 1) {
+		RTW_INFO("argument size is less than 1\n");
+		return -EFAULT;
+	}
+
+	if (count > sizeof(tmp)) {
+		rtw_warn_on(1);
+		return -EFAULT;
+	}
+
+	if (buffer && !copy_from_user(tmp, buffer, count)) {
+		int num = sscanf(tmp, "%d", &sdio_monitor_enable);
+
+		if (num == 1) {
+			if ((sdio_monitor_enable < SDIO_MONITOR_MODE_DISABLE) || (sdio_monitor_enable >= SDIO_MONITOR_MODE_MAX)) {
+				RTW_INFO("invalid value for sdio monitor mode !\n");
+				return -EFAULT;
+			}
+
+			if (sdio_monitor_enable != hal_data->sdio_monitor_enable) {
+				hal_data->sdio_monitor_enable = sdio_monitor_enable;
+				_rtw_memset(hal_data->sdio_monitor_sample_data, 0x00, sizeof(hal_data->sdio_monitor_sample_data));
+				hal_data->sdio_monitor_sample_num = 0;
+			}
+		}
+	}
+
+	return count;
+}
+#endif
 #endif /* CONFIG_SDIO_HCI */
 
 static int proc_get_fw_info(struct seq_file *m, void *v)
@@ -4055,6 +4301,12 @@ const struct rtw_proc_hdl adapter_proc_hdls[] = {
 	RTW_PROC_HDL_SSEQ("sd_f0_reg_dump", proc_get_sd_f0_reg_dump, NULL),
 	RTW_PROC_HDL_SSEQ("sdio_local_reg_dump", proc_get_sdio_local_reg_dump, NULL),
 	RTW_PROC_HDL_SSEQ("sdio_card_info", proc_get_sdio_card_info, NULL),
+#ifdef DBG_SDIO
+	RTW_PROC_HDL_SSEQ("sdio_dbg", proc_get_sdio_dbg, proc_set_sdio_dbg),
+#endif /* DBG_SDIO */
+#ifdef CONFIG_SDIO_MONITOR
+	RTW_PROC_HDL_SSEQ("sdio_monitor", proc_get_sdio_monitor, proc_set_sdio_monitor),
+#endif
 #endif /* CONFIG_SDIO_HCI */
 
 	RTW_PROC_HDL_SSEQ("fwdl_test_case", NULL, proc_set_fwdl_test_case),
@@ -4102,6 +4354,7 @@ const struct rtw_proc_hdl adapter_proc_hdls[] = {
 	RTW_PROC_HDL_SSEQ("rx_ampdu_density", proc_get_rx_ampdu_density, proc_set_rx_ampdu_density),
 	RTW_PROC_HDL_SSEQ("tx_ampdu_density", proc_get_tx_ampdu_density, proc_set_tx_ampdu_density),
 	RTW_PROC_HDL_SSEQ("tx_max_agg_num", proc_get_tx_max_agg_num, proc_set_tx_max_agg_num),
+	RTW_PROC_HDL_SSEQ("tx_quick_addba_req", proc_get_tx_quick_addba_req, proc_set_tx_quick_addba_req),
 #ifdef CONFIG_TX_AMSDU
 	RTW_PROC_HDL_SSEQ("tx_amsdu", proc_get_tx_amsdu, proc_set_tx_amsdu),
 	RTW_PROC_HDL_SSEQ("tx_amsdu_rate", proc_get_tx_amsdu_rate, proc_set_tx_amsdu_rate),

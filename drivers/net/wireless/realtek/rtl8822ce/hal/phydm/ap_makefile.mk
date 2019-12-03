@@ -103,7 +103,6 @@ ifeq ($(CONFIG_WLAN_HAL_8822CE),y)
 	ifeq ($(CONFIG_RTL_ODM_WLAN_DRIVER),y)
 		_PHYDM_FILES += \
 		phydm/rtl8822c/halhwimg8822c_bb.o\
-		phydm/rtl8822c/halhwimg8822c_mac.o\
 		phydm/rtl8822c/phydm_regconfig8822c.o\
 		phydm/rtl8822c/phydm_hal_api8822c.o
 	endif

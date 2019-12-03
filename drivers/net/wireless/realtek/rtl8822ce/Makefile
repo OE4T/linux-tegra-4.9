@@ -20,7 +20,7 @@ ifeq ($(GCC_VER_49),1)
 EXTRA_CFLAGS += -Wno-date-time	# Fix compile error && warning on gcc 4.9 and later
 endif
 
-SOURCETREE = $(srctree)/../nvidia/drivers/net/wireless/realtek/rtl8822ce/
+SOURCETREE = $(srctree)/../nvidia/drivers/net/wireless/realtek/rtl8822ce
 EXTRA_CFLAGS += -I$(SOURCETREE)/include
 
 EXTRA_LDFLAGS += --strip-debug
@@ -67,7 +67,7 @@ CONFIG_TXPWR_BY_RATE_EN = auto
 CONFIG_TXPWR_LIMIT = y
 CONFIG_TXPWR_LIMIT_EN = n
 CONFIG_RTW_CHPLAN = 0xFF
-CONFIG_RTW_ADAPTIVITY_EN = disable
+CONFIG_RTW_ADAPTIVITY_EN = enable
 CONFIG_RTW_ADAPTIVITY_MODE = normal
 CONFIG_SIGNAL_SCALE_MAPPING = n
 CONFIG_80211W = y
@@ -86,6 +86,7 @@ CONFIG_RTW_WIFI_HAL = n
 CONFIG_ICMP_VOQ = n
 CONFIG_IP_R_MONITOR = n #arp VOQ and high rate
 CONFIG_RTW_DISABLE_HW_PDN = n
+CONFIG_RTW_IOT_CCK_PD_INIT = n
 ########################## Debug ###########################
 CONFIG_RTW_DEBUG = y
 # default log level is _DRV_INFO_ = 4,
@@ -1224,6 +1225,10 @@ endif
 
 ifeq ($(CONFIG_RTW_DISABLE_HW_PDN), y)
 EXTRA_CFLAGS += -DCONFIG_RTW_DISABLE_HW_PDN
+endif
+
+ifeq ($(CONFIG_RTW_IOT_CCK_PD_INIT), y)
+EXTRA_CFLAGS += -DCONFIG_RTW_IOT_CCK_PD_INIT
 endif
 
 ifeq ($(CONFIG_RTW_WIFI_HAL), y)

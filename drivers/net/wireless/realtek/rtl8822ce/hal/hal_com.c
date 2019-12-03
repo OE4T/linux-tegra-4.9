@@ -40,10 +40,14 @@ void rtw_dump_fw_info(void *sel, _adapter *adapter)
 bool rsvd_page_cache_update_all(struct rsvd_page_cache_t *cache, u8 loc
 	, u8 txdesc_len, u32 page_size, u8 *info, u32 info_len)
 {
-	u8 page_num = (u8)PageNum(txdesc_len + info_len, page_size);
+	u8 page_num;
 	bool modified = 0;
 	bool loc_mod = 0, size_mod = 0, page_num_mod = 0;
-	
+
+	page_num = info_len ? (u8)PageNum(txdesc_len + info_len, page_size) : 0;
+	if (!info_len)
+		loc = 0;
+
 	if (cache->loc != loc) {
 		RTW_INFO("%s %s loc change (%u -> %u)\n"
 			, __func__, cache->name, cache->loc, loc);
@@ -60,7 +64,7 @@ bool rsvd_page_cache_update_all(struct rsvd_page_cache_t *cache, u8 loc
 		page_num_mod = 1;
 	}
 
-	if (info) {
+	if (info && info_len) {
 		if (cache->data) {
 			if (cache->size == info_len) {
 				if (_rtw_memcmp(cache->data, info, info_len) != _TRUE) {
@@ -10409,30 +10413,32 @@ exit:
 }
 #endif /* CONFIG_RTL8822C */
 
-static void rtw_hal_build_lps_pg_info_rsvd_page(_adapter *adapter, u8 *buf, u32 *buf_size)
+static void rtw_hal_build_lps_pg_info_rsvd_page(struct dvobj_priv *dvobj, _adapter *ld_sta_iface, u8 *buf, u32 *buf_size)
 {
 #define LPS_PG_INFO_RSVD_LEN	16
 
-	struct pwrctrl_priv *pwrpriv = adapter_to_pwrctl(adapter);
-	struct sta_info	*psta;
-#ifdef CONFIG_MBSSID_CAM
-	u8 cam_id = INVALID_CAM_ID;
-#endif
-	u8 *psec_cam_id = buf + 8;
-	u8 sec_cam_num = 0;
-	u8 drv_rsvdpage_num = 0;
-
 	if (buf) {
-		psta = rtw_get_stainfo(&adapter->stapriv, get_bssid(&adapter->mlmepriv));
-		if (!psta) {
-			RTW_ERR("%s [ERROR] sta is NULL\n", __func__);
-			rtw_warn_on(1);
-			return;
-		}
+		_adapter *adapter = dvobj_get_primary_adapter(dvobj);
+		struct pwrctrl_priv *pwrpriv = adapter_to_pwrctl(adapter);
+		struct sta_info *psta;
+#ifdef CONFIG_MBSSID_CAM
+		u8 cam_id = INVALID_CAM_ID;
+#endif
+		u8 *psec_cam_id = buf + 8;
+		u8 sec_cam_num = 0;
+		u8 drv_rsvdpage_num = 0;
 
-		/*Byte 0 - used macid*/
-		LPSPG_RSVD_PAGE_SET_MACID(buf, psta->cmn.mac_id);
-		RTW_INFO("[LPSPG-INFO] mac_id:%d\n", psta->cmn.mac_id);
+		if (ld_sta_iface) {
+			psta = rtw_get_stainfo(&ld_sta_iface->stapriv, get_bssid(&ld_sta_iface->mlmepriv));
+			if (!psta) {
+				RTW_ERR("%s [ERROR] sta is NULL\n", __func__);
+				rtw_warn_on(1);
+				goto size_chk;
+			}
+			/*Byte 0 - used macid*/
+			LPSPG_RSVD_PAGE_SET_MACID(buf, psta->cmn.mac_id);
+			RTW_INFO("[LPSPG-INFO] mac_id:%d\n", psta->cmn.mac_id);
+		}
 
 #ifdef CONFIG_MBSSID_CAM
 		/*Byte 1 - used BSSID CAM entry*/
@@ -10444,8 +10450,8 @@ static void rtw_hal_build_lps_pg_info_rsvd_page(_adapter *adapter, u8 *buf, u32 
 
 #ifdef CONFIG_WOWLAN /*&& pattern match cam used*/
 		/*Btye 2 - Max used Pattern Match CAM entry*/
-		if (pwrpriv->wowlan_mode == _TRUE &&
-		    check_fwstate(&adapter->mlmepriv, _FW_LINKED) == _TRUE) {
+		if (pwrpriv->wowlan_mode == _TRUE
+			&& ld_sta_iface && check_fwstate(&ld_sta_iface->mlmepriv, _FW_LINKED) == _TRUE) {
 			LPSPG_RSVD_PAGE_SET_PMC_NUM(buf, pwrpriv->wowlan_pattern_idx);
 			RTW_INFO("[LPSPG-INFO] Max Pattern Match CAM entry :%d\n", pwrpriv->wowlan_pattern_idx);
 		}
@@ -10473,6 +10479,7 @@ static void rtw_hal_build_lps_pg_info_rsvd_page(_adapter *adapter, u8 *buf, u32 
 		RTW_INFO("[LPSPG-INFO] DRV's rsvd page numbers :%d\n", drv_rsvdpage_num);
 	}
 
+size_chk:
 	if (buf_size)
 		*buf_size = LPS_PG_INFO_RSVD_LEN;
 }
@@ -10487,7 +10494,7 @@ static int rtw_hal_set_lps_pg_info_rsvd_page(_adapter *adapter)
 	int ret = _FAIL;
 
 	/* get length */
-	rtw_hal_build_lps_pg_info_rsvd_page(adapter, NULL, &info_len);
+	rtw_hal_build_lps_pg_info_rsvd_page(dvobj, adapter, NULL, &info_len);
 	if (!info_len) {
 		RTW_ERR("get %s length fail\n", cache->name);
 		goto exit;
@@ -10501,7 +10508,7 @@ static int rtw_hal_set_lps_pg_info_rsvd_page(_adapter *adapter)
 	}
 
 	/* get content */
-	rtw_hal_build_lps_pg_info_rsvd_page(adapter, info, NULL);
+	rtw_hal_build_lps_pg_info_rsvd_page(dvobj, adapter, info, NULL);
 
 	if (rsvd_page_cache_update_data(cache, info, info_len)) {
 
@@ -10530,17 +10537,24 @@ exit:
 }
 
 static void rtw_lps_pg_set_rsvd_page(_adapter *adapter, u8 *frame, u16 *index
-	, u8 txdesc_size, u32 page_size, u8 *total_page_num, bool is_wow_mode, bool only_get_page_num)
+	, u8 txdesc_size, u32 page_size, u8 *total_page_num
+	, bool is_wow_mode, _adapter *ld_sta_iface, bool only_get_page_num)
 {
 	HAL_DATA_TYPE *hal_data = GET_HAL_DATA(adapter);
 	struct pwrctrl_priv *pwrctl = adapter_to_pwrctl(adapter);
 	struct rsvd_page_cache_t *cache;
+	bool rsvd = 1;
 	u8 *pos;
 	u32 len;
 
-	/* lps_level will not change when enter wow_mode */
-	if (is_wow_mode && pwrctl->lps_level != LPS_PG)
-		return;
+	if (is_wow_mode) {
+		/* lps_level will not change when enter wow_mode */
+		if (pwrctl->lps_level != LPS_PG)
+			rsvd = 0;
+	} else {
+		if (!only_get_page_num && !ld_sta_iface)
+			rsvd = 0;
+	}
 
 	pos = only_get_page_num ? NULL : frame + *index;
 
@@ -10548,56 +10562,64 @@ static void rtw_lps_pg_set_rsvd_page(_adapter *adapter, u8 *frame, u16 *index
 	if (IS_8822C_SERIES(hal_data->version_id)) {
 		/* LPSPG_DPK_INFO */
 		cache = &pwrctl->lpspg_dpk_info;
-		if (pwrctl->lps_level != LPS_PG)
-			pos = NULL;
-		halrf_dpk_info_rsvd_page(adapter_to_phydm(adapter), pos, &len);
-		if (pos) {
-			#if (DBG_LPSPG_INFO_DUMP >= 1)
-			RTW_INFO_DUMP(cache->name, pos, len);
-			#endif
-		}
-		rsvd_page_cache_update_all(cache, *total_page_num, txdesc_size, page_size, pos, len);
-		*total_page_num += cache->page_num;
-		*index += page_size * cache->page_num;
-		pos = only_get_page_num ? NULL : frame + *index;
-		RSVD_PAGE_CFG(cache->name, cache->page_num, *total_page_num, *index);
-
-		/* LPSPG_IQK_INFO */
-		cache = &pwrctl->lpspg_iqk_info;
-		if (!(is_wow_mode && hal_data->RegIQKFWOffload)) { /* RegIQKFWOffload will not change when enter wow_mode */
-			if (pwrctl->lps_level != LPS_PG || hal_data->RegIQKFWOffload)
+		if (rsvd) {
+			if (pwrctl->lps_level != LPS_PG)
 				pos = NULL;
-			halrf_iqk_info_rsvd_page(adapter_to_phydm(adapter), pos, &len);
-			if (pos) {
-				#if (DBG_LPSPG_INFO_DUMP >= 1)
+			len = 0;
+			halrf_dpk_info_rsvd_page(adapter_to_phydm(adapter), pos, &len);
+			#if (DBG_LPSPG_INFO_DUMP >= 1)
+			if (pos)
 				RTW_INFO_DUMP(cache->name, pos, len);
-				#endif
-			}
+			#endif
 			rsvd_page_cache_update_all(cache, *total_page_num, txdesc_size, page_size, pos, len);
 			*total_page_num += cache->page_num;
 			*index += page_size * cache->page_num;
 			pos = only_get_page_num ? NULL : frame + *index;
 			RSVD_PAGE_CFG(cache->name, cache->page_num, *total_page_num, *index);
 		} else
-			rsvd_page_cache_free_data(cache);
+			rsvd_page_cache_free(cache);
+
+		/* LPSPG_IQK_INFO */
+		cache = &pwrctl->lpspg_iqk_info;
+		if (rsvd
+			/* RegIQKFWOffload will not change when enter wow_mode */
+			&& !(is_wow_mode && hal_data->RegIQKFWOffload)
+		) {
+			if (pwrctl->lps_level != LPS_PG || hal_data->RegIQKFWOffload)
+				pos = NULL;
+			len = 0;
+			halrf_iqk_info_rsvd_page(adapter_to_phydm(adapter), pos, &len);
+			#if (DBG_LPSPG_INFO_DUMP >= 1)
+			if (pos)
+				RTW_INFO_DUMP(cache->name, pos, len);
+			#endif
+			rsvd_page_cache_update_all(cache, *total_page_num, txdesc_size, page_size, pos, len);
+			*total_page_num += cache->page_num;
+			*index += page_size * cache->page_num;
+			pos = only_get_page_num ? NULL : frame + *index;
+			RSVD_PAGE_CFG(cache->name, cache->page_num, *total_page_num, *index);
+		} else
+			rsvd_page_cache_free(cache);
 	}
 #endif
 
 	/* LPSPG_INFO */
 	cache = &pwrctl->lpspg_info;
-	if (pwrctl->lps_level != LPS_PG)
-		pos = NULL;
-	rtw_hal_build_lps_pg_info_rsvd_page(adapter, pos, &len);
-	if (pos) {
+	if (rsvd) {
+		if (pwrctl->lps_level != LPS_PG)
+			pos = NULL;
+		rtw_hal_build_lps_pg_info_rsvd_page(adapter_to_dvobj(adapter), ld_sta_iface, pos, &len);
 		#if (DBG_LPSPG_INFO_DUMP >= 1)
-		RTW_INFO_DUMP(cache->name, pos, len);
+		if (pos)
+			RTW_INFO_DUMP(cache->name, pos, len);
 		#endif
-	}
-	rsvd_page_cache_update_all(cache, *total_page_num, txdesc_size, page_size, pos, len);
-	*total_page_num += cache->page_num;
-	*index += page_size * cache->page_num;
-	pos = only_get_page_num ? NULL : frame + *index;
-	RSVD_PAGE_CFG(cache->name, cache->page_num, *total_page_num, *index);
+		rsvd_page_cache_update_all(cache, *total_page_num, txdesc_size, page_size, pos, len);
+		*total_page_num += cache->page_num;
+		*index += page_size * cache->page_num;
+		pos = only_get_page_num ? NULL : frame + *index;
+		RSVD_PAGE_CFG(cache->name, cache->page_num, *total_page_num, *index);
+	} else
+		rsvd_page_cache_free(cache);
 }
 
 static u8 rtw_hal_set_lps_pg_info_cmd(_adapter *adapter)
@@ -10663,9 +10685,10 @@ u8 rtw_hal_set_lps_pg_info(_adapter *adapter)
 		rtw_warn_on(1);
 		return ret;
 	}
-
+	#ifdef CONFIG_RTL8822C
 	rtw_lps_pg_set_dpk_info_rsvd_page(adapter);
 	rtw_lps_pg_set_iqk_info_rsvd_page(adapter);
+	#endif
 	rtw_hal_set_lps_pg_info_rsvd_page(adapter);
 
 	ret = rtw_hal_set_lps_pg_info_cmd(adapter);
@@ -11118,7 +11141,10 @@ static void _rtw_hal_set_fw_rsvd_page(_adapter *adapter, bool finished, u8 *page
 
 #ifdef CONFIG_LPS_PG
 	rtw_lps_pg_set_rsvd_page(adapter, ReservedPagePacket, &BufIndex
-		, TxDescLen, PageSize, &TotalPageNum, is_wow_mode, page_num ? 1 : 0);
+		, TxDescLen, PageSize, &TotalPageNum, is_wow_mode
+		, (sta_iface && MLME_IS_STA(sta_iface) && MLME_IS_ASOC(sta_iface)) ? sta_iface : NULL
+		, page_num ? 1 : 0
+	);
 	TotalPacketLen = BufIndex;
 #endif
 

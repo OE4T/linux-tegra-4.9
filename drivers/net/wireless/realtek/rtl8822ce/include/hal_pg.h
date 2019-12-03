@@ -588,7 +588,7 @@
  */
 #define	EEPROM_TX_PWR_INX_8822C			0x10
 #define	EEPROM_ChannelPlan_8822C		0xB8
-#define	EEPROM_XTAL_8822C			0xB9
+#define	EEPROM_XTAL_B9_8822C			0xB9
 #define	EEPROM_IQK_LCK_8822C			0xBB
 #define	EEPROM_2G_5G_PA_TYPE_8822C		0xBC
 /* PATH A & PATH B */
@@ -612,6 +612,10 @@
 #define EEPROM_COUNTRY_CODE_8822C		0xCB
 #define	EEPROM_THERMAL_METER_A_8822C		0xD0
 #define	EEPROM_THERMAL_METER_B_8822C		0xD1
+
+#define	EEPROM_XTAL_110_8822C			0x110
+#define	EEPROM_XTAL_111_8822C			0x111
+
 /* RTL8822CU */
 #define EEPROM_MAC_ADDR_8822CU			0x157
 #define EEPROM_VID_8822CU			0x100
@@ -764,7 +768,9 @@
 #define EEPROM_Default_CrystalCap_8188F			0x20
 #define EEPROM_Default_CrystalCap_8188GTV		0x20
 #define EEPROM_Default_CrystalCap_8192F			0x20
-#define EEPROM_Default_CrystalCap_8822C			0x3F
+#define EEPROM_Default_CrystalCap_B9_8822C		0x3F
+#define EEPROM_Default_CrystalCap_110_8822C		0x40
+#define EEPROM_Default_CrystalCap_111_8822C		0x40
 #define EEPROM_Default_CrystalFreq				0x0
 #define EEPROM_Default_TxPowerLevel_92C		0x22
 #define EEPROM_Default_TxPowerLevel_2G			0x2C

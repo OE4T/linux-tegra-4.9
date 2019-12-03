@@ -54,11 +54,11 @@ _iqk_check_cal_8822c(
 				fail = (boolean)odm_get_bb_reg(dm, R_0x1b08, BIT(26));
 			notready = false;
 		} else {
-			ODM_delay_ms(1);
+			ODM_delay_us(10);
 			delay_count++;
 		}
 
-		if (delay_count >= 50) {
+		if (delay_count >= 30000) {
 			fail = true;
 			RF_DBG(dm, DBG_RF_IQK, "[IQK]IQK timeout!!!\n");
 			break;
@@ -172,13 +172,13 @@ void _iqk_reload_rxcfir_8822c(struct dm_struct *dm, u8 path)
 	tmp1 = 0x60000001;
 //	odm_set_bb_reg(dm, 0x1bd8, MASKDWORD, 0x60012303);
 //	odm_set_bb_reg(dm, 0x1bd8, MASKDWORD, 0x60045601);
-	ODM_delay_ms(10);
+	ODM_delay_us(10);
 #if 1
 	for (i = 0; i <= 16; i++) {
 		tmp2 = tmp1 | iqk_info->rx_cfir_real[0][path][i]<< 8;
 		tmp2 = (tmp2 | i << 2) + 2;
 		odm_set_bb_reg(dm, 0x1bd8, MASKDWORD, tmp2);
-		ODM_delay_ms(10);
+		ODM_delay_us(10);
 		odm_set_bb_reg(dm, 0x1bd8, BIT(30), 0x0);
 //		odm_set_bb_reg(dm, 0x1bd8, MASKDWORD, 0xe0000001);
 	}
@@ -186,7 +186,7 @@ void _iqk_reload_rxcfir_8822c(struct dm_struct *dm, u8 path)
 		tmp2 = tmp1 | iqk_info->rx_cfir_imag[0][path][i]<< 8;
 		tmp2 = (tmp2 | i << 2);
 		odm_set_bb_reg(dm, 0x1bd8, MASKDWORD, tmp2);		
-		ODM_delay_ms(10);
+		ODM_delay_us(10);
 		odm_set_bb_reg(dm, 0x1bd8, BIT(30), 0x0);
 //		odm_set_bb_reg(dm, 0x1bd8, MASKDWORD, 0xe0000001);
 	}
@@ -279,7 +279,7 @@ void phydm_get_read_counter_8822c(struct dm_struct *dm)
 		if ((odm_get_rf_reg(dm, RF_PATH_A, RF_0x8, RFREGOFFSETMASK) == 0xabcde) || counter > 300)
 			break;
 		counter++;
-		ODM_delay_ms(1);
+		ODM_delay_us(10);
 	};
 	odm_set_rf_reg(dm, RF_PATH_A, RF_0x8, RFREGOFFSETMASK, 0x0);
 	RF_DBG(dm, DBG_RF_IQK, "[IQK]counter = %d\n", counter);
@@ -2552,11 +2552,11 @@ void _iqk_bb_reset_8822c(
 		odm_set_bb_reg(dm, R_0x198c, 0x7, 0x7);
 		cca_ing = (boolean)odm_get_bb_reg(dm, R_0xfa0, BIT(3));
 
-		if (count > 30)
+		if (count > 3000)
 			cca_ing = false;
 
 		if (cca_ing) {
-			ODM_delay_ms(1);
+			ODM_delay_us(10);
 			count++;
 		} else {
 			odm_write_1byte(dm, 0x808, 0x0); /*RX ant off*/
@@ -2832,7 +2832,7 @@ void _iqk_backup_iqk_8822c(
 	case 0:
 		iqk_info->iqk_channel[1] = iqk_info->iqk_channel[0];
 		//RF_DBG(dm, DBG_RF_IQK, "[IQK](0)iqk_info->iqk_channel[1] = %2x\n",iqk_info->iqk_channel[1]);
-		for (i = 0; i < 2; i++) {
+		for (i = 0; i < SS_8822C; i++) {
 			iqk_info->lok_idac[1][i] = iqk_info->lok_idac[0][i];
 			iqk_info->rxiqk_agc[1][i] = iqk_info->rxiqk_agc[0][i];
 			iqk_info->bypass_iqk[1][i] = iqk_info->bypass_iqk[0][i];
@@ -2847,7 +2847,7 @@ void _iqk_backup_iqk_8822c(
 			}
 		}
 
-		for (i = 0; i < 4; i++) {
+		for (i = 0; i < SS_8822C; i++) {
 			iqk_info->rxiqk_fail_code[0][i] = 0x0;
 			iqk_info->rxiqk_agc[0][i] = 0x0;
 			for (j = 0; j < 2; j++) {
@@ -2885,7 +2885,7 @@ void _iqk_reload_iqk_setting_8822c(
 	u16 iqk_apply[2] = {0x180c, 0x410c};
 	u32 tmp = 0x0, tmp1 = 0x0, tmp2 =0x0;
 
-	for (path = 0; path < 2; path++) {
+	for (path = 0; path < SS_8822C; path++) {
 		if (reload_idx == 2) {
 			/*odm_set_rf_reg(dm, (enum rf_path)path, RF_0xdf, BIT(4), 0x1);*/
 			tmp = odm_get_rf_reg(dm, (enum rf_path)path, RF_0xdf, RFREGOFFSETMASK) | BIT(4);
@@ -3210,7 +3210,8 @@ void _iqk_txk_setting_8822c(
 		/*get thermal meter*/
 		ee_thermal = _iqk_get_efuse_thermal_8822c(dm, path);
 		odm_set_rf_reg(dm, path, 0x42, BIT(17) | BIT(16), 0x3);
-		ODM_delay_us(200);
+		ODM_delay_us(50);
+		ODM_delay_us(50);
 		curr_thermal = (u8)odm_get_rf_reg(dm, path, 0x42, 0xfc00);
 		if (ee_thermal > curr_thermal)
 			flag = ee_thermal - curr_thermal > threshold ? true : false;
@@ -3402,7 +3403,6 @@ _iqk_rx_iqk_gain_search_fail_8822c(
 	       	       step, IQK_CMD);
 		odm_write_4byte(dm, 0x1b00, IQK_CMD);
 		odm_write_4byte(dm, 0x1b00, IQK_CMD + 0x1);
-		ODM_delay_ms(1);
 		fail = _iqk_check_cal_8822c(dm, path, 0x1);
 	} else if (step == RXIQK2) {
 		for (idx = 0; idx < 4; idx++) {
@@ -3420,7 +3420,6 @@ _iqk_rx_iqk_gain_search_fail_8822c(
 		       step, IQK_CMD);
 		odm_write_4byte(dm, 0x1b00, IQK_CMD);
 		odm_write_4byte(dm, 0x1b00, IQK_CMD + 0x1);
-		ODM_delay_ms(2);
 		k2fail = _iqk_check_cal_8822c(dm, path, 0x1);
 
 		if (k2fail == true) {
@@ -3551,8 +3550,8 @@ _lok_one_shot_8822c(
 	u32 temp = 0;
 	u32 IQK_CMD = 0x0;
 	u8 idac_i, idac_q;
+	u8 i = 0x0;
 
-	
 	if (for_rxk) {
 		RF_DBG(dm, DBG_RF_IQK,
 			"[IQK]======S%d LOK for RXK======\n", path);
@@ -3567,7 +3566,8 @@ _lok_one_shot_8822c(
 	_iqk_rf_direct_access_8822c(dm, (enum rf_path)path, false);
 	odm_write_4byte(dm, 0x1b00, IQK_CMD);
 	odm_write_4byte(dm, 0x1b00, IQK_CMD + 1);	
-	ODM_delay_ms(IQK_DELAY_8822C);
+	for(i =0;i < 20; i++)
+		ODM_delay_us(50);
 	_iqk_rf_direct_access_8822c(dm, (enum rf_path)path, true);
 	/*LOK: CMD ID = 0	{0xf8000018, 0xf8000028}*/
 	/*LOK: CMD ID = 0	{0xf8000019, 0xf8000029}*/
@@ -3648,7 +3648,6 @@ _iqk_one_shot_8822c(
 	_iqk_set_gnt_wl_gnt_bt_8822c(dm, true);
 	odm_write_4byte(dm, 0x1b00, iqk_cmd);
 	odm_write_4byte(dm, 0x1b00, iqk_cmd + 0x1);
-	ODM_delay_ms(IQK_DELAY_8822C);
 	fail = _iqk_check_cal_8822c(dm, path, 0x1);
 #if 1
 	if (path == RF_PATH_B)
@@ -3811,7 +3810,7 @@ RF_DBG(dm, DBG_RF_IQK, "[IQK]rx_iqk_step = 0x%x\n", iqk_info->rxiqk_step);
 #endif
 		break;
 	case 5: /*check RX XYM*/
-#if 1
+#if 0
 		RF_DBG(dm, DBG_RF_IQK, "[IQK] check RX XYM step =%d\n", iqk_info->rxiqk_step);
 		KFAIL = _iqk_xym_read_8822c(dm, path);
 		if (KFAIL)
@@ -4181,7 +4180,6 @@ _iqk_rximr_rxk1_test_8822c(
 	odm_write_4byte(dm, 0x1b00, IQK_CMD);
 	odm_write_4byte(dm, 0x1b00, IQK_CMD + 0x1);
 
-	ODM_delay_ms(IQK_DELAY_8822C);
 	fail = _iqk_check_cal_8822c(dm, path, 0x1);
 	return fail;
 }
@@ -4227,7 +4225,7 @@ u32 _iqk_tximr_selfcheck_8822c(
 		IQK_CMD = 0x00000800;
 		odm_write_4byte(dm, 0x1b34, IQK_CMD + 1);
 		odm_write_4byte(dm, 0x1b34, IQK_CMD);
-		ODM_delay_ms(1);
+		ODM_delay_us(50);
 		odm_write_4byte(dm, 0x1bd4, 0x00040001);
 		tx_ini_power_H[i] = odm_read_4byte(dm, 0x1bfc);
 		odm_write_4byte(dm, 0x1bd4, 0x000C0001);
@@ -4256,7 +4254,7 @@ void _iqk_start_tximr_test_8822c(
 	u8 path, i, tone_index;
 	u32 imr_result;
 
-	for (path = 0; path < 2; path++) {
+	for (path = 0; path < SS_8822C; path++) {
 		_iqk_txk_setting_8822c(dm, path);
 		KFAIL = _iqk_one_shot_8822c(dm, path, TXIQK);
 		for (i = 0x0; i < imr_limit; i++) {
@@ -4309,14 +4307,14 @@ u32 _iqk_rximr_selfcheck_8822c(
 		IQK_CMD = 0x00000800;
 		odm_write_4byte(dm, 0x1b34, IQK_CMD + 1);
 		odm_write_4byte(dm, 0x1b34, IQK_CMD);
-		ODM_delay_ms(2);
+		ODM_delay_us(200);
 		odm_write_1byte(dm, 0x1bd6, 0xb);
 		while (count < 100) {
 			count++;
 			if (odm_get_bb_reg(dm, R_0x1bfc, BIT(1)) == 1)
 				break;
 			else
-				ODM_delay_ms(1);
+				ODM_delay_us(50);
 		}
 		if (1) {
 			odm_write_1byte(dm, 0x1bd6, 0x5);
@@ -4484,7 +4482,7 @@ void _iqk_start_rximr_test_8822c(
 {
 	u8 path;
 
-	for (path = 0; path < 2; path++)
+	for (path = 0; path < SS_8822C; path++)
 		_iqk_rximr_test_8822c(dm, path, imr_limit);
 }
 
@@ -4535,7 +4533,7 @@ void _phy_iq_calibrate_8822c(
 
 	RF_DBG(dm, DBG_RF_IQK, "[IQK]==========IQK strat!!!!!==========\n");
 	RF_DBG(dm, DBG_RF_IQK, "[IQK]band_type = %s, band_width = %d, ExtPA2G = %d, ext_pa_5g = %d\n", (*dm->band_type == ODM_BAND_5G) ? "5G" : "2G", *dm->band_width, dm->ext_pa, dm->ext_pa_5g);
-	RF_DBG(dm, DBG_RF_IQK, "[IQK]Interface = %d, cut_version = %x\n", dm->support_interface, dm->cut_version);
+	RF_DBG(dm, DBG_RF_IQK, "[IQK]Interface = %d, Cv = %x\n", dm->support_interface, dm->cut_version);
 	RF_DBG(dm, DBG_RF_IQK, "[IQK] Test V10 \n");
 	iqk_info->iqk_times++;
 	iqk_info->kcount = 0;
@@ -4566,7 +4564,9 @@ void _phy_iq_calibrate_8822c(
 			break;
 		iqk_info->kcount = 0;
 		RF_DBG(dm, DBG_RF_IQK, "[IQK]delay 50ms!!!\n");
-		ODM_delay_ms(50);
+		for (i = 0; i<1000; i++)
+			ODM_delay_us(10);
+
 	};
 
 	_iqk_fill_iqk_report_8822c(dm, 0);
@@ -4587,10 +4587,10 @@ void _check_fwiqk_done_8822c(struct dm_struct *dm)
 	u32 counter = 0x0;
 #if 1
 	while (1) {
-		if (odm_read_1byte(dm, 0x2d9c) == 0xaa  || counter > 300)
+		if (odm_read_1byte(dm, 0x2d9c) == 0xaa  || counter > 3000)
 			break;
 		counter++;
-		ODM_delay_ms(1);
+		ODM_delay_us(50);
 	};
 	odm_write_1byte(dm, 0x1b10, 0x0);
 	RF_DBG(dm, DBG_RF_IQK, "[IQK]counter = %d\n", counter);
@@ -4646,7 +4646,10 @@ void phy_iq_calibrate_8822c(
 	//if (!(*dm->mp_mode))
 	//	_iqk_check_coex_status(dm, true);
 
+	dm->rf_calibrate_info.is_iqk_in_progress = true;
+
 	/*FW IQK*/
+	
 	if (dm->fw_offload_ability & PHYDM_RF_IQK_OFFLOAD) {
 		_phy_iq_calibrate_by_fw_8822c(dm, clear, (u8)(segment_iqk));
 		_check_fwiqk_done_8822c(dm);
@@ -4664,6 +4667,9 @@ void phy_iq_calibrate_8822c(
 	_iqk_iqk_fail_report_8822c(dm);
 #endif
 	halrf_iqk_dbg(dm);
+
+	dm->rf_calibrate_info.is_iqk_in_progress = false;
+
 }
 
 void _phy_imr_measure_8822c(
@@ -4882,11 +4888,11 @@ void phy_iqk_dbg_cfir_backup_8822c(void *dm_void)
 
 	RF_DBG(dm, DBG_RF_IQK, "[IQK]%-20s\n", "backup TX/RX CFIR");
 
-	for (path = 0; path < 2; path++)
+	for (path = 0; path < SS_8822C; path++)
 		for (idx = 0; idx < 2; idx++)
 			phydm_get_iqk_cfir(dm, idx, path, true);
 
-	for (path = 0; path < 2; path++) {
+	for (path = 0; path < SS_8822C; path++) {
 		for (idx = 0; idx < 2; idx++) {
 			for (i = 0; i <= 16; i++) {
 				RF_DBG(dm, DBG_RF_IQK,
@@ -4921,7 +4927,7 @@ void phy_iqk_dbg_cfir_backup_update_8822c(void *dm_void)
 		RF_DBG(dm, DBG_RF_IQK, "[IQK]%-20s\n", "CFIR is invalid");
 		return;
 	}
-	for (path = 0; path < 2; path++) {
+	for (path = 0; path < SS_8822C; path++) {
 		for (idx = 0; idx < 2; idx++) {
 			odm_set_bb_reg(dm, R_0x1b00, MASKDWORD, 0x8 | path << 1);
 			odm_set_bb_reg(dm, R_0x1b2c, MASKDWORD, 0x7);
@@ -4947,7 +4953,7 @@ void phy_iqk_dbg_cfir_reload_8822c(void *dm_void)
 		RF_DBG(dm, DBG_RF_IQK, "[IQK]%-20s\n", "CFIR is invalid");
 		return;
 	}
-	for (path = 0; path < 2; path++) {
+	for (path = 0; path < SS_8822C; path++) {
 		for (idx = 0; idx < 2; idx++) {
 			odm_set_bb_reg(dm, R_0x1b00, MASKDWORD, 0x8 | path << 1);
 			odm_set_bb_reg(dm, R_0x1b2c, MASKDWORD, 0x7);
@@ -4980,7 +4986,7 @@ void phy_iqk_dbg_cfir_backup_show_8822c(void *dm_void)
 
 	RF_DBG(dm, DBG_RF_IQK, "[IQK]%-20s\n", "backup TX/RX CFIR");
 
-	for (path = 0; path < 2; path++) {
+	for (path = 0; path < SS_8822C; path++) {
 		for (idx = 0; idx < 2; idx++) {
 			for (i = 0; i <= 16; i++) {
 				RF_DBG(dm, DBG_RF_IQK,

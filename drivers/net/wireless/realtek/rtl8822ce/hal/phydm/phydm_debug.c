@@ -1524,6 +1524,20 @@ void phydm_basic_dbg_msg_cli_win(void *dm_void, char *buf)
 		   fa_t->cnt_cck_fail, fa_t->cnt_ofdm_fail, fa_t->cnt_all);
 	RT_PRINT(buf);
 
+	RT_SPRINTF(buf, DBGM_CLI_BUF_SIZE,
+		   "\r\n [CRC32 OK Cnt] {CCK, OFDM, Total} = {%d, %d, %d}",
+		   fa_t->cnt_cck_crc32_ok,
+		   fa_t->cnt_crc32_ok_all - fa_t->cnt_cck_crc32_ok,
+		   fa_t->cnt_crc32_ok_all);
+	RT_PRINT(buf);
+
+	RT_SPRINTF(buf, DBGM_CLI_BUF_SIZE,
+		   "\r\n [CRC32 Err Cnt] {CCK, OFDM, Total} = {%d, %d, %d}",
+		   fa_t->cnt_cck_crc32_error,
+		   fa_t->cnt_crc32_error_all - fa_t->cnt_cck_crc32_error,
+		   fa_t->cnt_crc32_error_all);
+	RT_PRINT(buf);
+
 	#if (ODM_IC_11N_SERIES_SUPPORT)
 	if (dm->support_ic_type & ODM_IC_11N_SERIES) {
 		RT_SPRINTF(buf, DBGM_CLI_BUF_SIZE,
@@ -2290,6 +2304,13 @@ void phydm_basic_dbg_msg_linked(void *dm_void)
 			  (dbg_t->is_ldpc_pkt) ? "Y" : "N",
 			  (dbg_t->is_stbc_pkt) ? "Y" : "N");
 #endif
+
+#if (RTL8822C_SUPPORT)
+	/*Beamformed pkt*/
+	if (dm->support_ic_type == ODM_RTL8822C)
+		PHYDM_DBG(dm, DBG_CMN, "Beamformed=((%s))\n",
+			  (dm->is_beamformed) ? "Y" : "N");
+#endif
 }
 
 void phydm_dm_summary(void *dm_void, u8 macid)
@@ -2454,6 +2475,18 @@ void phydm_basic_dbg_message(void *dm_void)
 
 	PHYDM_DBG(dm, DBG_CMN, "[FA Cnt] {CCK, OFDM, Total} = {%d, %d, %d}\n",
 		  fa_t->cnt_cck_fail, fa_t->cnt_ofdm_fail, fa_t->cnt_all);
+
+	PHYDM_DBG(dm, DBG_CMN,
+		  "[CRC32 OK Cnt] {CCK, OFDM, Total} = {%d, %d, %d}",
+		  fa_t->cnt_cck_crc32_ok,
+		  fa_t->cnt_crc32_ok_all - fa_t->cnt_cck_crc32_ok,
+		  fa_t->cnt_crc32_ok_all);
+
+	PHYDM_DBG(dm, DBG_CMN,
+		  "[CRC32 Err Cnt] {CCK, OFDM, Total} = {%d, %d, %d}",
+		  fa_t->cnt_cck_crc32_error,
+		  fa_t->cnt_crc32_error_all - fa_t->cnt_cck_crc32_error,
+		  fa_t->cnt_crc32_error_all);
 
 	PHYDM_DBG(dm, DBG_CMN,
 		  "[OFDM FA Detail] Parity_Fail=%d, Rate_Illegal=%d, CRC8=%d, MCS_fail=%d, Fast_sync=%d, SB_Search_fail=%d\n",

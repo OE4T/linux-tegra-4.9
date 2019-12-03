@@ -1,6 +1,6 @@
 /******************************************************************************
  *
- * Copyright(c) 2017 - 2018 Realtek Corporation. All rights reserved.
+ * Copyright(c) 2017 - 2019 Realtek Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of version 2 of the GNU General Public License as
@@ -21,7 +21,7 @@
 
 #if HALMAC_8822C_SUPPORT
 
-#define HALMAC_8822C_PWR_SEQ_VER  "V14"
+#define HALMAC_8822C_PWR_SEQ_VER  "V15"
 
 extern struct halmac_wlan_pwr_cfg *card_en_flow_8822c[];
 extern struct halmac_wlan_pwr_cfg *card_dis_flow_8822c[];

@@ -472,6 +472,17 @@ void halrf_mode_8822c(struct dm_struct *dm, u32 *i_value, u32 *q_value)
 #endif
 }
 
+void halrf_biask_backup_8822c(void *dm_void)
+{
+	struct dm_struct *dm = (struct dm_struct *)dm_void;
+	struct dm_dack_info *dack = &dm->dack_info;
+
+	dack->biask_d[0][0]= (u8)odm_get_bb_reg(dm, 0x2810, 0x1ff8);
+	dack->biask_d[0][1]= (u8)odm_get_bb_reg(dm, 0x283c, 0x1ff8);
+	dack->biask_d[1][0]= (u8)odm_get_bb_reg(dm, 0x4510, 0x1ff8);
+	dack->biask_d[1][1]= (u8)odm_get_bb_reg(dm, 0x453c, 0x1ff8);
+}
+
 void halrf_dck_backup_8822c(void *dm_void)
 {
 	struct dm_struct *dm = (struct dm_struct *)dm_void;
@@ -536,6 +547,18 @@ void halrf_dack_backup_8822c(void *dm_void)
 	odm_set_bb_reg(dm, 0x1860, MASKDWORD, temp1);
 	odm_set_bb_reg(dm, 0x4160, MASKDWORD, temp2);
 	odm_set_bb_reg(dm, 0x9b4, MASKDWORD, temp3);
+	halrf_biask_backup_8822c(dm);
+}
+
+void halrf_biask_restore_8822c(void *dm_void)
+{
+	struct dm_struct *dm = (struct dm_struct *)dm_void;
+	struct dm_dack_info *dack = &dm->dack_info;
+
+	odm_set_bb_reg(dm, 0x18b0, 0x1ff8000, dack->biask_d[0][0]);
+	odm_set_bb_reg(dm, 0x18cc, 0x1ff8000, dack->biask_d[0][1]);
+	odm_set_bb_reg(dm, 0x41b0, 0x1ff8000, dack->biask_d[1][0]);
+	odm_set_bb_reg(dm, 0x41cc, 0x1ff8000, dack->biask_d[1][1]);
 }
 
 void halrf_dck_restore_8822c(void *dm_void)
@@ -750,6 +773,8 @@ void halrf_dack_restore_8822c(void *dm_void)
 	odm_set_bb_reg(dm, 0x41b0, BIT(27), 0x1);
 	odm_set_bb_reg(dm, 0x41cc, BIT(27), 0x1);
 	odm_set_bb_reg(dm, 0x9b4, MASKDWORD, temp3);
+
+	halrf_biask_restore_8822c(dm);
 }
 
 void halrf_polling_check(void *dm_void, u32 add, u32 bmask, u32 data)

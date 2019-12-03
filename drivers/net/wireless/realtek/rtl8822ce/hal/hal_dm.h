@@ -63,6 +63,7 @@ void rtw_hal_lck_test(_adapter *adapter);
 s8 rtw_dm_get_min_rssi(_adapter *adapter);
 s8 rtw_phydm_get_min_rssi(_adapter *adapter);
 u8 rtw_phydm_get_cur_igi(_adapter *adapter);
+bool rtw_phydm_get_edcca_flag(_adapter *adapter);
 
 
 #ifdef CONFIG_LPS_LCLK_WD_TIMER

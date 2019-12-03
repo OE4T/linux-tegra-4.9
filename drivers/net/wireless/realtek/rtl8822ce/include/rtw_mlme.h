@@ -1,6 +1,6 @@
 /******************************************************************************
  *
- * Copyright(c) 2007 - 2017 Realtek Corporation.
+ * Copyright(c) 2007 - 2019 Realtek Corporation.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of version 2 of the GNU General Public License as
@@ -777,6 +777,7 @@ struct mlme_priv {
 
 	NDIS_802_11_SSID	assoc_ssid;
 	u8	assoc_bssid[6];
+	u16	assoc_ch;		/* 0 reserved for no specific channel */
 
 	struct wlan_network	cur_network;
 	struct wlan_network *cur_network_scanned;
@@ -1210,6 +1211,7 @@ enum {
 #ifdef DBG_LA_MODE
 	SS_DENY_LA_MODE,
 #endif
+	SS_DENY_ADAPTIVITY,
 };
 
 u8 _rtw_sitesurvey_condition_check(const char *caller, _adapter *adapter, bool check_sc_interval);
@@ -1266,7 +1268,7 @@ void	rtw_ht_use_default_setting(_adapter *padapter);
 void rtw_build_wmm_ie_ht(_adapter *padapter, u8 *out_ie, uint *pout_len);
 unsigned int rtw_restructure_ht_ie(_adapter *padapter, u8 *in_ie, u8 *out_ie, uint in_len, uint *pout_len, u8 channel);
 void rtw_update_ht_cap(_adapter *padapter, u8 *pie, uint ie_len, u8 channel);
-void rtw_issue_addbareq_cmd(_adapter *padapter, struct xmit_frame *pxmitframe);
+void rtw_issue_addbareq_cmd(_adapter *padapter, struct xmit_frame *pxmitframe, u8 issue_when_busy);
 void rtw_append_exented_cap(_adapter *padapter, u8 *out_ie, uint *pout_len);
 #endif
 

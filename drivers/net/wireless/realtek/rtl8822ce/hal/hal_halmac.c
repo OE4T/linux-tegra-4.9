@@ -1949,6 +1949,9 @@ int rtw_halmac_config_rx_info(struct dvobj_priv *d, enum halmac_drv_info info)
 
 	err = 0;
 out:
+	/* Sync driver RCR cache with register setting */
+	rtw_hal_get_hwreg(dvobj_get_primary_adapter(d), HW_VAR_RCR, NULL);
+
 	return err;
 }
 
@@ -3376,7 +3379,13 @@ static int init_mac_flow(struct dvobj_priv *d)
 	status = api->halmac_init_mac_cfg(halmac, trx_mode);
 	if (status != HALMAC_RET_SUCCESS)
 		goto out;
+
+	/* Driver insert flow: Sync driver setting with register */
+	/* Sync driver RCR cache with register setting */
+	rtw_hal_get_hwreg(dvobj_get_primary_adapter(d), HW_VAR_RCR, NULL);
+
 	_init_trx_cfg_drv(d);
+	/* Driver inser flow end */
 
 	err = rtw_halmac_rx_agg_switch(d, _TRUE);
 	if (err)
@@ -5352,6 +5361,88 @@ int rtw_halmac_sdio_set_tx_format(struct dvobj_priv *d, enum halmac_sdio_tx_form
 
 	return 0;
 }
+
+#ifdef CONFIG_SDIO_MONITOR
+u32 rtw_halmac_sdio_get_int_lat(struct dvobj_priv *d)
+{
+	struct halmac_adapter *mac;
+	struct halmac_api *api;
+	enum halmac_ret_status status;
+	u32 int_lat = 0;
+
+	mac = dvobj_to_halmac(d);
+	api = HALMAC_GET_API(mac);
+
+	status = api->halmac_get_hw_value(mac, HALMAC_HW_SDIO_INT_LAT, &int_lat);
+	if (HALMAC_RET_SUCCESS != status)
+		return 0;
+
+	return int_lat;
+}
+
+u32 rtw_halmac_sdio_get_lk_cnt(struct dvobj_priv *d)
+{
+	struct halmac_adapter *mac;
+	struct halmac_api *api;
+	enum halmac_ret_status status;
+	u32 clk_cnt = 0;
+
+	mac = dvobj_to_halmac(d);
+	api = HALMAC_GET_API(mac);
+
+	status = api->halmac_get_hw_value(mac, HALMAC_HW_SDIO_CLK_CNT, &clk_cnt);
+	if (HALMAC_RET_SUCCESS != status)
+		return 0;
+
+	return clk_cnt;
+}
+
+int rtw_halmac_sdio_set_wt_en(struct dvobj_priv *d)
+{
+	struct halmac_adapter *mac;
+	struct halmac_api *api;
+	enum halmac_ret_status status;
+	u8	enable = _TRUE;
+
+	mac = dvobj_to_halmac(d);
+	api = HALMAC_GET_API(mac);
+
+	status = api->halmac_set_hw_value(mac, HALMAC_HW_SDIO_WT_EN, &enable);
+	if (HALMAC_RET_SUCCESS != status)
+		return -1;
+
+	return 0;
+}
+
+int rtw_halmac_set_sdio_clk_monitor(struct dvobj_priv *d, u8 clk_moni_mode)
+{
+	struct halmac_adapter *mac;
+	struct halmac_api *api;
+	enum halmac_ret_status status;
+	u32 halmac_clk_moni_mode = 0;
+
+	mac = dvobj_to_halmac(d);
+	api = HALMAC_GET_API(mac);
+
+	switch (clk_moni_mode) {
+	case SDIO_MONITOR_MODE_SDIO_CLK_5US:
+		halmac_clk_moni_mode = HALMAC_MONITOR_5US;
+		break;
+	case SDIO_MONITOR_MODE_SDIO_CLK_50US:
+		halmac_clk_moni_mode = HALMAC_MONITOR_50US;
+		break;
+	case SDIO_MONITOR_MODE_SDIO_CLK_9MS:
+		halmac_clk_moni_mode = HALMAC_MONITOR_9MS;
+		break;
+	}
+
+	status = api->halmac_set_hw_value(mac, HALMAC_HW_SDIO_CLK_MONITOR, &halmac_clk_moni_mode);
+	if (HALMAC_RET_SUCCESS != status)
+		return -1;
+
+	return 0;
+}
+#endif
 #endif /* CONFIG_SDIO_HCI */
 
 #ifdef CONFIG_USB_HCI

@@ -22,7 +22,8 @@ u8 rtw_set_802_11_disassociate(_adapter *padapter);
 u8 rtw_set_802_11_bssid_list_scan(_adapter *padapter, struct sitesurvey_parm *pparm);
 u8 rtw_set_802_11_infrastructure_mode(_adapter *padapter, NDIS_802_11_NETWORK_INFRASTRUCTURE networktype);
 u8 rtw_set_802_11_ssid(_adapter *padapter, NDIS_802_11_SSID *ssid);
-u8 rtw_set_802_11_connect(_adapter *padapter, u8 *bssid, NDIS_802_11_SSID *ssid);
+u8 rtw_set_802_11_connect(_adapter *padapter,
+			  u8 *bssid, NDIS_802_11_SSID *ssid, u16 ch);
 
 u8 rtw_validate_bssid(u8 *bssid);
 u8 rtw_validate_ssid(NDIS_802_11_SSID *ssid);

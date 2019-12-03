@@ -1454,10 +1454,8 @@ void halrf_segment_iqk_trigger(void *dm_void, boolean clear,
 		     *rf->is_carrier_suppresion)))
 			return;
 
-#if (DM_ODM_SUPPORT_TYPE == ODM_CE)
 	if (!(rf->rf_supportability & HAL_RF_IQK))
 		return;
-#endif
 
 #if DISABLE_BB_RF
 	return;

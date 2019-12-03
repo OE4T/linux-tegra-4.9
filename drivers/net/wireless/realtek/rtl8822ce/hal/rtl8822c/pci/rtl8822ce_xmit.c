@@ -630,7 +630,7 @@ s32 rtl8822ce_dump_xframe(_adapter *padapter, struct xmit_frame *pxmitframe)
 	    (pxmitframe->attrib.ether_type != 0x0806) &&
 	    (pxmitframe->attrib.ether_type != 0x888e) &&
 	    (pxmitframe->attrib.dhcp_pkt != 1))
-		rtw_issue_addbareq_cmd(padapter, pxmitframe);
+		rtw_issue_addbareq_cmd(padapter, pxmitframe, _FALSE);
 #endif /* CONFIG_80211N_HT */
 	for (t = 0; t < pattrib->nr_frags; t++) {
 

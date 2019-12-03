@@ -98,7 +98,7 @@ void rtl8822c_set_FwPwrMode_cmd(PADAPTER, u8 psmode);
 
 #ifdef CONFIG_TDLS
 #ifdef CONFIG_TDLS_CH_SW
-void rtl8822b_set_BcnEarly_C2H_Rpt_cmd(PADAPTER padapter, u8 enable);
+void rtl8822c_set_BcnEarly_C2H_Rpt_cmd(PADAPTER padapter, u8 enable);
 #endif
 #endif
 

@@ -98,6 +98,12 @@ u8 rtw_do_join(_adapter *padapter)
 	_rtw_memcpy(&parm.ssid[0], &pmlmepriv->assoc_ssid, sizeof(NDIS_802_11_SSID));
 	parm.ssid_num = 1;
 
+	if (pmlmepriv->assoc_ch) {
+		parm.ch_num = 1;
+		parm.ch[0].hw_value = pmlmepriv->assoc_ch;
+		parm.ch[0].flags = 0;
+	}
+
 	if (_rtw_queue_empty(queue) == _TRUE) {
 		_exit_critical_bh(&(pmlmepriv->scanned_queue.lock), &irqL);
 		_clr_fwstate_(pmlmepriv, _FW_UNDER_LINKING);
@@ -251,6 +257,7 @@ handle_tkip_countermeasure:
 
 	_rtw_memset(&pmlmepriv->assoc_ssid, 0, sizeof(NDIS_802_11_SSID));
 	_rtw_memcpy(&pmlmepriv->assoc_bssid, bssid, ETH_ALEN);
+	pmlmepriv->assoc_ch = 0;
 	pmlmepriv->assoc_by_bssid = _TRUE;
 
 	if (check_fwstate(pmlmepriv, _FW_UNDER_SURVEY) == _TRUE)
@@ -364,7 +371,8 @@ exit:
 
 }
 
-u8 rtw_set_802_11_connect(_adapter *padapter, u8 *bssid, NDIS_802_11_SSID *ssid)
+u8 rtw_set_802_11_connect(_adapter *padapter,
+			  u8 *bssid, NDIS_802_11_SSID *ssid, u16 ch)
 {
 	_irqL irqL;
 	u8 status = _SUCCESS;
@@ -417,6 +425,8 @@ handle_tkip_countermeasure:
 		pmlmepriv->assoc_by_bssid = _TRUE;
 	} else
 		pmlmepriv->assoc_by_bssid = _FALSE;
+
+	pmlmepriv->assoc_ch = ch;
 
 	if (check_fwstate(pmlmepriv, _FW_UNDER_SURVEY) == _TRUE)
 		pmlmepriv->to_join = _TRUE;

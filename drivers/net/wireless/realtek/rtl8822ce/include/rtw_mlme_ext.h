@@ -276,8 +276,8 @@ enum TDLS_option {
 
 #endif /* CONFIG_TDLS */
 
-#ifndef NL80211_AUTHTYPE_SAE
-#define NL80211_AUTHTYPE_SAE 4
+#if (KERNEL_VERSION(3, 8, 0) > LINUX_VERSION_CODE)
+#define NL80211_AUTHTYPE_SAE (__NL80211_AUTHTYPE_NUM + 1)
 #endif
 
 /*
@@ -765,6 +765,7 @@ void VCS_update(_adapter *padapter, struct sta_info *psta);
 void	update_ldpc_stbc_cap(struct sta_info *psta);
 
 bool rtw_validate_value(u16 EID, u8 *p, u16 len);
+bool is_hidden_ssid(char *ssid, int len);
 bool hidden_ssid_ap(WLAN_BSSID_EX *snetwork);
 void rtw_absorb_ssid_ifneed(_adapter *padapter, WLAN_BSSID_EX *bssid, u8 *pframe);
 int rtw_get_bcn_keys(ADAPTER *Adapter, u8 *pframe, u32 packet_len,
@@ -869,7 +870,7 @@ void report_wmm_edca_update(_adapter *padapter);
 
 void beacon_timing_control(_adapter *padapter);
 u8 chk_bmc_sleepq_cmd(_adapter *padapter);
-extern u8 set_tx_beacon_cmd(_adapter *padapter);
+extern u8 set_tx_beacon_cmd(_adapter *padapter, u8 flags);
 unsigned int setup_beacon_frame(_adapter *padapter, unsigned char *beacon_frame);
 void update_mgnt_tx_rate(_adapter *padapter, u8 rate);
 void update_monitor_frame_attrib(_adapter *padapter, struct pkt_attrib *pattrib);

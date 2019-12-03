@@ -7460,7 +7460,7 @@ static int rtw_set_wps_beacon(struct net_device *dev, struct ieee_param *param, 
 
 		_rtw_memcpy(pmlmepriv->wps_beacon_ie, param->u.bcn_ie.buf, ie_len);
 
-		update_beacon(padapter, _VENDOR_SPECIFIC_IE_, wps_oui, _TRUE);
+		update_beacon(padapter, _VENDOR_SPECIFIC_IE_, wps_oui, _TRUE, 0);
 
 		pmlmeext->bstart_bss = _TRUE;
 
@@ -10426,7 +10426,11 @@ static int rtw_priv_get(struct net_device *dev,
 	struct iw_point *wrqu = (struct iw_point *)wdata;
 	u32 subcmd = wrqu->flags;
 	PADAPTER padapter = rtw_netdev_priv(dev);
-
+	HAL_DATA_TYPE	*pHalData = GET_HAL_DATA(padapter);
+	struct dm_struct	*p_dm = &pHalData->odmpriv;
+	struct dm_rf_calibration_struct	*p_rf_calibrate_info = &(p_dm->rf_calibrate_info);
+	struct dm_iqk_info	*p_iqk_info = &p_dm->IQK_info;
+	u32 i = 100;
 
 	if (padapter == NULL)
 		return -ENETDOWN;
@@ -10448,7 +10452,19 @@ static int rtw_priv_get(struct net_device *dev,
 
 	if (subcmd < MP_NULL) {
 #ifdef CONFIG_MP_INCLUDED
+		while (i > 1) {
+			if (p_rf_calibrate_info->is_iqk_in_progress) {
+				rtw_msleep_os(10);
+			} else {
+				p_iqk_info->rfk_forbidden = _TRUE;
+				break;
+			}
+			i--;
+		}
+		if (subcmd == MP_CHANNEL || subcmd == MP_BANDWIDTH || subcmd == MP_START)
+			p_iqk_info->rfk_forbidden = _FALSE;
 		rtw_priv_mp_get(dev, info, wdata, extra);
+		p_iqk_info->rfk_forbidden = _FALSE;
 #endif
 		return 0;
 	}

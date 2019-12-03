@@ -379,6 +379,8 @@ int rtw_mp_start(struct net_device *dev,
 		rtw_mi_scan_abort(padapter, _TRUE);
 	}
 
+	rtw_hal_set_hwreg(padapter, HW_VAR_CHECK_TXBUF, 0);
+
 	if (rtw_mp_cmd(padapter, MP_START, RTW_CMDF_WAIT_ACK) != _SUCCESS)
 		ret = -EPERM;
 
@@ -399,11 +401,11 @@ int rtw_mp_stop(struct net_device *dev,
 	PADAPTER padapter = rtw_netdev_priv(dev);
 	struct mp_priv *pmppriv = &padapter->mppriv;
 
-	if (rtw_mp_cmd(padapter, MP_STOP, RTW_CMDF_WAIT_ACK) != _SUCCESS)
-		ret = -EPERM;
-
 	if (pmppriv->mode != MP_ON)
 		return -EPERM;
+
+	if (rtw_mp_cmd(padapter, MP_STOP, RTW_CMDF_WAIT_ACK) != _SUCCESS)
+		ret = -EPERM;
 
 	pmppriv->bprocess_mp_mode = _FALSE;
 	_rtw_memset(extra, 0, wrqu->length);
@@ -482,6 +484,7 @@ int rtw_mp_channel(struct net_device *dev,
 	_rtw_memset(extra, 0, wrqu->length);
 	sprintf(extra, "Change channel %d to channel %d", padapter->mppriv.channel , channel);
 	padapter->mppriv.channel = channel;
+	rtw_hal_set_hwreg(padapter, HW_VAR_CHECK_TXBUF, 0);
 	SetChannel(padapter);
 	pHalData->current_channel = channel;
 
@@ -540,7 +543,7 @@ int rtw_mp_bandwidth(struct net_device *dev,
 	padapter->mppriv.preamble = sg;
 	_rtw_memset(extra, 0, wrqu->length);
 	sprintf(extra, "Change BW %d to BW %d\n", pHalData->current_channel_bw , bandwidth);
-
+	rtw_hal_set_hwreg(padapter, HW_VAR_CHECK_TXBUF, 0);
 	SetBandwidth(padapter);
 	pHalData->current_channel_bw = bandwidth;
 
@@ -836,10 +839,24 @@ int rtw_mp_ctx(struct net_device *dev,
 		return 0;
 	}
 	if (stop == 0) {
+		struct xmit_priv	*pxmitpriv = &(padapter->xmitpriv);
+		_queue *pfree_xmitbuf_queue = &pxmitpriv->free_xmitbuf_queue;
+		_queue *pfree_xmit_queue = &pxmitpriv->free_xmit_queue;
+
+		u32 i = 0;
 		bStartTest = 0; /* To set Stop*/
 		pmp_priv->tx.stop = 1;
 		sprintf(extra, "Stop continuous Tx");
 		odm_write_dig(&pHalData->odmpriv, 0x20);
+		do {
+			if (pxmitpriv->free_xmitframe_cnt == NR_XMITFRAME && pxmitpriv->free_xmitbuf_cnt == NR_XMITBUFF)
+				break;
+			else {
+				i++;
+				RTW_INFO("%s:wait queue_empty %d!!\n", __func__, i);
+				rtw_msleep_os(10);
+			}
+		} while (i < 1000);
 	} else {
 		bStartTest = 1;
 		odm_write_dig(&pHalData->odmpriv, 0x3f);
@@ -1692,11 +1709,17 @@ int rtw_mp_pretx_proc(PADAPTER padapter, u8 bStartTest, char *extra)
 		if (bStartTest == 0) {
 			pmp_priv->tx.stop = 1;
 			pmp_priv->mode = MP_ON;
+			#ifdef CONFIG_RTL8822B
+			rtw_write8(padapter, 0x838, 0x61);
+			#endif
 			sprintf(extra, "Stop continuous Tx");
 		} else if (pmp_priv->tx.stop == 1) {
 			pextra = extra + strlen(extra);
 			pextra += sprintf(pextra, "\nStart continuous DA=ffffffffffff len=1500 count=%u\n", pmp_priv->tx.count);
 			pmp_priv->tx.stop = 0;
+			#ifdef CONFIG_RTL8822B
+			rtw_write8(padapter, 0x838, 0x6d);
+			#endif
 			SetPacketTx(padapter);
 		} else
 			return -EFAULT;

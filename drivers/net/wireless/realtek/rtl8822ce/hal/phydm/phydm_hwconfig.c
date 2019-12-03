@@ -1209,6 +1209,12 @@ odm_config_mac_with_header_file(struct dm_struct *dm)
 		  "support_platform: 0x%X, support_interface: 0x%X, board_type: 0x%X\n",
 		  dm->support_platform, dm->support_interface, dm->board_type);
 
+#if (RTL8822C_SUPPORT)
+	if (dm->support_ic_type & ODM_RTL8822C) {
+		PHYDM_DBG(dm, ODM_COMP_INIT, "MAC para-package in HALMAC\n");
+		return result;
+	}
+#endif
 /* @1 AP doesn't use PHYDM initialization in these ICs */
 #if (DM_ODM_SUPPORT_TYPE != ODM_AP)
 #if (RTL8812A_SUPPORT == 1)
@@ -1292,10 +1298,6 @@ odm_config_mac_with_header_file(struct dm_struct *dm)
 #if (RTL8814B_SUPPORT == 1)
 	if (dm->support_ic_type == ODM_RTL8814B)
 		READ_AND_CONFIG_MP(8814b, _mac_reg);
-#endif
-#if 0 /*(RTL8822C_SUPPORT)*/
-	if (dm->support_ic_type == ODM_RTL8822C)
-		READ_AND_CONFIG_MP(8822c, _mac_reg);
 #endif
 #if (RTL8812F_SUPPORT)
 	if (dm->support_ic_type == ODM_RTL8812F)

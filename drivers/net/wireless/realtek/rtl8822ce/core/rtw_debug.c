@@ -17,6 +17,10 @@
 #include <drv_types.h>
 #include <hal_data.h>
 
+#ifdef CONFIG_SDIO_MONITOR
+#include "../hal/hal_halmac.h"
+#endif
+
 #ifdef CONFIG_RTW_DEBUG
 const char *rtw_log_level_str[] = {
 	"_DRV_NONE_ = 0",
@@ -183,6 +187,9 @@ void dump_drv_cfg(void *sel)
 #ifdef RTW_XMIT_THREAD_HIGH_PRIORITY_AGG
 	RTW_PRINT_SEL(sel, "RTW_XMIT_THREAD_HIGH_PRIORITY_AGG\n");
 #endif
+#ifdef DBG_SDIO
+	RTW_PRINT_SEL(sel, "DBG_SDIO = %d\n", DBG_SDIO);
+#endif
 #ifdef CONFIG_RTW_DISABLE_HW_PDN
 	RTW_PRINT_SEL(sel, "CONFIG_RTW_DISABLE_HW_PDN\n");
 #endif
@@ -273,6 +280,33 @@ void sdio_local_reg_dump(void *sel, _adapter *adapter)
 			_RTW_PRINT_SEL(sel, "\n");
 	}
 }
+
+#ifdef CONFIG_SDIO_MONITOR
+u32 sd_monitor_sdio_clk(_adapter *adapter, u8 clk_moni_mode)
+{
+	struct dvobj_priv *dvobj = adapter_to_dvobj(adapter);
+	u32 try_cnt = 0, clk_cnt = 0;
+	
+	/* switch to sdio clk monitor mode */
+	rtw_halmac_set_sdio_clk_monitor(dvobj, clk_moni_mode);
+
+	do {
+		clk_cnt = rtw_halmac_sdio_get_lk_cnt(dvobj);
+		if (clk_cnt > 0)
+			break;
+
+		if (try_cnt >= 100) {
+			clk_cnt = 0;
+			break;
+		}
+
+		rtw_msleep_os(1);
+		try_cnt++;
+	} while (1);
+
+	return clk_cnt;
+}
+#endif
 #endif /* CONFIG_SDIO_HCI */
 
 void mac_reg_dump(void *sel, _adapter *adapter)
@@ -3212,6 +3246,46 @@ ssize_t proc_set_tx_ampdu_density(struct file *file, const char __user *buffer, 
 	return count;
 }
 
+int proc_get_tx_quick_addba_req(struct seq_file *m, void *v)
+{
+	struct net_device *dev = m->private;
+	_adapter *padapter = (_adapter *)rtw_netdev_priv(dev);
+	struct registry_priv	*pregpriv = &padapter->registrypriv;
+
+	if (padapter)
+		RTW_PRINT_SEL(m, "tx_quick_addba_req = %x\n", pregpriv->tx_quick_addba_req);
+
+	return 0;
+}
+
+ssize_t proc_set_tx_quick_addba_req(struct file *file, const char __user *buffer, size_t count, loff_t *pos, void *data)
+{
+	struct net_device *dev = data;
+	_adapter *padapter = (_adapter *)rtw_netdev_priv(dev);
+	struct registry_priv	*pregpriv = &padapter->registrypriv;
+	char tmp[32];
+	u32 enable;
+
+	if (count < 1)
+		return -EFAULT;
+
+	if (count > sizeof(tmp)) {
+		rtw_warn_on(1);
+		return -EFAULT;
+	}
+
+	if (buffer && !copy_from_user(tmp, buffer, count)) {
+
+		int num = sscanf(tmp, "%d ", &enable);
+
+		if (padapter && (num == 1)) {
+			pregpriv->tx_quick_addba_req = enable;
+			RTW_INFO("tx_quick_addba_req = %d\n", pregpriv->tx_quick_addba_req);
+		}
+	}
+
+	return count;
+}
 #ifdef CONFIG_TX_AMSDU
 int proc_get_tx_amsdu(struct seq_file *m, void *v)
 {

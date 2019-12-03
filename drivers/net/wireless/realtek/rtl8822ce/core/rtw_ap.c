@@ -614,7 +614,7 @@ void	expire_timeout_chk(_adapter *padapter)
 
 					/* to update bcn with tim_bitmap for this station */
 					rtw_tim_map_set(padapter, pstapriv->tim_bitmap, psta->cmn.aid);
-					update_beacon(padapter, _TIM_IE_, NULL, _TRUE);
+					update_beacon(padapter, _TIM_IE_, NULL, _TRUE, 0);
 
 					if (!pmlmeext->active_keep_alive_check)
 						continue;
@@ -1786,10 +1786,7 @@ chbw_decision:
 		if (!(ifbmp_ch_changed & BIT(i)) || !pdvobj->padapters[i])
 			continue;
 
-		/* pure AP is not needed*/
-		if (MLME_IS_GO(pdvobj->padapters[i])
-			|| MLME_IS_MESH(pdvobj->padapters[i])
-		) {
+		{
 			u8 ht_option = 0;
 
 			#ifdef CONFIG_80211N_HT
@@ -1831,11 +1828,11 @@ update_beacon:
 			/* AP is not starting a 40 MHz BSS in presence of an 802.11g BSS. */
 			mlme->ht_op_mode &= (~HT_INFO_OPERATION_MODE_OP_MODE_MASK);
 			mlme->ht_op_mode |= OP_MODE_MAY_BE_LEGACY_STAS;
-			update_beacon(pdvobj->padapters[i], _HT_ADD_INFO_IE_, NULL, _FALSE);
+			update_beacon(pdvobj->padapters[i], _HT_ADD_INFO_IE_, NULL, _FALSE, 0);
 		}
 		#endif
 
-		update_beacon(pdvobj->padapters[i], _TIM_IE_, NULL, _FALSE);
+		update_beacon(pdvobj->padapters[i], _TIM_IE_, NULL, _FALSE, 0);
 	}
 
 	if (mlme_act != MLME_OPCH_SWITCH
@@ -2838,7 +2835,7 @@ u8 rtw_ap_bmc_frames_hdl(_adapter *padapter)
 	if ((rtw_tim_map_is_set(padapter, pstapriv->tim_bitmap, 0)) && (psta_bmc->sleepq_len > 0)) {
 		int tx_counts = 0;
 
-		_update_beacon(padapter, _TIM_IE_, NULL, _FALSE, "update TIM with TIB=1");
+		_update_beacon(padapter, _TIM_IE_, NULL, _FALSE, 0, "update TIM with TIB=1");
 
 		RTW_INFO("sleepq_len of bmc_sta = %d\n", psta_bmc->sleepq_len);
 
@@ -2888,7 +2885,7 @@ u8 rtw_ap_bmc_frames_hdl(_adapter *padapter)
 
 			if (update_tim == _TRUE) {
 				RTW_INFO("clear TIB\n");
-				_update_beacon(padapter, _TIM_IE_, NULL, _TRUE, "bmc sleepq and HIQ empty");
+				_update_beacon(padapter, _TIM_IE_, NULL, _TRUE, 0, "bmc sleepq and HIQ empty");
 			}
 		}
 	}
@@ -3210,7 +3207,7 @@ static void update_bcn_vendor_spec_ie(_adapter *padapter, u8 *oui)
 
 }
 
-void _update_beacon(_adapter *padapter, u8 ie_id, u8 *oui, u8 tx, const char *tag)
+void _update_beacon(_adapter *padapter, u8 ie_id, u8 *oui, u8 tx, u8 flags, const char *tag)
 {
 	_irqL irqL;
 	struct mlme_priv *pmlmepriv;
@@ -3281,7 +3278,10 @@ void _update_beacon(_adapter *padapter, u8 ie_id, u8 *oui, u8 tx, const char *ta
 		/* send_beacon(padapter); */ /* send_beacon must execute on TSR level */
 		if (0)
 			RTW_INFO(FUNC_ADPT_FMT" ie_id:%u - %s\n", FUNC_ADPT_ARG(padapter), ie_id, tag);
-		set_tx_beacon_cmd(padapter);
+		if(flags == RTW_CMDF_WAIT_ACK)
+			set_tx_beacon_cmd(padapter, RTW_CMDF_WAIT_ACK);
+		else
+			set_tx_beacon_cmd(padapter, 0);
 	}
 #else
 	{
@@ -3344,7 +3344,7 @@ void rtw_process_public_act_bsscoex(_adapter *padapter, u8 *pframe, uint frame_l
 
 	if (beacon_updated) {
 
-		update_beacon(padapter, _HT_ADD_INFO_IE_, NULL, _TRUE);
+		update_beacon(padapter, _HT_ADD_INFO_IE_, NULL, _TRUE, 0);
 
 		associated_stainfo_update(padapter, psta, STA_INFO_UPDATE_BW);
 	}
@@ -3555,7 +3555,7 @@ void bss_cap_update_on_sta_join(_adapter *padapter, struct sta_info *psta)
 
 			if (pmlmepriv->num_sta_non_erp == 1) {
 				beacon_updated = _TRUE;
-				update_beacon(padapter, _ERPINFO_IE_, NULL, _FALSE);
+				update_beacon(padapter, _ERPINFO_IE_, NULL, _FALSE, 0);
 			}
 		}
 
@@ -3567,7 +3567,7 @@ void bss_cap_update_on_sta_join(_adapter *padapter, struct sta_info *psta)
 
 			if (pmlmepriv->num_sta_non_erp == 0) {
 				beacon_updated = _TRUE;
-				update_beacon(padapter, _ERPINFO_IE_, NULL, _FALSE);
+				update_beacon(padapter, _ERPINFO_IE_, NULL, _FALSE, 0);
 			}
 		}
 
@@ -3665,8 +3665,8 @@ void bss_cap_update_on_sta_join(_adapter *padapter, struct sta_info *psta)
 		}
 
 		if (rtw_ht_operation_update(padapter) > 0) {
-			update_beacon(padapter, _HT_CAPABILITY_IE_, NULL, _FALSE);
-			update_beacon(padapter, _HT_ADD_INFO_IE_, NULL, _FALSE);
+			update_beacon(padapter, _HT_CAPABILITY_IE_, NULL, _FALSE, 0);
+			update_beacon(padapter, _HT_ADD_INFO_IE_, NULL, _FALSE, 0);
 			beacon_updated = _TRUE;
 		}
 	}
@@ -3676,7 +3676,7 @@ void bss_cap_update_on_sta_join(_adapter *padapter, struct sta_info *psta)
 	if (MLME_IS_MESH(padapter)) {
 		struct sta_priv *pstapriv = &padapter->stapriv;
 
-		update_beacon(padapter, WLAN_EID_MESH_CONFIG, NULL, _FALSE);
+		update_beacon(padapter, WLAN_EID_MESH_CONFIG, NULL, _FALSE, 0);
 		if (pstapriv->asoc_list_cnt == 1)
 			_set_timer(&padapter->mesh_atlm_param_req_timer, 0);
 		beacon_updated = _TRUE;
@@ -3684,7 +3684,7 @@ void bss_cap_update_on_sta_join(_adapter *padapter, struct sta_info *psta)
 #endif
 
 	if (beacon_updated)
-		update_beacon(padapter, 0xFF, NULL, _TRUE);
+		update_beacon(padapter, 0xFF, NULL, _TRUE, 0);
 
 	/* update associcated stations cap. */
 	associated_clients_update(padapter,  beacon_updated, STA_INFO_UPDATE_ALL);
@@ -3706,7 +3706,7 @@ u8 bss_cap_update_on_sta_leave(_adapter *padapter, struct sta_info *psta)
 	if (rtw_tim_map_is_set(padapter, pstapriv->tim_bitmap, psta->cmn.aid)) {
 		rtw_tim_map_clear(padapter, pstapriv->tim_bitmap, psta->cmn.aid);
 		beacon_updated = _TRUE;
-		update_beacon(padapter, _TIM_IE_, NULL, _FALSE);
+		update_beacon(padapter, _TIM_IE_, NULL, _FALSE, 0);
 	}
 
 	if (psta->no_short_preamble_set) {
@@ -3722,7 +3722,7 @@ u8 bss_cap_update_on_sta_leave(_adapter *padapter, struct sta_info *psta)
 		pmlmepriv->num_sta_non_erp--;
 		if (pmlmepriv->num_sta_non_erp == 0) {
 			beacon_updated = _TRUE;
-			update_beacon(padapter, _ERPINFO_IE_, NULL, _FALSE);
+			update_beacon(padapter, _ERPINFO_IE_, NULL, _FALSE, 0);
 		}
 	}
 
@@ -3759,14 +3759,14 @@ u8 bss_cap_update_on_sta_leave(_adapter *padapter, struct sta_info *psta)
 	}
 
 	if (rtw_ht_operation_update(padapter) > 0) {
-		update_beacon(padapter, _HT_CAPABILITY_IE_, NULL, _FALSE);
-		update_beacon(padapter, _HT_ADD_INFO_IE_, NULL, _FALSE);
+		update_beacon(padapter, _HT_CAPABILITY_IE_, NULL, _FALSE, 0);
+		update_beacon(padapter, _HT_ADD_INFO_IE_, NULL, _FALSE, 0);
 	}
 #endif /* CONFIG_80211N_HT */
 
 #ifdef CONFIG_RTW_MESH
 	if (MLME_IS_MESH(padapter)) {
-		update_beacon(padapter, WLAN_EID_MESH_CONFIG, NULL, _FALSE);
+		update_beacon(padapter, WLAN_EID_MESH_CONFIG, NULL, _FALSE, 0);
 		if (pstapriv->asoc_list_cnt == 0)
 			_cancel_timer_ex(&padapter->mesh_atlm_param_req_timer);
 		beacon_updated = _TRUE;
@@ -3774,7 +3774,7 @@ u8 bss_cap_update_on_sta_leave(_adapter *padapter, struct sta_info *psta)
 #endif
 
 	if (beacon_updated == _TRUE)
-		update_beacon(padapter, 0xFF, NULL, _TRUE);
+		update_beacon(padapter, 0xFF, NULL, _TRUE, 0);
 
 #if 0
 	/* update associated stations cap. */
@@ -5071,7 +5071,7 @@ void tx_beacon_handlder(struct dvobj_priv *pdvobj)
 		if (!check_fwstate(&padapter->mlmepriv, WIFI_OP_CH_SWITCHING)
 			&& !IS_CH_WAITING(adapter_to_rfctl(padapter))
 		) {
-			/*update_beacon(padapter, _TIM_IE_, NULL, _FALSE);*/
+			/*update_beacon(padapter, _TIM_IE_, NULL, _FALSE, 0);*/
 			/*issue_beacon(padapter, 0);*/
 			send_beacon(padapter);
 		}
@@ -5095,7 +5095,7 @@ void tx_beacon_timer_handlder(void *ctx)
 	_adapter *padapter = pdvobj->padapters[0];
 
 	if (padapter)
-		set_tx_beacon_cmd(padapter);
+		set_tx_beacon_cmd(padapter, 0);
 }
 #endif
 

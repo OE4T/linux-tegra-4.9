@@ -1,6 +1,6 @@
 /******************************************************************************
  *
- * Copyright(c) 2016 - 2018 Realtek Corporation. All rights reserved.
+ * Copyright(c) 2016 - 2019 Realtek Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of version 2 of the GNU General Public License as
@@ -108,6 +108,11 @@ static struct halmac_wlan_pwr_cfg TRANS_CARDEMU_TO_ACT_8822C[] = {
 	 HALMAC_PWR_INTF_ALL_MSK,
 	 HALMAC_PWR_ADDR_MAC,
 	 HALMAC_PWR_CMD_WRITE, (BIT(4) | BIT(3)), 0},
+	{0x1018,
+	 HALMAC_PWR_CUT_ALL_MSK,
+	 HALMAC_PWR_INTF_ALL_MSK,
+	 HALMAC_PWR_ADDR_MAC,
+	 HALMAC_PWR_CMD_WRITE, BIT(2), BIT(2)},
 	{0x0005,
 	 HALMAC_PWR_CUT_ALL_MSK,
 	 HALMAC_PWR_INTF_ALL_MSK,

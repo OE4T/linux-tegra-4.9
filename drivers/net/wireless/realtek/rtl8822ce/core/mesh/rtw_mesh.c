@@ -455,7 +455,7 @@ static void rtw_mesh_acnode_rsvd_chk(_adapter *adapter)
 	if (plink_ctl->acnode_rsvd != acnode_rsvd) {
 		plink_ctl->acnode_rsvd = acnode_rsvd;
 		RTW_INFO(FUNC_ADPT_FMT" acnode_rsvd = %d\n", FUNC_ADPT_ARG(adapter), plink_ctl->acnode_rsvd);
-		update_beacon(adapter, WLAN_EID_MESH_CONFIG, NULL, 1);
+		update_beacon(adapter, WLAN_EID_MESH_CONFIG, NULL, 1, 0);
 	}
 }
 

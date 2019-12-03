@@ -66,7 +66,7 @@
 #define IQK_VER_8192F "0x01"
 #define IQK_VER_8723B "0x1e"
 #define IQK_VER_8812A "0x02"
-#define IQK_VER_8821A "0x01"
+#define IQK_VER_8821A "0x02"
 #elif (DM_ODM_SUPPORT_TYPE & (ODM_CE))
 #define IQK_VER_8188E "0x01"
 #define IQK_VER_8192E "0x01"
@@ -96,17 +96,17 @@
 #define IQK_VER_8710B "0x01"
 #define IQK_VER_8723D "0x02"
 #define IQK_VER_8822B "0x30"
-#define IQK_VER_8822C "0x0c"
+#define IQK_VER_8822C "0x0d"
 #define IQK_VER_8821C "0x23"
 #define IQK_VER_8198F "0x09"
 #define IQK_VER_8814B "0x0b"
 #define IQK_VER_8812F "0x07"
 
 /*LCK version*/
-#define LCK_VER_8188E "0x01"
-#define LCK_VER_8192E "0x01"
+#define LCK_VER_8188E "0x02"
+#define LCK_VER_8192E "0x02"
 #define LCK_VER_8192F "0x01"
-#define LCK_VER_8723B "0x01"
+#define LCK_VER_8723B "0x02"
 #define LCK_VER_8812A "0x01"
 #define LCK_VER_8821A "0x01"
 #define LCK_VER_8814A "0x01"
@@ -170,7 +170,7 @@
 
 
 /*DACK version*/
-#define DACK_VER_8822C "0x8"
+#define DACK_VER_8822C "0xa"
 #define DACK_VER_8814B "0x3"
 
 /*Kfree tracking version*/

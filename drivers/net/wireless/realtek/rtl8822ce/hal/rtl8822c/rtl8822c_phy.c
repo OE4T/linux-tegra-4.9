@@ -307,6 +307,9 @@ u8 rtl8822c_phy_init(PADAPTER adapter)
 	if (err)
 		return _FALSE;
 
+#ifdef CONFIG_RTW_IOT_CCK_PD_INIT
+	phydm_iot_patch_id_update(phydm, 0x021f0800, true);
+#endif
 	ret = config_phydm_parameter_init_8822c(phydm, ODM_PRE_SETTING);
 	if (FALSE == ret)
 		return _FALSE;
@@ -318,6 +321,9 @@ u8 rtl8822c_phy_init(PADAPTER adapter)
 	if (_FALSE == ok)
 		return _FALSE;
 
+#ifdef CONFIG_RTW_IOT_CCK_PD_INIT
+	phydm_iot_patch_id_update(phydm, 0x021f0800, true);
+#endif
 	ret = config_phydm_parameter_init_8822c(phydm, ODM_POST_SETTING);
 	if (FALSE == ret)
 		return _FALSE;

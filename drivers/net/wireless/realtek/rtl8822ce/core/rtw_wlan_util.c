@@ -2360,10 +2360,14 @@ bool rtw_validate_value(u16 EID, u8 *p, u16 len)
 	return _TRUE;
 }
 
+bool is_hidden_ssid(char *ssid, int len)
+{
+	return len == 0 || is_all_null(ssid, len) == _TRUE;
+}
+
 inline bool hidden_ssid_ap(WLAN_BSSID_EX *snetwork)
 {
-	return ((snetwork->Ssid.SsidLength == 0) ||  
-		is_all_null(snetwork->Ssid.Ssid, snetwork->Ssid.SsidLength) == _TRUE);
+	return is_hidden_ssid(snetwork->Ssid.Ssid, snetwork->Ssid.SsidLength);
 }
 
 /*
@@ -2607,6 +2611,13 @@ int rtw_check_bcn_info(ADAPTER *Adapter, u8 *pframe, u32 packet_len)
 #ifdef DBG_RX_BCN
 	rtw_debug_bcn(Adapter, pframe, packet_len);
 #endif
+
+	/* hidden ssid, replace with current beacon ssid directly */
+	if (is_hidden_ssid(recv_beacon.ssid, recv_beacon.ssid_len)) {
+		_rtw_memcpy(recv_beacon.ssid, pmlmepriv->cur_beacon_keys.ssid,
+			    pmlmepriv->cur_beacon_keys.ssid_len);
+		recv_beacon.ssid_len = pmlmepriv->cur_beacon_keys.ssid_len;
+	}
 
 #ifdef CONFIG_BCN_CNT_CONFIRM_HDL
 	if (_rtw_memcmp(&recv_beacon, cur_beacon, sizeof(recv_beacon)) == _TRUE)

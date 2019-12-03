@@ -254,6 +254,8 @@ int rtw_rx_ampdu_amsdu;/* 0: disabled, 1:enabled, 2:auto . There is an IOT issu 
 */
 int rtw_tx_ampdu_amsdu = 2;
 
+int rtw_quick_addba_req = 0;
+
 static uint rtw_rx_ampdu_sz_limit_1ss[4] = CONFIG_RTW_RX_AMPDU_SZ_LIMIT_1SS;
 static uint rtw_rx_ampdu_sz_limit_1ss_num = 0;
 module_param_array(rtw_rx_ampdu_sz_limit_1ss, uint, &rtw_rx_ampdu_sz_limit_1ss_num, 0644);
@@ -486,6 +488,7 @@ module_param(rtw_ampdu_enable, int, 0644);
 module_param(rtw_rx_stbc, int, 0644);
 module_param(rtw_rx_ampdu_amsdu, int, 0644);
 module_param(rtw_tx_ampdu_amsdu, int, 0644);
+module_param(rtw_quick_addba_req, int, 0644);
 #endif /* CONFIG_80211N_HT */
 
 #ifdef CONFIG_BEAMFORMING
@@ -893,6 +896,11 @@ uint rtw_suspend_type = RTW_SUSPEND_TYPE;
 module_param(rtw_suspend_type, uint, 0644);
 #endif
 
+#ifdef CONFIG_RTL8822C_XCAP_NEW_POLICY
+uint rtw_8822c_xcap_overwrite = 1;
+module_param(rtw_8822c_xcap_overwrite, uint, 0644);
+#endif
+
 #if CONFIG_TX_AC_LIFETIME
 static void rtw_regsty_load_tx_ac_lifetime(struct registry_priv *regsty)
 {
@@ -1101,6 +1109,7 @@ uint loadparam(_adapter *padapter)
 		registry_par->rx_stbc = (u8)rtw_rx_stbc;
 		registry_par->rx_ampdu_amsdu = (u8)rtw_rx_ampdu_amsdu;
 		registry_par->tx_ampdu_amsdu = (u8)rtw_tx_ampdu_amsdu;
+		registry_par->tx_quick_addba_req = (u8)rtw_quick_addba_req;
 		registry_par->short_gi = (u8)rtw_short_gi;
 		registry_par->ldpc_cap = (u8)rtw_ldpc_cap;
 #if defined(CONFIG_CUSTOMER01_SMART_ANTENNA)
@@ -1336,6 +1345,11 @@ uint loadparam(_adapter *padapter)
 #ifdef CONFIG_RTW_MESH
 	registry_par->peer_alive_based_preq = rtw_peer_alive_based_preq;
 #endif
+
+#ifdef CONFIG_RTL8822C_XCAP_NEW_POLICY
+	registry_par->rtw_8822c_xcap_overwrite = (u8)rtw_8822c_xcap_overwrite;
+#endif
+
 	return status;
 }
 
@@ -1482,7 +1496,7 @@ static u16 rtw_select_queue(struct net_device *dev, struct sk_buff *skb
 	#else
 	, void *accel_priv
 	#endif
-	#if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 14, 0)
+	#if ((LINUX_VERSION_CODE >= KERNEL_VERSION(3, 14, 0)) && (LINUX_VERSION_CODE < KERNEL_VERSION(5, 2, 0)))
 	, select_queue_fallback_t fallback
 	#endif
 #endif

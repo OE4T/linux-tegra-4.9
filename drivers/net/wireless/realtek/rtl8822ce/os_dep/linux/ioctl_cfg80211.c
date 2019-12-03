@@ -1,6 +1,6 @@
 /******************************************************************************
  *
- * Copyright(c) 2007 - 2017 Realtek Corporation.
+ * Copyright(c) 2007 - 2019 Realtek Corporation.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of version 2 of the GNU General Public License as
@@ -407,6 +407,23 @@ static void rtw_get_chbw_from_nl80211_channel_type(struct ieee80211_channel *cha
 #endif /* (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 29)) */
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 5, 0))
+bool rtw_cfg80211_allow_ch_switch_notify(_adapter *adapter)
+{
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(3, 19, 0))
+	if ((!MLME_IS_AP(adapter))
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 13, 0))
+		&& (!MLME_IS_ADHOC(adapter))
+		&& (!MLME_IS_ADHOC_MASTER(adapter))
+		&& (!MLME_IS_MESH(adapter))
+#elif defined(CONFIG_RTW_MESH)
+		&& (!MLME_IS_MESH(adapter))
+#endif
+		)
+		return 0;
+#endif
+	return 1;
+}
+
 u8 rtw_cfg80211_ch_switch_notify(_adapter *adapter, u8 ch, u8 bw, u8 offset, u8 ht)
 {
 	struct wiphy *wiphy = adapter_to_wiphy(adapter);
@@ -414,6 +431,9 @@ u8 rtw_cfg80211_ch_switch_notify(_adapter *adapter, u8 ch, u8 bw, u8 offset, u8 
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 8, 0))
 	struct cfg80211_chan_def chdef;
+
+	if (!rtw_cfg80211_allow_ch_switch_notify(adapter))
+		goto exit;
 
 	ret = rtw_chbw_to_cfg80211_chan_def(wiphy, &chdef, ch, bw, offset, ht);
 	if (ret != _SUCCESS)
@@ -424,6 +444,9 @@ u8 rtw_cfg80211_ch_switch_notify(_adapter *adapter, u8 ch, u8 bw, u8 offset, u8 
 #else
 	int freq = rtw_ch2freq(ch);
 	enum nl80211_channel_type ctype;
+
+	if (!rtw_cfg80211_allow_ch_switch_notify(adapter))
+		goto exit;
 
 	if (!freq) {
 		ret = _FAIL;
@@ -2950,6 +2973,7 @@ bypass_p2p_chk:
 		case SS_DENY_BUDDY_UNDER_LINK_WPS :
 		#endif
 		case SS_DENY_BUSY_TRAFFIC :
+		case SS_DENY_ADAPTIVITY:
 			need_indicate_scan_done = _TRUE;
 			goto check_need_indicate_scan_done;
 
@@ -3267,6 +3291,11 @@ static int rtw_cfg80211_set_auth_type(struct security_priv *psecuritypriv,
 
 	psecuritypriv->auth_type = sme_auth_type;
 
+	if (sme_auth_type == NL80211_AUTHTYPE_SAE) {
+		psecuritypriv->auth_alg = WLAN_AUTH_SAE;
+		return 0;
+	}
+
 	switch (sme_auth_type) {
 	case NL80211_AUTHTYPE_AUTOMATIC:
 
@@ -3293,9 +3322,6 @@ static int rtw_cfg80211_set_auth_type(struct security_priv *psecuritypriv,
 		psecuritypriv->ndisencryptstatus = Ndis802_11Encryption1Enabled;
 
 
-		break;
-	case NL80211_AUTHTYPE_SAE:
-		psecuritypriv->auth_alg = WLAN_AUTH_SAE;
 		break;
 	default:
 		psecuritypriv->dot11AuthAlgrthm = dot11AuthAlgrthm_Open;
@@ -3395,7 +3421,9 @@ static int rtw_cfg80211_set_key_mgt(struct security_priv *psecuritypriv, u32 key
 		psecuritypriv->rsn_akm_suite_type = 4;
 	}
 #endif
-	else {
+	else if (key_mgt == WLAN_AKM_SUITE_SAE) { 
+		psecuritypriv->rsn_akm_suite_type = 8; 
+	} else {
 		RTW_INFO("Invalid key mgt: 0x%x\n", key_mgt);
 		/* return -EINVAL; */
 	}
@@ -3820,7 +3848,8 @@ static int cfg80211_rtw_connect(struct wiphy *wiphy, struct net_device *ndev,
 
 	if (rtw_check_connect_sae_compat(sme)) {
 		sme->auth_type = NL80211_AUTHTYPE_SAE;
-		RTW_INFO("%s set sme->auth_type=4 for SAE compat\n", __FUNCTION__);
+		RTW_INFO("%s set sme->auth_type=%d for SAE compat\n", __FUNCTION__,
+			 NL80211_AUTHTYPE_SAE);
 	}
 
 	if (pwdev_priv->block == _TRUE) {
@@ -4016,7 +4045,8 @@ static int cfg80211_rtw_connect(struct wiphy *wiphy, struct net_device *ndev,
 
 	/* rtw_set_802_11_encryption_mode(padapter, padapter->securitypriv.ndisencryptstatus); */
 
-	if (rtw_set_802_11_connect(padapter, (u8 *)sme->bssid, &ndis_ssid) == _FALSE) {
+	if (rtw_set_802_11_connect(padapter, (u8 *)sme->bssid, &ndis_ssid, \
+			sme->channel ? sme->channel->hw_value : 0) == _FALSE) {
 		ret = -1;
 		goto cancel_ps_deny;
 	}
@@ -8344,7 +8374,7 @@ static int cfg80211_rtw_update_mesh_config(struct wiphy *wiphy, struct net_devic
 	RTW_INFO(FUNC_ADPT_FMT" mask:0x%08x\n", FUNC_ADPT_ARG(adapter), mask);
 
 	rtw_cfg80211_mesh_cfg_set(adapter, nconf, mask);
-	update_beacon(adapter, WLAN_EID_MESH_CONFIG, NULL, _TRUE);
+	update_beacon(adapter, WLAN_EID_MESH_CONFIG, NULL, _TRUE, 0);
 #if CONFIG_RTW_MESH_CTO_MGATE_CARRIER
 	if (rtw_mesh_cto_mgate_required(adapter))
 		rtw_netif_carrier_off(adapter->pnetdev);
@@ -8846,7 +8876,7 @@ static int rtw_cfg80211_set_beacon_wpsp2pie(struct net_device *ndev, char *buf, 
 			_rtw_memcpy(pmlmepriv->wps_beacon_ie, wps_ie, wps_ielen);
 			pmlmepriv->wps_beacon_ie_len = wps_ielen;
 
-			update_beacon(padapter, _VENDOR_SPECIFIC_IE_, wps_oui, _TRUE);
+			update_beacon(padapter, _VENDOR_SPECIFIC_IE_, wps_oui, _TRUE, RTW_CMDF_WAIT_ACK);
 
 		}
 
@@ -9963,7 +9993,9 @@ int rtw_wiphy_register(struct wiphy *wiphy)
 {
 	RTW_INFO(FUNC_WIPHY_FMT"\n", FUNC_WIPHY_ARG(wiphy));
 
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 14, 0)) || defined(RTW_VENDOR_EXT_SUPPORT)
+#if ( ((LINUX_VERSION_CODE < KERNEL_VERSION(5, 3, 0)) &&  \
+        LINUX_VERSION_CODE >= KERNEL_VERSION(3, 14, 0)) \
+     || defined(RTW_VENDOR_EXT_SUPPORT) )
 	rtw_cfgvendor_attach(wiphy);
 #endif
 
@@ -9976,7 +10008,9 @@ void rtw_wiphy_unregister(struct wiphy *wiphy)
 {
 	RTW_INFO(FUNC_WIPHY_FMT"\n", FUNC_WIPHY_ARG(wiphy));
 
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 14, 0)) || defined(RTW_VENDOR_EXT_SUPPORT)
+#if ( ((LINUX_VERSION_CODE < KERNEL_VERSION(5, 3, 0)) &&  \
+        LINUX_VERSION_CODE >= KERNEL_VERSION(3, 14, 0)) \
+     || defined(RTW_VENDOR_EXT_SUPPORT) )
 	rtw_cfgvendor_detach(wiphy);
 #endif
 

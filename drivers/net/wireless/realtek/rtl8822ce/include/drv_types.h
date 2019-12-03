@@ -256,6 +256,7 @@ struct registry_priv {
 	u8	rx_stbc;
 	u8	rx_ampdu_amsdu;/* Rx A-MPDU Supports A-MSDU is permitted */
 	u8	tx_ampdu_amsdu;/* Tx A-MPDU Supports A-MSDU is permitted */
+	u8	tx_quick_addba_req;
 	u8 rx_ampdu_sz_limit_by_nss_bw[4][4]; /* 1~4SS, BW20~BW160 */
 	/* Short GI support Bit Map */
 	/* BIT0 - 20MHz, 1: support, 0: non-support */
@@ -479,6 +480,10 @@ struct registry_priv {
 #endif/*CONFIG_TDMADIG*/
 #ifdef CONFIG_RTW_MESH
 	u8 peer_alive_based_preq;
+#endif
+
+#ifdef CONFIG_RTL8822C_XCAP_NEW_POLICY
+	u8 rtw_8822c_xcap_overwrite;
 #endif
 };
 

@@ -1504,8 +1504,6 @@ config_phydm_switch_channel_8822c(struct dm_struct *dm, u8 central_ch)
 		odm_set_bb_reg(dm, R_0x1a80, BIT(18), 0x0);
 		/* @CCA Mask, default = 0xf */
 		odm_set_bb_reg(dm, R_0x1c80, 0x3F000000, 0xF);
-		/* dynamic HT-STF gain control adjust */
-		odm_set_bb_reg(dm, R_0x8a0, 0x0000000c, 0x0);
 	} else {
 		/* @Enable BB CCK check */
 		odm_set_bb_reg(dm, R_0x1a80, BIT(18), 0x1);
@@ -1515,9 +1513,6 @@ config_phydm_switch_channel_8822c(struct dm_struct *dm, u8 central_ch)
 		phydm_dis_cck_trx_8822c(dm, PHYDM_SET);
 		/* @CCA Mask */
 		odm_set_bb_reg(dm, R_0x1c80, 0x3F000000, 0x22);
-		/* dynamic HT-STF gain control adjust */
-		odm_set_bb_reg(dm, R_0x8a0, BIT(2), 0x1);
-		odm_set_bb_reg(dm, R_0x8a0, BIT(3), 0x1);
 	}
 
 	/* ==== [Set RF Reg 0x18] ===========================================*/
@@ -1933,6 +1928,16 @@ void phydm_set_dis_dpd_by_rate_8822c(struct dm_struct *dm, u16 bitmask)
 }
 
 __odm_func__
+void phydm_cck_pd_init_8822c(struct dm_struct *dm)
+{
+	struct phydm_iot_center	*iot_table = &dm->iot_table;
+
+	if (*dm->mp_mode && iot_table->patch_id_021f0800)
+		/*CS ratio:BW20/1R*/
+		odm_set_bb_reg(dm, R_0x1ad0, 0x1f, 0x12);
+}
+
+__odm_func__
 boolean
 config_phydm_parameter_init_8822c(struct dm_struct *dm,
 				  enum odm_parameter_init type)
@@ -1940,6 +1945,7 @@ config_phydm_parameter_init_8822c(struct dm_struct *dm,
 	PHYDM_DBG(dm, ODM_PHY_CONFIG, "%s ======>\n", __func__);
 
 	phydm_cck_gi_bound_8822c(dm);
+	phydm_cck_pd_init_8822c(dm);
 
 	/* Disable low rate DPD*/
 	if (dm->en_dis_dpd)

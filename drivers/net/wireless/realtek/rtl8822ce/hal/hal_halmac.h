@@ -209,6 +209,12 @@ u32 rtw_halmac_sdio_get_tx_addr(struct dvobj_priv *, u8 *desc, u32 size);
 int rtw_halmac_sdio_tx_allowed(struct dvobj_priv *, u8 *buf, u32 size);
 u32 rtw_halmac_sdio_get_rx_addr(struct dvobj_priv *, u8 *seq);
 int rtw_halmac_sdio_set_tx_format(struct dvobj_priv *d, enum halmac_sdio_tx_format format);
+#ifdef CONFIG_SDIO_MONITOR
+u32 rtw_halmac_sdio_get_int_lat(struct dvobj_priv *d);
+u32 rtw_halmac_sdio_get_lk_cnt(struct dvobj_priv *d);
+int rtw_halmac_sdio_set_wt_en(struct dvobj_priv *d);
+int rtw_halmac_set_sdio_clk_monitor(struct dvobj_priv *d, u8 clk_monitor_mode);
+#endif
 #endif /* CONFIG_SDIO_HCI */
 
 #ifdef CONFIG_USB_HCI

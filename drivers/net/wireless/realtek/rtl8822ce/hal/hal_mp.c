@@ -2287,6 +2287,16 @@ void mpt_ProSetPMacTx(PADAPTER	Adapter)
 #ifdef PHYDM_PMAC_TX_SETTING_SUPPORT
 		struct phydm_pmac_info phydm_mactxinfo;
 
+		if (PMacTxInfo.bEnPMacTx == TRUE) {
+			pMptCtx->HWTxmode = PMacTxInfo.Mode;
+			pMptCtx->mpt_rate_index = PMacTxInfo.TX_RATE;
+			if (PMacTxInfo.Mode == CONTINUOUS_TX)
+				hal_mpt_SetTxPower(Adapter);
+		} else {
+			PMacTxInfo.Mode = pMptCtx->HWTxmode;
+			PMacTxInfo.TX_RATE = pMptCtx->mpt_rate_index;
+			pMptCtx->HWTxmode = TEST_NONE;
+		}
 		mpt_convert_phydm_txinfo_for_jaguar3(PMacTxInfo, &phydm_mactxinfo);
 		phydm_set_pmac_tx(p_dm_odm, &phydm_mactxinfo, pMptCtx->mpt_rf_path);
 #endif

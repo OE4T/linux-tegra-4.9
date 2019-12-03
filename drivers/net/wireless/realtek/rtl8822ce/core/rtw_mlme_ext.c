@@ -1746,6 +1746,17 @@ unsigned int OnProbeRsp(_adapter *padapter, union recv_frame *precv_frame)
 		|| (padapter->rtw_rson_scanstage == RSON_SCAN_PROCESS)
 		#endif
 	) {
+		struct mlme_ext_info *pmlmeinfo = &(pmlmeext->mlmext_info);
+
+		if (_rtw_memcmp(GetAddr3Ptr(pframe), get_my_bssid(&pmlmeinfo->network), ETH_ALEN)
+			&& (pmlmeinfo->state & 0x03) == WIFI_FW_STATION_STATE && (pmlmeinfo->state & WIFI_FW_ASSOC_SUCCESS)
+		) {
+			if (!rtw_check_bcn_info(padapter, pframe, precv_frame->u.hdr.len)) {
+				RTW_PRINT(FUNC_ADPT_FMT" ap has changed, disconnect now\n", FUNC_ADPT_ARG(padapter));
+				receive_disconnect(padapter, pmlmeinfo->network.MacAddress , 0, _FALSE);
+			}
+		}
+
 		rtw_mi_report_survey_event(padapter, precv_frame);
 		return _SUCCESS;
 	}
@@ -1833,6 +1844,15 @@ unsigned int OnBeacon(_adapter *padapter, union recv_frame *precv_frame)
 	if (mlmeext_chk_scan_state(pmlmeext, SCAN_PROCESS)
 		|| (MLME_IS_MESH(padapter) && check_fwstate(pmlmepriv, WIFI_ASOC_STATE))
 	) {
+		if (_rtw_memcmp(GetAddr3Ptr(pframe), get_my_bssid(&pmlmeinfo->network), ETH_ALEN)
+			&& (pmlmeinfo->state & 0x03) == WIFI_FW_STATION_STATE && (pmlmeinfo->state & WIFI_FW_ASSOC_SUCCESS)
+		) {
+			if (!rtw_check_bcn_info(padapter, pframe, len)) {
+				RTW_PRINT(FUNC_ADPT_FMT" ap has changed, disconnect now\n", FUNC_ADPT_ARG(padapter));
+				receive_disconnect(padapter, pmlmeinfo->network.MacAddress , 0, _FALSE);
+			}
+		}
+
 		rtw_mi_report_survey_event(padapter, precv_frame);
 		return _SUCCESS;
 	}
@@ -1865,6 +1885,10 @@ unsigned int OnBeacon(_adapter *padapter, union recv_frame *precv_frame)
 						RTW_INFO("%s: beacon keys ready\n", __func__);
 						_rtw_memcpy(&pmlmepriv->cur_beacon_keys,
 							&recv_beacon, sizeof(recv_beacon));
+						if (is_hidden_ssid(recv_beacon.ssid, recv_beacon.ssid_len)) {
+							_rtw_memcpy(pmlmepriv->cur_beacon_keys.ssid, pmlmeinfo->network.Ssid.Ssid, IW_ESSID_MAX_SIZE);
+							pmlmepriv->cur_beacon_keys.ssid_len = pmlmeinfo->network.Ssid.SsidLength;
+						}
 					} else {
 						RTW_ERR("%s: get beacon keys failed\n", __func__);
 						_rtw_memset(&pmlmepriv->cur_beacon_keys, 0, sizeof(recv_beacon));
@@ -1925,7 +1949,7 @@ unsigned int OnBeacon(_adapter *padapter, union recv_frame *precv_frame)
 #endif
 				ret = rtw_check_bcn_info(padapter, pframe, len);
 				if (!ret) {
-					RTW_PRINT("ap has changed, disconnect now\n ");
+					RTW_PRINT(FUNC_ADPT_FMT" ap has changed, disconnect now\n", FUNC_ADPT_ARG(padapter));
 					receive_disconnect(padapter, pmlmeinfo->network.MacAddress , 0, _FALSE);
 					return _SUCCESS;
 				}
@@ -13196,6 +13220,10 @@ void rtw_ft_update_bcn(_adapter *padapter, union recv_frame *precv_frame)
 					RTW_INFO("%s: beacon keys ready\n", __func__);
 					_rtw_memcpy(&pmlmepriv->cur_beacon_keys,
 						&recv_beacon, sizeof(recv_beacon));
+					if (is_hidden_ssid(recv_beacon.ssid, recv_beacon.ssid_len)) {
+						_rtw_memcpy(pmlmepriv->cur_beacon_keys.ssid, pmlmeinfo->network.Ssid.Ssid, IW_ESSID_MAX_SIZE);
+						pmlmepriv->cur_beacon_keys.ssid_len = pmlmeinfo->network.Ssid.SsidLength;
+					}
 				} else {
 					RTW_ERR("%s: get beacon keys failed\n", __func__);
 					_rtw_memset(&pmlmepriv->cur_beacon_keys, 0, sizeof(recv_beacon));
@@ -15675,26 +15703,20 @@ exit:
 	return res;
 }
 
-u8 set_tx_beacon_cmd(_adapter *padapter)
+u8 set_tx_beacon_cmd(_adapter *padapter, u8 flags)
 {
 	struct cmd_obj	*ph2c;
 	struct Tx_Beacon_param	*ptxBeacon_parm;
 	struct cmd_priv	*pcmdpriv = &(padapter->cmdpriv);
 	struct mlme_ext_priv	*pmlmeext = &padapter->mlmeextpriv;
 	struct mlme_ext_info	*pmlmeinfo = &(pmlmeext->mlmext_info);
+	struct submit_ctx sctx;
 	u8	res = _SUCCESS;
 	int len_diff = 0;
 
-
-	ph2c = (struct cmd_obj *)rtw_zmalloc(sizeof(struct cmd_obj));
-	if (ph2c == NULL) {
-		res = _FAIL;
-		goto exit;
-	}
-
+	/*prepare cmd parameter*/
 	ptxBeacon_parm = (struct Tx_Beacon_param *)rtw_zmalloc(sizeof(struct Tx_Beacon_param));
 	if (ptxBeacon_parm == NULL) {
-		rtw_mfree((unsigned char *)ph2c, sizeof(struct	cmd_obj));
 		res = _FAIL;
 		goto exit;
 	}
@@ -15708,10 +15730,32 @@ u8 set_tx_beacon_cmd(_adapter *padapter)
 		   );
 	ptxBeacon_parm->network.IELength += len_diff;
 
+
+	/* need enqueue, prepare cmd_obj and enqueue */
+	ph2c = (struct cmd_obj *)rtw_zmalloc(sizeof(struct cmd_obj));
+	if (ph2c == NULL) {
+		res = _FAIL;
+		rtw_mfree((u8 *)ptxBeacon_parm, sizeof(*ptxBeacon_parm));
+		goto exit;
+	}
+
 	init_h2fwcmd_w_parm_no_rsp(ph2c, ptxBeacon_parm, GEN_CMD_CODE(_TX_Beacon));
+
+	if (flags & RTW_CMDF_WAIT_ACK) {
+		ph2c->sctx = &sctx;
+		rtw_sctx_init(&sctx, 10 * 1000);
+	}
 
 	res = rtw_enqueue_cmd(pcmdpriv, ph2c);
 
+	if (res == _SUCCESS && (flags & RTW_CMDF_WAIT_ACK)) {
+		rtw_sctx_wait(&sctx, __func__);
+		_enter_critical_mutex(&pcmdpriv->sctx_mutex, NULL);
+		if (sctx.status == RTW_SCTX_SUBMITTED)
+			ph2c->sctx = NULL;
+		_exit_critical_mutex(&pcmdpriv->sctx_mutex, NULL);
+	}
+	
 
 exit:
 
@@ -16018,7 +16062,7 @@ void rtw_join_done_chk_ch(_adapter *adapter, int join_res)
 
 					rtw_start_bss_hdl_after_chbw_decided(iface);
 
-					if (MLME_IS_GO(iface) || MLME_IS_MESH(iface)) { /* pure AP is not needed*/
+					{
 						#if defined(CONFIG_IOCTL_CFG80211) && (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 5, 0))
 						u8 ht_option = 0;
 
@@ -16034,7 +16078,7 @@ void rtw_join_done_chk_ch(_adapter *adapter, int join_res)
 				}
 
 				clr_fwstate(mlme, WIFI_OP_CH_SWITCHING);
-				update_beacon(iface, 0xFF, NULL, _TRUE);
+				update_beacon(iface, 0xFF, NULL, _TRUE, 0);
 			}
 		}
 
@@ -16054,7 +16098,7 @@ void rtw_join_done_chk_ch(_adapter *adapter, int join_res)
 				&& check_fwstate(mlme, WIFI_ASOC_STATE)
 			) {
 				clr_fwstate(mlme, WIFI_OP_CH_SWITCHING);
-				update_beacon(iface, 0xFF, NULL, _TRUE);
+				update_beacon(iface, 0xFF, NULL, _TRUE, 0);
 			}
 		}
 #ifdef CONFIG_DFS_MASTER

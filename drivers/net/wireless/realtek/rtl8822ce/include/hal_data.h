@@ -109,6 +109,20 @@ typedef enum _RX_AGG_MODE {
 
 #endif /* RTW_RX_AGGREGATION */
 
+#ifdef CONFIG_SDIO_HCI
+#ifdef CONFIG_SDIO_MONITOR
+typedef enum _SDIO_MONITOR_MODE {
+	SDIO_MONITOR_MODE_DISABLE,
+	SDIO_MONITOR_MODE_INT_LAT,
+	SDIO_MONITOR_MODE_CMD53W_INTVL,
+	SDIO_MONITOR_MODE_SDIO_CLK_5US,
+	SDIO_MONITOR_MODE_SDIO_CLK_50US,
+	SDIO_MONITOR_MODE_SDIO_CLK_9MS,
+	SDIO_MONITOR_MODE_MAX
+} SDIO_MONITOR_MODE;
+#endif
+#endif
+
 /* E-Fuse */
 #ifdef CONFIG_RTL8188E
 	#define EFUSE_MAP_SIZE	512
@@ -204,6 +218,10 @@ typedef struct _BB_INIT_REGISTER {
 
 #define MAX_IQK_INFO_BACKUP_CHNL_NUM	5
 #define MAX_IQK_INFO_BACKUP_REG_NUM		10
+
+#ifdef CONFIG_SDIO_MONITOR
+#define SDIO_MONITOR_MAX_SAMPLE_NUM	10000
+#endif
 
 struct kfree_data_t {
 	u8 flag;
@@ -660,6 +678,12 @@ typedef struct hal_com_data {
 
 #endif /*#ifdef CONFIG_RTL8821C*/
 #endif /* !RTW_HALMAC */
+
+#ifdef CONFIG_SDIO_MONITOR
+	u8			sdio_monitor_enable;
+	u32			sdio_monitor_sample_data[SDIO_MONITOR_MAX_SAMPLE_NUM];
+	u32			sdio_monitor_sample_num;
+#endif
 #endif /* CONFIG_SDIO_HCI */
 
 #ifdef CONFIG_USB_HCI

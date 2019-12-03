@@ -1455,9 +1455,8 @@ u8 _rtw_sitesurvey_condition_check(const char *caller, _adapter *adapter, bool c
 {
 	u8 ss_condition = SS_ALLOW;
 	struct mlme_priv *pmlmepriv = &adapter->mlmepriv;
-#ifdef DBG_LA_MODE
 	struct registry_priv *registry_par = &adapter->registrypriv;
-#endif
+
 
 #ifdef CONFIG_MP_INCLUDED
 	if (rtw_mp_mode_check(adapter)) {
@@ -1499,6 +1498,16 @@ u8 _rtw_sitesurvey_condition_check(const char *caller, _adapter *adapter, bool c
 	if (rtw_is_scan_deny(adapter)) {
 		RTW_INFO("%s ("ADPT_FMT") : scan deny\n", caller, ADPT_ARG(adapter));
 		ss_condition = SS_DENY_BY_DRV;
+		goto _exit;
+	}
+
+	if (registry_par->adaptivity_en
+	    && rtw_phydm_get_edcca_flag(adapter)
+	    && rtw_is_2g_ch(GET_HAL_DATA(adapter)->current_channel)) {
+		RTW_WARN(FUNC_ADPT_FMT": Adaptivity block scan! (ch=%u)\n",
+			 FUNC_ADPT_ARG(adapter),
+			 GET_HAL_DATA(adapter)->current_channel);
+		ss_condition = SS_DENY_ADAPTIVITY;
 		goto _exit;
 	}
 
@@ -4954,17 +4963,36 @@ void rtw_issue_addbareq_cmd_tdls(_adapter *padapter, struct xmit_frame *pxmitfra
 #endif /* CONFIG_TDLS */
 
 #ifdef CONFIG_80211N_HT
-void rtw_issue_addbareq_cmd(_adapter *padapter, struct xmit_frame *pxmitframe)
+static u8 rtw_issue_addbareq_check(_adapter *padapter, struct xmit_frame *pxmitframe, u8 issue_when_busy)
+{
+	struct mlme_priv *pmlmepriv = &padapter->mlmepriv;
+	struct registry_priv *pregistry = &padapter->registrypriv;
+	struct pkt_attrib *pattrib = &pxmitframe->attrib;
+	s32 bmcst = IS_MCAST(pattrib->ra);
+
+	if (bmcst)
+		return _FALSE;
+
+	if (pregistry->tx_quick_addba_req == 0) {
+		if ((issue_when_busy == _TRUE) && (pmlmepriv->LinkDetectInfo.bBusyTraffic == _FALSE))
+			return _FALSE;
+
+		if (pmlmepriv->LinkDetectInfo.NumTxOkInPeriod < 100)
+			return _FALSE;
+	}
+
+	return _TRUE;
+}
+
+void rtw_issue_addbareq_cmd(_adapter *padapter, struct xmit_frame *pxmitframe, u8 issue_when_busy)
 {
 	u8 issued;
 	int priority;
 	struct sta_info *psta = NULL;
 	struct ht_priv	*phtpriv;
 	struct pkt_attrib *pattrib = &pxmitframe->attrib;
-	s32 bmcst = IS_MCAST(pattrib->ra);
 
-	/* if(bmcst || (padapter->mlmepriv.LinkDetectInfo.bTxBusyTraffic == _FALSE)) */
-	if (bmcst || (padapter->mlmepriv.LinkDetectInfo.NumTxOkInPeriod < 100))
+	if (rtw_issue_addbareq_check(padapter,pxmitframe, issue_when_busy) == _FALSE)
 		return;
 
 	priority = pattrib->priority;
@@ -5075,7 +5103,7 @@ void _rtw_roaming(_adapter *padapter, struct wlan_network *tgt_network)
 			cur_network->network.Ssid.Ssid, MAC_ARG(cur_network->network.MacAddress),
 			 cur_network->network.Ssid.SsidLength);
 		_rtw_memcpy(&pmlmepriv->assoc_ssid, &cur_network->network.Ssid, sizeof(NDIS_802_11_SSID));
-
+		pmlmepriv->assoc_ch = 0;
 		pmlmepriv->assoc_by_bssid = _FALSE;
 
 #ifdef CONFIG_WAPI_SUPPORT

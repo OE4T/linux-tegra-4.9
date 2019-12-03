@@ -348,10 +348,10 @@ static void Hal_EfuseParseXtal(PADAPTER adapter, u8 *map, u8 mapvalid)
 	PHAL_DATA_TYPE hal = GET_HAL_DATA(adapter);
 
 
-	if ((_TRUE == mapvalid) && map[EEPROM_XTAL_8822C] != 0xFF)
-		hal->crystal_cap = map[EEPROM_XTAL_8822C];
+	if ((_TRUE == mapvalid) && map[EEPROM_XTAL_B9_8822C] != 0xFF)
+		hal->crystal_cap = map[EEPROM_XTAL_B9_8822C];
 	else
-		hal->crystal_cap = EEPROM_Default_CrystalCap_8822C;
+		hal->crystal_cap = EEPROM_Default_CrystalCap_B9_8822C;
 
 	RTW_INFO("EEPROM crystal_cap=0x%02x\n", hal->crystal_cap);
 }
@@ -632,6 +632,129 @@ static void hal_read_usb_pid_vid(PADAPTER adapter, u8 *map, u8 mapvalid)
 
 #endif /* CONFIG_USB_HCI */
 
+#ifdef CONFIG_RTL8822C_XCAP_NEW_POLICY
+#define GET_XCAP_VALUE_B9_8822C(x) (x & 0x7F)
+#define GET_XCAP_VALUE_110_8822C(x) (x & 0x7F)
+#define GET_XCAP_VALUE_111_8822C(x) ((x & 0x7F00) >> 8)
+#define EFUSE_XCAP_VALID_CHK_B9_8822C(x) \
+	(!(GET_XCAP_VALUE_B9_8822C(x) == 0x7F))
+#define EFUSE_XCAP_VALID_CHK_110_8822C(x) \
+	(!((GET_XCAP_VALUE_110_8822C(x) == EEPROM_Default_CrystalCap_110_8822C) || (GET_XCAP_VALUE_110_8822C(x) == 0x7F)))
+#define EFUSE_XCAP_VALID_CHK_111_8822C(x) \
+	(!((GET_XCAP_VALUE_111_8822C(x) == EEPROM_Default_CrystalCap_111_8822C) || (GET_XCAP_VALUE_111_8822C(x) == 0x7F)))
+static s16 hal_efuse_search_xtal_cap(PADAPTER adapter, u8 h_xcap_b9, u16 f_xcap_110_111, u8 f_xcap_b9)
+{
+	enum {
+		XCAP_SRC_H_EFUSE_B9_8822C = 0,
+		XCAP_SRC_F_EFUSE_110_8822C,
+		XCAP_SRC_F_EFUSE_B9_8822C,
+		XCAP_SRC_8822C_MAX
+	};
+
+	const char *const xcap_src_8822c_str[XCAP_SRC_8822C_MAX] = {
+		"XCAP_SRC_H_EFUSE_B9",
+		"XCAP_SRC_F_EFUSE_110",
+		"XCAP_SRC_F_EFUSE_B9"
+	};
+
+	/* this declaration also controls the priority while searching xcap value from the candidates, 
+		the prior element in the array implies the higher priority, fill -1 to bypass the element */
+	s8 xcap_src_8822c[XCAP_SRC_8822C_MAX] = 
+		{XCAP_SRC_F_EFUSE_B9_8822C, XCAP_SRC_F_EFUSE_110_8822C, XCAP_SRC_H_EFUSE_B9_8822C};
+
+	int i = 0;
+	s8 xcap_found = -1;
+	s16 xcap_value = -1;
+
+	/* search for the valid xcap value from candidates */
+	for (i = 0; i < XCAP_SRC_8822C_MAX; i++) {
+		switch (xcap_src_8822c[i]) {
+		case XCAP_SRC_H_EFUSE_B9_8822C:
+			if (EFUSE_XCAP_VALID_CHK_B9_8822C(h_xcap_b9)) {
+				xcap_value = ((GET_XCAP_VALUE_B9_8822C(h_xcap_b9) << 8) | GET_XCAP_VALUE_B9_8822C(h_xcap_b9));
+				xcap_found = XCAP_SRC_H_EFUSE_B9_8822C;
+			}
+			break;
+		case XCAP_SRC_F_EFUSE_110_8822C:
+			if ((EFUSE_XCAP_VALID_CHK_110_8822C(f_xcap_110_111 )) && (EFUSE_XCAP_VALID_CHK_111_8822C(f_xcap_110_111 ))) {
+				xcap_value = (f_xcap_110_111 & 0x7F7F);
+				xcap_found = XCAP_SRC_F_EFUSE_110_8822C;
+			}
+			break;
+		case XCAP_SRC_F_EFUSE_B9_8822C:
+			if (EFUSE_XCAP_VALID_CHK_B9_8822C(f_xcap_b9)) {
+				xcap_value = ((GET_XCAP_VALUE_B9_8822C(f_xcap_b9) << 8) | GET_XCAP_VALUE_B9_8822C(f_xcap_b9));
+				xcap_found = XCAP_SRC_F_EFUSE_B9_8822C;
+			}
+			break;
+		case -1:
+			break;
+		}
+
+		if (xcap_found >= 0)
+			break;
+	}
+
+	if (xcap_found == -1)
+		RTW_INFO("valid crystall_cap value is not found in all sources!\n");
+	else
+		RTW_INFO("valid crystal_cap value 0x%04X is found in %s!\n", xcap_value, xcap_src_8822c_str[xcap_found]);
+
+	return xcap_value;
+}
+
+static void hal_efuse_parse_xtal_cap_new(PADAPTER adapter, u16 h_xcap_110_111, u8 h_xcap_b9, 
+	u16 f_xcap_110_111, u8 f_xcap_b9, u8 mapvalid)
+{
+	PHAL_DATA_TYPE hal = GET_HAL_DATA(adapter);
+	s16 xcap_value = -1;
+	u16 xcap_value_to_h_efuse = 0;
+
+	if (mapvalid == _FALSE) {
+		hal->crystal_cap = EEPROM_Default_CrystalCap_110_8822C;
+		goto exit;
+	}
+
+	if (adapter->registrypriv.rtw_8822c_xcap_overwrite == 1) {
+		xcap_value = hal_efuse_search_xtal_cap(adapter, h_xcap_b9, f_xcap_110_111, f_xcap_b9);
+		if (xcap_value != -1) {
+			if (xcap_value != (h_xcap_110_111 & 0x7F7F)) {
+				xcap_value_to_h_efuse = ((h_xcap_110_111 & 0x8080) | xcap_value);
+				rtw_efuse_map_write(adapter, EEPROM_XTAL_110_8822C, 2, (u8*)&xcap_value_to_h_efuse);
+				RTW_INFO("update crystal_cap = 0x%02X into hw efuse!\n", xcap_value);
+			}
+
+			hal->crystal_cap = GET_XCAP_VALUE_110_8822C(xcap_value);
+		}
+		else {
+			if ((EFUSE_XCAP_VALID_CHK_110_8822C(h_xcap_110_111)) && (EFUSE_XCAP_VALID_CHK_111_8822C(h_xcap_110_111)))
+				hal->crystal_cap = GET_XCAP_VALUE_110_8822C(h_xcap_110_111);
+			else
+				hal->crystal_cap = EEPROM_Default_CrystalCap_110_8822C;
+		}
+	}
+	else {
+			if ((EFUSE_XCAP_VALID_CHK_110_8822C(h_xcap_110_111)) && (EFUSE_XCAP_VALID_CHK_111_8822C(h_xcap_110_111)))
+				hal->crystal_cap = GET_XCAP_VALUE_110_8822C(h_xcap_110_111);
+			else {
+				xcap_value = hal_efuse_search_xtal_cap(adapter, h_xcap_b9, f_xcap_110_111, f_xcap_b9);
+				if (xcap_value != -1) {
+					xcap_value_to_h_efuse = ((h_xcap_110_111 & 0x8080) | xcap_value);
+					rtw_efuse_map_write(adapter, EEPROM_XTAL_110_8822C, 2, (u8*)&xcap_value_to_h_efuse);
+					RTW_INFO("update crystal_cap = 0x%02X into hw efuse!\n", xcap_value);
+					hal->crystal_cap = GET_XCAP_VALUE_110_8822C(xcap_value);
+				}
+				else
+					hal->crystal_cap = EEPROM_Default_CrystalCap_110_8822C;
+			}
+	}
+
+exit:
+	RTW_INFO("EEPROM crystal_cap=0x%02x\n", hal->crystal_cap);
+
+}
+#endif
+
 /*
  * Description:
  *	Collect all information from efuse or files.
@@ -647,6 +770,12 @@ u8 rtl8822c_read_efuse(PADAPTER adapter)
 	u8 val8;
 	u8 *efuse_map = NULL;
 	u8 valid;
+#ifdef CONFIG_RTL8822C_XCAP_NEW_POLICY
+	u8 h_efuse_xcap_b9 = 0xFF;
+	u16 h_efuse_xcap_110_111 = 0xFFFF;
+	u8 f_efuse_xcap_b9 = 0xFF;
+	u16 f_efuse_xcap_110_111 = 0xFFFF;
+#endif
 	u8 ret = _FAIL;
 
 	hal = GET_HAL_DATA(adapter);
@@ -664,11 +793,22 @@ u8 rtl8822c_read_efuse(PADAPTER adapter)
 	/* 2. Read eFuse */
 	EFUSE_ShadowMapUpdate(adapter, EFUSE_WIFI, 0);
 
+#ifdef CONFIG_RTL8822C_XCAP_NEW_POLICY
+	h_efuse_xcap_b9 = efuse_map[EEPROM_XTAL_B9_8822C];
+	h_efuse_xcap_110_111 = ((efuse_map[EEPROM_XTAL_111_8822C] << 8) | efuse_map[EEPROM_XTAL_110_8822C]);
+#endif
+
 	/* 3. Read Efuse file if necessary */
 #ifdef CONFIG_EFUSE_CONFIG_FILE
 	if (check_phy_efuse_tx_power_info_valid(adapter) == _FALSE) {
 		if (Hal_readPGDataFromConfigFile(adapter) != _SUCCESS)
 			RTW_WARN("%s: invalid phy efuse and read from file fail, will use driver default!!\n", __FUNCTION__);
+#ifdef CONFIG_RTL8822C_XCAP_NEW_POLICY
+		else {
+			f_efuse_xcap_b9 = efuse_map[EEPROM_XTAL_B9_8822C];
+			f_efuse_xcap_110_111 = ((efuse_map[EEPROM_XTAL_111_8822C] << 8) | efuse_map[EEPROM_XTAL_110_8822C]);
+		}
+#endif
 	}
 #endif /* CONFIG_EFUSE_CONFIG_FILE */
 
@@ -686,7 +826,13 @@ u8 rtl8822c_read_efuse(PADAPTER adapter)
 	Hal_EfuseParseBoardType(adapter, efuse_map, valid);
 	Hal_EfuseParseBTCoexistInfo(adapter, efuse_map, valid);
 	Hal_EfuseParseChnlPlan(adapter, efuse_map, hal->bautoload_fail_flag);
+#ifdef CONFIG_RTL8822C_XCAP_NEW_POLICY
+	if ((adapter->registrypriv.mp_mode == 0) && (hal->EEPROMBluetoothCoexist == _TRUE))
+		hal_efuse_parse_xtal_cap_new(adapter, h_efuse_xcap_110_111, h_efuse_xcap_b9, f_efuse_xcap_110_111, f_efuse_xcap_b9, valid);
+	else
+#else
 	Hal_EfuseParseXtal(adapter, efuse_map, valid);
+#endif
 	Hal_EfuseParseThermalMeter(adapter, efuse_map, valid);
 	Hal_EfuseParseAntennaDiversity(adapter, efuse_map, valid);
 	Hal_EfuseParseCustomerID(adapter, efuse_map, valid);

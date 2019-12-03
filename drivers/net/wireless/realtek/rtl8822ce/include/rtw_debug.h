@@ -259,6 +259,9 @@ void dump_drv_cfg(void *sel);
 #ifdef CONFIG_SDIO_HCI
 void sd_f0_reg_dump(void *sel, _adapter *adapter);
 void sdio_local_reg_dump(void *sel, _adapter *adapter);
+#ifdef CONFIG_SDIO_MONITOR
+u32 sd_monitor_sdio_clk(_adapter *adapter, u8 clk_monitor_mode);
+#endif
 #endif /* CONFIG_SDIO_HCI */
 
 void mac_reg_dump(void *sel, _adapter *adapter);
@@ -425,6 +428,8 @@ ssize_t proc_set_rx_ampdu_density(struct file *file, const char __user *buffer, 
 int proc_get_tx_ampdu_density(struct seq_file *m, void *v);
 ssize_t proc_set_tx_ampdu_density(struct file *file, const char __user *buffer, size_t count, loff_t *pos, void *data);
 
+int proc_get_tx_quick_addba_req(struct seq_file *m, void *v);
+ssize_t proc_set_tx_quick_addba_req(struct file *file, const char __user *buffer, size_t count, loff_t *pos, void *data);
 #ifdef CONFIG_TX_AMSDU
 int proc_get_tx_amsdu(struct seq_file *m, void *v);
 ssize_t proc_set_tx_amsdu(struct file *file, const char __user *buffer, size_t count, loff_t *pos, void *data);

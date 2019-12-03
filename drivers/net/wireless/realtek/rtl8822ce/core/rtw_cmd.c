@@ -1501,6 +1501,7 @@ u8 rtw_joinbss_cmd(_adapter  *padapter, struct wlan_network *pnetwork)
 		&& REGSTY_IS_11AC_ENABLE(pregistrypriv)
 		&& is_supported_vht(pregistrypriv->wireless_mode)
 		&& (!rfctl->country_ent || COUNTRY_CHPLAN_EN_11AC(rfctl->country_ent))
+		&& ((padapter->registrypriv.wifi_spec == 0) || (pnetwork->network.Configuration.DSConfig > 14))
 	) {
 		rtw_restructure_vht_ie(padapter, &pnetwork->network.IEs[0], &psecnetwork->IEs[0],
 			pnetwork->network.IELength, &psecnetwork->IELength);
@@ -3156,8 +3157,8 @@ static void dynamic_update_bcn_check(_adapter *padapter)
 				&& _FALSE == ATOMIC_READ(&pmlmepriv->olbc_ht)) {
 
 				if (rtw_ht_operation_update(padapter) > 0) {
-					update_beacon(padapter, _HT_CAPABILITY_IE_, NULL, _FALSE);
-					update_beacon(padapter, _HT_ADD_INFO_IE_, NULL, _TRUE);
+					update_beacon(padapter, _HT_CAPABILITY_IE_, NULL, _FALSE, 0);
+					update_beacon(padapter, _HT_ADD_INFO_IE_, NULL, _TRUE, 0);
 				}
 			}
 #endif /* CONFIG_80211N_HT */
@@ -3170,8 +3171,8 @@ static void dynamic_update_bcn_check(_adapter *padapter)
 			&& _FALSE != ATOMIC_READ(&pmlmepriv->olbc_ht)) {
 					
 			if (rtw_ht_operation_update(padapter) > 0) {
-				update_beacon(padapter, _HT_CAPABILITY_IE_, NULL, _FALSE);
-				update_beacon(padapter, _HT_ADD_INFO_IE_, NULL, _TRUE);
+				update_beacon(padapter, _HT_CAPABILITY_IE_, NULL, _FALSE, 0);
+				update_beacon(padapter, _HT_ADD_INFO_IE_, NULL, _TRUE, 0);
 
 			}
 			ATOMIC_SET(&pmlmepriv->olbc, _FALSE);
@@ -3212,11 +3213,15 @@ void rtw_iface_dynamic_chk_wk_hdl(_adapter *padapter)
 void rtw_dynamic_chk_wk_hdl(_adapter *padapter)
 {
 	rtw_mi_dynamic_chk_wk_hdl(padapter);
-
-#ifdef DBG_CONFIG_ERROR_DETECT
-	rtw_hal_sreset_xmit_status_check(padapter);
-	rtw_hal_sreset_linked_status_check(padapter);
+#ifdef CONFIG_MP_INCLUDED
+	if (rtw_mp_mode_check(padapter) == _FALSE)
 #endif
+	{
+#ifdef DBG_CONFIG_ERROR_DETECT
+		rtw_hal_sreset_xmit_status_check(padapter);
+		rtw_hal_sreset_linked_status_check(padapter);
+#endif
+	}
 
 	/* if(check_fwstate(pmlmepriv, _FW_UNDER_LINKING|_FW_UNDER_SURVEY)==_FALSE) */
 	{
@@ -4083,7 +4088,7 @@ static void rtw_chk_hi_queue_hdl(_adapter *padapter)
 			rtw_tim_map_clear(padapter, pstapriv->sta_dz_bitmap, 0);
 
 			if (update_tim == _TRUE)
-				_update_beacon(padapter, _TIM_IE_, NULL, _TRUE, "bmc sleepq and HIQ empty");
+				_update_beacon(padapter, _TIM_IE_, NULL, _TRUE, 0,"bmc sleepq and HIQ empty");
 		} else /* re check again */
 			rtw_chk_hi_queue_cmd(padapter);
 

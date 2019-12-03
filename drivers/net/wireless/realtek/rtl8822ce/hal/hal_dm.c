@@ -79,7 +79,9 @@ void rtw_hal_update_iqk_fw_offload_cap(_adapter *adapter)
 	RTW_INFO("IQK FW offload:%s\n", hal->RegIQKFWOffload ? "enable" : "disable");
 
 	if (rtw_mi_check_status(adapter, MI_LINKED)) {
+		#ifdef CONFIG_LPS
 		LPS_Leave(adapter, "SWITCH_IQK_OFFLOAD");
+		#endif
 		halrf_iqk_trigger(p_dm_odm, _FALSE);
 	}
 }
@@ -829,6 +831,15 @@ u8 rtw_phydm_get_cur_igi(_adapter *adapter)
 
 	cur_igi = phydm_cmn_info_query(phydm, (enum phydm_info_query) PHYDM_INFO_CURR_IGI);
 	return cur_igi;
+}
+
+bool rtw_phydm_get_edcca_flag(_adapter *adapter)
+{
+	struct dm_struct *phydm = adapter_to_phydm(adapter);
+	bool cur_edcca_flag = 0;
+
+	cur_edcca_flag = phydm_cmn_info_query(phydm, (enum phydm_info_query) PHYDM_INFO_EDCCA_FLAG);
+	return cur_edcca_flag;
 }
 
 u32 rtw_phydm_get_phy_cnt(_adapter *adapter, enum phy_cnt cnt)

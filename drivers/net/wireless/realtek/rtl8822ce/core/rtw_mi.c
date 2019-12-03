@@ -826,7 +826,7 @@ static u8 _rtw_mi_beacon_update(_adapter *padapter, void *data)
 	if (!MLME_IS_STA(padapter)
 	    && check_fwstate(&padapter->mlmepriv, _FW_LINKED) == _TRUE) {
 		RTW_INFO(ADPT_FMT" - update_beacon\n", ADPT_ARG(padapter));
-		update_beacon(padapter, 0xFF, NULL, _TRUE);
+		update_beacon(padapter, 0xFF, NULL, _TRUE, 0);
 	}
 	return _TRUE;
 }
@@ -1206,7 +1206,7 @@ static u8 _rtw_mi_set_tx_beacon_cmd(_adapter *adapter, void *data)
 
 	if (MLME_IS_AP(adapter) || MLME_IS_MESH(adapter)) {
 		if (pmlmepriv->update_bcn == _TRUE)
-			set_tx_beacon_cmd(adapter);
+			set_tx_beacon_cmd(adapter, 0);
 	}
 	return _TRUE;
 }

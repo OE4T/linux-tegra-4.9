@@ -359,6 +359,8 @@
 	#ifdef CONFIG_LPS
 		/* #define CONFIG_LPS_1T1R */ /* Supported after FW v07 */
 	#endif
+
+	#define CONFIG_RTL8822C_XCAP_NEW_POLICY
 #endif /* CONFIG_RTL8822C */
 
 #ifdef CONFIG_RTL8821C

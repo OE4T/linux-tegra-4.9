@@ -35,6 +35,7 @@ struct wmark_gov_info {
 	unsigned int		p_load_target;
 	unsigned int		p_load_max;
 	unsigned int		p_smooth;
+	bool			p_freq_boost_en;
 
 	/* common data */
 	struct devfreq		*df;
@@ -166,7 +167,7 @@ static int devfreq_watermark_target_freq(struct devfreq *df,
 	load = (dev_stat.busy_time * 1000) / dev_stat.total_time;
 
 	/* if we cross load max...  */
-	if (load >= wmarkinfo->p_load_max) {
+	if (wmarkinfo->p_freq_boost_en && load >= wmarkinfo->p_load_max) {
 		/* we go directly to the highest frequency. depending
 		 * on frequency table we might never go higher than
 		 * the current frequency (i.e. load should be over 100%
@@ -223,9 +224,9 @@ static void devfreq_watermark_debug_start(struct devfreq *df)
 		return;
 	}
 
-#define CREATE_DBG_FILE(fname) \
+#define CREATE_DBG_FILE(type, fname) \
 	do {\
-		f = debugfs_create_u32(#fname, S_IRUGO | S_IWUSR, \
+		f = debugfs_create_##type(#fname, S_IRUGO | S_IWUSR, \
 			wmarkinfo->debugdir, &wmarkinfo->p_##fname); \
 		if (NULL == f) { \
 			pr_warn("cannot create debug entry " #fname "\n"); \
@@ -233,10 +234,17 @@ static void devfreq_watermark_debug_start(struct devfreq *df)
 		} \
 	} while (0)
 
-	CREATE_DBG_FILE(load_target);
-	CREATE_DBG_FILE(load_max);
-	CREATE_DBG_FILE(block_window);
-	CREATE_DBG_FILE(smooth);
+#define CREATE_DBG_FILE_BOOL(fname) CREATE_DBG_FILE(bool, fname)
+#define CREATE_DBG_FILE_U32(fname) CREATE_DBG_FILE(u32, fname)
+
+	CREATE_DBG_FILE_U32(load_target);
+	CREATE_DBG_FILE_U32(load_max);
+	CREATE_DBG_FILE_U32(block_window);
+	CREATE_DBG_FILE_U32(smooth);
+	CREATE_DBG_FILE_BOOL(freq_boost_en);
+
+#undef CREATE_DBG_FILE_U32
+#undef CREATE_DBG_FILE_BOOL
 #undef CREATE_DBG_FILE
 
 }
@@ -268,6 +276,7 @@ static int devfreq_watermark_start(struct devfreq *df)
 	wmarkinfo->p_load_max = 900;
 	wmarkinfo->p_smooth = 10;
 	wmarkinfo->p_block_window = 50000;
+	wmarkinfo->p_freq_boost_en = true;
 	wmarkinfo->df = df;
 	wmarkinfo->pdev = pdev;
 

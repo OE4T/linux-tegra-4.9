@@ -5,7 +5,7 @@
  * Copyright (C) 2011 Texas Instruments, Inc.
  * Copyright (C) 2011 Google, Inc.
  *
- * Copyright (C) 2014-2019, NVIDIA Corporation. All rights reserved.
+ * Copyright (C) 2014-2020, NVIDIA Corporation. All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -439,7 +439,7 @@ static inline void __maybe_unused dump_global_symbol_table(void)
 }
 
 static int
-create_global_symbol_table(const struct firmware *fw)
+__maybe_unused create_global_symbol_table(const struct firmware *fw)
 {
 	int i;
 	struct device *dev = &priv.pdev->dev;
@@ -480,7 +480,7 @@ create_global_symbol_table(const struct firmware *fw)
 	return 0;
 }
 
-struct global_sym_info *find_global_symbol(const char *sym_name)
+struct global_sym_info * __maybe_unused find_global_symbol(const char *sym_name)
 {
 	struct device *dev = &priv.pdev->dev;
 	struct global_sym_info *table = priv.adsp_glo_sym_tbl;
@@ -704,13 +704,13 @@ static int nvadsp_firmware_load(struct platform_device *pdev)
 				NVADSP_FIRMWARE, ret);
 		goto end;
 	}
-
+#ifdef CONFIG_ANDROID
 	ret = create_global_symbol_table(fw);
 	if (ret) {
 		dev_err(dev, "unable to create global symbol table\n");
 		goto release_firmware;
 	}
-
+#endif
 	ret = allocate_memory_for_adsp_os();
 	if (ret) {
 		dev_err(dev, "unable to allocate memory for adsp os\n");

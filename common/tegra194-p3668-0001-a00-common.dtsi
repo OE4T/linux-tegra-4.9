@@ -274,7 +274,6 @@
 		nvidia,cmd-timeout = <2000>;
 	};
 
-	/* FIXME: need to check pcie refclk */
 	gpio@c2f0000 {
 		pex-refclk-sel-low {
 			gpio-hog;
@@ -304,41 +303,8 @@
 		};
 	};
 
-	/* Jakku using only PCIE0 and routed to Porgs's M.2-Key-E */
-	pcie@14180000 {
-		status = "disabled";
-
-		vddio-pex-ctl-supply = <&p3668_spmic_sd3>;
-		nvidia,disable-aspm-states = <0xf>;
-		nvidia,enable-power-down;
-
-		phys = <&p2u_2>,
-		       <&p2u_3>,
-		       <&p2u_4>,
-		       <&p2u_5>;
-		phy-names = "pcie-p2u-0", "pcie-p2u-1", "pcie-p2u-2", "pcie-p2u-3";
-	};
-
-	/* Jakku is not using this pcie@14100000 and pcie@14140000, disabling them */
-	pcie@14100000 {
-		status = "disabled";
-
-		vddio-pex-ctl-supply = <&p3668_spmic_sd3>;
-		nvidia,disable-aspm-states = <0xc>;
-		nvidia,enable-power-down;
-
-		nvidia,max-speed = <2>;
-
-		phys = <&p2u_0>;
-		phy-names = "pcie-p2u-0";
-	};
-
-	pcie@14120000 {
-		nvidia,max-speed = <3>;
-	};
-
-	pcie@14140000 {
-		status = "disabled";
+	pcie@14160000 {
+		status = "okay";
 
 		nvidia,pex-wake = <&tegra_main_gpio TEGRA194_MAIN_GPIO(L, 2)
 					GPIO_ACTIVE_HIGH>;
@@ -347,16 +313,9 @@
 		nvidia,enable-power-down;
 		nvidia,max-speed = <3>;
 
-		phys = <&p2u_7>;
+		num-lanes = <1>;
+		phys = <&p2u_11>;
 		phy-names = "pcie-p2u-0";
-	};
-
-	pcie@14160000 {
-		nvidia,max-speed = <3>;
-	};
-
-	pcie@14180000 {
-		nvidia,max-speed = <3>;
 	};
 
 	pcie@141a0000 {
@@ -427,10 +386,6 @@
 
 	dpaux3 {
 		compatible = "nvidia,tegra194-dpaux3-pinctrl";
-		status = "okay";
-	};
-
-	pcie@14100000 {
 		status = "okay";
 	};
 

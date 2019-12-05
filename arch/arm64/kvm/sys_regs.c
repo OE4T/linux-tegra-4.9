@@ -1754,6 +1754,12 @@ int kvm_handle_cp14_32(struct kvm_vcpu *vcpu, struct kvm_run *run)
 				NULL, 0);
 }
 
+static bool is_imp_def_sys_reg(struct sys_reg_params *params)
+{
+	// See ARM DDI 0487E.a, section D12.3.2
+	return params->Op0 == 3 && (params->CRn & 0b1011) == 0b1011;
+}
+
 static int emulate_sys_reg(struct kvm_vcpu *vcpu,
 			   struct sys_reg_params *params)
 {
@@ -1782,6 +1788,8 @@ static int emulate_sys_reg(struct kvm_vcpu *vcpu,
 			return 1;
 		}
 		/* If access function fails, it should complain. */
+	} else if (is_imp_def_sys_reg(params)) {
+	       kvm_inject_undefined(vcpu);
 	} else {
 		kvm_err("Unsupported guest sys_reg access at: %lx\n",
 			*vcpu_pc(vcpu));

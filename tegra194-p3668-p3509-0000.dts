@@ -14,10 +14,5 @@
  */
 
 /dts-v1/;
-#include "common/tegra194-p3668-0001-a00-common.dtsi"
+#include "common/tegra194-p3668-common.dtsi"
 #include "common/tegra194-p3509-0000-a00.dtsi"
-/ {
-	sdhci@3400000 {
-		status = "disabled";
-	};
-};

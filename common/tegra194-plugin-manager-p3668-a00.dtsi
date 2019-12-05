@@ -34,7 +34,7 @@
 			};
 		};
 
-		fragemen-tegra-wdt-dis {
+		fragement-tegra-wdt-dis {
 			odm-data = "disable-denver-wdt";
 			override@0 {
 				target = <&tegra_pmc>;
@@ -50,6 +50,26 @@
 				target = <&gpcdma>;
 				_overlay_ {
 					nvidia,bypass-smmu;
+				};
+			};
+		};
+
+		fragement-tegra-sdhci-sd-dis {
+			ids = "3668-0001-000";
+			override@0 {
+				target = <&sdhci_sd>;
+				_overlay_ {
+					status = "disabled";
+				};
+			};
+		};
+
+		fragement-tegra-sdhci-emmc-dis {
+			ids = "3668-0000-000";
+			override@0 {
+				target = <&sdhci_emmc>;
+				_overlay_ {
+					status = "disabled";
 				};
 			};
 		};

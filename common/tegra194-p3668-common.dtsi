@@ -19,10 +19,10 @@
 #include <tegra194-soc/tegra194-soc-cvm.dtsi>
 #include "tegra194-fixed-regulator-p3668.dtsi"
 #include <t19x-common-platforms/tegra194-comms.dtsi>
-#include "tegra194-plugin-manager-p3668-0001-a00.dtsi"
+#include "tegra194-plugin-manager-p3668-a00.dtsi"
 #include <t19x-common-platforms/tegra194-platforms-eqos.dtsi>
 #include "tegra194-powermon-p3668.dtsi"
-#include "tegra194-power-tree-p3668-0001.dtsi"
+#include "tegra194-power-tree-p3668.dtsi"
 #include "tegra194-thermal-p3668.dtsi"
 
 / {
@@ -244,13 +244,13 @@
 		status = "okay";
 	};
 
-	sdhci@3460000 {
+	sdhci_emmc: sdhci@3460000 {
 		uhs-mask = <0x0>;
 		nvidia,enable-hwcq;
 		status = "okay";
 	};
 
-	sdhci@3400000 {
+	sdhci_sd: sdhci@3400000 {
 		mmc-ocr-mask = <0x0>;
 		cd-inverted;
 		cd-gpios = <&tegra_main_gpio TEGRA194_MAIN_GPIO(G, 7) 0>;

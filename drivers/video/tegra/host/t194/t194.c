@@ -661,7 +661,7 @@ struct nvhost_device_data t19_nvdla0_info = {
 	.clocks			= {
 		{"nvdla0", UINT_MAX},
 		{"nvdla0_flcn", UINT_MAX},
-		{"emc", UINT_MAX,
+		{"emc", 0,
 		 NVHOST_MODULE_ID_EXTERNAL_MEMORY_CONTROLLER,
 		 0, TEGRA_BWMGR_SET_EMC_FLOOR}
 	},
@@ -694,7 +694,7 @@ struct nvhost_device_data t19_nvdla1_info = {
 	.clocks			= {
 		{"nvdla1", UINT_MAX},
 		{"nvdla1_flcn", UINT_MAX},
-		{"emc", UINT_MAX,
+		{"emc", 0,
 		 NVHOST_MODULE_ID_EXTERNAL_MEMORY_CONTROLLER,
 		 0, TEGRA_BWMGR_SET_EMC_FLOOR}
 	},

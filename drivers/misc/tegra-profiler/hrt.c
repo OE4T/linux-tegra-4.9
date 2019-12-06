@@ -873,31 +873,43 @@ bool quadd_is_inherited(struct task_struct *task)
 
 void __quadd_event_fork(struct task_struct *task)
 {
+	pid_t tgid;
+
 	if (likely(!atomic_read(&hrt.mmap_active)))
 		return;
 
 	if (!quadd_mode_is_process_tree(hrt.quadd_ctx))
 		return;
 
+	tgid = task_tgid_nr(task);
+	if (pid_list_search(tgid))
+		return;
+
 	read_lock(&tasklist_lock);
 	if (quadd_is_inherited(task)) {
 		quadd_get_task_mmaps(hrt.quadd_ctx, task);
-		pid_list_add(task_tgid_nr(task));
+		pid_list_add(tgid);
 	}
 	read_unlock(&tasklist_lock);
 }
 
 void __quadd_event_exit(struct task_struct *task)
 {
+	pid_t tgid;
+
 	if (likely(!atomic_read(&hrt.mmap_active)))
 		return;
 
 	if (!quadd_mode_is_process_tree(hrt.quadd_ctx))
 		return;
 
+	tgid = task_tgid_nr(task);
+	if (!pid_list_search(tgid))
+		return;
+
 	read_lock(&tasklist_lock);
 	if (quadd_is_inherited(task))
-		pid_list_del(task_tgid_nr(task));
+		pid_list_del(tgid);
 	read_unlock(&tasklist_lock);
 }
 

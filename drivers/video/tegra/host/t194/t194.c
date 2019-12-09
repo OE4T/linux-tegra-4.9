@@ -1,7 +1,7 @@
 /*
  * Tegra Graphics Init for T194 Architecture Chips
  *
- * Copyright (c) 2016-2019, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2016-2020, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -262,6 +262,7 @@ struct nvhost_device_data t19_vi5_info = {
 	.can_powergate		= true,
 	.pre_virt_init		= vi5_priv_early_probe,
 	.post_virt_init		= vi5_priv_late_probe,
+	.num_channels           = 36,
 };
 #endif
 

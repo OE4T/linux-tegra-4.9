@@ -915,7 +915,8 @@ int tegra_channel_set_stream(struct tegra_channel *chan, bool on)
 		tegra_camera_update_clknbw(chan, false);
 	}
 
-	atomic_set(&chan->is_streaming, on);
+	if (!ret)
+		atomic_set(&chan->is_streaming, on);
 	return ret;
 }
 

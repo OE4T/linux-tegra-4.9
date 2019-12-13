@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2019, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2018-2020, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -74,8 +74,7 @@ int vblk_prep_mmc_multi_ioc(struct vblk_dev *vblkdev,
 	uint8_t *tmpaddr;
 	void *ioctl_buf;
 
-	ioctl_buf = kmalloc(ioctl_bytes,
-			GFP_KERNEL);
+	ioctl_buf = vmalloc(ioctl_bytes);
 	if (ioctl_buf == NULL) {
 		return -ENOMEM;
 	}
@@ -166,7 +165,7 @@ int vblk_prep_mmc_multi_ioc(struct vblk_dev *vblkdev,
 
 free_ioc_buf:
 	if (err && ioctl_buf)
-		kfree (ioctl_buf);
+		vfree(ioctl_buf);
 
 	return err;
 }
@@ -239,7 +238,7 @@ int vblk_complete_mmc_multi_ioc(struct vblk_dev *vblkdev,
 
 free_ioc_buf:
 	if (ioctl_buf)
-		kfree(ioctl_buf);
+		vfree(ioctl_buf);
 
 	return err;
 }

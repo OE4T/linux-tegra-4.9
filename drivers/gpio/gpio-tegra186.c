@@ -757,7 +757,7 @@ struct tegra_gpio_controller {
 	int num_ports;
 };
 
-struct tegra_gpio_saved_register {
+struct tegra_gpio_state {
 	bool restore_needed;
 	u32 val;
 	u32 conf;
@@ -775,7 +775,8 @@ struct tegra_gpio_info {
 	struct tegra_gpio_controller tg_contrlr[MAX_GPIO_CONTROLLERS];
 	struct gpio_chip gc;
 	struct irq_chip ic;
-	struct tegra_gpio_saved_register *gpio_rval;
+	struct tegra_gpio_state *state_suspend;
+	struct tegra_gpio_state *state_init;
 	unsigned int gte_enable;
 	bool use_timestamp;
 };
@@ -1043,14 +1044,61 @@ static inline bool gpio_is_accessible(struct tegra_gpio_info *tgi, u32 offset)
 	return false;
 }
 
+static void tegra_gpio_save_gpio_state(struct tegra_gpio_info *tgi, u32 offset)
+{
+	struct tegra_gpio_state *regs;
+
+	regs = &tgi->state_init[offset];
+
+	regs->conf = tegra_gpio_readl(tgi, offset, GPIO_ENB_CONFIG_REG);
+	regs->out = tegra_gpio_readl(tgi, offset, GPIO_OUT_CTRL_REG);
+	regs->val = tegra_gpio_readl(tgi, offset, GPIO_OUT_VAL_REG);
+}
+
+static void tegra_gpio_restore_gpio_state(struct tegra_gpio_info *tgi,
+					  u32 offset)
+{
+	struct tegra_gpio_state *regs;
+	int was_gpio, was_output;
+
+	regs = &tgi->state_init[offset];
+	was_gpio = regs->conf & 0x1;
+	was_output = regs->conf & 0x2;
+
+	/*
+	 * If pin was GPIO and pin direction was OUT then restore GPIO_OUT_VAL
+	 * first then GPIO_OUT_CTRL and then GPIO_CNF
+	 */
+	if (was_gpio & was_output) {
+		tegra_gpio_writel(tgi, regs->val, offset, GPIO_OUT_VAL_REG);
+		tegra_gpio_writel(tgi, regs->out, offset, GPIO_OUT_CTRL_REG);
+		tegra_gpio_writel(tgi, regs->conf, offset, GPIO_ENB_CONFIG_REG);
+	}
+
+	/*
+	 * If pin was GPIO and pin direction was IN then restore GPIO_OUT_CTRL,
+	 * then GPIO_OUT_VAL and then GPIO_CNF
+	 */
+	else if (was_gpio) {
+		tegra_gpio_writel(tgi, regs->out, offset, GPIO_OUT_CTRL_REG);
+		tegra_gpio_writel(tgi, regs->val, offset, GPIO_OUT_VAL_REG);
+		tegra_gpio_writel(tgi, regs->conf, offset, GPIO_ENB_CONFIG_REG);
+	}
+
+	/*
+	 * If pin is SFIO then restore GPIO_CNF, then GPIO_OUT_CTRL and then
+	 * GPIO_OUT_VAL
+	 */
+	else {
+		tegra_gpio_writel(tgi, regs->conf, offset, GPIO_ENB_CONFIG_REG);
+		tegra_gpio_writel(tgi, regs->out, offset, GPIO_OUT_CTRL_REG);
+		tegra_gpio_writel(tgi, regs->val, offset, GPIO_OUT_VAL_REG);
+	}
+}
+
 static void tegra_gpio_enable(struct tegra_gpio_info *tgi, int gpio)
 {
 	tegra_gpio_update(tgi, gpio, GPIO_ENB_CONFIG_REG, GPIO_ENB_BIT, 0x1);
-}
-
-static void tegra_gpio_disable(struct tegra_gpio_info *tgi, int gpio)
-{
-	tegra_gpio_update(tgi, gpio, GPIO_ENB_CONFIG_REG, GPIO_ENB_BIT, 0x0);
 }
 
 static int tegra_gpio_request(struct gpio_chip *chip, unsigned offset)
@@ -1060,6 +1108,7 @@ static int tegra_gpio_request(struct gpio_chip *chip, unsigned offset)
 	if (!gpio_is_accessible(tgi, offset))
 		return -EBUSY;
 
+	tegra_gpio_save_gpio_state(tgi, offset);
 	return pinctrl_request_gpio(chip->base + offset);
 }
 
@@ -1068,9 +1117,7 @@ static void tegra_gpio_free(struct gpio_chip *chip, unsigned offset)
 	struct tegra_gpio_info *tgi = gpiochip_get_data(chip);
 
 	pinctrl_free_gpio(chip->base + offset);
-	/* Set the GPIO to floated state, before setting to DISABLE state */
-	tegra_gpio_writel(tgi, 0x1, offset, GPIO_OUT_CTRL_REG);
-	tegra_gpio_disable(tgi, offset);
+	tegra_gpio_restore_gpio_state(tgi, offset);
 }
 
 static void tegra_gpio_set(struct gpio_chip *chip, unsigned offset, int value)
@@ -1177,12 +1224,12 @@ static int tegra_gpio_suspend_configure(struct gpio_chip *chip, unsigned offset,
 					enum gpiod_flags dflags)
 {
 	struct tegra_gpio_info *tgi = gpiochip_get_data(chip);
-	struct tegra_gpio_saved_register *regs;
+	struct tegra_gpio_state *regs;
 
 	if (!gpio_is_accessible(tgi, offset))
 		return -EBUSY;
 
-	regs = &tgi->gpio_rval[offset];
+	regs = &tgi->state_suspend[offset];
 	regs->conf = tegra_gpio_readl(tgi, offset, GPIO_ENB_CONFIG_REG),
 	regs->out = tegra_gpio_readl(tgi, offset, GPIO_OUT_CTRL_REG),
 	regs->val = tegra_gpio_readl(tgi, offset, GPIO_OUT_VAL_REG),
@@ -1613,9 +1660,14 @@ static int tegra_gpio_probe(struct platform_device *pdev)
 		tgi->nbanks = tgi->soc->num_banks;
 	}
 
-	tgi->gpio_rval = devm_kzalloc(&pdev->dev, tgi->soc->nports * 8 *
-				      sizeof(*tgi->gpio_rval), GFP_KERNEL);
-	if (!tgi->gpio_rval)
+	tgi->state_suspend = devm_kzalloc(&pdev->dev, tgi->soc->nports * 8 *
+				      sizeof(*tgi->state_suspend), GFP_KERNEL);
+	if (!tgi->state_suspend)
+		return -ENOMEM;
+
+	tgi->state_init = devm_kzalloc(&pdev->dev, tgi->soc->nports * 8 *
+				      sizeof(*tgi->state_init), GFP_KERNEL);
+	if (!tgi->state_init)
 		return -ENOMEM;
 
 	tgi->gc.label			= tgi->soc->name;
@@ -1816,11 +1868,11 @@ static int tegra_gpio_probe(struct platform_device *pdev)
 static int tegra_gpio_resume_early(struct device *dev)
 {
 	struct tegra_gpio_info *tgi = dev_get_drvdata(dev);
-	struct tegra_gpio_saved_register *regs;
+	struct tegra_gpio_state *regs;
 	int i;
 
 	for (i = 0; i < tgi->gc.ngpio; i++) {
-		regs = &tgi->gpio_rval[i];
+		regs = &tgi->state_suspend[i];
 		if (!regs->restore_needed)
 			continue;
 

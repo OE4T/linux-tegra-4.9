@@ -60,9 +60,7 @@
 		};
 	};
 
-	hdr40_i2c1: i2c@7000c000 { };
-
-	hdr40_i2c0: i2c@7000c400 {
+	i2c@7000c400 {
 		lp8557-backlight-a-wuxga-8-0@2c {
 			status = "disabled";
 		};

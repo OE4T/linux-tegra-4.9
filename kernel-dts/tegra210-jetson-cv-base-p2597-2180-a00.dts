@@ -52,7 +52,7 @@
 
 / {
 	model = "jetson_cv";
-	compatible = "nvidia,jetson-cv", "nvidia,tegra210";
+	compatible = "nvidia,p2597-0000+p2180-1000", "nvidia,jetson-cv", "nvidia,tegra210";
 	nvidia,dtsfilename = __FILE__;
 
 	#address-cells = <2>;
@@ -800,7 +800,7 @@
 		tach_gpio =  <&gpio TEGRA_GPIO(K, 7) GPIO_ACTIVE_LOW>; /* TEGRA_GPIO_PK7 */
 	};
 
-	i2c@7000c400 {
+	hdr40_i2c0: i2c@7000c400 {
 		nvidia,clock-always-on;
 
 		lp8557-backlight-a-wuxga-8-0@2c {
@@ -1158,7 +1158,7 @@
 		dma-names = "tx";
 	};
 
-	i2c@7000c400 {
+	hdr40_i2c1: i2c@7000c000 {
 		clock-frequency = <400000>;
 	};
 

@@ -29,6 +29,8 @@
 	interrupt-controller@3881000 {
 		reg = <0x0 0x03881000 0x0 0x00001000
 		       0x0 0x03892000 0x0 0x00002000>;
+		/delete-property/ interrupts;
+		/delete-property/ interrupt-parent;
 	};
 
 	/* Paravirtualized BPMP driver */

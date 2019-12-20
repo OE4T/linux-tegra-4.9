@@ -334,6 +334,25 @@ static int tegra_udrm_send_vblank_event_ioctl(struct drm_device *drm,
 	return 0;
 }
 
+static int tegra_udrm_send_connector_status_event_ioctl(struct drm_device *drm,
+		void *data, struct drm_file *file)
+{
+	struct drm_tegra_udrm_connector_status_event *args =
+		(struct drm_tegra_udrm_connector_status_event *)data;
+	char hotplug_str[] = "HOTPLUG=1", conn_id[30], prop_id[30];
+	char *envp[4] = { hotplug_str, conn_id, prop_id, NULL };
+	int ret = 0;
+
+	snprintf(conn_id, ARRAY_SIZE(conn_id), "CONNECTOR=%u", args->conn_id);
+	snprintf(prop_id, ARRAY_SIZE(prop_id), "PROPERTY=%u", args->prop_id);
+
+	ret = kobject_uevent_env(&drm->primary->kdev->kobj, KOBJ_CHANGE, envp);
+	if (ret < 0)
+		pr_err("%s: kobj_uevent error!\n", __func__);
+
+	return ret;
+}
+
 static const struct file_operations tegra_udrm_fops = {
 	.owner = THIS_MODULE,
 	.open = drm_open,
@@ -376,6 +395,8 @@ static const struct drm_ioctl_desc tegra_udrm_ioctls[] = {
 		tegra_udrm_drop_master_notify_ioctl, 0),
 	DRM_IOCTL_DEF_DRV(TEGRA_UDRM_SET_MASTER_NOTIFY,
 		tegra_udrm_set_master_notify_ioctl, 0),
+	DRM_IOCTL_DEF_DRV(TEGRA_UDRM_SEND_CONNECTOR_STATUS_EVENT,
+		tegra_udrm_send_connector_status_event_ioctl, 0),
 };
 
 static int tegra_udrm_open(struct drm_device *drm, struct drm_file *filp)

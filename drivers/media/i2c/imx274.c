@@ -851,7 +851,7 @@ static int imx274_power_get(struct tegracam_device *tc_dev)
 	const char *mclk_name;
 	const char *parentclk_name;
 	struct clk *parent;
-	int err = 0;
+	int err = 0, ret = 0;
 
 	mclk_name = pdata->mclk_name ?
 		    pdata->mclk_name : "cam_mclk1";
@@ -887,6 +887,21 @@ static int imx274_power_get(struct tegracam_device *tc_dev)
 		pw->af_gpio = pdata->af_gpio;
 		pw->pwdn_gpio = pdata->pwdn_gpio;
 	}
+
+	ret = gpio_request(pw->reset_gpio, "cam_reset_gpio");
+	if (ret < 0)
+		dev_dbg(dev, "%s can't request reset_gpio %d\n", __func__, ret);
+	gpio_direction_output(pw->reset_gpio, 1);
+
+	ret = gpio_request(pw->af_gpio, "cam_af_gpio");
+	if (ret < 0)
+		dev_dbg(dev, "%s can't request af_gpio %d\n", __func__, ret);
+	gpio_direction_output(pw->af_gpio, 1);
+
+	ret = gpio_request(pw->pwdn_gpio, "cam_pwdn_gpio");
+	if (ret < 0)
+		dev_dbg(dev, "%s can't request pwdn_gpio %d\n",	__func__, ret);
+	gpio_direction_output(pw->pwdn_gpio, 1);
 
 	pw->state = SWITCH_OFF;
 	return err;

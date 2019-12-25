@@ -59,6 +59,26 @@
 	pwm-fan {
 		pwms = <&tegra_pwm6 0 45334>;
 		vdd-fan-supply = <&p3449_vdd_fan>;
+		profiles {
+			default = "quiet";
+			quiet {
+				state_cap = <4>;
+				active_pwm = <0 80 120 160 255 255 255 255 255 255>;
+			};
+			/delete-node/ cool;
+		};
+	};
+	thermal-fan-est {
+		profiles {
+			default = "quiet";
+			quiet {
+				active_trip_temps = <0 51000 61000 71000 82000
+						140000 150000 160000 170000 180000>;
+				active_hysteresis = <0 10000 9000 9000 10000
+						0 0 0 0 0>;
+			};
+			/delete-node/ cool;
+		};
 	};
 	serial@3110000 {
 		status = "okay";

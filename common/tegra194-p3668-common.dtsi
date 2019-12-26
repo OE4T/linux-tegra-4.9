@@ -19,7 +19,7 @@
 #include <tegra194-soc/tegra194-soc-cvm.dtsi>
 #include "tegra194-fixed-regulator-p3668.dtsi"
 #include <t19x-common-platforms/tegra194-comms.dtsi>
-#include "tegra194-plugin-manager-p3668-a00.dtsi"
+#include "tegra194-plugin-manager-p3668.dtsi"
 #include <t19x-common-platforms/tegra194-platforms-eqos.dtsi>
 #include "tegra194-powermon-p3668.dtsi"
 #include "tegra194-power-tree-p3668.dtsi"

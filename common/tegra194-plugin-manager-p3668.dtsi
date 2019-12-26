@@ -55,7 +55,7 @@
 		};
 
 		fragement-tegra-sdhci-sd-dis {
-			ids = "3668-0001-000";
+			ids = ">=3668-0001-000";
 			override@0 {
 				target = <&sdhci_sd>;
 				_overlay_ {
@@ -65,7 +65,7 @@
 		};
 
 		fragement-tegra-sdhci-emmc-dis {
-			ids = "3668-0000-000";
+			ids = ">=3668-0000-000";
 			override@0 {
 				target = <&sdhci_emmc>;
 				_overlay_ {

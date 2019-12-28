@@ -1495,7 +1495,8 @@ static int tegra_qspi_setup(struct spi_device *spi)
 	tqspi->def_command1_reg = val;
 	tegra_qspi_writel(tqspi, tqspi->def_command1_reg, QSPI_COMMAND1);
 	spin_unlock_irqrestore(&tqspi->lock, flags);
-	pm_runtime_put(tqspi->dev);
+	pm_runtime_mark_last_busy(tqspi->dev);
+	pm_runtime_put_autosuspend(tqspi->dev);
 
 	return 0;
 }
@@ -1528,7 +1529,8 @@ static int tegra_qspi_cs_low(struct spi_device *spi, bool state)
 	tegra_qspi_writel(tqspi, val, QSPI_COMMAND1);
 
 	spin_unlock_irqrestore(&tqspi->lock, flags);
-	pm_runtime_put(tqspi->dev);
+	pm_runtime_mark_last_busy(tqspi->dev);
+	pm_runtime_put_autosuspend(tqspi->dev);
 
 	return 0;
 }
@@ -1751,7 +1753,8 @@ static int tegra_qspi_transfer_one_message(struct spi_master *master,
 	ret = 0;
 exit:
 	tegra_qspi_writel(tqspi, tqspi->def_command1_reg, QSPI_COMMAND1);
-	pm_runtime_put(tqspi->dev);
+	pm_runtime_mark_last_busy(tqspi->dev);
+	pm_runtime_put_autosuspend(tqspi->dev);
 	msg->status = ret;
 	spi_finalize_current_message(master);
 
@@ -2097,6 +2100,7 @@ static int tegra_qspi_probe(struct platform_device *pdev)
 	struct tegra_qspi_data	*tqspi;
 	struct resource		*r;
 	int ret, qspi_irq;
+	u32 as_delay;
 	u32 actual_speed = 0;
 
 	master = spi_alloc_master(&pdev->dev, sizeof(*tqspi));
@@ -2204,7 +2208,13 @@ static int tegra_qspi_probe(struct platform_device *pdev)
 		if (ret < 0)
 			goto exit_deinit_dma;
 	}
+	ret = of_property_read_u32(dev->of_node, "qspi-autosuspend-delay",
+				   &as_delay);
+	if (ret)
+		as_delay = 3000; /* defalut autosuspend delay */
 
+	pm_runtime_set_autosuspend_delay(&pdev->dev, as_delay);
+	pm_runtime_use_autosuspend(&pdev->dev);
 	pm_runtime_enable(&pdev->dev);
 	if (!pm_runtime_enabled(&pdev->dev)) {
 		ret = tegra_qspi_runtime_resume(&pdev->dev);
@@ -2239,7 +2249,8 @@ static int tegra_qspi_probe(struct platform_device *pdev)
 	tegra_qspi_writel(tqspi, tqspi->def_command1_reg, QSPI_COMMAND1);
 	tqspi->def_command2_reg = tegra_qspi_readl(tqspi, QSPI_COMMAND2);
 	tegra_qspi_set_gr_registers(tqspi);
-	pm_runtime_put(&pdev->dev);
+	pm_runtime_mark_last_busy(&pdev->dev);
+	pm_runtime_put_autosuspend(&pdev->dev);
 
 	master->dev.of_node = pdev->dev.of_node;
 	ret = devm_spi_register_master(&pdev->dev, master);
@@ -2257,6 +2268,7 @@ static int tegra_qspi_probe(struct platform_device *pdev)
 	return ret;
 
 exit_pm_disable:
+	pm_runtime_put_noidle(&pdev->dev);
 	pm_runtime_disable(&pdev->dev);
 	if (!pm_runtime_status_suspended(&pdev->dev))
 		tegra_qspi_runtime_suspend(&pdev->dev);
@@ -2287,6 +2299,7 @@ static int tegra_qspi_remove(struct platform_device *pdev)
 	if (tqspi->rx_dma_chan)
 		tegra_qspi_deinit_dma_param(tqspi, true);
 
+	pm_runtime_put_noidle(&pdev->dev);
 	pm_runtime_disable(&pdev->dev);
 	if (!pm_runtime_status_suspended(&pdev->dev))
 		tegra_qspi_runtime_suspend(&pdev->dev);
@@ -2330,7 +2343,8 @@ static int tegra_qspi_resume(struct device *dev)
 	}
 	tegra_qspi_writel(tqspi, tqspi->command1_reg, QSPI_COMMAND1);
 	tegra_qspi_set_gr_registers(tqspi);
-	pm_runtime_put(dev);
+	pm_runtime_mark_last_busy(dev);
+	pm_runtime_put_autosuspend(dev);
 
 	return spi_master_resume(master);
 }

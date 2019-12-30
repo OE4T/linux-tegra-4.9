@@ -26,13 +26,9 @@
 #include "tegra194-thermal-p3668.dtsi"
 
 / {
-	nvidia,dtsfilename = __FILE__;
-	nvidia,dtbbuildtime = __DATE__, __TIME__;
 	nvidia,fastboot-usb-vid = <0x0955>;
 	nvidia,fastboot-usb-pid = <0xee1e>;
 	model = "NVIDIA Jetson Xavier NX Developer Kit";
-
-	compatible = "nvidia,p3509-0000-a00+p3668-0001-a00", "nvidia,tegra194";
 
 	chosen {
 		bootargs ="console=ttyTCU0,115200";

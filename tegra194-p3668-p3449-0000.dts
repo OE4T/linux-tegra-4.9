@@ -16,3 +16,10 @@
 /dts-v1/;
 #include "common/tegra194-p3668-common.dtsi"
 #include "common/tegra194-p3449-0000-b01.dtsi"
+
+/ {
+	nvidia,dtsfilename = __FILE__;
+	nvidia,dtbbuildtime = __DATE__, __TIME__;
+
+	compatible = "nvidia,p3449-0000-b01+p3668", "nvidia,tegra194";
+};

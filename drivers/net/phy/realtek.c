@@ -6,7 +6,7 @@
  * Author: Johnson Leung <r58129@freescale.com>
  *
  * Copyright (c) 2004 Freescale Semiconductor, Inc.
- * Copyright (c) 2019, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2019-2020, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute  it and/or modify it
  * under  the terms of  the GNU General  Public License as published by the
@@ -30,8 +30,12 @@
 #define RTL8211F_PAGE_SELECT	0x1f
 #define RTL8211F_TX_DELAY	0x100
 #define RTL8211F_DEFAULT_PAGE	0xa42
+#define RTL8211F_PHYCR1_PAGE	0xa43
 #define RTL8211F_LED_PAGE	0xd04
 
+#define RTL8211F_PHYCR1_REG	0x18
+#define RTL8211F_ALDPS_ENABLED	0x4
+#define RTL8211F_ALDPS_PLL_OFF	0x2
 #define RTL8211F_LED0_LINK_1000	0x8
 #define RTL8211F_LED1_LINK_1000	0x100
 #define RTL8211F_LED1_LINK_100	0x40
@@ -133,6 +137,20 @@ static int rtl8211f_config_init(struct phy_device *phydev)
 		reg &= ~RTL8211F_TX_DELAY;
 
 	phy_write(phydev, 0x11, reg);
+
+	ret = phy_write(phydev, RTL8211F_PAGE_SELECT, RTL8211F_PHYCR1_PAGE);
+	if (ret)
+		return ret;
+
+	reg = phy_read(phydev, RTL8211F_PHYCR1_REG);
+	if (reg < 0)
+		return reg;
+
+	ret = phy_write(phydev, RTL8211F_PHYCR1_REG,
+			reg | RTL8211F_ALDPS_ENABLED |
+			RTL8211F_ALDPS_PLL_OFF);
+	if (ret)
+		return ret;
 
 	ret = phy_write(phydev, RTL8211F_PAGE_SELECT, RTL8211F_LED_PAGE);
 	if (ret)

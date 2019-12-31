@@ -1,7 +1,7 @@
 /*
  * tegra210_virt_alt_admaif.c - Tegra ADMAIF component driver
  *
- * Copyright (c) 2014-2019 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2020 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -49,64 +49,63 @@ static int tegra210_admaif_hw_params(struct snd_pcm_substream *substream,
 	struct device *dev = dai->dev;
 	struct tegra210_virt_admaif_client_data *data =
 				&admaif->client_data;
-	struct tegra210_virt_audio_cif *cif_conf = &data->cif;
+	struct tegra210_virt_audio_cif cif_conf;
 	struct nvaudio_ivc_msg	msg;
 	unsigned int value;
 	int err;
 
-	data->admaif_id = dai->id;
-	memset(cif_conf, 0, sizeof(struct tegra210_virt_audio_cif));
-	cif_conf->audio_channels = params_channels(params);
-	cif_conf->client_channels = params_channels(params);
+	memset(&cif_conf, 0, sizeof(struct tegra210_virt_audio_cif));
+	cif_conf.audio_channels = params_channels(params);
+	cif_conf.client_channels = params_channels(params);
 
 	switch (params_format(params)) {
 	case SNDRV_PCM_FORMAT_S8:
-		cif_conf->client_bits = TEGRA210_AUDIOCIF_BITS_8;
-		cif_conf->audio_bits = TEGRA210_AUDIOCIF_BITS_8;
+		cif_conf.client_bits = TEGRA210_AUDIOCIF_BITS_8;
+		cif_conf.audio_bits = TEGRA210_AUDIOCIF_BITS_8;
 		break;
 	case SNDRV_PCM_FORMAT_S16_LE:
-		cif_conf->client_bits = TEGRA210_AUDIOCIF_BITS_16;
-		cif_conf->audio_bits = TEGRA210_AUDIOCIF_BITS_16;
+		cif_conf.client_bits = TEGRA210_AUDIOCIF_BITS_16;
+		cif_conf.audio_bits = TEGRA210_AUDIOCIF_BITS_16;
 		break;
 	case SNDRV_PCM_FORMAT_S24_LE:
-		cif_conf->client_bits = TEGRA210_AUDIOCIF_BITS_24;
-		cif_conf->audio_bits = TEGRA210_AUDIOCIF_BITS_24;
+		cif_conf.client_bits = TEGRA210_AUDIOCIF_BITS_24;
+		cif_conf.audio_bits = TEGRA210_AUDIOCIF_BITS_24;
 		break;
 	case SNDRV_PCM_FORMAT_S32_LE:
-		cif_conf->client_bits = TEGRA210_AUDIOCIF_BITS_32;
-		cif_conf->audio_bits = TEGRA210_AUDIOCIF_BITS_32;
+		cif_conf.client_bits = TEGRA210_AUDIOCIF_BITS_32;
+		cif_conf.audio_bits = TEGRA210_AUDIOCIF_BITS_32;
 		break;
 	default:
 		dev_err(dev, "Wrong format!\n");
 		return -EINVAL;
 	}
-	cif_conf->direction = substream->stream;
+	cif_conf.direction = substream->stream;
 
-	value = (cif_conf->threshold <<
+	value = (cif_conf.threshold <<
 			TEGRA210_AUDIOCIF_CTRL_FIFO_THRESHOLD_SHIFT) |
-		((cif_conf->audio_channels - 1) <<
+		((cif_conf.audio_channels - 1) <<
 			TEGRA210_AUDIOCIF_CTRL_AUDIO_CHANNELS_SHIFT) |
-		((cif_conf->client_channels - 1) <<
+		((cif_conf.client_channels - 1) <<
 			TEGRA210_AUDIOCIF_CTRL_CLIENT_CHANNELS_SHIFT) |
-		(cif_conf->audio_bits <<
+		(cif_conf.audio_bits <<
 			TEGRA210_AUDIOCIF_CTRL_AUDIO_BITS_SHIFT) |
-		(cif_conf->client_bits <<
+		(cif_conf.client_bits <<
 			TEGRA210_AUDIOCIF_CTRL_CLIENT_BITS_SHIFT) |
-		(cif_conf->expand <<
+		(cif_conf.expand <<
 			TEGRA210_AUDIOCIF_CTRL_EXPAND_SHIFT) |
-		(cif_conf->stereo_conv <<
+		(cif_conf.stereo_conv <<
 			TEGRA210_AUDIOCIF_CTRL_STEREO_CONV_SHIFT) |
-		(cif_conf->replicate <<
+		(cif_conf.replicate <<
 			TEGRA210_AUDIOCIF_CTRL_REPLICATE_SHIFT) |
-		(cif_conf->truncate <<
+		(cif_conf.truncate <<
 			TEGRA210_AUDIOCIF_CTRL_TRUNCATE_SHIFT) |
-		(cif_conf->mono_conv <<
+		(cif_conf.mono_conv <<
 			TEGRA210_AUDIOCIF_CTRL_MONO_CONV_SHIFT);
 
 	memset(&msg, 0, sizeof(struct nvaudio_ivc_msg));
-	msg.params.dmaif_info.id        = data->admaif_id;
+	msg.params.dmaif_info.id        = dai->id;
 	msg.params.dmaif_info.value     = value;
-	if (!cif_conf->direction)
+	if (!cif_conf.direction)
 		msg.cmd = NVAUDIO_DMAIF_SET_TXCIF;
 	else
 		msg.cmd = NVAUDIO_DMAIF_SET_RXCIF;
@@ -128,10 +127,9 @@ static void tegra210_admaif_start_playback(struct snd_soc_dai *dai)
 	int err;
 	struct nvaudio_ivc_msg msg;
 
-	data->admaif_id = dai->id;
 	memset(&msg, 0, sizeof(struct nvaudio_ivc_msg));
 	msg.cmd = NVAUDIO_START_PLAYBACK;
-	msg.params.dmaif_info.id = data->admaif_id;
+	msg.params.dmaif_info.id = dai->id;
 	msg.ack_required = true;
 	err = nvaudio_ivc_send_receive(data->hivc_client,
 			&msg, sizeof(struct nvaudio_ivc_msg));
@@ -147,10 +145,9 @@ static void tegra210_admaif_stop_playback(struct snd_soc_dai *dai)
 	int err;
 	struct nvaudio_ivc_msg msg;
 
-	data->admaif_id = dai->id;
 	memset(&msg, 0, sizeof(struct nvaudio_ivc_msg));
 	msg.cmd = NVAUDIO_STOP_PLAYBACK;
-	msg.params.dmaif_info.id = data->admaif_id;
+	msg.params.dmaif_info.id = dai->id;
 
 	msg.ack_required = true;
 	err = nvaudio_ivc_send_receive(data->hivc_client,
@@ -167,10 +164,9 @@ static void tegra210_admaif_start_capture(struct snd_soc_dai *dai)
 	int err;
 	struct nvaudio_ivc_msg msg;
 
-	data->admaif_id = dai->id;
 	memset(&msg, 0, sizeof(struct nvaudio_ivc_msg));
 	msg.cmd = NVAUDIO_START_CAPTURE;
-	msg.params.dmaif_info.id = data->admaif_id;
+	msg.params.dmaif_info.id = dai->id;
 
 	msg.ack_required = true;
 	err = nvaudio_ivc_send_receive(data->hivc_client,
@@ -187,10 +183,9 @@ static void tegra210_admaif_stop_capture(struct snd_soc_dai *dai)
 	int err;
 	struct nvaudio_ivc_msg msg;
 
-	data->admaif_id = dai->id;
 	memset(&msg, 0, sizeof(struct nvaudio_ivc_msg));
 	msg.cmd = NVAUDIO_STOP_CAPTURE;
-	msg.params.dmaif_info.id = data->admaif_id;
+	msg.params.dmaif_info.id = dai->id;
 
 	msg.ack_required = true;
 	err = nvaudio_ivc_send_receive(data->hivc_client,

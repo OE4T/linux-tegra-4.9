@@ -1,5 +1,7 @@
 /*
  *
+ * Copyright (c) 2019, NVIDIA CORPORATION. All rights reserved.
+ *
  *  Realtek Bluetooth USB download firmware driver
  *
  *
@@ -33,7 +35,8 @@
 /* #define RTKBT_SWITCH_PATCH */
 
 #if 1
-#define RTKBT_DBG(fmt, arg...) printk(KERN_INFO "rtk_btusb: " fmt "\n" , ## arg)
+#define RTKBT_DBG(fmt, arg...) \
+			printk(KERN_DEBUG "rtk_btusb: " fmt "\n" ,## arg)
 #define RTKBT_INFO(fmt, arg...) printk(KERN_INFO "rtk_btusb: " fmt "\n" , ## arg)
 #define RTKBT_WARN(fmt, arg...) printk(KERN_WARNING "rtk_btusb: " fmt "\n", ## arg)
 #else

@@ -44,16 +44,6 @@
 			};
 		};
 
-		fragment-p3668-mods {
-			odm-data = "mods-build";
-			override@0 {
-				target = <&gpcdma>;
-				_overlay_ {
-					nvidia,bypass-smmu;
-				};
-			};
-		};
-
 		fragement-tegra-sdhci-sd-dis {
 			ids = ">=3668-0001-000";
 			override@0 {

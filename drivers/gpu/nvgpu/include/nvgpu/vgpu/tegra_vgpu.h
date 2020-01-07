@@ -1,7 +1,7 @@
 /*
  * Tegra GPU Virtualization Interfaces to Server
  *
- * Copyright (c) 2014-2018, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2020, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -175,6 +175,7 @@ struct tegra_vgpu_as_map_params {
 #define TEGRA_VGPU_MAP_CACHEABLE	(1 << 0)
 #define TEGRA_VGPU_MAP_IO_COHERENT	(1 << 1)
 #define TEGRA_VGPU_MAP_L3_ALLOC		(1 << 2)
+#define TEGRA_VGPU_MAP_PLATFORM_ATOMIC	(1 << 3)
 
 struct tegra_vgpu_as_map_ex_params {
 	u64 handle;

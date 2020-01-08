@@ -30,7 +30,7 @@
  * =========================================================================
  */
 /*
- * Copyright (c) 2015-2019, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2020, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -325,6 +325,8 @@ int eqos_clock_enable(struct eqos_prv_data *pdata)
 			goto err_tx;
 	}
 
+	pdata->clks_enable = true;
+
 	return 0;
 
 err_axi_cbb:
@@ -365,6 +367,8 @@ void eqos_clock_disable(struct eqos_prv_data *pdata)
 
 	if (!IS_ERR_OR_NULL(pdata->pllrefe_clk))
 		clk_disable_unprepare(pdata->pllrefe_clk);
+
+	pdata->clks_enable = false;
 }
 
 static int eqos_get_clocks(struct eqos_prv_data *pdata)

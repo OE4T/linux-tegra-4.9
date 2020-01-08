@@ -30,7 +30,7 @@
  * =========================================================================
  */
 /*
- * Copyright (c) 2015-2018, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2020, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -156,6 +156,11 @@ static INT eqos_mdio_read(struct mii_bus *bus, int phyaddr, int phyreg)
 	struct hw_if_struct *hw_if = &(pdata->hw_if);
 	int phydata = 0;
 
+	if (!pdata->clks_enable) {
+		pr_err("%s:No clks available, skipping PHY read\n", __func__);
+		return -ENODEV;
+	}
+
 	DBGPR_MDIO("--> eqos_mdio_read: phyaddr = %d, phyreg = %d\n",
 		   phyaddr, phyreg);
 
@@ -192,6 +197,11 @@ static INT eqos_mdio_write(struct mii_bus *bus, int phyaddr, int phyreg,
 	struct eqos_prv_data *pdata = netdev_priv(dev);
 	struct hw_if_struct *hw_if = &(pdata->hw_if);
 	INT ret = Y_SUCCESS;
+
+	if (!pdata->clks_enable) {
+		pr_err("%s:No clks available, skipping PHY write\n", __func__);
+		return -ENODEV;
+	}
 
 	DBGPR_MDIO("--> eqos_mdio_write\n");
 

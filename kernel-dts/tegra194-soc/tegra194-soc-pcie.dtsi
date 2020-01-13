@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017 - 2018, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017 - 2020, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -334,6 +334,7 @@
 		interrupts = <0 72 0x04>;	/* controller interrupt */
 		interrupt-names = "intr";
 
+		nvidia,max-speed = <4>;
 		nvidia,bar0-size = <0x100000>;	/* 1 MB */
 		nvidia,device-id = /bits/ 16 <0x1AD4>;
 		nvidia,controller-id = <&bpmp 0x0>;
@@ -391,6 +392,7 @@
 		interrupts = <0 51 0x04>;	/* controller interrupt */
 		interrupt-names = "intr";
 
+		nvidia,max-speed = <4>;
 		nvidia,bar0-size = <0x100000>;	/* 1 MB */
 		nvidia,device-id = /bits/ 16 <0x1AD5>;
 		nvidia,controller-id = <&bpmp 0x4>;
@@ -452,6 +454,7 @@
 		pinctrl-0 = <&pex_rst_c5_in_state>;
 		pinctrl-1 = <&clkreq_c5_bi_dir_state>;
 
+		nvidia,max-speed = <4>;
 		nvidia,bar0-size = <0x100000>;	/* 1 MB */
 		nvidia,device-id = /bits/ 16 <0x1AD4>;
 		nvidia,controller-id = <&bpmp 0x5>;

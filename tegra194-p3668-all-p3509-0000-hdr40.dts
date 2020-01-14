@@ -3,7 +3,7 @@
  * Device-tree overlay for tegra194-p3668-0001-p3509-0000 40-pin
  * Expansion Header.
  *
- * Copyright (c) 2019 NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2019-2020 NVIDIA CORPORATION. All rights reserved.
  *
  */
 
@@ -11,7 +11,7 @@
 /plugin/;
 
 #include <dt-bindings/pinctrl/pinctrl-tegra.h>
-#include <dt-common/jetson/tegra194-p3668-0001-p3509-0000.h>
+#include <dt-common/jetson/tegra194-p3668-all-p3509-0000.h>
 
 / {
 	overlay-name = "Jetson 40pin Header";

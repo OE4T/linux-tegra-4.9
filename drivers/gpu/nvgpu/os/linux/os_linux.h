@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2020, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -166,8 +166,6 @@ struct nvgpu_os_linux {
 	struct gk20a_cde_app cde_app;
 
 	struct rw_semaphore busy_lock;
-
-	struct gk20a_sched_ctrl sched_ctrl;
 
 	bool init_done;
 };

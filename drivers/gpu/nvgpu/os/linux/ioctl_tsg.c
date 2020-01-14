@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2018, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2020, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -58,8 +58,7 @@ static int gk20a_tsg_bind_channel_fd(struct tsg_gk20a *tsg, int ch_fd)
 static int gk20a_tsg_ioctl_bind_channel_ex(struct gk20a *g,
 	struct tsg_gk20a *tsg, struct nvgpu_tsg_bind_channel_ex_args *arg)
 {
-	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
-	struct gk20a_sched_ctrl *sched = &l->sched_ctrl;
+	struct nvgpu_sched_ctrl *sched = &g->sched_ctrl;
 	struct channel_gk20a *ch;
 	struct gr_gk20a *gr = &g->gr;
 	int err = 0;
@@ -484,8 +483,7 @@ int nvgpu_ioctl_tsg_dev_release(struct inode *inode, struct file *filp)
 static int gk20a_tsg_ioctl_set_runlist_interleave(struct gk20a *g,
 	struct tsg_gk20a *tsg, struct nvgpu_runlist_interleave_args *arg)
 {
-	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
-	struct gk20a_sched_ctrl *sched = &l->sched_ctrl;
+	struct nvgpu_sched_ctrl *sched = &g->sched_ctrl;
 	u32 level = arg->level;
 	int err;
 
@@ -514,8 +512,7 @@ done:
 static int gk20a_tsg_ioctl_set_timeslice(struct gk20a *g,
 	struct tsg_gk20a *tsg, struct nvgpu_timeslice_args *arg)
 {
-	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
-	struct gk20a_sched_ctrl *sched = &l->sched_ctrl;
+	struct nvgpu_sched_ctrl *sched = &g->sched_ctrl;
 	int err;
 
 	nvgpu_log(g, gpu_dbg_fn | gpu_dbg_sched, "tsgid=%u", tsg->tsgid);

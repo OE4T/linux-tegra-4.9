@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2019, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2020, NVIDIA CORPORATION.  All rights reserved.
  *
  * GK20A Graphics
  *
@@ -71,6 +71,7 @@ struct nvgpu_setup_bind_args;
 #include <nvgpu/ecc.h>
 #include <nvgpu/tsg.h>
 #include <nvgpu/sec2.h>
+#include <nvgpu/sched.h>
 
 #include "gk20a/clk_gk20a.h"
 #include "gk20a/ce2_gk20a.h"
@@ -1478,6 +1479,7 @@ struct gk20a {
 	struct pmgr_pmupstate pmgr_pmu;
 	struct therm_pmupstate therm_pmu;
 	struct nvgpu_sec2 sec2;
+	struct nvgpu_sched_ctrl sched_ctrl;
 
 #ifdef CONFIG_DEBUG_FS
 	struct railgate_stats pstats;

@@ -1,7 +1,7 @@
 /*
  * hdmi2.0.c: hdmi2.0 driver.
  *
- * Copyright (c) 2014-2019, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2014-2020, NVIDIA CORPORATION, All rights reserved.
  * Author: Animesh Kishore <ankishore@nvidia.com>
  *
  * This software is licensed under the terms of the GNU General Public
@@ -2070,7 +2070,6 @@ static u32 tegra_hdmi_get_ex_colorimetry(struct tegra_hdmi *hdmi)
 static u32 tegra_hdmi_get_rgb_quant(struct tegra_hdmi *hdmi)
 {
 	u32 vmode = hdmi->dc->mode.vmode;
-	u32 hdmi_quant = HDMI_AVI_RGB_QUANT_DEFAULT;
 
 	/*
 	 * For seamless HDMI, read Q0/Q1 from bootloader
@@ -2095,14 +2094,8 @@ static u32 tegra_hdmi_get_rgb_quant(struct tegra_hdmi *hdmi)
 		}
 	}
 
-	dev_info(&hdmi->dc->ndev->dev, "hdmi: get RGB quant from EDID.\n");
-	if (tegra_edid_is_rgb_quantization_selectable(hdmi->edid)) {
-		if (vmode & FB_VMODE_LIMITED_RANGE)
-			hdmi_quant = HDMI_AVI_RGB_QUANT_LIMITED;
-		else
-			hdmi_quant = HDMI_AVI_RGB_QUANT_FULL;
-	}
-	return hdmi_quant;
+	return (vmode & FB_VMODE_LIMITED_RANGE) ? HDMI_AVI_RGB_QUANT_LIMITED :
+		HDMI_AVI_RGB_QUANT_FULL;
 }
 
 static u32 tegra_hdmi_get_ycc_quant(struct tegra_hdmi *hdmi)

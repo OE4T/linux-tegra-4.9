@@ -2,11 +2,11 @@
 /*
  * Definitions for Jetson tegra194-p3668-0001-p3509-0000 board.
  *
- * Copyright (c) 2019 NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2019-2020 NVIDIA CORPORATION. All rights reserved.
  *
  */
 
-#define JETSON_COMPATIBLE	"nvidia,p3509-0000-a00+p3668-0001-a00"
+#define JETSON_COMPATIBLE	"nvidia,p3509-0000-a00+p3668-0001-a01"
 
 /* SoC function name for clock signal on 40-pin header pin 7 */
 #define HDR40_CLK	"aud"

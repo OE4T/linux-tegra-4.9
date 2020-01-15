@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2020, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -556,8 +556,10 @@ int gk20a_ctxsw_trace_init(struct gk20a *g)
 	if (!g->ops.fecs_trace.init)
 		return 0;
 
-	if (likely(trace))
+	if (likely(trace)) {
+		__nvgpu_set_enabled(g, NVGPU_SUPPORT_FECS_CTXSW_TRACE, true);
 		return 0;
+	}
 
 	trace = nvgpu_kzalloc(g, sizeof(*trace));
 	if (unlikely(!trace))

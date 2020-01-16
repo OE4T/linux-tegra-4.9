@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2019-2020, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -465,7 +465,6 @@ static void tvnet_stop_tx_queue(struct tvnet_priv *tvnet)
 static void tvnet_stop_rx_work(struct tvnet_priv *tvnet)
 {
 	/* wait for interrupt handle to return to ensure rx is stopped */
-	synchronize_irq(pci_irq_vector(tvnet->pdev, 0));
 	synchronize_irq(pci_irq_vector(tvnet->pdev, 1));
 }
 

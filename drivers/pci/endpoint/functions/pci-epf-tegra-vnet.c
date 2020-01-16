@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2019-2020, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -37,6 +37,10 @@
 
 /* Network link timeout 5 sec */
 #define LINK_TIMEOUT 5000
+
+#define TVNET_DEFAULT_MTU 64512
+#define TVNET_MIN_MTU 68
+#define TVNET_MAX_MTU TVNET_DEFAULT_MTU
 
 #define TVNET_NAPI_WEIGHT	64
 
@@ -710,6 +714,30 @@ static int tvnet_close(struct net_device *ndev)
 	return 0;
 }
 
+static int tvnet_ep_change_mtu(struct net_device *ndev, int new_mtu)
+{
+	bool set_down = false;
+
+	if (new_mtu > TVNET_MAX_MTU || new_mtu < TVNET_MIN_MTU) {
+		pr_err("MTU range is %d to %d\n", TVNET_MIN_MTU, TVNET_MAX_MTU);
+		return -EINVAL;
+	}
+
+	if (netif_running(ndev)) {
+		set_down = true;
+		tvnet_close(ndev);
+	}
+
+	pr_info("changing MTU from %d to %d\n", ndev->mtu, new_mtu);
+
+	ndev->mtu = new_mtu;
+
+	if (set_down)
+		tvnet_open(ndev);
+
+	return 0;
+}
+
 static netdev_tx_t tvnet_start_xmit(struct sk_buff *skb,
 				    struct net_device *ndev)
 {
@@ -880,6 +908,7 @@ static const struct net_device_ops tvnet_netdev_ops = {
 	.ndo_open = tvnet_open,
 	.ndo_stop = tvnet_close,
 	.ndo_start_xmit = tvnet_start_xmit,
+	.ndo_change_mtu = tvnet_ep_change_mtu,
 };
 
 static void process_ctrl_msg(struct pci_epf_tvnet *tvnet)
@@ -1580,6 +1609,9 @@ static int pci_epf_tvnet_bind(struct pci_epf *epf)
 	SET_NETDEV_DEV(ndev, fdev);
 	ndev->netdev_ops = &tvnet_netdev_ops;
 	netif_napi_add(ndev, &tvnet->napi, tvnet_poll, TVNET_NAPI_WEIGHT);
+
+	ndev->mtu = TVNET_DEFAULT_MTU;
+
 	ret = register_netdev(ndev);
 	if (ret < 0) {
 		dev_err(fdev, "register_netdev() failed: %d\n", ret);

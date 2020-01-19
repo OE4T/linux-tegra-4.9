@@ -1,7 +1,7 @@
 /*
  * pwm_fan.c fan driver that is controlled by pwm
  *
- * Copyright (c) 2013-2019, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013-2020, NVIDIA CORPORATION.  All rights reserved.
  *
  * Author: Anshul Jain <anshulj@nvidia.com>
  *
@@ -44,6 +44,8 @@
 #include <linux/atomic.h>
 #include <linux/sched.h>
 #include <linux/version.h>
+#include <linux/hwmon.h>
+#include <linux/hwmon-sysfs.h>
 
 #include "thermal_core.h"
 
@@ -884,7 +886,7 @@ static DEVICE_ATTR(fan_kickstart, S_IWUSR | S_IRUGO,
 			fan_kickstart_show,
 			fan_kickstart_store);
 
-static struct attribute *pwm_fan_attributes[] = {
+static struct attribute *pwm_fan_attrs[] = {
 	&dev_attr_fan_profile.attr,
 	&dev_attr_pwm_cap.attr,
 	&dev_attr_state_cap.attr,
@@ -901,9 +903,7 @@ static struct attribute *pwm_fan_attributes[] = {
 	NULL
 };
 
-static const struct attribute_group pwm_fan_group = {
-	.attrs = pwm_fan_attributes,
-};
+ATTRIBUTE_GROUPS(pwm_fan);
 
 static int add_sysfs_entry(struct device *dev)
 {
@@ -948,7 +948,6 @@ irqreturn_t fan_tach_isr(int irq, void *data)
 
 	return IRQ_HANDLED;
 }
-
 static int pwm_fan_probe(struct platform_device *pdev)
 {
 	int i;
@@ -970,6 +969,7 @@ static int pwm_fan_probe(struct platform_device *pdev)
 	int tach_gpio;
 	int fan_startup_time = 0;
 	int fan_startup_pwm = 0;
+	struct device *hwmon;
 
 	if (!pdev)
 		return -EINVAL;
@@ -1353,9 +1353,17 @@ static int pwm_fan_probe(struct platform_device *pdev)
 			fan_data->fan_rrd[i],
 			fan_data->fan_state_cap_lookup[i]);
 	}
-
+	hwmon = devm_hwmon_device_register_with_groups(&pdev->dev, "tegra_pwmfan", fan_data, pwm_fan_groups);
+        if (IS_ERR(hwmon)) {
+                dev_err(&pdev->dev, "Failed to register hwmon device\n");
+                pwm_disable(fan_data->pwm_dev);
+                err = PTR_ERR(hwmon);
+		goto hwmon_fail;
+        }
 	return err;
 
+hwmon_fail:
+	remove_sysfs_entry(&pdev->dev);
 sysfs_fail:
 	destroy_workqueue(fan_data->tach_workqueue);
 tach_workqueue_alloc_fail:

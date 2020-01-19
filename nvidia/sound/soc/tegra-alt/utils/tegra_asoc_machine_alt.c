@@ -3932,7 +3932,7 @@ EXPORT_SYMBOL_GPL(release_asoc_phandles);
 
 int tegra_asoc_populate_dai_links(struct platform_device *pdev)
 {
-	struct device_node *np = pdev->dev.of_node, *subnp;
+	struct device_node *np = pdev->dev.of_node, *subnp = NULL;
 	struct snd_soc_card *card = platform_get_drvdata(pdev);
 	struct tegra_machine *machine = snd_soc_card_get_drvdata(card);
 	struct snd_soc_dai_link *dai_links, *ahub_links;

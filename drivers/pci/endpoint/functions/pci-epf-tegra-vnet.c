@@ -349,7 +349,7 @@ static inline u32 tvnet_ivc_get_rd_cnt(struct tvnet_counter *counter)
 	return READ_ONCE(*counter->rd);
 }
 
-static void tvnet_read_ctrl_msg(struct pci_epf_tvnet *tvnet,
+static void tvnet_ep_read_ctrl_msg(struct pci_epf_tvnet *tvnet,
 				struct ctrl_msg *msg)
 {
 	struct host_ring_buf *host_ring_buf = &tvnet->host_ring_buf;
@@ -367,7 +367,7 @@ static void tvnet_read_ctrl_msg(struct pci_epf_tvnet *tvnet,
 }
 
 /* TODO Handle error case */
-static int tvnet_write_ctrl_msg(struct pci_epf_tvnet *tvnet,
+static int tvnet_ep_write_ctrl_msg(struct pci_epf_tvnet *tvnet,
 				struct ctrl_msg *msg)
 {
 	struct ep_ring_buf *ep_ring_buf = &tvnet->ep_ring_buf;
@@ -408,7 +408,7 @@ static dma_addr_t tvnet_ivoa_alloc(struct pci_epf_tvnet *tvnet)
 	return iova;
 }
 
-static void tvnet_iova_dealloc(struct pci_epf_tvnet *tvnet, dma_addr_t iova)
+static void tvnet_ep_iova_dealloc(struct pci_epf_tvnet *tvnet, dma_addr_t iova)
 {
 	int pageno;
 
@@ -417,7 +417,7 @@ static void tvnet_iova_dealloc(struct pci_epf_tvnet *tvnet, dma_addr_t iova)
 }
 #endif
 
-static void tvnet_alloc_empty_buffers(struct pci_epf_tvnet *tvnet)
+static void tvnet_ep_alloc_empty_buffers(struct pci_epf_tvnet *tvnet)
 {
 	struct ep_ring_buf *ep_ring_buf = &tvnet->ep_ring_buf;
 	struct pci_epc *epc = tvnet->epf->epc;
@@ -469,7 +469,7 @@ static void tvnet_alloc_empty_buffers(struct pci_epf_tvnet *tvnet)
 		if (!page) {
 			dev_err(tvnet->fdev, "%s: alloc_pages() failed\n",
 				__func__);
-			tvnet_iova_dealloc(tvnet, iova);
+			tvnet_ep_iova_dealloc(tvnet, iova);
 			break;
 		}
 
@@ -479,7 +479,7 @@ static void tvnet_alloc_empty_buffers(struct pci_epf_tvnet *tvnet)
 			dev_err(tvnet->fdev, "%s: iommu_map(RAM) failed: %d\n",
 				__func__, ret);
 			__free_pages(page, 1);
-			tvnet_iova_dealloc(tvnet, iova);
+			tvnet_ep_iova_dealloc(tvnet, iova);
 			break;
 		}
 
@@ -488,7 +488,7 @@ static void tvnet_alloc_empty_buffers(struct pci_epf_tvnet *tvnet)
 			dev_err(tvnet->fdev, "%s: vmap() failed\n", __func__);
 			iommu_unmap(domain, iova, PAGE_SIZE);
 			__free_pages(page, 1);
-			tvnet_iova_dealloc(tvnet, iova);
+			tvnet_ep_iova_dealloc(tvnet, iova);
 			break;
 		}
 #endif
@@ -502,7 +502,7 @@ static void tvnet_alloc_empty_buffers(struct pci_epf_tvnet *tvnet)
 			vunmap(virt);
 			iommu_unmap(domain, iova, PAGE_SIZE);
 			__free_pages(page, 1);
-			tvnet_iova_dealloc(tvnet, iova);
+			tvnet_ep_iova_dealloc(tvnet, iova);
 #endif
 			break;
 		}
@@ -529,7 +529,7 @@ static void tvnet_alloc_empty_buffers(struct pci_epf_tvnet *tvnet)
 	}
 }
 
-static void tvnet_free_empty_buffers(struct pci_epf_tvnet *tvnet)
+static void tvnet_ep_free_empty_buffers(struct pci_epf_tvnet *tvnet)
 {
 	struct pci_epf *epf = tvnet->epf;
 	struct pci_epc *epc = epf->epc;
@@ -552,14 +552,14 @@ static void tvnet_free_empty_buffers(struct pci_epf_tvnet *tvnet)
 		vunmap(h2ep_empty_ptr->virt);
 		iommu_unmap(domain, h2ep_empty_ptr->iova, PAGE_SIZE);
 		__free_pages(h2ep_empty_ptr->page, 1);
-		tvnet_iova_dealloc(tvnet, h2ep_empty_ptr->iova);
+		tvnet_ep_iova_dealloc(tvnet, h2ep_empty_ptr->iova);
 #endif
 		kfree(h2ep_empty_ptr);
 	}
 	spin_unlock_irqrestore(&tvnet->h2ep_empty_lock, flags);
 }
 
-static void tvnet_stop_tx_queue(struct pci_epf_tvnet *tvnet)
+static void tvnet_ep_stop_tx_queue(struct pci_epf_tvnet *tvnet)
 {
 	struct net_device *ndev = tvnet->ndev;
 
@@ -569,12 +569,12 @@ static void tvnet_stop_tx_queue(struct pci_epf_tvnet *tvnet)
 	netif_tx_unlock_bh(ndev);
 }
 
-static void tvnet_stop_rx_work(struct pci_epf_tvnet *tvnet)
+static void tvnet_ep_stop_rx_work(struct pci_epf_tvnet *tvnet)
 {
 	/* TODO wait for syncpoint interrupt handlers */
 }
 
-static void tvnet_clear_data_msg_counters(struct pci_epf_tvnet *tvnet)
+static void tvnet_ep_clear_data_msg_counters(struct pci_epf_tvnet *tvnet)
 {
 	struct host_ring_buf *host_ring_buf = &tvnet->host_ring_buf;
 	struct host_own_cnt *host_cnt = host_ring_buf->host_cnt;
@@ -587,7 +587,7 @@ static void tvnet_clear_data_msg_counters(struct pci_epf_tvnet *tvnet)
 	host_cnt->ep2h_full_rd_cnt = 0;
 }
 
-static void tvnet_update_link_state(struct net_device *ndev,
+static void tvnet_ep_update_link_state(struct net_device *ndev,
 				    enum os_link_state state)
 {
 	if (state == OS_LINK_STATE_UP) {
@@ -602,7 +602,7 @@ static void tvnet_update_link_state(struct net_device *ndev,
 }
 
 /* OS link state machine */
-static void tvnet_update_link_sm(struct pci_epf_tvnet *tvnet)
+static void tvnet_ep_update_link_sm(struct pci_epf_tvnet *tvnet)
 {
 	struct net_device *ndev = tvnet->ndev;
 	enum os_link_state old_state = tvnet->os_link_state;
@@ -614,61 +614,61 @@ static void tvnet_update_link_sm(struct pci_epf_tvnet *tvnet)
 		tvnet->os_link_state = OS_LINK_STATE_DOWN;
 
 	if (tvnet->os_link_state != old_state)
-		tvnet_update_link_state(ndev, tvnet->os_link_state);
+		tvnet_ep_update_link_state(ndev, tvnet->os_link_state);
 }
 
 /* One way link state machine */
-static void tvnet_user_link_up_req(struct pci_epf_tvnet *tvnet)
+static void tvnet_ep_user_link_up_req(struct pci_epf_tvnet *tvnet)
 {
 	struct ctrl_msg msg;
 
-	tvnet_clear_data_msg_counters(tvnet);
-	tvnet_alloc_empty_buffers(tvnet);
+	tvnet_ep_clear_data_msg_counters(tvnet);
+	tvnet_ep_alloc_empty_buffers(tvnet);
 	msg.msg_id = CTRL_MSG_LINK_UP;
-	tvnet_write_ctrl_msg(tvnet, &msg);
+	tvnet_ep_write_ctrl_msg(tvnet, &msg);
 	tvnet->rx_link_state = DIR_LINK_STATE_UP;
-	tvnet_update_link_sm(tvnet);
+	tvnet_ep_update_link_sm(tvnet);
 }
 
-static void tvnet_user_link_down_req(struct pci_epf_tvnet *tvnet)
+static void tvnet_ep_user_link_down_req(struct pci_epf_tvnet *tvnet)
 {
 	struct ctrl_msg msg;
 
 	tvnet->rx_link_state = DIR_LINK_STATE_SENT_DOWN;
 	msg.msg_id = CTRL_MSG_LINK_DOWN;
-	tvnet_write_ctrl_msg(tvnet, &msg);
-	tvnet_update_link_sm(tvnet);
+	tvnet_ep_write_ctrl_msg(tvnet, &msg);
+	tvnet_ep_update_link_sm(tvnet);
 }
 
-static void tvnet_rcv_link_up_msg(struct pci_epf_tvnet *tvnet)
+static void tvnet_ep_rcv_link_up_msg(struct pci_epf_tvnet *tvnet)
 {
 	tvnet->tx_link_state = DIR_LINK_STATE_UP;
-	tvnet_update_link_sm(tvnet);
+	tvnet_ep_update_link_sm(tvnet);
 }
 
-static void tvnet_rcv_link_down_msg(struct pci_epf_tvnet *tvnet)
+static void tvnet_ep_rcv_link_down_msg(struct pci_epf_tvnet *tvnet)
 {
 	struct ctrl_msg msg;
 
 	/* Stop using empty buffers of remote system */
-	tvnet_stop_tx_queue(tvnet);
+	tvnet_ep_stop_tx_queue(tvnet);
 	msg.msg_id = CTRL_MSG_LINK_DOWN_ACK;
-	tvnet_write_ctrl_msg(tvnet, &msg);
+	tvnet_ep_write_ctrl_msg(tvnet, &msg);
 	tvnet->tx_link_state = DIR_LINK_STATE_DOWN;
-	tvnet_update_link_sm(tvnet);
+	tvnet_ep_update_link_sm(tvnet);
 }
 
-static void tvnet_rcv_link_down_ack(struct pci_epf_tvnet *tvnet)
+static void tvnet_ep_rcv_link_down_ack(struct pci_epf_tvnet *tvnet)
 {
 	/* Stop using empty buffers(which are full in rx) of local system */
-	tvnet_stop_rx_work(tvnet);
-	tvnet_free_empty_buffers(tvnet);
+	tvnet_ep_stop_rx_work(tvnet);
+	tvnet_ep_free_empty_buffers(tvnet);
 	tvnet->rx_link_state = DIR_LINK_STATE_DOWN;
 	wake_up_interruptible(&tvnet->link_state_wq);
-	tvnet_update_link_sm(tvnet);
+	tvnet_ep_update_link_sm(tvnet);
 }
 
-static int tvnet_open(struct net_device *ndev)
+static int tvnet_ep_open(struct net_device *ndev)
 {
 	struct device *fdev = ndev->dev.parent;
 	struct pci_epf_tvnet *tvnet = dev_get_drvdata(fdev);
@@ -680,14 +680,14 @@ static int tvnet_open(struct net_device *ndev)
 
 	mutex_lock(&tvnet->link_state_lock);
 	if (tvnet->rx_link_state == DIR_LINK_STATE_DOWN)
-		tvnet_user_link_up_req(tvnet);
+		tvnet_ep_user_link_up_req(tvnet);
 	napi_enable(&tvnet->napi);
 	mutex_unlock(&tvnet->link_state_lock);
 
 	return 0;
 }
 
-static int tvnet_close(struct net_device *ndev)
+static int tvnet_ep_close(struct net_device *ndev)
 {
 	struct device *fdev = ndev->dev.parent;
 	struct pci_epf_tvnet *tvnet = dev_get_drvdata(fdev);
@@ -696,7 +696,7 @@ static int tvnet_close(struct net_device *ndev)
 	mutex_lock(&tvnet->link_state_lock);
 	napi_disable(&tvnet->napi);
 	if (tvnet->rx_link_state == DIR_LINK_STATE_UP)
-		tvnet_user_link_down_req(tvnet);
+		tvnet_ep_user_link_down_req(tvnet);
 
 	ret = wait_event_interruptible_timeout(tvnet->link_state_wq,
 					       (tvnet->rx_link_state ==
@@ -725,7 +725,7 @@ static int tvnet_ep_change_mtu(struct net_device *ndev, int new_mtu)
 
 	if (netif_running(ndev)) {
 		set_down = true;
-		tvnet_close(ndev);
+		tvnet_ep_close(ndev);
 	}
 
 	pr_info("changing MTU from %d to %d\n", ndev->mtu, new_mtu);
@@ -733,12 +733,12 @@ static int tvnet_ep_change_mtu(struct net_device *ndev, int new_mtu)
 	ndev->mtu = new_mtu;
 
 	if (set_down)
-		tvnet_open(ndev);
+		tvnet_ep_open(ndev);
 
 	return 0;
 }
 
-static netdev_tx_t tvnet_start_xmit(struct sk_buff *skb,
+static netdev_tx_t tvnet_ep_start_xmit(struct sk_buff *skb,
 				    struct net_device *ndev)
 {
 	struct device *fdev = ndev->dev.parent;
@@ -905,28 +905,28 @@ static netdev_tx_t tvnet_start_xmit(struct sk_buff *skb,
 }
 
 static const struct net_device_ops tvnet_netdev_ops = {
-	.ndo_open = tvnet_open,
-	.ndo_stop = tvnet_close,
-	.ndo_start_xmit = tvnet_start_xmit,
+	.ndo_open = tvnet_ep_open,
+	.ndo_stop = tvnet_ep_close,
+	.ndo_start_xmit = tvnet_ep_start_xmit,
 	.ndo_change_mtu = tvnet_ep_change_mtu,
 };
 
-static void process_ctrl_msg(struct pci_epf_tvnet *tvnet)
+static void tvnet_ep_process_ctrl_msg(struct pci_epf_tvnet *tvnet)
 {
 	struct ctrl_msg msg;
 
 	while (tvnet_ivc_rd_available(&tvnet->h2ep_ctrl)) {
-		tvnet_read_ctrl_msg(tvnet, &msg);
+		tvnet_ep_read_ctrl_msg(tvnet, &msg);
 		if (msg.msg_id == CTRL_MSG_LINK_UP)
-			tvnet_rcv_link_up_msg(tvnet);
+			tvnet_ep_rcv_link_up_msg(tvnet);
 		else if (msg.msg_id == CTRL_MSG_LINK_DOWN)
-			tvnet_rcv_link_down_msg(tvnet);
+			tvnet_ep_rcv_link_down_msg(tvnet);
 		else if (msg.msg_id == CTRL_MSG_LINK_DOWN_ACK)
-			tvnet_rcv_link_down_ack(tvnet);
+			tvnet_ep_rcv_link_down_ack(tvnet);
 	}
 }
 
-static int process_h2ep_msg(struct pci_epf_tvnet *tvnet)
+static int tvnet_ep_process_h2ep_msg(struct pci_epf_tvnet *tvnet)
 {
 	struct host_ring_buf *host_ring_buf = &tvnet->host_ring_buf;
 	struct data_msg *data_msg = host_ring_buf->h2ep_full_msgs;
@@ -968,6 +968,7 @@ static int process_h2ep_msg(struct pci_epf_tvnet *tvnet)
 
 		/* Advance H2EP full buffer after search in local list */
 		tvnet_ivc_advance_rd(&tvnet->h2ep_full);
+
 		/*
 		 * If H2EP network queue is stopped due to lack of H2EP_FULL
 		 * queue, raising ctrl irq will help.
@@ -993,7 +994,7 @@ static int process_h2ep_msg(struct pci_epf_tvnet *tvnet)
 		vunmap(h2ep_empty_ptr->virt);
 		iommu_unmap(domain, h2ep_empty_ptr->iova, PAGE_SIZE);
 		__free_pages(h2ep_empty_ptr->page, 1);
-		tvnet_iova_dealloc(tvnet, h2ep_empty_ptr->iova);
+		tvnet_ep_iova_dealloc(tvnet, h2ep_empty_ptr->iova);
 #endif
 
 		kfree(h2ep_empty_ptr);
@@ -1004,7 +1005,7 @@ static int process_h2ep_msg(struct pci_epf_tvnet *tvnet)
 }
 
 #if ENABLE_DMA
-static void tvnet_setup_ep_dma(struct pci_epf_tvnet *tvnet)
+static void tvnet_ep_setup_dma(struct pci_epf_tvnet *tvnet)
 {
 	dma_addr_t iova = tvnet->bar0_amap[HOST_DMA].iova;
 	u32 val;
@@ -1069,7 +1070,7 @@ static void tvnet_setup_ep_dma(struct pci_epf_tvnet *tvnet)
 }
 #endif
 
-static void ctrl_irqsp_reprime_work(struct work_struct *work)
+static void tvnet_ep_ctrl_irqsp_reprime_work(struct work_struct *work)
 {
 	struct irqsp_data *data_irqsp =
 		container_of(work, struct irqsp_data, reprime_work);
@@ -1077,7 +1078,7 @@ static void ctrl_irqsp_reprime_work(struct work_struct *work)
 	nvhost_interrupt_syncpt_prime(data_irqsp->is);
 }
 
-static void ctrl_irqsp_callback(void *private_data)
+static void tvnet_ep_ctrl_irqsp_callback(void *private_data)
 {
 	struct irqsp_data *data_irqsp = private_data;
 	struct pci_epf_tvnet *tvnet = dev_get_drvdata(data_irqsp->dev);
@@ -1092,16 +1093,15 @@ static void ctrl_irqsp_callback(void *private_data)
 	}
 
 	if (tvnet_ivc_rd_available(&tvnet->h2ep_ctrl))
-		process_ctrl_msg(tvnet);
+		tvnet_ep_process_ctrl_msg(tvnet);
 
 	if (!tvnet_ivc_full(&tvnet->h2ep_empty) &&
 	    (tvnet->os_link_state == OS_LINK_STATE_UP))
-		tvnet_alloc_empty_buffers(tvnet);
-
+		tvnet_ep_alloc_empty_buffers(tvnet);
 	schedule_work(&data_irqsp->reprime_work);
 }
 
-static void data_irqsp_reprime_work(struct work_struct *work)
+static void tvnet_ep_data_irqsp_reprime_work(struct work_struct *work)
 {
 	struct irqsp_data *data_irqsp =
 		container_of(work, struct irqsp_data, reprime_work);
@@ -1109,7 +1109,7 @@ static void data_irqsp_reprime_work(struct work_struct *work)
 	nvhost_interrupt_syncpt_prime(data_irqsp->is);
 }
 
-static void data_irqsp_callback(void *private_data)
+static void tvnet_ep_data_irqsp_callback(void *private_data)
 {
 	struct irqsp_data *data_irqsp = private_data;
 	struct pci_epf_tvnet *tvnet = dev_get_drvdata(data_irqsp->dev);
@@ -1120,15 +1120,14 @@ static void data_irqsp_callback(void *private_data)
 		schedule_work(&data_irqsp->reprime_work);
 }
 
-static int tvnet_poll(struct napi_struct *napi, int budget)
+static int tvnet_ep_poll(struct napi_struct *napi, int budget)
 {
 	struct pci_epf_tvnet *tvnet = container_of(napi, struct pci_epf_tvnet,
 						   napi);
 	struct irqsp_data *data_irqsp = tvnet->data_irqsp;
 	int work_done;
 
-	work_done = process_h2ep_msg(tvnet);
-	trace_printk("work_done: %d budget: %d\n", work_done, budget);
+	work_done = tvnet_ep_process_h2ep_msg(tvnet);
 	if (work_done < budget) {
 		napi_complete(napi);
 		schedule_work(&data_irqsp->reprime_work);
@@ -1137,7 +1136,7 @@ static int tvnet_poll(struct napi_struct *napi, int budget)
 	return work_done;
 }
 
-static int pci_epf_setup_irqsp(struct pci_epf_tvnet *tvnet)
+static int tvnet_ep_pci_epf_setup_irqsp(struct pci_epf_tvnet *tvnet)
 {
 	struct bar0_amap *amap = &tvnet->bar0_amap[SIMPLE_IRQ];
 	struct irqsp_data *ctrl_irqsp, *data_irqsp;
@@ -1156,9 +1155,10 @@ static int pci_epf_setup_irqsp(struct pci_epf_tvnet *tvnet)
 		goto fail;
 	}
 
-	ctrl_irqsp->is = nvhost_interrupt_syncpt_get(cdev->of_node,
-						     ctrl_irqsp_callback,
-						     ctrl_irqsp);
+	ctrl_irqsp->is =
+		nvhost_interrupt_syncpt_get(cdev->of_node,
+					    tvnet_ep_ctrl_irqsp_callback,
+					    ctrl_irqsp);
 	if (IS_ERR(ctrl_irqsp->is)) {
 		ret = PTR_ERR(ctrl_irqsp->is);
 		dev_err(fdev, "failed to get ctrl syncpt irq: %d\n", ret);
@@ -1166,7 +1166,7 @@ static int pci_epf_setup_irqsp(struct pci_epf_tvnet *tvnet)
 	}
 
 	ctrl_irqsp->dev = fdev;
-	INIT_WORK(&ctrl_irqsp->reprime_work, ctrl_irqsp_reprime_work);
+	INIT_WORK(&ctrl_irqsp->reprime_work, tvnet_ep_ctrl_irqsp_reprime_work);
 	tvnet->ctrl_irqsp = ctrl_irqsp;
 
 	data_irqsp = devm_kzalloc(fdev, sizeof(*data_irqsp), GFP_KERNEL);
@@ -1175,9 +1175,10 @@ static int pci_epf_setup_irqsp(struct pci_epf_tvnet *tvnet)
 		goto free_ctrl_sp;
 	}
 
-	data_irqsp->is = nvhost_interrupt_syncpt_get(cdev->of_node,
-						     data_irqsp_callback,
-						     data_irqsp);
+	data_irqsp->is =
+		nvhost_interrupt_syncpt_get(cdev->of_node,
+					    tvnet_ep_data_irqsp_callback,
+					    data_irqsp);
 	if (IS_ERR(data_irqsp->is)) {
 		ret = PTR_ERR(data_irqsp->is);
 		dev_err(fdev, "failed to get data syncpt irq: %d\n", ret);
@@ -1185,7 +1186,7 @@ static int pci_epf_setup_irqsp(struct pci_epf_tvnet *tvnet)
 	}
 
 	data_irqsp->dev = fdev;
-	INIT_WORK(&data_irqsp->reprime_work, data_irqsp_reprime_work);
+	INIT_WORK(&data_irqsp->reprime_work, tvnet_ep_data_irqsp_reprime_work);
 	tvnet->data_irqsp = data_irqsp;
 
 	syncpt_addr = nvhost_interrupt_syncpt_get_syncpt_addr(ctrl_irqsp->is);
@@ -1224,7 +1225,7 @@ fail:
 	return ret;
 }
 
-static void pci_epf_destroy_irqsp(struct pci_epf_tvnet *tvnet)
+static void tvnet_ep_pci_epf_destroy_irqsp(struct pci_epf_tvnet *tvnet)
 {
 	struct pci_epf *epf = tvnet->epf;
 	struct pci_epc *epc = epf->epc;
@@ -1238,7 +1239,7 @@ static void pci_epf_destroy_irqsp(struct pci_epf_tvnet *tvnet)
 	nvhost_interrupt_syncpt_free(tvnet->ctrl_irqsp->is);
 }
 
-static int alloc_single_page_bar0_mem(struct pci_epf *epf,
+static int tvnet_ep_alloc_single_page_bar0_mem(struct pci_epf *epf,
 				      enum bar0_amap_type type)
 {
 	struct pci_epf_tvnet *tvnet = epf_get_drvdata(epf);
@@ -1282,7 +1283,7 @@ fail:
 	return ret;
 }
 
-static void free_single_page_bar0_mem(struct pci_epf *epf,
+static void tvnet_ep_free_single_page_bar0_mem(struct pci_epf *epf,
 				      enum bar0_amap_type type)
 {
 	struct pci_epf_tvnet *tvnet = epf_get_drvdata(epf);
@@ -1296,7 +1297,7 @@ static void free_single_page_bar0_mem(struct pci_epf *epf,
 	__free_pages(amap->page, 1);
 }
 
-static int alloc_multi_page_bar0_mem(struct pci_epf *epf,
+static int tvnet_ep_alloc_multi_page_bar0_mem(struct pci_epf *epf,
 				     enum bar0_amap_type type)
 {
 	struct pci_epf_tvnet *tvnet = epf_get_drvdata(epf);
@@ -1358,7 +1359,7 @@ fail:
 	return ret;
 }
 
-static void free_multi_page_bar0_mem(struct pci_epf *epf,
+static void tvnet_ep_free_multi_page_bar0_mem(struct pci_epf *epf,
 				     enum bar0_amap_type type)
 {
 	struct pci_epf_tvnet *tvnet = epf_get_drvdata(epf);
@@ -1372,7 +1373,7 @@ static void free_multi_page_bar0_mem(struct pci_epf *epf,
 	vfree(amap->virt);
 }
 
-static int pci_epf_tvnet_bind(struct pci_epf *epf)
+static int tvnet_ep_pci_epf_bind(struct pci_epf *epf)
 {
 	struct pci_epf_tvnet *tvnet = epf_get_drvdata(epf);
 	struct pci_epc *epc = epf->epc;
@@ -1430,7 +1431,7 @@ static int pci_epf_tvnet_bind(struct pci_epf *epf)
 	/* BAR0 metadata memory allocation */
 	tvnet->bar0_amap[META_DATA].iova = tvnet->bar0_iova;
 	tvnet->bar0_amap[META_DATA].size = PAGE_SIZE;
-	ret = alloc_single_page_bar0_mem(epf, META_DATA);
+	ret = tvnet_ep_alloc_single_page_bar0_mem(epf, META_DATA);
 	if (ret < 0) {
 		dev_err(fdev, "BAR0 metadata alloc failed: %d\n", ret);
 		goto free_iova;
@@ -1444,7 +1445,7 @@ static int pci_epf_tvnet_bind(struct pci_epf *epf)
 	amap->iova = tvnet->bar0_amap[META_DATA].iova +
 		tvnet->bar0_amap[META_DATA].size;
 	amap->size = 2 * PAGE_SIZE;
-	ret = pci_epf_setup_irqsp(tvnet);
+	ret = tvnet_ep_pci_epf_setup_irqsp(tvnet);
 	if (ret < 0) {
 		dev_err(fdev, "irqsp setup failed: %d\n", ret);
 		goto free_bar0_md;
@@ -1457,7 +1458,7 @@ static int pci_epf_tvnet_bind(struct pci_epf *epf)
 	size = sizeof(struct ep_own_cnt) + (RING_COUNT *
 		(sizeof(struct ctrl_msg) + 2 * sizeof(struct data_msg)));
 	amap->size = PAGE_ALIGN(size);
-	ret = alloc_multi_page_bar0_mem(epf, EP_MEM);
+	ret = tvnet_ep_alloc_multi_page_bar0_mem(epf, EP_MEM);
 	if (ret < 0) {
 		dev_err(fdev, "BAR0 EP mem alloc failed: %d\n", ret);
 		goto free_irqsp;
@@ -1480,7 +1481,7 @@ static int pci_epf_tvnet_bind(struct pci_epf *epf)
 	size = (sizeof(struct host_own_cnt)) + (RING_COUNT *
 		(sizeof(struct ctrl_msg) + 2 * sizeof(struct data_msg)));
 	amap->size = PAGE_ALIGN(size);
-	ret = alloc_multi_page_bar0_mem(epf, HOST_MEM);
+	ret = tvnet_ep_alloc_multi_page_bar0_mem(epf, HOST_MEM);
 	if (ret < 0) {
 		dev_err(fdev, "BAR0 host mem alloc failed: %d\n", ret);
 		goto free_ep_mem;
@@ -1505,7 +1506,7 @@ static int pci_epf_tvnet_bind(struct pci_epf *epf)
 					tvnet->bar0_amap[HOST_MEM].size;
 	size = ((DMA_DESC_COUNT + 1) * sizeof(struct tvnet_dma_desc));
 	amap->size = PAGE_ALIGN(size);
-	ret = alloc_multi_page_bar0_mem(epf, HOST_DMA);
+	ret = tvnet_ep_alloc_multi_page_bar0_mem(epf, HOST_DMA);
 	if (ret < 0) {
 		dev_err(fdev, "BAR0 host dma mem alloc failed: %d\n", ret);
 		goto free_host_mem;
@@ -1608,7 +1609,7 @@ static int pci_epf_tvnet_bind(struct pci_epf *epf)
 	tvnet->ndev = ndev;
 	SET_NETDEV_DEV(ndev, fdev);
 	ndev->netdev_ops = &tvnet_netdev_ops;
-	netif_napi_add(ndev, &tvnet->napi, tvnet_poll, TVNET_NAPI_WEIGHT);
+	netif_napi_add(ndev, &tvnet->napi, tvnet_ep_poll, TVNET_NAPI_WEIGHT);
 
 	ndev->mtu = TVNET_DEFAULT_MTU;
 
@@ -1678,22 +1679,22 @@ free_pci_mem:
 	pci_epc_mem_free_addr(epc, tvnet->tx_dst_pci_addr, tvnet->tx_dst_va,
 			      SZ_64K);
 free_host_dma:
-	free_multi_page_bar0_mem(epf, HOST_DMA);
+	tvnet_ep_free_multi_page_bar0_mem(epf, HOST_DMA);
 free_host_mem:
-	free_multi_page_bar0_mem(epf, HOST_MEM);
+	tvnet_ep_free_multi_page_bar0_mem(epf, HOST_MEM);
 free_ep_mem:
-	free_multi_page_bar0_mem(epf, EP_MEM);
+	tvnet_ep_free_multi_page_bar0_mem(epf, EP_MEM);
 free_irqsp:
-	pci_epf_destroy_irqsp(tvnet);
+	tvnet_ep_pci_epf_destroy_irqsp(tvnet);
 free_bar0_md:
-	free_single_page_bar0_mem(epf, META_DATA);
+	tvnet_ep_free_single_page_bar0_mem(epf, META_DATA);
 free_iova:
 	iommu_dma_free_iova(cdev, tvnet->bar0_iova, BAR0_SIZE);
 fail:
 	return ret;
 }
 
-static void pci_epf_tvnet_unbind(struct pci_epf *epf)
+static void tvnet_ep_pci_epf_unbind(struct pci_epf *epf)
 {
 	struct pci_epf_tvnet *tvnet = epf_get_drvdata(epf);
 	struct pci_epc *epc = epf->epc;
@@ -1711,30 +1712,30 @@ static void pci_epf_tvnet_unbind(struct pci_epf *epf)
 	free_netdev(tvnet->ndev);
 	pci_epc_mem_free_addr(epc, tvnet->tx_dst_pci_addr, tvnet->tx_dst_va,
 			      SZ_64K);
-	free_multi_page_bar0_mem(epf, HOST_DMA);
-	free_multi_page_bar0_mem(epf, HOST_MEM);
-	free_multi_page_bar0_mem(epf, EP_MEM);
-	pci_epf_destroy_irqsp(tvnet);
-	free_single_page_bar0_mem(epf, META_DATA);
+	tvnet_ep_free_multi_page_bar0_mem(epf, HOST_DMA);
+	tvnet_ep_free_multi_page_bar0_mem(epf, HOST_MEM);
+	tvnet_ep_free_multi_page_bar0_mem(epf, EP_MEM);
+	tvnet_ep_pci_epf_destroy_irqsp(tvnet);
+	tvnet_ep_free_single_page_bar0_mem(epf, META_DATA);
 	iommu_dma_free_iova(cdev, tvnet->bar0_iova, BAR0_SIZE);
 }
 
-static void pci_epf_tvnet_linkup(struct pci_epf *epf)
+static void tvnet_ep_pci_epf_linkup(struct pci_epf *epf)
 {
 	struct pci_epf_tvnet *tvnet = epf_get_drvdata(epf);
 
 #if ENABLE_DMA
-	tvnet_setup_ep_dma(tvnet);
+	tvnet_ep_setup_dma(tvnet);
 #endif
 	tvnet->pcie_link_status = true;
 }
 
-static const struct pci_epf_device_id pci_epf_tvnet_ids[] = {
+static const struct pci_epf_device_id tvnet_ep_epf_tvnet_ids[] = {
 	{ .name = "pci_epf_tvnet", },
 	{ },
 };
 
-static int pci_epf_tvnet_probe(struct pci_epf *epf)
+int tvnet_ep_epf_tvnet_probe(struct pci_epf *epf)
 {
 	struct device *fdev = &epf->dev;
 	struct pci_epf_tvnet *tvnet;
@@ -1760,21 +1761,21 @@ static int pci_epf_tvnet_probe(struct pci_epf *epf)
 	return 0;
 }
 
-static struct pci_epf_ops tvnet_ops = {
-	.bind		= pci_epf_tvnet_bind,
-	.unbind		= pci_epf_tvnet_unbind,
-	.linkup		= pci_epf_tvnet_linkup,
+static struct pci_epf_ops tvnet_ep_ops = {
+	.bind		= tvnet_ep_pci_epf_bind,
+	.unbind		= tvnet_ep_pci_epf_unbind,
+	.linkup		= tvnet_ep_pci_epf_linkup,
 };
 
 static struct pci_epf_driver tvnet_driver = {
 	.driver.name	= "pci_epf_tvnet",
-	.probe		= pci_epf_tvnet_probe,
-	.id_table	= pci_epf_tvnet_ids,
-	.ops		= &tvnet_ops,
+	.probe		= tvnet_ep_epf_tvnet_probe,
+	.id_table	= tvnet_ep_epf_tvnet_ids,
+	.ops		= &tvnet_ep_ops,
 	.owner		= THIS_MODULE,
 };
 
-static int __init pci_epf_tvnet_init(void)
+static int __init tvnet_ep_pci_epf_init(void)
 {
 	int ret;
 
@@ -1786,13 +1787,13 @@ static int __init pci_epf_tvnet_init(void)
 
 	return 0;
 }
-module_init(pci_epf_tvnet_init);
+module_init(tvnet_ep_pci_epf_init);
 
-static void __exit pci_epf_tvnet_exit(void)
+static void __exit tvnet_ep_pci_epf_exit(void)
 {
 	pci_epf_unregister_driver(&tvnet_driver);
 }
-module_exit(pci_epf_tvnet_exit);
+module_exit(tvnet_ep_pci_epf_exit);
 
 MODULE_DESCRIPTION("PCI EPF TEGRA VIRTUAL NETWORK DRIVER");
 MODULE_AUTHOR("Manikanta Maddireddy <mmaddireddy@nvidia.com>");

@@ -758,7 +758,7 @@
 		 */
 		modules {
 			cam_module0: module0 {
-				badge = "porg_front_RBPCV2";
+				badge = "jakku_front_RBP194";
 				position = "front";
 				orientation = "1";
 				cam_module0_drivernode0: drivernode0 {
@@ -772,7 +772,7 @@
 				};
 			};
 			cam_module1: module1 {
-				badge = "porg_rear_RBPCV2";
+				badge = "jakku_rear_RBP194";
 				position = "rear";
 				orientation = "1";
 				cam_module1_drivernode0: drivernode0 {

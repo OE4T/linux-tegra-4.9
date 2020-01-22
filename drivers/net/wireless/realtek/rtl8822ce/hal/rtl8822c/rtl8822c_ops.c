@@ -330,9 +330,9 @@ static void Hal_EfuseParseBTCoexistInfo(PADAPTER adapter, u8 *map, u8 mapvalid)
 		 hal->EEPROMBluetoothAntNum == Ant_x2 ? 2 : 1);
 }
 
-static void Hal_EfuseParseChnlPlan(PADAPTER adapter, u8 *map, u8 autoloadfail)
+static int Hal_EfuseParseChnlPlan(PADAPTER adapter, u8 *map, u8 autoloadfail)
 {
-	hal_com_config_channel_plan(
+	return hal_com_config_channel_plan(
 		adapter,
 		map ? &map[EEPROM_COUNTRY_CODE_8822C] : NULL,
 		map ? map[EEPROM_ChannelPlan_8822C] : 0xFF,
@@ -825,14 +825,18 @@ u8 rtl8822c_read_efuse(PADAPTER adapter)
 		goto exit;
 	Hal_EfuseParseBoardType(adapter, efuse_map, valid);
 	Hal_EfuseParseBTCoexistInfo(adapter, efuse_map, valid);
-	Hal_EfuseParseChnlPlan(adapter, efuse_map, hal->bautoload_fail_flag);
+	if (Hal_EfuseParseChnlPlan(adapter, efuse_map, hal->bautoload_fail_flag)) {
+		RTW_WARN("load channel plan file\n");
+		goto exit;
+	}
+
 #ifdef CONFIG_RTL8822C_XCAP_NEW_POLICY
 	if ((adapter->registrypriv.mp_mode == 0) && (hal->EEPROMBluetoothCoexist == _TRUE))
 		hal_efuse_parse_xtal_cap_new(adapter, h_efuse_xcap_110_111, h_efuse_xcap_b9, f_efuse_xcap_110_111, f_efuse_xcap_b9, valid);
 	else
-#else
-	Hal_EfuseParseXtal(adapter, efuse_map, valid);
 #endif
+	Hal_EfuseParseXtal(adapter, efuse_map, valid);
+
 	Hal_EfuseParseThermalMeter(adapter, efuse_map, valid);
 	Hal_EfuseParseAntennaDiversity(adapter, efuse_map, valid);
 	Hal_EfuseParseCustomerID(adapter, efuse_map, valid);

@@ -1884,7 +1884,10 @@ static int rtw_drv_init(struct pci_dev *pdev, const struct pci_device_id *pdid)
 		RTW_INFO("rtw_pci_primary_adapter_init Failed!\n");
 		goto free_dvobj;
 	}
-
+	if (padapter->power_init_fail) {
+		printk("power init fail\n");
+		goto free_if_vir;
+	}
 	/* Initialize virtual interface */
 #ifdef CONFIG_CONCURRENT_MODE
 	if (padapter->registrypriv.virtual_iface_num > (CONFIG_IFACE_NUMBER - 1))

@@ -2497,7 +2497,6 @@ static int proc_get_tx_power_by_rate(struct seq_file *m, void *v)
 	return 0;
 }
 
-#if CONFIG_TXPWR_LIMIT
 static int proc_get_tx_power_limit(struct seq_file *m, void *v)
 {
 	struct net_device *dev = m->private;
@@ -2507,7 +2506,6 @@ static int proc_get_tx_power_limit(struct seq_file *m, void *v)
 
 	return 0;
 }
-#endif /* CONFIG_TXPWR_LIMIT */
 
 static int proc_get_tx_power_ext_info(struct seq_file *m, void *v)
 {
@@ -4479,9 +4477,7 @@ const struct rtw_proc_hdl adapter_proc_hdls[] = {
 	RTW_PROC_HDL_SSEQ("hal_txpwr_info", proc_get_hal_txpwr_info, NULL),
 	RTW_PROC_HDL_SSEQ("target_tx_power", proc_get_target_tx_power, NULL),
 	RTW_PROC_HDL_SSEQ("tx_power_by_rate", proc_get_tx_power_by_rate, NULL),
-#if CONFIG_TXPWR_LIMIT
 	RTW_PROC_HDL_SSEQ("tx_power_limit", proc_get_tx_power_limit, NULL),
-#endif
 	RTW_PROC_HDL_SSEQ("tx_power_ext_info", proc_get_tx_power_ext_info, proc_set_tx_power_ext_info),
 	RTW_PROC_HDL_SEQ("tx_power_idx", &seq_ops_tx_power_idx, NULL),
 #ifdef CONFIG_RF_POWER_TRIM

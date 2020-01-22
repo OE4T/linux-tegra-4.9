@@ -354,7 +354,7 @@ u8 hal_largest_bw(_adapter *adapter, u8 in_bw);
 
 bool hal_chk_wl_func(_adapter *adapter, u8 func);
 
-void hal_com_config_channel_plan(
+int hal_com_config_channel_plan(
 		PADAPTER padapter,
 		char *hw_alpha2,
 		u8 hw_chplan,

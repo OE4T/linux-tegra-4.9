@@ -388,9 +388,7 @@ typedef struct _RT_CHANNEL_INFO {
 #define CAC_TIME_CE_MS (10*60*1000)
 #define NON_OCP_TIME_MS (30*60*1000)
 
-#if CONFIG_TXPWR_LIMIT
 void rtw_txpwr_init_regd(struct rf_ctl_t *rfctl);
-#endif
 void rtw_rfctl_init(_adapter *adapter);
 void rtw_rfctl_deinit(_adapter *adapter);
 

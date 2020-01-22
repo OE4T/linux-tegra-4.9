@@ -2274,7 +2274,6 @@ int rtw_mp_pwrlmt(struct net_device *dev,
 		return -EFAULT;
 
 	*(extra + wrqu->data.length) = '\0';
-#if CONFIG_TXPWR_LIMIT
 	pwrlimtstat = registry_par->RegEnableTxPowerLimit;
 	if (strncmp(extra, "off", 3) == 0 && strlen(extra) < 4) {
 		padapter->registrypriv.RegEnableTxPowerLimit = 0;
@@ -2285,7 +2284,6 @@ int rtw_mp_pwrlmt(struct net_device *dev,
 		sprintf(extra, "Turn on Power Limit\n");
 
 	} else
-#endif
 		sprintf(extra, "Get Power Limit Status:%s\n", (pwrlimtstat == 1) ? "ON" : "OFF");
 
 

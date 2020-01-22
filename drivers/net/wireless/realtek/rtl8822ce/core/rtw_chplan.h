@@ -129,6 +129,7 @@ enum rtw_chplan_id {
 	RTW_CHPLAN_UNSPECIFIED = 0xFF,
 };
 
+int rtw_get_channel_plan_from_file(const char *path);
 u8 rtw_chplan_get_default_regd(u8 id);
 bool rtw_chplan_is_empty(u8 id);
 #define rtw_is_channel_plan_valid(chplan) (((chplan) < RTW_CHPLAN_MAX || (chplan) == RTW_CHPLAN_REALTEK_DEFINE) && !rtw_chplan_is_empty(chplan))

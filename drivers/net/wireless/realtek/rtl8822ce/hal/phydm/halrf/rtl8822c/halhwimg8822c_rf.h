@@ -85,8 +85,6 @@ u32 odm_get_version_mp_8822c_txpowertracktssi(void);
  ******************************************************************************/
 
 /* tc: Test Chip, mp: mp Chip*/
-void
-odm_read_and_config_mp_8822c_txpwr_lmt(struct dm_struct *dm);
 u32 odm_get_version_mp_8822c_txpwr_lmt(void);
 
 #endif

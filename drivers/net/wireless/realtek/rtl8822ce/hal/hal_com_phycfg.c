@@ -2855,7 +2855,6 @@ PHY_SetTxPowerIndexByRateArray(
 	}
 }
 
-#if CONFIG_TXPWR_LIMIT
 const char *const _txpwr_lmt_rs_str[] = {
 	"CCK",
 	"OFDM",
@@ -3570,7 +3569,6 @@ GetS1ByteIntegerFromStringInDecimal(
 
 	return _TRUE;
 }
-#endif /* CONFIG_TXPWR_LIMIT */
 
 /*
 * phy_set_tx_power_limit - Parsing TX power limit from phydm array, called by odm_ConfigBB_TXPWR_LMT_XXX in phydm
@@ -3587,7 +3585,6 @@ phy_set_tx_power_limit(
 		u8				*PowerLimit
 )
 {
-#if CONFIG_TXPWR_LIMIT
 	PADAPTER Adapter = pDM_Odm->adapter;
 	HAL_DATA_TYPE *pHalData = GET_HAL_DATA(Adapter);
 	struct hal_spec_t *hal_spec = GET_HAL_SPEC(Adapter);
@@ -3689,7 +3686,59 @@ phy_set_tx_power_limit(
 		RTW_PRINT("unknown/unsupported band:%s\n", Band);
 		return;
 	}
+}
+
+static void
+phy_set_tx_power_limit_hex(PADAPTER Adapter,
+			   u8* Regulation, u8 band, u8 bandwidth, u8 tlrs,
+			   u8 ntx_idx, u8 channel, s8 powerlimit)
+{
+	HAL_DATA_TYPE *pHalData = GET_HAL_DATA(Adapter);
+	struct hal_spec_t *hal_spec = GET_HAL_SPEC(Adapter);
+	s8 prevPowerLimit, channelIndex;
+	s8 ww_lmt_val = phy_txpwr_ww_lmt_value(Adapter);
+
+	if (powerlimit != ww_lmt_val) {
+		if (powerlimit < -hal_spec->txgi_max || powerlimit > hal_spec->txgi_max)
+			RTW_PRINT("Illegal power limit value [ch %d][val %d]\n", channel, powerlimit);
+
+		if (powerlimit > hal_spec->txgi_max)
+			powerlimit = hal_spec->txgi_max;
+		else if (powerlimit < -hal_spec->txgi_max)
+			powerlimit =  ww_lmt_val + 1;
+	}
+
+	if (band == 0) {
+		channelIndex = phy_GetChannelIndexOfTxPowerLimit(BAND_ON_2_4G, channel);
+
+		if (channelIndex == -1) {
+			RTW_PRINT("unsupported channel: %d at 2.4G\n", channel);
+			return;
+		}
+
+		if (bandwidth >= MAX_2_4G_BANDWIDTH_NUM) {
+			RTW_PRINT("unsupported bandwidth: %d at 2.4G\n", bandwidth);
+			return;
+		}
+
+		rtw_txpwr_lmt_add(adapter_to_rfctl(Adapter), Regulation, band, bandwidth, tlrs, ntx_idx, channelIndex, powerlimit);
+	}
+#ifdef CONFIG_IEEE80211_BAND_5GHZ
+	else if (band == 1) {
+		channelIndex = phy_GetChannelIndexOfTxPowerLimit(BAND_ON_5G, channel);
+
+		if (channelIndex == -1) {
+			RTW_PRINT("unsupported channel: %d at 5G\n", channel);
+			return;
+		}
+
+		rtw_txpwr_lmt_add(adapter_to_rfctl(Adapter), Regulation, band, bandwidth, tlrs, ntx_idx, channelIndex, powerlimit);
+	}
 #endif
+	else {
+		RTW_PRINT("unknown/unsupported band:%d\n", band);
+		return;
+	}
 }
 
 u8
@@ -3783,11 +3832,9 @@ bool phy_is_tx_power_limit_needed(_adapter *adapter)
 	HAL_DATA_TYPE *hal_data = GET_HAL_DATA(adapter);
 	struct registry_priv *regsty = dvobj_to_regsty(adapter_to_dvobj(adapter));
 
-#if CONFIG_TXPWR_LIMIT
 	if (regsty->RegEnableTxPowerLimit == 1
 		|| (regsty->RegEnableTxPowerLimit == 2 && hal_data->EEPROMRegulatory == 1))
 		return _TRUE;
-#endif
 
 	return _FALSE;
 }
@@ -3850,7 +3897,56 @@ exit:
 	return ret;
 }
 
-#if CONFIG_TXPWR_LIMIT
+#define RTW_HEXFILE_LEN 2001
+static u8 rtw_hex_setting_buf[RTW_HEXFILE_LEN];
+static int rtw_config_tx_powerlimit_from_hex(PADAPTER Adapter, const char *path)
+{
+	u32 len;
+	u8 sec_1, sec_2;
+	u16 sec_3, chksum;
+	u32 i = 0, j = 0;
+
+	len = rtw_retrieve_from_file(path, rtw_hex_setting_buf, RTW_HEXFILE_LEN);
+	if (len > RTW_HEXFILE_LEN) {
+		RTW_WARN("power limit hexfile oversize\n");
+		return -1;
+	}
+	if (len == 0) {
+		RTW_WARN("read power limit hexfile fail\n");
+		return -1;
+	}
+	chksum = *(u16 *)(rtw_hex_setting_buf);
+	if (rtw_calc_crc(rtw_hex_setting_buf + 2, len - 2) != chksum) {
+		RTW_WARN("read power limit fail(tainted)\n");
+		return -1;
+	}
+	sec_1 = rtw_hex_setting_buf[2];
+	sec_2 = sec_1 + rtw_hex_setting_buf[3];
+	sec_3 = sec_2 + rtw_hex_setting_buf[4];
+	i += 5;
+	while (i < len) {
+		if (j < sec_2) {
+			i += (rtw_hex_setting_buf[i] + 1);
+		} else if (j >= sec_2 && j < sec_3) {
+			i += 3;
+		} else {
+			if (i + 5 >= len)
+				return -1;
+			phy_set_tx_power_limit_hex(Adapter,
+					"WW",
+					rtw_hex_setting_buf[i],
+					rtw_hex_setting_buf[i + 1],
+					rtw_hex_setting_buf[i + 2],
+					rtw_hex_setting_buf[i + 3],
+					rtw_hex_setting_buf[i + 4],
+					rtw_hex_setting_buf[i + 5]);
+			i += 6;
+		}
+		j++;
+	}
+	return 0;
+}
+
 int phy_load_tx_power_limit(_adapter *adapter, u8 chk_file)
 {
 	HAL_DATA_TYPE *hal_data = GET_HAL_DATA(adapter);
@@ -3867,19 +3963,22 @@ int phy_load_tx_power_limit(_adapter *adapter, u8 chk_file)
 		goto exit;
 	}
 
+#ifdef CONFIG_HEXFILE_POWER_LIMIT
+	if (!rtw_config_tx_powerlimit_from_hex(adapter, RTW_HEXFILE_NAME)) {
+		RTW_INFO("hexfile power limit loaded\n");
+		goto post_hdl;
+	} else {
+		RTW_WARN("config power limit from hexfile fail\n");
+		adapter->power_init_fail = true;
+		goto exit;
+	}
+#endif
+
 #ifdef CONFIG_LOAD_PHY_PARA_FROM_FILE
 	if (chk_file
 		&& PHY_ConfigRFWithPowerLimitTableParaFile(adapter, PHY_FILE_TXPWR_LMT) == _SUCCESS
 	) {
 		hal_data->txpwr_limit_from_file = 1;
-		goto post_hdl;
-	}
-#endif
-
-#ifdef CONFIG_EMBEDDED_FWIMG
-	if (odm_config_rf_with_header_file(&hal_data->odmpriv, CONFIG_RF_TXPWR_LMT, RF_PATH_A) == HAL_STATUS_SUCCESS) {
-		RTW_INFO("default power limit loaded\n");
-		hal_data->txpwr_limit_from_file = 0;
 		goto post_hdl;
 	}
 #endif
@@ -3896,7 +3995,6 @@ post_hdl:
 exit:
 	return ret;
 }
-#endif /* CONFIG_TXPWR_LIMIT */
 
 void phy_load_tx_power_ext_info(_adapter *adapter, u8 chk_file)
 {
@@ -3911,10 +4009,8 @@ void phy_load_tx_power_ext_info(_adapter *adapter, u8 chk_file)
 	)
 		phy_load_tx_power_by_rate(adapter, chk_file);
 
-#if CONFIG_TXPWR_LIMIT
 	if (phy_is_tx_power_limit_needed(adapter))
 		phy_load_tx_power_limit(adapter, chk_file);
-#endif
 }
 
 inline void phy_reload_tx_power_ext_info(_adapter *adapter)
@@ -4926,7 +5022,6 @@ PHY_ConfigRFWithTxPwrTrackParaFile(
 	return rtStatus;
 }
 
-#if CONFIG_TXPWR_LIMIT
 
 #ifndef DBG_TXPWR_LMT_FILE_PARSE
 #define DBG_TXPWR_LMT_FILE_PARSE 0
@@ -5377,7 +5472,6 @@ PHY_ConfigRFWithPowerLimitTableParaFile(
 
 	return rtStatus;
 }
-#endif /* CONFIG_TXPWR_LIMIT */
 
 void phy_free_filebuf_mask(_adapter *padapter, u8 mask)
 {

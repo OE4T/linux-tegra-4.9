@@ -346,9 +346,7 @@ struct registry_priv {
 	u8 pll_ref_clk_sel;
 
 	/* define for tx power adjust */
-#if CONFIG_TXPWR_LIMIT
 	u8	RegEnableTxPowerLimit;
-#endif
 	u8	RegEnableTxPowerByRate;
 
 	u8 target_tx_pwr_valid;
@@ -912,7 +910,6 @@ struct rf_ctl_t {
 	u8 highest_ht_rate_bw_bmp;
 	u8 highest_vht_rate_bw_bmp;
 
-#if CONFIG_TXPWR_LIMIT
 	_mutex txpwr_lmt_mutex;
 	_list reg_exc_list;
 	u8 regd_exc_num;
@@ -925,7 +922,6 @@ struct rf_ctl_t {
 	u8 txpwr_lmt_5g_cck_ofdm_state;
 	u8 txpwr_lmt_5g_20_40_ref;
 	#endif
-#endif
 
 	u8 ch_sel_same_band_prefer;
 
@@ -1418,7 +1414,7 @@ struct _ADAPTER {
 	int	DriverState;/* for disable driver using module, use dongle to replace module. */
 	int	pid[3];/* process id from UI, 0:wps, 1:hostapd, 2:dhcpcd */
 	int	bDongle;/* build-in module or external dongle */
-
+	bool power_init_fail;
 	#if defined(CONFIG_AP_MODE) && defined(CONFIG_SUPPORT_MULTI_BCN)
 	_list	list;
 	u8 vap_id;

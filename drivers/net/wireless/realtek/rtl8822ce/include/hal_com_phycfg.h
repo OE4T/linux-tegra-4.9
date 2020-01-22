@@ -160,7 +160,6 @@ u8 phy_get_pg_txpwr_idx(
 		PBOOLEAN		bIn24G
 );
 
-#if CONFIG_TXPWR_LIMIT
 s8 phy_get_txpwr_lmt_abs(_adapter *adapter
 	, const char *regd_name
 	, BAND_TYPE band, enum channel_width bw
@@ -178,11 +177,6 @@ s8 PHY_GetTxPowerLimit(_adapter *adapter
 	, BAND_TYPE band, enum channel_width bw
 	, u8 rfpath, u8 rate, u8 ntx_idx, u8 cch
 );
-#else
-#define phy_get_txpwr_lmt_abs(adapter, regd_name, band, bw, tlrs, ntx_idx, cch, lock) (GET_HAL_SPEC(adapter)->txgi_max)
-#define phy_get_txpwr_lmt(adapter, regd_name, band, bw, rfpath, rs, ntx_idx, cch, lock) (GET_HAL_SPEC(adapter)->txgi_max)
-#define PHY_GetTxPowerLimit(adapter, regd_name, band, bw, rfpath, rate, ntx_idx, cch) (GET_HAL_SPEC(adapter)->txgi_max)
-#endif /* CONFIG_TXPWR_LIMIT */
 
 s8
 PHY_GetTxPowerTrackingOffset(
@@ -238,9 +232,7 @@ void dump_tx_power_idx(void *sel, _adapter *adapter);
 bool phy_is_tx_power_limit_needed(_adapter *adapter);
 bool phy_is_tx_power_by_rate_needed(_adapter *adapter);
 int phy_load_tx_power_by_rate(_adapter *adapter, u8 chk_file);
-#if CONFIG_TXPWR_LIMIT
 int phy_load_tx_power_limit(_adapter *adapter, u8 chk_file);
-#endif
 void phy_load_tx_power_ext_info(_adapter *adapter, u8 chk_file);
 void phy_reload_tx_power_ext_info(_adapter *adapter);
 void phy_reload_default_tx_power_ext_info(_adapter *adapter);
@@ -302,9 +294,7 @@ int phy_ConfigBBWithPgParaFile(PADAPTER	Adapter, const char *pFileName);
 int phy_ConfigBBWithMpParaFile(PADAPTER	Adapter, char	*pFileName);
 int PHY_ConfigRFWithParaFile(PADAPTER	Adapter, char	*pFileName, enum rf_path	eRFPath);
 int PHY_ConfigRFWithTxPwrTrackParaFile(PADAPTER	Adapter, char	*pFileName);
-#if CONFIG_TXPWR_LIMIT
 int PHY_ConfigRFWithPowerLimitTableParaFile(PADAPTER	Adapter, const char *pFileName);
-#endif
 void phy_free_filebuf_mask(_adapter *padapter, u8 mask);
 void phy_free_filebuf(_adapter *padapter);
 #endif /* CONFIG_LOAD_PHY_PARA_FROM_FILE */

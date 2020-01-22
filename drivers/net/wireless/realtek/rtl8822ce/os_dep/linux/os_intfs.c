@@ -665,11 +665,9 @@ int rtw_tx_pwr_by_rate = CONFIG_TXPWR_BY_RATE_EN;
 module_param(rtw_tx_pwr_by_rate, int, 0644);
 MODULE_PARM_DESC(rtw_tx_pwr_by_rate, "0:Disable, 1:Enable, 2: Depend on efuse");
 
-#if CONFIG_TXPWR_LIMIT
-int rtw_tx_pwr_lmt_enable = CONFIG_TXPWR_LIMIT_EN;
+int rtw_tx_pwr_lmt_enable = 2;
 module_param(rtw_tx_pwr_lmt_enable, int, 0644);
 MODULE_PARM_DESC(rtw_tx_pwr_lmt_enable, "0:Disable, 1:Enable, 2: Depend on efuse");
-#endif
 
 static int rtw_target_tx_pwr_2g_a[RATE_SECTION_NUM] = CONFIG_RTW_TARGET_TX_PWR_2G_A;
 static int rtw_target_tx_pwr_2g_a_num = 0;
@@ -1114,13 +1112,8 @@ uint loadparam(_adapter *padapter)
 		registry_par->ldpc_cap = (u8)rtw_ldpc_cap;
 #if defined(CONFIG_CUSTOMER01_SMART_ANTENNA)
 		rtw_stbc_cap = 0x0;
-#elif defined(CONFIG_RTW_TX_2PATH_EN)
-		rtw_stbc_cap &= ~(BIT1|BIT5);
 #endif
 		registry_par->stbc_cap = (u8)rtw_stbc_cap;
-#if defined(CONFIG_RTW_TX_2PATH_EN)
-		rtw_beamform_cap &= ~(BIT0|BIT2|BIT4);
-#endif
 		registry_par->beamform_cap = (u8)rtw_beamform_cap;
 		registry_par->beamformer_rf_num = (u8)rtw_bfer_rf_number;
 		registry_par->beamformee_rf_num = (u8)rtw_bfee_rf_number;
@@ -1219,9 +1212,7 @@ uint loadparam(_adapter *padapter)
 #endif
 	registry_par->pll_ref_clk_sel = (u8)rtw_pll_ref_clk_sel;
 
-#if CONFIG_TXPWR_LIMIT
 	registry_par->RegEnableTxPowerLimit = (u8)rtw_tx_pwr_lmt_enable;
-#endif
 	registry_par->RegEnableTxPowerByRate = (u8)rtw_tx_pwr_by_rate;
 
 	rtw_regsty_load_target_tx_power(registry_par);

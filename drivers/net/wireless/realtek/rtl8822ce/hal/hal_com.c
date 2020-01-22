@@ -398,7 +398,7 @@ void rtw_hal_config_rftype(PADAPTER  padapter)
  *	AutoLoadFail		efuse autoload fail or not
  *
  */
-void hal_com_config_channel_plan(
+int hal_com_config_channel_plan(
 		PADAPTER padapter,
 		char *hw_alpha2,
 		u8 hw_chplan,
@@ -415,6 +415,12 @@ void hal_com_config_channel_plan(
 	const struct country_chplan *country_ent = NULL, *ent;
 
 	pHalData = GET_HAL_DATA(padapter);
+#ifdef CONFIG_HEXFILE_CHANNEL_PLAN
+	if (rtw_get_channel_plan_from_file(RTW_HEXFILE_NAME)) {
+		RTW_WARN("get channel plan hexfile fail\n");
+		return -1;
+	}
+#endif
 
 	/* treat 0xFF as invalid value, bypass hw_chplan & force_hw_chplan parsing */
 	if (hw_chplan == 0xFF)
@@ -485,6 +491,8 @@ done:
 	rfctl->country_ent = country_ent;
 	rfctl->ChannelPlan = chplan;
 	pHalData->bDisableSWChannelPlan = force_hw_chplan;
+
+	return 0;
 }
 
 BOOLEAN
@@ -15246,20 +15254,54 @@ u8 phy_get_current_tx_num(
 )
 {
 	u8	tx_num = RF_1TX;
+	PHAL_DATA_TYPE hal = GET_HAL_DATA(pAdapter);
+	ANTENNA_PATH anttx = hal->antenna_tx_path;
 
-	if (IS_1T_RATE(Rate)) {
-	#if defined(CONFIG_RTW_TX_2PATH_EN)
-		tx_num = RF_2TX;
-	#else
-		tx_num = RF_1TX;
-	#endif
-	} else if (IS_2T_RATE(Rate))
-		tx_num = RF_2TX;
-	else if (IS_3T_RATE(Rate))
-		tx_num = RF_3TX;
-	else
-		rtw_warn_on(1);
+	if (rtw_mp_mode_check(pAdapter)) {
+		switch (anttx) {
+		case ANTENNA_A:
+		case ANTENNA_B:
+		case ANTENNA_C:
+		case ANTENNA_D:
+						tx_num = RF_1TX;
+						break;
+		case ANTENNA_AB:
+		case ANTENNA_AC:
+		case ANTENNA_AD:
+		case ANTENNA_BC:
+		case ANTENNA_BD:
+		case ANTENNA_CD:
+						tx_num = RF_2TX;
+						break;
+		case ANTENNA_ABC:
+		case ANTENNA_BCD:
+		case ANTENNA_ABD:
+		case ANTENNA_ACD:
+						tx_num = RF_3TX;
+						break;
+		case ANTENNA_ABCD:
+						tx_num = RF_4TX;
+						break;
 
+		default:
+					tx_num = RF_1TX;
+					break;
+
+		}
+	} else {
+		if (IS_1T_RATE(Rate)) {
+		#if defined(CONFIG_RTW_TX_2PATH_EN)
+			tx_num = RF_2TX;
+		#else
+			tx_num = RF_1TX;
+		#endif
+		} else if (IS_2T_RATE(Rate))
+			tx_num = RF_2TX;
+		else if (IS_3T_RATE(Rate))
+			tx_num = RF_3TX;
+		else
+			rtw_warn_on(1);
+	}
 	return tx_num;
 }
 #endif

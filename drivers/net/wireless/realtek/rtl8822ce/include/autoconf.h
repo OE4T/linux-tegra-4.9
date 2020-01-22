@@ -13,6 +13,10 @@
  *
  *****************************************************************************/
 /***** temporarily flag *******/
+#define CONFIG_HEXFILE_CHANNEL_PLAN
+#define CONFIG_HEXFILE_POWER_LIMIT
+#define RTW_HEXFILE_LEN 2001
+#define RTW_HEXFILE_NAME "/lib/firmware/rtl8822_setting.bin"
 #define CONFIG_SINGLE_IMG
 /* #define CONFIG_DISABLE_ODM */
 
@@ -52,6 +56,8 @@
 	#define CONFIG_SET_SCAN_DENY_TIMER
 #endif
 #define CONFIG_TX_AMSDU
+
+#define CONFIG_RTW_TX_2PATH_EN /* mutually incompatible with STBC_TX & Beamformer */
 
 /*
  * Internal  General Config
@@ -173,7 +179,10 @@
 
 #define CONFIG_GLOBAL_UI_PID
 
-/*#define CONFIG_RTW_80211K*/
+/* #define CONFIG_RTW_80211K */
+/* #define CONFIG_RTW_80211R */
+/* #define CONFIG_RTW_WNM */
+/* #define CONFIG_RTW_BTM_ROAM */
 
 #define CONFIG_LAYER2_ROAMING
 #define CONFIG_LAYER2_ROAMING_RESUME

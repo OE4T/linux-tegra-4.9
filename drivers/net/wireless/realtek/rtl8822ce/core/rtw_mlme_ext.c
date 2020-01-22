@@ -170,7 +170,6 @@ static void init_channel_list(_adapter *padapter, RT_CHANNEL_INFO *channel_set
 
 }
 
-#if CONFIG_TXPWR_LIMIT
 void rtw_txpwr_init_regd(struct rf_ctl_t *rfctl)
 {
 	u8 regd;
@@ -268,7 +267,6 @@ void rtw_txpwr_init_regd(struct rf_ctl_t *rfctl)
 release_lock:
 	_exit_critical_mutex(&rfctl->txpwr_lmt_mutex, &irqL);
 }
-#endif /* CONFIG_TXPWR_LIMIT */
 
 void rtw_rfctl_init(_adapter *adapter)
 {
@@ -279,11 +277,9 @@ void rtw_rfctl_init(_adapter *adapter)
 
 	_rtw_mutex_init(&rfctl->offch_mutex);
 
-#if CONFIG_TXPWR_LIMIT
 	_rtw_mutex_init(&rfctl->txpwr_lmt_mutex);
 	_rtw_init_listhead(&rfctl->reg_exc_list);
 	_rtw_init_listhead(&rfctl->txpwr_lmt_list);
-#endif
 
 	rfctl->ch_sel_same_band_prefer = 1;
 
@@ -302,11 +298,9 @@ void rtw_rfctl_deinit(_adapter *adapter)
 
 	_rtw_mutex_free(&rfctl->offch_mutex);
 
-#if CONFIG_TXPWR_LIMIT
 	rtw_regd_exc_list_free(rfctl);
 	rtw_txpwr_lmt_list_free(rfctl);
 	_rtw_mutex_free(&rfctl->txpwr_lmt_mutex);
-#endif
 }
 
 #ifdef CONFIG_DFS_MASTER
@@ -790,9 +784,7 @@ void dump_cur_chset(void *sel, struct rf_ctl_t *rfctl)
 	else
 		RTW_PRINT_SEL(sel, "chplan:0x%02X\n", rfctl->ChannelPlan);
 
-#if CONFIG_TXPWR_LIMIT
 	RTW_PRINT_SEL(sel, "PLS regd:%s\n", rfctl->regd_name);
-#endif
 
 #ifdef CONFIG_DFS_MASTER
 	RTW_PRINT_SEL(sel, "dfs_domain:%u\n", rtw_odm_get_dfs_domain(dvobj));
@@ -6848,7 +6840,7 @@ unsigned int OnAction_ft(_adapter *padapter, union recv_frame *precv_frame)
 	u8	category = 0;
 	u8	*pframe = NULL;
 	u8	*pframe_body = NULL;
-	u8	sta_addr[ETH_ALEN] = {0};
+	u8	tgt_addr[ETH_ALEN];
 	u8	*pie = NULL;
 	u32	ft_ie_len = 0;
 	u32 status_code = 0;
@@ -6886,8 +6878,9 @@ unsigned int OnAction_ft(_adapter *padapter, union recv_frame *precv_frame)
 			goto exit;
 		}
 
-		if (is_zero_mac_addr(&pframe_body[8]) || is_broadcast_mac_addr(&pframe_body[8])) {
-			RTW_ERR("FT: Invalid Target MAC Address "MAC_FMT"\n", MAC_ARG(padapter->mlmepriv.roam_tgt_addr));
+		_rtw_memcpy(tgt_addr, &pframe_body[8], ETH_ALEN);
+		if (is_zero_mac_addr(tgt_addr) || is_broadcast_mac_addr(tgt_addr)) {
+			RTW_ERR("FT: Invalid Target MAC Address "MAC_FMT"\n", MAC_ARG(tgt_addr));
 			goto exit;
 		}
 
@@ -13511,6 +13504,19 @@ void rtw_ft_report_evt(_adapter *padapter)
 	ft_evt_parms.ric_ies = pft_roam->ft_event.ric_ies;
 	ft_evt_parms.ric_ies_len = pft_roam->ft_event.ric_ies_len;
 
+
+	/* It's a KERNEL issue between v4.11 ~ v4.16, 
+	* <= v4.10, NLMSG_DEFAULT_SIZE is used for nlmsg_new().
+	* v4.11 ~ v4.16, only used "100 + >ric_ies_len" for nlmsg_new() 
+	*	even then DRIVER don't support RIC.
+	* >= v4.17, issue should correct as "100 + ies_len + ric_ies_len".
+	*/	
+	#if ((LINUX_VERSION_CODE >= KERNEL_VERSION(4, 11, 0)) && \
+	(LINUX_VERSION_CODE < KERNEL_VERSION(4, 17, 0)))
+		ft_evt_parms.ric_ies_len = (ft_evt_parms.ies_len <= 100 )?
+			(0):(ft_evt_parms.ies_len - 100);
+	#endif
+
 	rtw_ft_lock_set_status(padapter, RTW_FT_AUTHENTICATED_STA, &irqL);
 	rtw_cfg80211_ft_event(padapter, &ft_evt_parms);
 	RTW_INFO("FT: rtw_ft_report_evt\n");
@@ -16360,9 +16366,7 @@ u8 set_chplan_hdl(_adapter *padapter, unsigned char *pbuf)
 
 	rfctl->max_chan_nums = init_channel_set(padapter, rfctl->ChannelPlan, rfctl->channel_set);
 	init_channel_list(padapter, rfctl->channel_set, &rfctl->channel_list);
-#if CONFIG_TXPWR_LIMIT
 	rtw_txpwr_init_regd(rfctl);
-#endif
 
 	rtw_hal_set_odm_var(padapter, HAL_ODM_REGULATION, NULL, _TRUE);
 

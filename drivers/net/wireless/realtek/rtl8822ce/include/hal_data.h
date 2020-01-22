@@ -335,7 +335,6 @@ typedef struct hal_p2p_ps_para {
 #define TXPWR_LMT_RS_NUM_2G	4 /* CCK, OFDM, HT, VHT */
 #define TXPWR_LMT_RS_NUM_5G	3 /* OFDM, HT, VHT */
 
-#if CONFIG_TXPWR_LIMIT
 extern const char *const _txpwr_lmt_rs_str[];
 #define txpwr_lmt_rs_str(rs) (((rs) >= TXPWR_LMT_RS_NUM) ? _txpwr_lmt_rs_str[TXPWR_LMT_RS_NUM] : _txpwr_lmt_rs_str[(rs)])
 
@@ -356,7 +355,6 @@ struct txpwr_lmt_ent {
 
 	char regd_name[0];
 };
-#endif /* CONFIG_TXPWR_LIMIT */
 
 typedef struct hal_com_data {
 	HAL_VERSION			version_id;

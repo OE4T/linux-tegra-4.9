@@ -14,6 +14,8 @@
  */
 
 #include <galen/kernel-dts/common/tegra194-p2888-0001-p2822-0000-common.dtsi>
+#include "tegra194-audio-e3900-0000.dtsi"
+#include "tegra194-super-module-e2614-e3900-0000.dtsi"
 
 / {
         chosen {

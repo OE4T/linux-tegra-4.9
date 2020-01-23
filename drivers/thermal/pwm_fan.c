@@ -1403,7 +1403,8 @@ static int pwm_fan_remove(struct platform_device *pdev)
 	cancel_delayed_work(&fan_data->fan_tach_work);
 	destroy_workqueue(fan_data->tach_workqueue);
 	disable_irq(fan_data->tach_irq);
-	gpio_free(fan_data->tach_gpio);
+	if (fan_data->tach_gpio != -1)
+		gpio_free(fan_data->tach_gpio);
 	if (fan_data->kickstart_en) {
 		cancel_delayed_work_sync(&fan_data->fan_hyst_work);
 		fan_data->fan_kickstart = false;

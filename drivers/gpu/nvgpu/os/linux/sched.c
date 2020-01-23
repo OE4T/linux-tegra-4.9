@@ -205,7 +205,7 @@ static int gk20a_sched_dev_ioctl_get_params(struct gk20a *g,
 
 	arg->pid = tsg->tgid;	/* kernel tgid corresponds to user pid */
 	arg->runlist_interleave = tsg->interleave_level;
-	arg->timeslice = tsg->timeslice_us;
+	arg->timeslice = gk20a_tsg_get_timeslice(tsg);
 
 	arg->graphics_preempt_mode =
 		tsg->gr_ctx.graphics_preempt_mode;

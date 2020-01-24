@@ -17,7 +17,6 @@
 #include "common/tegra194-camera-modules-e3900-0000.dtsi"
 #include "t19x-common-modules/tegra194-camera-plugin-manager.dtsi"
 #include "common/tegra194-plugin-manager-e3900-0000.dtsi"
-#include "common/tegra194-fixed-regulator-e3900-0000.dtsi"
 #include "common/tegra194-pcie-e3900-0000.dtsi"
 
 / {
@@ -25,7 +24,7 @@
         nvidia,dtbbuildtime = __DATE__, __TIME__;
         nvidia,fastboot-usb-vid = <0x0955>;
         nvidia,fastboot-usb-pid = <0xee1e>;
-        model = "Jetson-AGX";
-        compatible = "nvidia,mccoy", "nvidia,galen", "nvidia,jetson-xavier", "nvidia,p2822-0000+p2888-0001", "nvidia,tegra194";
+        model = "Clara-AGX";
+        compatible = "nvidia,e3900-0000+p2888-0004", "nvidia,galen", "nvidia,jetson-xavier", "nvidia,tegra194";
 };
 

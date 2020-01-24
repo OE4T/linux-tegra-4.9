@@ -11,4 +11,5 @@
  * more details.
  */
 
+#include "galen/kernel-dts/common/tegra194-fixed-regulator-p2822-1000.dtsi"
 #include <galen/kernel-dts/common/tegra194-p2822-camera-modules.dtsi>

@@ -271,7 +271,7 @@ static int tegra_vi4_probe(struct platform_device *pdev)
 	struct tegra_vi_data *data = NULL;
 	int err;
 	struct tegra_camera_dev_info vi_info;
-	uint32_t num_channels = 0;
+	unsigned int num_channels = 0;
 
 	dma_set_mask_and_coherent(&pdev->dev, DMA_BIT_MASK(39));
 	memset(&vi_info, 0, sizeof(vi_info));
@@ -296,8 +296,7 @@ static int tegra_vi4_probe(struct platform_device *pdev)
 			"using default number of vi channels,%d\n",
 			pdata->num_channels);
 	} else {
-		if (!((num_channels > pdata->num_channels) ||
-			(num_channels < 0))) {
+		if (!(num_channels > pdata->num_channels)) {
 			pdata->num_channels = num_channels;
 		} else {
 			dev_warn(&pdev->dev,

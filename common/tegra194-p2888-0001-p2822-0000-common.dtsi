@@ -322,11 +322,6 @@
 		};
 	};
 
-	hardwood {
-		compatible = "nvidia,denver-hardwood";
-		interrupts = <0 24 0x4>;
-	};
-
 	ufshci@2450000 {
 		status = "disabled";
 		nvidia,enable-hs-mode;

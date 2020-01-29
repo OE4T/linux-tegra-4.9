@@ -179,4 +179,9 @@
 	i2c@c240000 {
 		multi-master;
 	};
+
+	hardwood {
+		compatible = "nvidia,denver-hardwood";
+		interrupts = <0 24 0x4>;
+	};
 };

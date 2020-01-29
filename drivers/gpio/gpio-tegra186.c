@@ -1,7 +1,7 @@
 /*
  * GPIO driver for NVIDIA Tegra186
  *
- * Copyright (c) 2015-2019, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2020, NVIDIA CORPORATION.  All rights reserved.
  *
  * Author: Suresh Mangipudi <smangipudi@nvidia.com>
  *
@@ -27,6 +27,7 @@
 #include <linux/pinctrl/consumer.h>
 #include <linux/pm.h>
 #include <linux/irqchip/tegra.h>
+#include <linux/gpio-tegra186.h>
 #include <dt-bindings/gpio/tegra186-gpio.h>
 #include <dt-bindings/gpio/tegra194-gpio.h>
 #include <linux/version.h>
@@ -779,6 +780,7 @@ struct tegra_gpio_info {
 	struct tegra_gpio_state *state_init;
 	unsigned int gte_enable;
 	bool use_timestamp;
+	bool use_ext_gte_timestamp;
 };
 
 static struct lock_class_key gpio_lock_class;
@@ -1185,20 +1187,34 @@ static int tegra_gpio_direction_output(struct gpio_chip *chip, unsigned offset,
 	return ret;
 }
 
+int tegra_gpio_enable_external_gte(struct gpio_chip *chip)
+{
+
+	struct tegra_gpio_info *tgi;
+	if (!chip)
+		return -EOPNOTSUPP;
+
+	tgi = gpiochip_get_data(chip);
+        tgi->use_ext_gte_timestamp = true;
+	return 0;
+}
+
 static int tegra_gpio_timestamp_control(struct gpio_chip *chip, unsigned offset,
 					int enable)
 {
 	struct tegra_gpio_info *tgi = gpiochip_get_data(chip);
 	u32 val = enable << GPIO_TIMESTAMP_FUNC_BIT;
 	u32 mask = BIT(GPIO_TIMESTAMP_FUNC_BIT);
-	int ret;
+	int ret = 0;
 
-	if (tgi->use_timestamp) {
+	if (tgi->use_timestamp || tgi->use_ext_gte_timestamp) {
 		tegra_gpio_update(tgi, offset, GPIO_ENB_CONFIG_REG, mask, val);
-		if (enable)
-			ret = tegra_gte_enable_ts(tgi, offset);
-		else
-			ret = tegra_gte_disable_ts(tgi, offset);
+		if (tgi->use_timestamp) {
+			if (enable)
+				ret = tegra_gte_enable_ts(tgi, offset);
+			else
+				ret = tegra_gte_disable_ts(tgi, offset);
+		}
 	} else
 		ret = -EOPNOTSUPP;
 

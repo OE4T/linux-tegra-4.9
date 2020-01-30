@@ -1,1 +1,2 @@
 obj-$(CONFIG_USB_WPAN_HCD)	+= ozwpan/
+obj-$(CONFIG_TEGRA_HTS_GTE)     += platform/tegra/gte/

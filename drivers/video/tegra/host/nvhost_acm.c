@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host Automatic Clock Management
  *
- * Copyright (c) 2010-2019, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2010-2020, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -597,6 +597,54 @@ static ssize_t autosuspend_delay_show(struct kobject *kobj,
 	return ret;
 }
 
+static ssize_t clk_cap_store(struct kobject *kobj,
+	struct kobj_attribute *attr, const char *buf, size_t count)
+{
+	struct nvhost_device_data *pdata =
+		container_of(kobj, struct nvhost_device_data, clk_cap_kobj);
+	/* i is indeed 'index' here after type conversion */
+	int ret, i = attr - pdata->clk_cap_attrs;
+	struct clk *clk = pdata->clk[i];
+	unsigned long freq_cap;
+
+	ret = kstrtoul(buf, 0, &freq_cap);
+	if (ret)
+		return -EINVAL;
+
+	ret = clk_set_max_rate(clk, freq_cap);
+	if (ret < 0)
+		return ret;
+
+	return count;
+}
+
+static ssize_t clk_cap_show(struct kobject *kobj,
+	struct kobj_attribute *attr, char *buf)
+{
+	struct nvhost_device_data *pdata =
+		container_of(kobj, struct nvhost_device_data, clk_cap_kobj);
+	/* i is indeed 'index' here after type conversion */
+	int i = attr - pdata->clk_cap_attrs;
+	struct clk *clk = pdata->clk[i];
+	long max_rate;
+
+	max_rate = clk_round_rate(clk, UINT_MAX);
+	if (max_rate < 0)
+		return max_rate;
+
+	return snprintf(buf, PAGE_SIZE, "%ld\n", max_rate);
+}
+
+static void acm_kobj_release(struct kobject *kobj)
+{
+	sysfs_remove_dir(kobj);
+}
+
+static struct kobj_type acm_kobj_ktype = {
+	.release    = acm_kobj_release,
+	.sysfs_ops  = &kobj_sysfs_ops,
+};
+
 int nvhost_clk_get(struct platform_device *dev, char *name, struct clk **clk)
 {
 	int i;
@@ -817,7 +865,50 @@ int nvhost_module_init(struct platform_device *dev)
 		goto fail_force_idle;
 	}
 
+	err = kobject_init_and_add(&pdata->clk_cap_kobj, &acm_kobj_ktype,
+		pdata->power_kobj, "%s", "clk_cap");
+	if (err) {
+		dev_err(&dev->dev, "Could not add dir 'clk_cap'\n");
+		goto fail_clk_cap;
+	}
+
+	pdata->clk_cap_attrs = devm_kcalloc(&dev->dev, pdata->num_clks,
+		sizeof(*attr), GFP_KERNEL);
+	if (!pdata->clk_cap_attrs) {
+		err = -ENOMEM;
+		goto fail_clks;
+	}
+
+	for (i = 0; i < pdata->num_clks; ++i) {
+		struct clk *c;
+
+		c = pdata->clk[i];
+		if (!c)
+			continue;
+
+		attr = &pdata->clk_cap_attrs[i];
+		attr->attr.name = __clk_get_name(c);
+		/* octal permission is preferred nowadays */
+		attr->attr.mode = 0644;
+		attr->show = clk_cap_show;
+		attr->store = clk_cap_store;
+		sysfs_attr_init(&attr->attr);
+		if (sysfs_create_file(&pdata->clk_cap_kobj, &attr->attr)) {
+			dev_err(&dev->dev, "Could not create sysfs attribute %s\n",
+				__clk_get_name(c));
+			err = -EIO;
+			goto fail_clks;
+		}
+	}
+
 	return 0;
+
+fail_clks:
+	/* kobj of acm_kobj_ktype cleans up sysfs entries automatically */
+	kobject_put(&pdata->clk_cap_kobj);
+
+fail_clk_cap:
+	device_remove_file(&dev->dev, &dev_attr_force_idle);
 
 fail_force_idle:
 	attr = &pdata->power_attrib->power_attr[NVHOST_POWER_SYSFS_ATTRIB_FORCE_ON];
@@ -866,6 +957,9 @@ void nvhost_module_deinit(struct platform_device *dev)
 	if (pdata->bwmgr_handle)
 		tegra_bwmgr_unregister(pdata->bwmgr_handle);
 #endif
+
+	/* kobj of acm_kobj_ktype cleans up sysfs entries automatically */
+	kobject_put(&pdata->clk_cap_kobj);
 
 	if (pdata->power_kobj) {
 		for (i = 0; i < NVHOST_POWER_SYSFS_ATTRIB_MAX; i++) {

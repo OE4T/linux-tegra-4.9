@@ -1899,6 +1899,25 @@
 			<&tegra_pinctrl TEGRA194_AON_GPIO_BASE(AA) TEGRA_PIN_BASE(AA) TEGRA194_AON_GPIO_RANGE(AA, EE) >;
 	};
 
+	tegra_gte_lic: gte@3aa0000 {
+		compatible = "nvidia,tegra194-gte-lic";
+		reg = <0x0 0x3aa0000 0x0 0x10000>;
+		interrupts = <0 11 0x4>;
+		nvidia,int-threshold = <1>;
+		nvidia,num-slices = <11>;
+		status = "disabled";
+	};
+
+	tegra_gte_aon: gte@c1e0000 {
+		compatible = "nvidia,tegra194-gte-aon";
+		reg = <0x0 0xc1e0000 0x0 0x10000>;
+		interrupts = <0 13 0x4>;
+		nvidia,int-threshold = <1>;
+		nvidia,num-slices = <3>;
+		nvidia,gpio-controller = <&tegra_aon_gpio>;
+		status = "disabled";
+	};
+
 	tegra_wdt:watchdog@30c0000 {
 		compatible = "nvidia,tegra-wdt-t18x";
 		reg = <0x0 0x030c0000 0x0 0x10000>, /* WDT0 */

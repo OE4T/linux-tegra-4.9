@@ -158,7 +158,7 @@ int gk20a_tsg_unbind_channel(struct channel_gk20a *ch)
 		return -EINVAL;
 	}
 
-	err = g->ops.fifo.tsg_unbind_channel(ch);
+	err = gk20a_fifo_tsg_unbind_channel(ch);
 	if (err) {
 		nvgpu_err(g, "Channel %d unbind failed, tearing down TSG %d",
 			ch->chid, tsg->tsgid);
@@ -172,6 +172,11 @@ int gk20a_tsg_unbind_channel(struct channel_gk20a *ch)
 		ch->tsgid = NVGPU_INVALID_TSG_ID;
 		nvgpu_rwsem_up_write(&tsg->ch_list_lock);
 	}
+
+	if (g->ops.fifo.tsg_unbind_channel != NULL) {
+		err = g->ops.fifo.tsg_unbind_channel(ch);
+	}
+
 	nvgpu_log(g, gpu_dbg_fn, "UNBIND tsg:%d channel:%d",
 					tsg->tsgid, ch->chid);
 

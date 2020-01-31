@@ -1,7 +1,7 @@
 /*
  * ADMA driver for Nvidia's Tegra210 ADMA controller.
  *
- * Copyright (c) 2016-2019, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2020, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -582,7 +582,8 @@ static unsigned int tegra_adma_get_residue(struct tegra_adma_chan *tdc)
 	/* get transferred data count */
 	tc_transferred = ch_regs->tc - tc_remain;
 
-	tot_xfer = (uint64_t)(tdc->tx_buf_count * ch_regs->tc) + tc_transferred;
+	tot_xfer = (uint64_t)((uint64_t)tdc->tx_buf_count *
+			(uint64_t)ch_regs->tc) + tc_transferred;
 	tot_xfer %= desc->buf_len;
 
 	return desc->buf_len - tot_xfer;

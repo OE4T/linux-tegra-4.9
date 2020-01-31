@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017 - 2019, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017 - 2020, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -3765,6 +3765,21 @@ static void pex_ep_event_bme_change(struct tegra_pcie_dw *pcie)
 	u32 val = 0, width = 0, speed = 0;
 	unsigned long freq;
 
+	/* Make EMC FLOOR freq request based on link width and speed */
+	val = readl(pci->dbi_base + CFG_LINK_STATUS_CONTROL);
+	width = ((val >> 16) & PCI_EXP_LNKSTA_NLW) >> 4;
+	width = find_first_bit((const unsigned long *)&width,
+			       sizeof(width));
+	speed = ((val >> 16) & PCI_EXP_LNKSTA_CLS);
+	freq = pcie->dvfs_tbl[width][speed - 1];
+	dev_dbg(pcie->dev, "EMC Freq requested = %lu\n", freq);
+
+	if (tegra_bwmgr_set_emc(pcie->emc_bw, freq, TEGRA_BWMGR_SET_EMC_FLOOR))
+		dev_err(pcie->dev, "can't set emc clock[%lu]\n", freq);
+
+	speed = ((val >> 16) & PCI_EXP_LNKSTA_CLS);
+	clk_set_rate(pcie->core_clk, pcie_gen_freq[speed - 1]);
+
 	/* If EP doesn't advertise L1SS, just return */
 	val = readl(pci->dbi_base + pcie->cfg_link_cap_l1sub);
 	if (!(val & (PCI_L1SS_CAP_ASPM_L1_1 | PCI_L1SS_CAP_ASPM_L1_2)))
@@ -3796,21 +3811,6 @@ static void pex_ep_event_bme_change(struct tegra_pcie_dw *pcie)
 		if (val & APPL_LTR_MSG_2_LTR_MSG_REQ_STATE)
 			dev_err(pcie->dev, "LTR_MSG sending failed\n");
 	}
-
-	/* Make EMC FLOOR freq request based on link width and speed */
-	val = readl(pci->dbi_base + CFG_LINK_STATUS_CONTROL);
-	width = ((val >> 16) & PCI_EXP_LNKSTA_NLW) >> 4;
-	width = find_first_bit((const unsigned long *)&width,
-			       sizeof(width));
-	speed = ((val >> 16) & PCI_EXP_LNKSTA_CLS);
-	freq = pcie->dvfs_tbl[width][speed - 1];
-	dev_dbg(pcie->dev, "EMC Freq requested = %lu\n", freq);
-
-	if (tegra_bwmgr_set_emc(pcie->emc_bw, freq, TEGRA_BWMGR_SET_EMC_FLOOR))
-		dev_err(pcie->dev, "can't set emc clock[%lu]\n", freq);
-
-	speed = ((val >> 16) & PCI_EXP_LNKSTA_CLS);
-	clk_set_rate(pcie->core_clk, pcie_gen_freq[speed - 1]);
 }
 
 static int pcie_ep_work_thread(void *p)

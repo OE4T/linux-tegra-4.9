@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2020, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2020, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -20,31 +20,9 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#include <nvgpu/enabled.h>
-#include <nvgpu/vgpu/vgpu.h>
+#ifndef FB_VGPU_H
+#define FB_VGPU_H
 
-#include "gk20a/gk20a.h"
-#include "vgpu_gv11b.h"
+void vgpu_fb_set_mmu_debug_mode(struct gk20a *g, bool enable);
 
-int vgpu_gv11b_init_gpu_characteristics(struct gk20a *g)
-{
-	int err;
-
-	nvgpu_log_fn(g, " ");
-
-	err = vgpu_init_gpu_characteristics(g);
-	if (err) {
-		nvgpu_err(g, "vgpu_init_gpu_characteristics failed, err %d\n", err);
-		return err;
-	}
-
-	__nvgpu_set_enabled(g, NVGPU_SUPPORT_TSG_SUBCONTEXTS, true);
-	__nvgpu_set_enabled(g, NVGPU_SUPPORT_IO_COHERENCE, true);
-	__nvgpu_set_enabled(g, NVGPU_SUPPORT_SCG, true);
-	__nvgpu_set_enabled(g, NVGPU_SUPPORT_SYNCPOINT_ADDRESS, true);
-	__nvgpu_set_enabled(g, NVGPU_SUPPORT_USER_SYNCPOINT, true);
-	__nvgpu_set_enabled(g, NVGPU_SUPPORT_PLATFORM_ATOMIC, true);
-	__nvgpu_set_enabled(g, NVGPU_SUPPORT_SET_CTX_MMU_DEBUG_MODE, true);
-
-	return 0;
-}
+#endif

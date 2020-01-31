@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2020, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2020, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -20,31 +20,26 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#include <nvgpu/enabled.h>
+#include <nvgpu/gk20a.h>
+#include <nvgpu/vgpu/tegra_vgpu.h>
 #include <nvgpu/vgpu/vgpu.h>
 
-#include "gk20a/gk20a.h"
-#include "vgpu_gv11b.h"
+#include "fb_vgpu.h"
 
-int vgpu_gv11b_init_gpu_characteristics(struct gk20a *g)
+void vgpu_fb_set_mmu_debug_mode(struct gk20a *g, bool enable)
 {
+	struct tegra_vgpu_cmd_msg msg = {};
+	struct tegra_vgpu_fb_set_mmu_debug_mode_params *p =
+				&msg.params.fb_set_mmu_debug_mode;
 	int err;
 
-	nvgpu_log_fn(g, " ");
-
-	err = vgpu_init_gpu_characteristics(g);
-	if (err) {
-		nvgpu_err(g, "vgpu_init_gpu_characteristics failed, err %d\n", err);
-		return err;
+	msg.cmd = TEGRA_VGPU_CMD_FB_SET_MMU_DEBUG_MODE;
+	msg.handle = vgpu_get_handle(g);
+	p->enable = enable ? 1U : 0U;
+	err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
+	err = err != 0 ? err : msg.ret;
+	if (err != 0) {
+		nvgpu_err(g,
+			"fb set mmu debug mode failed err %d", err);
 	}
-
-	__nvgpu_set_enabled(g, NVGPU_SUPPORT_TSG_SUBCONTEXTS, true);
-	__nvgpu_set_enabled(g, NVGPU_SUPPORT_IO_COHERENCE, true);
-	__nvgpu_set_enabled(g, NVGPU_SUPPORT_SCG, true);
-	__nvgpu_set_enabled(g, NVGPU_SUPPORT_SYNCPOINT_ADDRESS, true);
-	__nvgpu_set_enabled(g, NVGPU_SUPPORT_USER_SYNCPOINT, true);
-	__nvgpu_set_enabled(g, NVGPU_SUPPORT_PLATFORM_ATOMIC, true);
-	__nvgpu_set_enabled(g, NVGPU_SUPPORT_SET_CTX_MMU_DEBUG_MODE, true);
-
-	return 0;
 }

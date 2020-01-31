@@ -41,6 +41,7 @@
 #include "vgpu/dbg_vgpu.h"
 #include "vgpu/fecs_trace_vgpu.h"
 #include "vgpu/css_vgpu.h"
+#include "vgpu/fb_vgpu.h"
 #include "gp10b/gp10b.h"
 #include "gp10b/hal_gp10b.h"
 #include "vgpu/gm20b/vgpu_gr_gm20b.h"
@@ -250,7 +251,7 @@ static const struct gpu_ops vgpu_gp10b_ops = {
 		.read_wpr_info = NULL,
 		.is_debug_mode_enabled = NULL,
 		.set_debug_mode = vgpu_mm_mmu_set_debug_mode,
-		.set_mmu_debug_mode = NULL,
+		.set_mmu_debug_mode = vgpu_fb_set_mmu_debug_mode,
 		.tlb_invalidate = vgpu_mm_tlb_invalidate,
 	},
 	.clock_gating = {

@@ -49,6 +49,7 @@
 #include "vgpu/dbg_vgpu.h"
 #include "vgpu/fecs_trace_vgpu.h"
 #include "vgpu/css_vgpu.h"
+#include "vgpu/fb_vgpu.h"
 #include "vgpu/gm20b/vgpu_gr_gm20b.h"
 #include "vgpu/gp10b/vgpu_mm_gp10b.h"
 #include "vgpu/gp10b/vgpu_gr_gp10b.h"
@@ -189,7 +190,7 @@ static const struct gpu_ops vgpu_gv11b_ops = {
 		.get_hw_accessor_stream_out_mode =
 			gr_gv100_get_hw_accessor_stream_out_mode,
 		.update_hwpm_ctxsw_mode = vgpu_gr_update_hwpm_ctxsw_mode,
-		.set_mmu_debug_mode = NULL,
+		.set_mmu_debug_mode = vgpu_gr_set_mmu_debug_mode,
 		.record_sm_error_state = gv11b_gr_record_sm_error_state,
 		.clear_sm_error_state = vgpu_gr_clear_sm_error_state,
 		.suspend_contexts = vgpu_gr_suspend_contexts,
@@ -291,7 +292,7 @@ static const struct gpu_ops vgpu_gv11b_ops = {
 		.read_wpr_info = NULL,
 		.is_debug_mode_enabled = NULL,
 		.set_debug_mode = vgpu_mm_mmu_set_debug_mode,
-		.set_mmu_debug_mode = NULL,
+		.set_mmu_debug_mode = vgpu_fb_set_mmu_debug_mode,
 		.tlb_invalidate = vgpu_mm_tlb_invalidate,
 		.hub_isr = gv11b_fb_hub_isr,
 		.enable_hub_intr = gv11b_fb_enable_hub_intr,

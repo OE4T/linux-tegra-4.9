@@ -1,7 +1,7 @@
 /*
  * tegra186-quill-common-p3489-1000-a00.dtsi: Quill common dtsi.
  *
- * Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2020, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -47,6 +47,14 @@
 
 	spi@3240000 {
 		status = "okay";
+		spi@0 {
+			compatible = "spidev";
+			reg = <0x0>;
+			spi-max-frequency = <33000000>;
+			nvidia,enable-hw-based-cs;
+			nvidia,rx-clk-tap-delay = <0x8>;
+			nvidia,tx-clk-tap-delay = <0x16>;
+		};
 	};
 
 	gpio@2200000 {

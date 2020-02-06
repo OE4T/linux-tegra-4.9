@@ -5,7 +5,7 @@
  * Copyright (C) 2019 NVIDIA Corporation. All rights reserved.
  *
  * Portions contributed by Nvidia
- * Copyright (C) 2015-2019 NVIDIA Corporation. All rights reserved.
+ * Copyright (C) 2015-2020 NVIDIA Corporation. All rights reserved.
  *
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -924,7 +924,7 @@ static void wl_add_remove_pm_enable_work(struct bcm_cfg80211 *cfg, bool add_remo
 	if (cfg == NULL)
 		return;
 
-	if (cfg->pm_enable_work_on) {
+	if (cfg->pm_enable_work_on && cfg->pwr_save) {
 		if (add_remove) {
 			schedule_delayed_work(&cfg->pm_enable_work,
 				msecs_to_jiffies(WL_PM_ENABLE_TIMEOUT));
@@ -5374,10 +5374,13 @@ wl_cfg80211_set_power_mgmt(struct wiphy *wiphy, struct net_device *dev,
 	struct bcm_cfg80211 *cfg = wiphy_priv(wiphy);
 	struct net_info *_net_info = wl_get_netinfo_by_netdev(cfg, dev);
 
+	/* Store preferred power mode to be checked when triggering
+	 * delayed worker for enabling power mode
+	 */
+	cfg->pwr_save = enabled;
 	RETURN_EIO_IF_NOT_UP(cfg);
 	WL_DBG(("Enter\n"));
-	if (cfg->p2p_net == dev || _net_info == NULL || cfg->vsdb_mode ||
-		!wl_get_drv_status(cfg, CONNECTED, dev)) {
+	if (cfg->p2p_net == dev || _net_info == NULL || cfg->vsdb_mode) {
 		return err;
 	}
 

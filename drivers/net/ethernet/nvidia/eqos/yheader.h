@@ -394,9 +394,21 @@
 #define FIFO_SIZE_B(x) (x)
 #define FIFO_SIZE_KB(x) (x*1024)
 
-//#define EQOS_MAX_DATA_PER_TX_BUF (1 << 13)     /* 8 KB Maximum data per buffer pointer(in Bytes) */
-#define EQOS_MAX_DATA_PER_TX_BUF (1 << 12)	/* for testing purpose: 4 KB Maximum data per buffer pointer(in Bytes) */
-#define EQOS_MAX_DATA_PER_TXD (EQOS_MAX_DATA_PER_TX_BUF)
+#define EQOS_MAX_DATA_PER_TX_BUF	0x3FFF
+#define EQOS_MAX_DATA_PER_TXD		(EQOS_MAX_DATA_PER_TX_BUF)
+
+/* Descriptors required for maximum contiguous TSO/GSO packet
+ * one extra descriptor if there is linear buffer payload
+ */
+#define EQOS_TX_MAX_SPLIT	((GSO_MAX_SIZE / EQOS_MAX_DATA_PER_TXD) + 1)
+
+/* Maximum possible descriptors needed for an SKB:
+ * - Maximum number of SKB frags
+ * - Maximum descriptors for contiguous TSO/GSO packet
+ * - Possible context descriptor
+ * - Possible TSO header descriptor
+ */
+#define EQOS_TX_DESC_THRESHOLD	(MAX_SKB_FRAGS + EQOS_TX_MAX_SPLIT + 2)
 
 #define EQOS_MAX_SUPPORTED_MTU 1500
 #define EQOS_MAX_GPSL 9000 /* Default maximum Gaint Packet Size Limit */

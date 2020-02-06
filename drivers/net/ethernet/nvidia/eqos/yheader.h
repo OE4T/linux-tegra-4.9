@@ -986,7 +986,7 @@ struct tx_ring {
 
 	/* for TSO */
 	u32 default_mss;
-	bool tx_full;
+
 	/** Number of packets or frames transmitted */
 	unsigned int frame_cnt;
 	/** Max no of pkts to transfer before triggering Tx interrupt */

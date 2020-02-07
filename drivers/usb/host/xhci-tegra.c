@@ -1475,11 +1475,14 @@ static irqreturn_t tegra_xusb_mbox_irq(int irq, void *data)
 {
 	struct tegra_xusb *tegra = data;
 	struct usb_hcd  *hcd = tegra->hcd;
-	u32 value;
+	u32 value, value2;
 
 	/* clear mailbox interrupts */
 	value = fpci_readl(tegra, XUSB_CFG_ARU_SMI_INTR);
 	fpci_writel(tegra, value, XUSB_CFG_ARU_SMI_INTR);
+
+	/* read again to avoid spurious ARU SMI interrupt */
+	value2 = fpci_readl(tegra, XUSB_CFG_ARU_SMI_INTR);
 
 	if (value & MBOX_SMI_INTR_FW_HANG) {
 		dev_err(tegra->dev, "controller firmware hang\n");
@@ -1487,7 +1490,12 @@ static irqreturn_t tegra_xusb_mbox_irq(int irq, void *data)
 		return IRQ_HANDLED;
 	}
 
-	return IRQ_WAKE_THREAD;
+	if (value & MBOX_SMI_INTR_EN)
+		return IRQ_WAKE_THREAD;
+
+	dev_warn(tegra->dev, "unhandled mbox irq: %08x %08x\n", value, value2);
+
+	return value ? IRQ_HANDLED : IRQ_NONE;
 }
 
 static void tegra_xusb_mbox_handle(struct tegra_xusb *tegra,
@@ -2965,7 +2973,8 @@ static void tegra_xusb_probe_finish(const struct firmware *fw, void *context)
 
 		ret = devm_request_threaded_irq(dev, tegra->mbox_irq,
 						tegra_xusb_mbox_irq,
-						tegra_xusb_mbox_thread, 0,
+						tegra_xusb_mbox_thread,
+						IRQF_ONESHOT,
 						dev_name(dev), tegra);
 		if (ret < 0) {
 			dev_err(dev,

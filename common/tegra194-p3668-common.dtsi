@@ -444,7 +444,7 @@
 
 	ether_qos@2490000 {
 		nvidia,phy-reset-gpio = <&tegra_main_gpio TEGRA194_MAIN_GPIO(R, 1) 0>;
-		nvidia,phy-reset-post-delay = <72>;
+		nvidia,phy-reset-post-delay = <224>;
 		nvidia,phy-reset-duration = <10000>;
                 mdio {
                         compatible = "nvidia,eqos-mdio";

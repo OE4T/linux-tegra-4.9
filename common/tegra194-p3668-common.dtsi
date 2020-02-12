@@ -385,16 +385,52 @@
 		status = "okay";
 	};
 
-	spi@3230000{
+	spi@3210000{ /* SPI1 in 40 pin conn */
 		status = "okay";
+		spi@0 { /* chip select 0 */
+			compatible = "spidev";
+			reg = <0x0>;
+			spi-max-frequency = <50000000>;
+			controller-data {
+				nvidia,enable-hw-based-cs;
+				nvidia,rx-clk-tap-delay = <0x10>;
+				nvidia,tx-clk-tap-delay = <0x0>;
+			};
+		};
+		spi@1 { /* chip select 1 */
+			compatible = "spidev";
+			reg = <0x1>;
+			spi-max-frequency = <50000000>;
+			controller-data {
+				nvidia,enable-hw-based-cs;
+				nvidia,rx-clk-tap-delay = <0x10>;
+				nvidia,tx-clk-tap-delay = <0x0>;
+			};
+		};
 	};
 
-	spi@3210000{
+	spi@3230000{ /* SPI3 in 40 pin conn */
 		status = "okay";
-	};
-
-	spi@3230000 {
-		status = "okay";
+		spi@0 { /* chip select 0 */
+			compatible = "spidev";
+			reg = <0x0>;
+			spi-max-frequency = <50000000>;
+			controller-data {
+				nvidia,enable-hw-based-cs;
+				nvidia,rx-clk-tap-delay = <0x10>;
+				nvidia,tx-clk-tap-delay = <0x0>;
+			};
+		};
+		spi@1 { /* chips select 1 */
+			compatible = "spidev";
+			reg = <0x1>;
+			spi-max-frequency = <50000000>;
+			controller-data {
+				nvidia,enable-hw-based-cs;
+				nvidia,rx-clk-tap-delay = <0x10>;
+				nvidia,tx-clk-tap-delay = <0x0>;
+			};
+		};
 	};
 
 	ether_qos@2490000 {

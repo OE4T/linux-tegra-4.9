@@ -1,7 +1,7 @@
 /*
- * drivers/misc/tegra-profiler/version.h
+ * drivers/misc/tegra-profiler/uncore_events.h
  *
- * Copyright (c) 2013-2020, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2020, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -14,10 +14,16 @@
  *
  */
 
-#ifndef __QUADD_VERSION_H
-#define __QUADD_VERSION_H
+#ifndef __UNCORE_EVENTS_H
+#define __UNCORE_EVENTS_H
 
-#define QUADD_MODULE_VERSION		"1.141"
-#define QUADD_MODULE_BRANCH		"Dev"
+struct quadd_ctx;
 
-#endif	/* __QUADD_VERSION_H */
+int quadd_uncore_start(void);
+void quadd_uncore_stop(void);
+
+int quadd_uncore_init(struct quadd_ctx *quadd_ctx);
+void quadd_uncore_deinit(void);
+
+
+#endif	/* __UNCORE_EVENTS_H */

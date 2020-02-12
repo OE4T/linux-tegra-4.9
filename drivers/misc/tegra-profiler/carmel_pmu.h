@@ -1,7 +1,7 @@
 /*
- * drivers/misc/tegra-profiler/version.h
+ * drivers/misc/tegra-profiler/carmel_pmu.h
  *
- * Copyright (c) 2013-2020, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2020, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -14,10 +14,13 @@
  *
  */
 
-#ifndef __QUADD_VERSION_H
-#define __QUADD_VERSION_H
+#ifndef __QUADD_CARMEL_PMU_H
+#define __QUADD_CARMEL_PMU_H
 
-#define QUADD_MODULE_VERSION		"1.141"
-#define QUADD_MODULE_BRANCH		"Dev"
+struct quadd_event_source;
 
-#endif	/* __QUADD_VERSION_H */
+struct quadd_event_source *
+quadd_carmel_uncore_pmu_init(void);
+void quadd_carmel_uncore_pmu_deinit(void);
+
+#endif	/* __QUADD_CARMEL_PMU_H */

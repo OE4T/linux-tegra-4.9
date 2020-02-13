@@ -1,6 +1,6 @@
 /*
 *
-* Copyright (c) 2019, NVIDIA CORPORATION. All rights reserved.
+* Copyright (c) 2019-2020, NVIDIA CORPORATION. All rights reserved.
 *
 *  Realtek Bluetooth USB driver
 *
@@ -62,8 +62,10 @@
 #define RTKBT_DBG(fmt, arg...) \
 			printk(KERN_DEBUG "rtk_btcoex: " fmt "\n" ,## arg)
 #define RTKBT_INFO(fmt, arg...) printk(KERN_INFO "rtk_btcoex: " fmt "\n" , ## arg)
-#define RTKBT_WARN(fmt, arg...) printk(KERN_WARNING "rtk_btcoex: " fmt "\n", ## arg)
-#define RTKBT_ERR(fmt, arg...) printk(KERN_WARNING "rtk_btcoex: " fmt "\n", ## arg)
+#define RTKBT_WARN(fmt, arg...) \
+			printk( KERN_DEBUG "rtk_btcoex: " fmt "\n" ,## arg)
+#define RTKBT_ERR(fmt, arg...) \
+			printk(KERN_ERR "rtk_btcoex: " fmt "\n" ,## arg)
 
 static struct rtl_coex_struct btrtl_coex;
 

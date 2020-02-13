@@ -40,9 +40,7 @@ static const char * const tegra_hv_err_reason_desc[] = {
 	"Memory Controller",
 	"Memory Controller T19X",
 	"Central Back Bone",
-	"Instruction Abort",
-	"Data Abort",
-	"Other synchronous exception",
+	"Synchronous exception",
 };
 
 int tegra_hv_register_vm_err_hooks(struct tegra_hv_vm_err_handlers *handlers);

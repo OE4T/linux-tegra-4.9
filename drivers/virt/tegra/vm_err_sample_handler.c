@@ -15,6 +15,17 @@
 #include <linux/module.h>
 #include <linux/vm_err.h>
 
+#define ESR_EC_INSTR_ABORT_LOWER_EL 0x20U
+#define ESR_EC_DATA_ABORT_LOWER_EL 0x24U
+
+#define ESR_DABT_ISS_ISV_MASK (1U << 24)
+#define ESR_DABT_ISS_SAS_SHIFT 22U
+#define ESR_DABT_ISS_SAS_MASK (3U << ESR_DABT_ISS_SAS_SHIFT)
+#define ESR_DABT_ISS_FNV_MASK (1U << 10)
+#define ESR_DABT_ISS_WNR_MASK (1U << 6)
+#define ESR_DABT_ISS_DFSC_MASK 0x3F
+
+
 /* Bridge error details:
  * Note: These are redefined here only to allow user friendly messages
  * describing the error.
@@ -245,25 +256,125 @@ static void print_mc_error(const struct err_data_t * const err_data)
 	pr_crit("--------------------------------------\n");
 }
 
+static void print_sync_full_details(const struct err_data_t *const err_data,
+		bool with_frame)
+{
+	int i;
+	const struct sync_t * const sync = &err_data->sync;
+
+	if (with_frame) {
+		pr_crit("Synchronous exception, full details\n");
+		pr_crit("--------------------------------------\n");
+
+	}
+	pr_crit("Offending VCpu Id %u\n", sync->offending_vcpu_id);
+	pr_crit("(Following register validity depends on error context)\n");
+	pr_crit("ESR_EL2:               0x%08x\n", sync->esr_el2);
+	pr_crit("ELR_EL2:       0x%016llx\n", sync->elr_el2);
+	pr_crit("FAR_EL2:       0x%016llx\n", sync->far_el2);
+	pr_crit("HPFAR_EL2:     0x%016llx\n", sync->hpfar_el2);
+	pr_crit("PAR_HPFAR_EL2: 0x%016llx\n", sync->par_hpfar_el2);
+	pr_crit("SPSR_EL2:      0x%016llx\n", sync->spsr_el2);
+	pr_crit("ELR_EL1:       0x%016llx\n", sync->elr_el1);
+	pr_crit("FAR_EL1:       0x%016llx\n", sync->far_el1);
+	pr_crit("SPSR_EL1:      0x%016llx\n", sync->spsr_el1);
+	pr_crit("ESR_EL1:               0x%08x\n", sync->esr_el1);
+	pr_crit("Fault Instr:           0x%08x\n", sync->fault_instr);
+	pr_crit("General Purpose Registers\n");
+
+	for (i = 0; i < 30; i++)
+		pr_crit("    x%02u: 0x%016llx\n", i, sync->gpr_array[i]);
+
+	pr_crit("    x30: 0x%016llx (link register)\n", sync->gpr_array[30]);
+
+	if (with_frame)
+		pr_crit("--------------------------------------\n");
+}
+
+static inline uint8_t extract_dabt_iss_sas(const uint32_t esr)
+{
+	return ((esr & ESR_DABT_ISS_SAS_MASK) >> ESR_DABT_ISS_SAS_SHIFT);
+}
+
 static void print_data_abort(const struct err_data_t *const err_data)
 {
-	const struct sync_data_abort_t * const data_abort =
-		&err_data->sync_data_abort;
+	const struct sync_t * const data_abort = &err_data->sync;
+	uint32_t esr = data_abort->esr_el2;
 
 	pr_crit("Data abort details\n");
 	pr_crit("--------------------------------------\n");
-	pr_crit("offending VCpu Id %u\n", data_abort->offending_vcpu_id);
-	(data_abort->is_write) ?
-		pr_crit("write access\n") : pr_crit("read access\n");
-	pr_crit("access size %u\n", data_abort->access_size);
-	pr_crit("fault address: 0x%llx\n", data_abort->fault_addr);
-	pr_crit("esr: 0x%x\n", data_abort->esr_el2);
-	pr_crit("spsr_el2: 0x%llx\n", data_abort->spsr_el2);
-	pr_crit("elr_el1: 0x%llx\n", data_abort->elr_el1);
-	pr_crit("gpr_array[0]: 0x%llx\n", data_abort->gpr_array[0]);
-	pr_crit("gpr_array[15]: 0x%llx\n", data_abort->gpr_array[15]);
-	pr_crit("gpr_array[30]: 0x%llx\n", data_abort->gpr_array[30]);
+
+	// Check if instruction syndrome is valid.
+	if (esr & ESR_DABT_ISS_ISV_MASK) {
+		bool is_write = (esr & ESR_DABT_ISS_WNR_MASK) > 0;
+		uint8_t access_size = (1U << extract_dabt_iss_sas(esr));
+
+		(is_write) ? pr_crit("write access\n") :
+				pr_crit("read access\n");
+		pr_crit("access size %u\n", access_size);
+	}
+
+	// Check if both fault addresses are valid.
+	if ((!(esr & ESR_DABT_ISS_FNV_MASK)) &&
+			((esr & ESR_DABT_ISS_DFSC_MASK) < 13U)) {
+		uint64_t fault_addr = data_abort->hpfar_el2 << 8 |
+				(data_abort->far_el2 & 0xfffULL);
+
+		pr_crit("Fault address: 0x%llx\n", fault_addr);
+	}
+
+	pr_crit("Additional context:\n");
+
+	// Print rest of trap context
+	print_sync_full_details(err_data, false);
+
 	pr_crit("--------------------------------------\n");
+}
+
+static void print_instr_abort(const struct err_data_t *const err_data)
+{
+	pr_crit("Instruction abort details\n");
+	pr_crit("--------------------------------------\n");
+
+	// Print trap context
+	print_sync_full_details(err_data, false);
+
+	pr_crit("--------------------------------------\n");
+}
+
+static inline uint32_t exception_class(const uint32_t esr)
+{
+	uint32_t ret = esr & 0xFC000000U;
+
+	return (ret >> 26);
+}
+
+static void print_sync(const struct err_data_t *const err_data)
+{
+	if (!(err_data->sync.is_filled)) {
+		pr_crit("Synchronous exception, no details available\n");
+		return;
+	}
+
+	/* For demo purposes, do some preprocessing for data aborts and detect
+	 * instr abort class.
+	 *
+	 * Full details for an implementation that is more tailored to a
+	 * specific use case to be found in the AArch64 reference manual.
+	 */
+	switch (exception_class(err_data->sync.esr_el2)) {
+	case ESR_EC_DATA_ABORT_LOWER_EL:
+		print_data_abort(err_data);
+		break;
+
+	case ESR_EC_INSTR_ABORT_LOWER_EL:
+		print_instr_abort(err_data);
+		break;
+
+	default:
+		print_sync_full_details(err_data, true);
+		break;
+	}
 }
 
 static bool handle_async_err_details(const struct err_data_t * const err_data)
@@ -326,16 +437,10 @@ static bool handle_async_err_details(const struct err_data_t * const err_data)
 
 static bool handle_sync_err_details(const struct err_data_t * const err_data)
 {
-	/* Currently only data abort error injection is supported */
-	if (err_data->err_reason != REASON_SYNC_DATA_ABORT) {
-		pr_crit("%s: unexpected reason id %u\n", __func__,
-			err_data->err_reason);
-		/* Invalid reason. Enter bad mode. */
-		return true;
-	}
 	pr_info("%s: error reason: %s\n", __func__,
 		tegra_hv_err_reason_desc[err_data->err_reason]);
-	print_data_abort(err_data);
+
+	print_sync(err_data);
 
 	/* Recovery from sync error could be impossible. Enter bad mode. */
 	return true;
@@ -397,8 +502,8 @@ static bool handle_peer_err_details(const struct err_data_t * const err_data)
 		enter_bad_mode = false;
 		break;
 
-	case REASON_SYNC_DATA_ABORT:
-		print_data_abort(err_data);
+	case REASON_SYNC:
+		print_sync(err_data);
 		enter_bad_mode = false;
 		break;
 

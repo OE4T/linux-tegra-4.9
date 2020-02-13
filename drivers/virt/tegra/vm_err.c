@@ -67,12 +67,12 @@ static bool check_sync_err(const unsigned int vcpu_id,
 	 * after validating the vcpu_id above, no need to validate rd_idx here.
 	 */
 	err_data = &(ctrl->err_info->err_data[rd_idx]);
-	if (!err_data->sync_data_abort.is_filled) {
-		*send_sync_err_ack = false;
-		dev_info(ctrl->dev, "No synchronous error data on vcpu %u\n",
-			vcpu_id);
-		/* No sync error. No need to enter bad mode. */
-		return false;
+	if (err_data->err_reason != REASON_SYNC) {
+		dev_crit(ctrl->dev, "%s: unexpected reason id %u\n", __func__,
+			err_data->err_reason);
+		*send_sync_err_ack = true;
+		/* Invalid reason. Enter bad mode. */
+		return true;
 	}
 
 	if (err_data->err_type != SYNC) {
@@ -396,8 +396,8 @@ static void shared_structs_check(struct device *dev)
 		sizeof(struct async_mc_err_t));
 	dev_info(dev, "async_mc_err_t19x size 0x%lx\n",
 		sizeof(struct async_mc_err_t19x_t));
-	dev_info(dev, "sync_data_abort size 0x%lx\n",
-		sizeof(struct sync_data_abort_t));
+	dev_info(dev, "sync size 0x%lx\n",
+		sizeof(struct sync_t));
 	dev_info(dev, "err_data size 0x%lx\n", sizeof(struct err_data_t));
 
 	/* Ensure common structures shared by HV and Linux are in sync */
@@ -407,7 +407,7 @@ static void shared_structs_check(struct device *dev)
 	BUILD_BUG_ON(sizeof(struct async_smmu_err_t) != 0x1C);
 	BUILD_BUG_ON(sizeof(struct async_mc_err_t) != 0x24);
 	BUILD_BUG_ON(sizeof(struct async_mc_err_t19x_t) != 0xBB);
-	BUILD_BUG_ON(sizeof(struct sync_data_abort_t) != 0x11B);
+	BUILD_BUG_ON(sizeof(struct sync_t) != 0x149);
 	BUILD_BUG_ON(sizeof(struct err_data_t) != 0x265);
 }
 

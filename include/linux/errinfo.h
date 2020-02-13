@@ -20,9 +20,7 @@ enum err_reason {
 	REASON_ASYNC_MC,
 	REASON_ASYNC_MC_T19X,
 	REASON_ASYNC_CBB,
-	REASON_SYNC_INSTR_ABORT,
-	REASON_SYNC_DATA_ABORT,
-	REASON_SYNC_OTHER,
+	REASON_SYNC,
 	REASON_ENUM_SIZE
 };
 
@@ -123,15 +121,20 @@ struct __attribute__((__packed__)) async_mc_err_t19x_t {
 	unsigned int	write;
 };
 
-struct __attribute__((__packed__)) sync_data_abort_t {
-	bool		is_filled;	/* metadata field per vcpu */
-	bool		is_write;
-	uint8_t		access_size;
+struct __attribute__((__packed__)) sync_t {
+	bool		is_filled;    /* metadata field per vcpu */
 	unsigned int	offending_vcpu_id;
-	unsigned int	esr_el2;
-	uint64_t	fault_addr;
+	uint32_t	esr_el2;
+	uint64_t	elr_el2;
+	uint64_t	far_el2;
+	uint64_t	hpfar_el2;
+	uint64_t	par_hpfar_el2;
 	uint64_t	spsr_el2;
 	uint64_t	elr_el1;
+	uint64_t	far_el1;
+	uint64_t	spsr_el1;
+	uint32_t	esr_el1;
+	uint32_t	fault_instr;
 	uint64_t	gpr_array[31];
 };
 
@@ -147,7 +150,7 @@ struct __attribute__((__packed__)) err_data_t {
 		struct async_cbb_err_t		async_cbb_err;
 		struct async_mc_err_t19x_t	async_mc_err_t19x;
 		/* Synchronous */
-		struct sync_data_abort_t	sync_data_abort;
+		struct sync_t			sync;
 	};
 };
 

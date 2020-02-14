@@ -1,7 +1,7 @@
 /*
  * T194 p3668 audio common DTSI file.
  *
- * Copyright (c) 2019, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2019-2020, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -38,14 +38,11 @@
 		nvidia,model = "jetson-xaviernx-ape";
 		clocks = <&bpmp_clks TEGRA194_CLK_PLLA>,
 			 <&bpmp_clks TEGRA194_CLK_PLLA_OUT0>,
-			 <&bpmp_clks TEGRA194_CLK_AHUB>,
 			 <&bpmp_clks TEGRA194_CLK_AUD_MCLK>;
-		clock-names = "pll_a", "pll_a_out0", "ahub", "extern1";
+		clock-names = "pll_a", "pll_a_out0", "extern1";
 		assigned-clocks = <&bpmp_clks TEGRA194_CLK_PLLA_OUT0>,
-				  <&bpmp_clks TEGRA194_CLK_AHUB>,
 				  <&bpmp_clks TEGRA194_CLK_AUD_MCLK>;
 		assigned-clock-parents = <&bpmp_clks TEGRA194_CLK_PLLA>,
-					 <&bpmp_clks TEGRA194_CLK_PLLA_OUT0>,
 					 <&bpmp_clks TEGRA194_CLK_PLLA_OUT0>;
 
 		nvidia,audio-routing =

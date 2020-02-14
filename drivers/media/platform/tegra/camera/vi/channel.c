@@ -1,7 +1,7 @@
 /*
  * NVIDIA Tegra Video Input Device
  *
- * Copyright (c) 2015-2019, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2020, NVIDIA CORPORATION.  All rights reserved.
  *
  * Author: Bryan Wu <pengw@nvidia.com>
  *
@@ -466,8 +466,15 @@ void free_ring_buffers(struct tegra_channel *chan, int frames)
 	while (frames > 0) {
 		vbuf = chan->buffers[chan->free_index];
 
+		/* Skip updating the buffer sequence with channel sequence
+		 * for interlaced captures and this instead will be updated
+		 * with frame id received from CSI with capture complete
+		 */
+		if (!chan->is_interlaced)
+			vbuf->sequence = chan->sequence++;
+		else
+			chan->sequence++;
 		/* release one frame */
-		vbuf->sequence = chan->sequence++;
 		vbuf->field = V4L2_FIELD_NONE;
 		vb2_set_plane_payload(&vbuf->vb2_buf,
 			0, chan->format.sizeimage);

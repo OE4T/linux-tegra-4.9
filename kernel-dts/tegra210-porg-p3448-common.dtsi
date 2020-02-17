@@ -210,8 +210,19 @@
 			compatible = "spidev";
 			reg = <0x0>;
 			spi-max-frequency = <33000000>;
-			nvidia,enable-hw-based-cs;
-			nvidia,rx-clk-tap-delay = <7>;
+			controller-data {
+				nvidia,enable-hw-based-cs;
+				nvidia,rx-clk-tap-delay = <7>;
+			};
+		};
+		spi@1 {
+			compatible = "spidev";
+			reg = <0x1>;
+			spi-max-frequency = <33000000>;
+			controller-data {
+				nvidia,enable-hw-based-cs;
+				nvidia,rx-clk-tap-delay = <7>;
+			};
 		};
 	};
 
@@ -221,8 +232,19 @@
 			compatible = "spidev";
 			reg = <0x0>;
 			spi-max-frequency = <33000000>;
-			nvidia,enable-hw-based-cs;
-			nvidia,rx-clk-tap-delay = <6>;
+			controller-data {
+				nvidia,enable-hw-based-cs;
+				nvidia,rx-clk-tap-delay = <6>;
+			};
+		};
+		spi@1 {
+			compatible = "spidev";
+			reg = <0x1>;
+			spi-max-frequency = <33000000>;
+			controller-data {
+				nvidia,enable-hw-based-cs;
+				nvidia,rx-clk-tap-delay = <6>;
+			};
 		};
 	};
 

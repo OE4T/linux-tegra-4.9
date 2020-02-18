@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2019, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2018-2020, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -233,6 +233,7 @@ struct vblk_sg_io_hdr
     uint32_t sbp_arg_offset;    /* [i], [*o] offset to sense_buffer memory */
     uint32_t status;            /* [o] scsi status */
     uint8_t sb_len_wr;          /* [o] byte count actually written to sbp */
+    uint32_t dxfer_buf_len;     /* [i] Length of data transfer buffer */
 };
 
 #pragma pack(pop)

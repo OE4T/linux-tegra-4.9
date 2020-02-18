@@ -29,7 +29,7 @@
  * DAMAGE.
  * ========================================================================= */
 /*
- * Copyright (c) 2015-2019, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2020, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -1352,7 +1352,8 @@ static int eqos_prepare_mc_list(struct net_device *dev,
 									  addr);
 
 			if ((pdata->ptp_cfg.use_tagged_ptp) &&
-			    (is_ptp_addr(ha->addr)))
+			    (is_ptp_addr(ha->addr)) &&
+			    pdata->dt_cfg.use_multi_q)
 				hw_if->config_ptp_channel(pdata->ptp_cfg.
 							  ptp_dma_ch_id, i);
 

@@ -100,7 +100,7 @@ static void bpmp_signal_thread(int ch)
 	if (!(p->flags & RING_DOORBELL))
 		return;
 
-	if (to_reclaim && m) {
+	if ((to_reclaim & m) != 0) {
 		mail_ops->free_master(mail_ops, ch);
 		to_reclaim &= ~m;
 		tch_free |= m;

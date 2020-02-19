@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2018-2019, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2018-2020, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -59,6 +59,7 @@ struct gmsl_link_ctx {
 	__u32 ser_reg;
 	__u32 sdev_reg;
 	__u32 sdev_def;
+	bool serdev_found;
 	struct gmsl_stream streams[GMSL_DEV_MAX_NUM_DATA_STREAMS];
 	struct device *s_dev;
 };

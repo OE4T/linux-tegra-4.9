@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2018-2019, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2018-2020, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -21,7 +21,7 @@
 
 int max9296_setup_link(struct device *dev, struct device *s_dev);
 
-int max9296_setup_control(struct device *dev);
+int max9296_setup_control(struct device *dev, struct device *s_dev);
 
 int max9296_reset_control(struct device *dev, struct device *s_dev);
 

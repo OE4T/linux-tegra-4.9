@@ -334,3 +334,15 @@
  * code
  */
 #define uninitialized_var(x) x = x
+
+#if GCC_VERSION >= 90000
+/*
+ * Optional: only supported since gcc >= 9
+ * Optional: not supported by clang
+ * Optional: not supported by icc
+ *
+ *   gcc: https://gcc.gnu.org/onlinedocs/gcc/Common-Function-Attributes.html#index-copy-function-attribute
+ */
+#define __copy(symbol)                 __attribute__((__copy__(symbol)))
+#endif
+

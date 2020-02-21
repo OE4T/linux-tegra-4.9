@@ -1511,14 +1511,21 @@ static int eqos_suspend_noirq(struct device *dev)
 			enable_irq_wake(pdata->phydev->irq);
 		} else {
 			phy_stop(pdata->phydev);
-			if (gpio_is_valid(pdata->phy_reset_gpio))
+			if (gpio_is_valid(pdata->phy_reset_gpio)) {
 				gpio_set_value(pdata->phy_reset_gpio, 0);
+				usleep_range(pdata->phy_reset_duration,
+					pdata->phy_reset_duration + 1);
+			}
 		}
 	}
 
 	eqos_stop_dev(pdata);
 
 	pdata->hw_stopped = true;
+
+	/* Assert MAC RST gpio */
+	if (pdata->eqos_rst)
+		reset_control_assert(pdata->eqos_rst);
 
 	/* cancel iso work */
 	cancel_work_sync(&pdata->iso_work);
@@ -1536,6 +1543,8 @@ static int eqos_resume_noirq(struct device *dev)
 {
 	struct net_device *ndev = dev_get_drvdata(dev);
 	struct eqos_prv_data *pdata = netdev_priv(ndev);
+	struct hw_if_struct *hw_if = &pdata->hw_if;
+	int ret = Y_SUCCESS;
 
 	if (!netif_running(ndev))
 		return 0;
@@ -1549,16 +1558,34 @@ static int eqos_resume_noirq(struct device *dev)
 	eqos_regulator_init(pdata);
 
 	/* enable clocks */
-	eqos_clock_enable(pdata);
+	ret = eqos_clock_enable(pdata);
+	if (ret < 0) {
+		dev_err(&pdata->pdev->dev, "resume clocks not enabled\n");
+		return -EINVAL;
+	}
 
 	if (device_may_wakeup(&ndev->dev)) {
 		disable_irq_wake(pdata->phydev->irq);
+		/* issue CAR reset to device */
+		ret = hw_if->car_reset(pdata);
+		if (ret < 0) {
+			dev_err(&pdata->pdev->dev, "WoL Failed to reset MAC\n");
+			return -ENODEV;
+		}
 		eqos_start_dev(pdata);
 	} else {
 		if (gpio_is_valid(pdata->phy_reset_gpio) &&
 		    !gpio_get_value(pdata->phy_reset_gpio)) {
 			/* deassert phy reset */
 			gpio_set_value(pdata->phy_reset_gpio, 1);
+			msleep(pdata->phy_reset_post_delay);
+		}
+
+		/* issue CAR reset to device */
+		ret = hw_if->car_reset(pdata);
+		if (ret < 0) {
+			dev_err(&pdata->pdev->dev, "Failed to reset MAC\n");
+			return -ENODEV;
 		}
 
 		eqos_start_dev(pdata);

@@ -3230,9 +3230,9 @@ static INT eqos_car_reset(struct eqos_prv_data *pdata)
 
 	ULONG dma_bmr;
 
-	/* Issue a CAR reset */
+	/* deassert rst line */
 	if (!IS_ERR_OR_NULL(pdata->eqos_rst))
-		reset_control_reset(pdata->eqos_rst);
+		reset_control_deassert(pdata->eqos_rst);
 
 	/* add delay of 10 usec */
 	udelay(10);

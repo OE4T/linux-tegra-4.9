@@ -47,6 +47,7 @@
 #include <linux/gpio.h>
 #include <linux/time.h>
 #include <linux/platform/tegra/ptp-notifier.h>
+#include <linux/reset.h>
 #include "yheader.h"
 #include "yapphdr.h"
 #include "drv.h"
@@ -1106,6 +1107,7 @@ static int eqos_open(struct net_device *dev)
 	struct eqos_prv_data *pdata = netdev_priv(dev);
 	int ret = Y_SUCCESS;
 	struct desc_if_struct *desc_if = &pdata->desc_if;
+	struct hw_if_struct *hw_if = &pdata->hw_if;
 
 	pr_debug("-->eqos_open\n");
 
@@ -1124,6 +1126,13 @@ static int eqos_open(struct net_device *dev)
 	ret = eqos_clock_enable(pdata);
 	if (ret)
 		return ret;
+
+	/* issue CAR reset to device */
+	ret = hw_if->car_reset(pdata);
+	if (ret < 0) {
+		dev_err(&dev->dev, "Failed to reset MAC\n");
+		return -ENODEV;
+	}
 
 	/* PHY initialisation */
 	ret = eqos_init_phy(dev);
@@ -1219,6 +1228,10 @@ static int eqos_close(struct net_device *dev)
 
 	pdata->hw_stopped = true;
 	mutex_unlock(&pdata->hw_change_lock);
+
+	/* Assert MAC RST gpio */
+	if (pdata->eqos_rst)
+		reset_control_assert(pdata->eqos_rst);
 
 	eqos_clock_disable(pdata);
 
@@ -5367,8 +5380,6 @@ void eqos_start_dev(struct eqos_prv_data *pdata)
 
 	pr_debug("-->%s()\n", __func__);
 
-	/* issue CAR reset to device */
-	hw_if->car_reset(pdata);
 	hw_if->pad_calibrate(pdata);
 
 	/* default configuration */

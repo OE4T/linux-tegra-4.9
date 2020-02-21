@@ -24,6 +24,7 @@
 #include <galen/kernel-dts/common/tegra194-plugin-manager-p2888-0000.dtsi>
 #include "tegra194-audio-e3900-0000.dtsi"
 #include "tegra194-super-module-e2614-e3900-0000.dtsi"
+#include "tegra194-pwm-fan-e3900-0000.dtsi"
 
 / {
 	chosen {

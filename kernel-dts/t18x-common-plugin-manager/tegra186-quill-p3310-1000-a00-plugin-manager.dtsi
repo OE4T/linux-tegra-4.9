@@ -302,6 +302,14 @@
 					};
 				};
 			};
+			override@3 {
+				target = <&{/fixed-regulators}>;
+				_overlay_ {
+					regulator@17 {
+						enable-active-high;
+					};
+				};
+			};
 		};
 
 		fragment-e3320-dp {

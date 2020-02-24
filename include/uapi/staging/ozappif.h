@@ -1,11 +1,11 @@
 /* -----------------------------------------------------------------------------
  * Copyright (c) 2011 Ozmo Inc
- * Copyright (c) 2015, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2015-2020, NVIDIA CORPORATION. All rights reserved.
  * Released under the GNU General Public License Version 2 (GPLv2).
  * -----------------------------------------------------------------------------
  */
-#ifndef _OZAPPIF_H
-#define _OZAPPIF_H
+#ifndef _UAPI_OZAPPIF_H
+#define _UAPI_OZAPPIF_H
 
 #define OZ_IOCTL_MAGIC	0xf4
 
@@ -34,4 +34,4 @@ struct oz_binding_info {
 #define OZ_IOCTL_MAX		5
 
 
-#endif /* _OZAPPIF_H */
+#endif /* _UAPI_OZAPPIF_H */

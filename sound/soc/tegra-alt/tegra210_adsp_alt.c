@@ -2,7 +2,7 @@
  * tegra210_adsp_alt.c - Tegra ADSP audio driver
  *
  * Author: Sumit Bhattacharya <sumitb@nvidia.com>
- * Copyright (c) 2014-2020, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2019, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -197,6 +197,7 @@ static const struct snd_pcm_hardware adsp_pcm_hardware = {
 				  SNDRV_PCM_INFO_DRAIN_TRIGGER,
 	.formats		= SNDRV_PCM_FMTBIT_S8 |
 				  SNDRV_PCM_FMTBIT_S16_LE |
+				  SNDRV_PCM_FMTBIT_S24_LE |
 				  SNDRV_PCM_FMTBIT_S32_LE,
 	.channels_min		= 1,
 	.channels_max		= 2,
@@ -2085,6 +2086,10 @@ static int tegra210_adsp_null_sink_hw_params(struct snd_soc_dapm_widget *w,
 		adma_params.intr_dur =
 			1000 * max_bytes / (channels * rate * 2);
 		break;
+	case SNDRV_PCM_FORMAT_S24_LE:
+		adma_params.intr_dur =
+			1000 * max_bytes / (channels * rate * 3);
+		break;
 	case SNDRV_PCM_FORMAT_S32_LE:
 		adma_params.intr_dur =
 			1000 * max_bytes / (channels * rate * 4);
@@ -2744,6 +2749,7 @@ static struct snd_soc_dai_ops tegra210_adsp_eavb_dai_ops = {
 			.rates = SNDRV_PCM_RATE_8000_48000,		\
 			.formats = SNDRV_PCM_FMTBIT_S8 |		\
 				SNDRV_PCM_FMTBIT_S16_LE |		\
+				SNDRV_PCM_FMTBIT_S24_LE |		\
 				SNDRV_PCM_FMTBIT_S32_LE,		\
 		},							\
 		.capture = {						\
@@ -2753,6 +2759,7 @@ static struct snd_soc_dai_ops tegra210_adsp_eavb_dai_ops = {
 			.rates = SNDRV_PCM_RATE_8000_48000,		\
 			.formats = SNDRV_PCM_FMTBIT_S8 |		\
 				SNDRV_PCM_FMTBIT_S16_LE |		\
+				SNDRV_PCM_FMTBIT_S24_LE |		\
 				SNDRV_PCM_FMTBIT_S32_LE,		\
 		},							\
 	}
@@ -2821,6 +2828,7 @@ static struct snd_soc_dai_driver tegra210_adsp_dai[] = {
 			.rates = SNDRV_PCM_RATE_8000_48000,	\
 			.formats = SNDRV_PCM_FMTBIT_S8 |	\
 				SNDRV_PCM_FMTBIT_S16_LE |	\
+				SNDRV_PCM_FMTBIT_S24_LE |	\
 				SNDRV_PCM_FMTBIT_S32_LE,	\
 		},						\
 		.capture = {					\
@@ -2830,6 +2838,7 @@ static struct snd_soc_dai_driver tegra210_adsp_dai[] = {
 			.rates = SNDRV_PCM_RATE_8000_48000,	\
 			.formats = SNDRV_PCM_FMTBIT_S8 |	\
 				SNDRV_PCM_FMTBIT_S16_LE |	\
+				SNDRV_PCM_FMTBIT_S24_LE |	\
 				SNDRV_PCM_FMTBIT_S32_LE,	\
 		},						\
 		.ops = &tegra210_adsp_fe_dai_ops,		\

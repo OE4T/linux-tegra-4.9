@@ -2,7 +2,7 @@
  * tegra_alt_pcm.c - Tegra PCM driver
  *
  * Author: Stephen Warren <swarren@nvidia.com>
- * Copyright (c) 2011-2020 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2019 NVIDIA CORPORATION.  All rights reserved.
  *
  * Based on code copyright/by:
  *
@@ -45,6 +45,8 @@ static const struct snd_pcm_hardware tegra_alt_pcm_hardware = {
 				  SNDRV_PCM_INFO_INTERLEAVED,
 	.formats		= SNDRV_PCM_FMTBIT_S8 |
 				  SNDRV_PCM_FMTBIT_S16_LE |
+				  SNDRV_PCM_FMTBIT_S24_LE |
+				  SNDRV_PCM_FMTBIT_S20_3LE |
 				  SNDRV_PCM_FMTBIT_S32_LE,
 	.period_bytes_min	= 128,
 	.period_bytes_max	= PAGE_SIZE * 4,

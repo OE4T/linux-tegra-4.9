@@ -674,6 +674,13 @@ static bool mv88e6xxx_6352_family(struct mv88e6xxx_chip *chip)
 	return chip->info->family == MV88E6XXX_FAMILY_6352;
 }
 
+#ifdef CONFIG_NET_DSA_MIOVISION_MV88E6390
+static bool mv88e6xxx_6390_family(struct mv88e6xxx_chip *chip)
+{
+	return chip->info->family == MV88E6XXX_FAMILY_6390;
+}
+#endif
+
 static int mv88e6xxx_port_setup_mac(struct mv88e6xxx_chip *chip, int port,
 				    int link, int speed, int duplex,
 				    phy_interface_t mode)
@@ -2545,6 +2552,11 @@ static int mv88e6xxx_setup_port(struct mv88e6xxx_chip *chip, int port)
 	    mv88e6xxx_6185_family(chip))
 		reg = PORT_CONTROL_2_MAP_DA;
 
+#ifdef CONFIG_NET_DSA_MIOVISION_MV88E6390
+	if (mv88e6xxx_6390_family(chip))
+		reg |= PORT_CONTROL_2_MAP_DA;
+#endif
+
 	if (mv88e6xxx_6095_family(chip) || mv88e6xxx_6185_family(chip)) {
 		/* Set the upstream port this port should use */
 		reg |= dsa_upstream_port(ds);
@@ -2646,7 +2658,27 @@ static int mv88e6xxx_setup_port(struct mv88e6xxx_chip *chip, int port)
 	/* Default VLAN ID and priority: don't set a default VLAN
 	 * ID, and set the default packet priority to zero.
 	 */
+#ifdef CONFIG_NET_DSA_MIOVISION_MV88E6390
+	err = mv88e6xxx_port_write(chip, port, PORT_DEFAULT_VLAN, 0x0000);
+	if (err)
+		return err;
+
+	/* @HACK
+	 * this only works for our hardware b/c there is a phy between the CPU port and CPU
+	 * we MUST enable PHY auto-negotiation on the associated phy to the CPU port otherwise negotiation
+	 * will not complete and packets will never flow
+	 */
+	if (dsa_is_cpu_port(ds, port)) {
+		reg = PHY_COPPER_CONTROL_AN_EN | PHY_COPPER_CONTROL_AN_RST;
+		err = mv88e6xxx_phy_write(chip, port, PHY_COPPER_CONTROL, reg );
+		if (err)
+			return err;
+	}
+
+	return 0;
+#else
 	return mv88e6xxx_port_write(chip, port, PORT_DEFAULT_VLAN, 0x0000);
+#endif
 }
 
 static int mv88e6xxx_g1_set_switch_mac(struct mv88e6xxx_chip *chip, u8 *addr)
@@ -4187,6 +4219,13 @@ static int mv88e6xxx_detect(struct mv88e6xxx_chip *chip)
 	mutex_lock(&chip->reg_lock);
 	err = mv88e6xxx_port_read(chip, 0, PORT_SWITCH_ID, &id);
 	mutex_unlock(&chip->reg_lock);
+
+#ifdef CONFIG_NET_DSA_MIOVISION_MV88E6390
+	// The MV88E6390 does not respond properly to the PORT_SWITCH_ID call, so we force it to the
+	// MV88E6390 device ID here if this flag is set.
+	id = PORT_SWITCH_ID_PROD_NUM_6390 << 4;
+#endif
+
 	if (err)
 		return err;
 

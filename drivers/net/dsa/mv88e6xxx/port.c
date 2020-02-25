@@ -640,7 +640,18 @@ int mv88e6165_port_jumbo_config(struct mv88e6xxx_chip *chip, int port)
 	if (err)
 		return err;
 
+#ifdef CONFIG_NET_DSA_MIOVISION_MV88E6390
+	/*
+	 * @HACK the values set here were incorrect for the 88e6390 paired with the Tegra186.
+	 * THE MTU must be less than the MTU for the Tegra186 ether_qos device.  It is set by default to 1500.
+	 *
+	 * Note that the tx checksumming offload on the Tegra186 needs to be disabled for DSA tagged frames to be 
+	 * transmitted or received
+	 */
+	reg |= PORT_CONTROL_2_JUMBO_1522;
+#else
 	reg |= PORT_CONTROL_2_JUMBO_10240;
+#endif
 
 	return mv88e6xxx_port_write(chip, port, PORT_CONTROL_2, reg);
 }

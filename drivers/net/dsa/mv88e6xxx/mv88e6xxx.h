@@ -35,6 +35,28 @@
 #define PHY_PAGE		0x16
 #define PHY_PAGE_COPPER		0x00
 
+#ifdef CONFIG_NET_DSA_MIOVISION_MV88E6390
+	#define PHY_COPPER_CONTROL                              0x00
+	#define PHY_COPPER_CONTROL_AN_EN                        BIT(12)
+	#define PHY_COPPER_CONTROL_AN_RST                       BIT(9)
+	#define PHY_COPPER_STATUS                               0x01
+	#define PHY_COPPER_SPECIFIC_STATUS                      0x11
+	#define PHY_COPPER_SPECIFIC_STATUS_SPEED_MASK           0xC000
+	#define PHY_COPPER_SPECIFIC_STATUS_SPEED_10             0x0000
+	#define PHY_COPPER_SPECIFIC_STATUS_SPEED_100            0x4000
+	#define PHY_COPPER_SPECIFIC_STATUS_SPEED_1000           0x8000
+	#define PHY_COPPER_SPECIFIC_STATUS_DUPLEX               BIT(13)
+	#define PHY_COPPER_SPECIFIC_STATUS_GLOBAL_LINK          BIT(3)
+	#define PHY_COPPER_SPECIFIC_STATUS_LINK                 BIT(10)
+	#define PHY_COPPER_SPECIFIC_STATUS_AUTONEG_COMPLETE     BIT(11)
+	#define PHY_COPPER_SPECIFIC_INT_EN                      0x12
+	#define PHY_COPPER_SPECIFIC_INT_EN_AUTONEG_COMPLETE     BIT(11)
+	#define PHY_COPPER_SPECIFIC_INT_EN_LINK_CHANGE          BIT(10)
+	#define PHY_COPPER_SPECIFIC_INT                         0x13
+	#define PHY_COPPER_SPECIFIC_INT_AUTONEG_COMPLETE        BIT(11)
+	#define PHY_COPPER_SPECIFIC_INT_LINK_CHANGE             BIT(10)
+#endif
+
 #define ADDR_SERDES		0x0f
 #define SERDES_PAGE_FIBER	0x01
 

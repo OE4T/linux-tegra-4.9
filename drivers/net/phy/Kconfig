@@ -43,6 +43,14 @@ config MDIO_BITBANG
 
 	  If in doubt, say N.
 
+config MDIO_BITBANG_MIOVISION_DISABLE_TURNAROUND
+	bool "Disable the turnaround bit detection on the mdio bitbang interface."
+	default n
+	depends on MDIO_BITBANG
+	help
+	  Most PHY's should drive the mdio line low on turnaround, however on MV88E6390 this does not happen.
+	  This flag bypasses the check for this state.
+
 config MDIO_BUS_MUX
 	tristate
 	depends on OF_MDIO

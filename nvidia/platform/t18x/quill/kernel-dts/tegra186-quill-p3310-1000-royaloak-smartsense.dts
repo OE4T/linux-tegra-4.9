@@ -57,9 +57,13 @@
 
 	chosen {
 		board-has-eeprom;
+#if TEGRA_BOOTARGUMENT_VERSION >= DT_VERSION_2
+		bootargs ="console=ttyS0,115200 androidboot.presilicon=true firmware_class.path=/etc/firmware";
+#else
 		bootargs ="console=ttyS0,115200";
+#endif
 		stdout-path = &uarta;
-		//nvidia,tegra-joint_xpu_rail;
+		nvidia,tegra-joint_xpu_rail;
 	};
 
 	aliases {
@@ -90,6 +94,21 @@
 		phy-names = "otg-usb2";
 	};
 
+#if TEGRA_XUSB_PADCONTROL_VERSION >= DT_VERSION_2
+	xudc@3550000 {
+		status = "okay";
+		phys = <&{/xusb_padctl@3520000/pads/usb2/lanes/usb2-0}>;
+		phy-names = "usb2";
+		nvidia,boost-cpu-freq = <1200>;
+	};
+
+	usb_cd {
+		status = "okay";
+		phys = <&{/xusb_padctl@3520000/pads/usb2/lanes/usb2-0}>;
+		phy-names = "otg-phy";
+		nvidia,xusb-padctl = <&xusb_padctl>;
+	};
+#else
 	xudc@3550000 {
 		status = "okay";
 		phys = <&tegra_xusb_padctl TEGRA_PADCTL_PHY_UTMI_P(0)>;
@@ -97,15 +116,27 @@
 		emc-frequency = <150000000>;
 		nvidia,boost-cpu-freq = <1200>;
 	};
+#endif
 
+#if TEGRA_XUSB_PADCONTROL_VERSION >= DT_VERSION_2
+	xhci@3530000 {
+		status = "okay";
+		phys = <&{/xusb_padctl@3520000/pads/usb2/lanes/usb2-0}>,
+			<&{/xusb_padctl@3520000/pads/usb2/lanes/usb2-1}>,
+			<&{/xusb_padctl@3520000/pads/usb2/lanes/usb2-2}>,
+			<&{/xusb_padctl@3520000/pads/usb3/lanes/usb3-0}>;
+		phy-names = "usb2-0", "usb2-1", "usb2-2", "usb3-0";
+	};
+#else
 	xhci@3530000 {
 		status = "okay";
 		phys = <&tegra_xusb_padctl TEGRA_PADCTL_PHY_UTMI_P(0)>,
 			<&tegra_xusb_padctl TEGRA_PADCTL_PHY_UTMI_P(1)>,
-			<&tegra_xusb_padctl TEGRA_PADCTL_PHY_USB3_P(1)>;
+			<&tegra_xusb_padctl TEGRA_PADCTL_PHY_USB3_P(0)>;
 		phy-names = "utmi-0", "utmi-1", "usb3-0";
 		nvidia,boost_cpu_freq = <800>;
 	};
+#endif
 
     bluedroid_pm {
 		bluedroid_pm,reset-gpio = <&tegra_main_gpio TEGRA_MAIN_GPIO(H, 5) 0>;
@@ -154,6 +185,84 @@
 		};
 	};
 
+#if TEGRA_XUSB_PADCONTROL_VERSION >= DT_VERSION_2
+	xusb_padctl@3520000 {
+		status = "okay";
+		pinctrl-0 = <&vbus_en0_default_state>;
+		pinctrl-1 = <&vbus_en1_default_state>;
+		pinctrl-2 = <&vbus_en0_sfio_tristate_state>;
+		pinctrl-3 = <&vbus_en1_sfio_tristate_state>;
+		pinctrl-4 = <&vbus_en0_sfio_passthrough_state>;
+		pinctrl-5 = <&vbus_en1_sfio_passthrough_state>;
+		pinctrl-names = "vbus_en0_default", "vbus_en1_default",
+			"vbus_en0_sfio_tristate", "vbus_en1_sfio_tristate",
+			"vbus_en0_sfio_passthrough", "vbus_en1_sfio_passthrough";
+
+		pads {
+			usb2 {
+				lanes {
+					usb2-0 {
+						nvidia,function = "xusb";
+						status = "okay";
+					};
+					usb2-1 {
+						nvidia,function = "xusb";
+						status = "okay";
+					};
+					usb2-2 {
+						nvidia,function = "xusb";
+						status = "okay";
+					};
+				};
+			};
+			usb3 {
+				lanes {
+					usb3-0 {
+						nvidia,function = "xusb";
+						status = "okay";
+					};
+					usb3-1 {
+						nvidia,function = "xusb";
+						status = "okay";
+					};
+					usb3-2 {
+						nvidia,function = "xusb";
+						status = "okay";
+					};
+				};
+			};
+		};
+
+		ports {
+			usb2-0 {
+				status = "okay";
+				mode = "otg";
+				vbus-supply = <&battery_reg>;
+				nvidia,oc-pin = <0>;
+			};
+			usb2-1 {
+				status = "okay";
+				mode = "host";
+				vbus-supply = <&battery_reg>;
+				nvidia,oc-pin = <1>;
+			};
+			usb2-2 {
+				status = "okay";
+				mode = "host";
+				vbus-supply = <&battery_reg>;
+			};
+			usb3-0 {
+				status = "okay";
+				vbus-supply = <&battery_reg>;
+				nvidia,usb2-companion = <0>;
+			};
+			usb3-1 {
+				nvidia,usb2-companion = <1>;
+			};
+		};
+	};
+#endif
+
 	pinctrl@3520000 {
 		status = "okay";
 		pinctrl-0 = <&tegra_xusb_padctl_pinmux_default>;
@@ -167,12 +276,6 @@
 			"vbus_en0_sfio_tristate", "vbus_en1_sfio_tristate",
 			"vbus_en0_sfio_passthrough", "vbus_en1_sfio_passthrough",
 			"vbus_en0_default", "vbus_en1_default";
-
-		vbus-0-supply = <&battery_reg>;
-		vbus-1-supply = <&battery_reg>;
-		vbus-2-supply = <&battery_reg>;
-		vbus-3-supply = <&battery_reg>;
-
 		tegra_xusb_padctl_pinmux_default: pinmux {
 			/* Quill does not support usb3-micro AB */
 			usb2-micro-AB {
@@ -284,8 +387,6 @@
 		mma8452@1c {
 			compatible = "fsl,mma8452";
 			reg = <0x1c>;
-			/*interrupt-parent=<&TX2A_ACCEL_INTn>;
-			interrupts=<0 0> */
 		};
 		
 		ab0805@69 {

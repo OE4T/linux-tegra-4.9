@@ -1,0 +1,615 @@
+/*
+ * tegra186-quill-p3310-a00-00-base.dts Quill A00 Board
+ *
+ * Copyright (c) 2015-2019, NVIDIA CORPORATION. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 2 of the License.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ */
+
+ /*
+ * Miovision Smartsense
+ *
+ * The Smartsense has 2 TX2 modules, Slot A and Slot B, in a master and slave
+ * (respectively) configuration.
+ *
+ * Board support code in U-Boot modifies the DTB on the fly during boot.
+ * - nodes that have no designation are left as is
+ * - smartsense,txslots = "a,c,f"; designates the node for the listed slots, the
+ *   node is removed from the DTB when booting on other slots
+ * - smartsense,txslots = ""; removes the node from all slots, most useful to
+ *   clean up loose ends from the Tegra platform/SoC DTSIs
+ *
+ * NOTE: Currently this only works for 1st-level nodes (root being top-level).
+ *       If deeper nesting is required, the board support code can be refactored
+ *       into a recursive call without too much trouble.
+ */
+
+#include <t18x-common-platforms/tegra186-quill-common-p3310-1000-a00.dtsi>
+#include <t18x-common-platforms/tegra186-quill-power-tree-p3310-1000-a00-00.dtsi>
+//#include <t18x-common-platforms/tegra186-quill-camera-modules.dtsi>
+#include <t18x-common-modules/tegra186-display-e3320-1000-a00.dtsi>
+
+/* comms dtsi file should be included after gpio dtsi file */
+#include <t18x-common-platforms/tegra186-quill-comms.dtsi>
+#include <t18x-common-plugin-manager/tegra186-quill-p3310-1000-a00-plugin-manager.dtsi>
+//#include <t18x-common-modules/tegra186-super-module-e2614-p2597-1000-a00.dtsi>
+//#include <t18x-common-plugin-manager/tegra186-quill-display-plugin-manager.dtsi>
+#include <t18x-common-prod/tegra186-priv-quill-p3310-1000-a00-prod.dtsi>
+//#include <t18x-common-plugin-manager/tegra186-quill-camera-plugin-manager.dtsi>
+
+/ {
+	model = "quill";
+	compatible = "nvidia,quill", "nvidia,p2597-0000+p3310-1000", "nvidia,tegra186";
+
+	nvidia,dtsfilename = __FILE__;
+	nvidia,dtbbuildtime = __DATE__, __TIME__;
+    nvidia,boardids = "3310:0000:SMARTSENSE:1";
+    nvidia,proc-boardid = "3310:0000:SMARTSENSE:1";	
+	nvidia,fastboot-usb-vid = <0x0955>;
+	nvidia,fastboot-usb-pid = <0xee16>;
+
+	chosen {
+		board-has-eeprom;
+		bootargs ="console=ttyS0,115200";
+		stdout-path = &uarta;
+		//nvidia,tegra-joint_xpu_rail;
+	};
+
+	aliases {
+        mdio-gpio0 = &mdio1;
+	};
+
+	firmware {
+		android {
+			compatible = "android,firmware";
+			hardware = "quill";
+		};
+	};
+
+	memory@80000000 {
+		device_type = "memory";
+		reg = <0x0 0x80000000 0x0 0x70000000>;
+	};
+
+	usb_cd {
+		status = "okay";
+		phys = <&tegra_xusb_padctl TEGRA_PADCTL_PHY_UTMI_P(0)>;
+		phy-names = "otg-phy";
+	};
+
+	xotg {
+		status = "okay";
+		phys = <&tegra_xusb_padctl TEGRA_PADCTL_PHY_UTMI_P(0)>;
+		phy-names = "otg-usb2";
+	};
+
+	xudc@3550000 {
+		status = "okay";
+		phys = <&tegra_xusb_padctl TEGRA_PADCTL_PHY_UTMI_P(0)>;
+		phy-names = "usb2";
+		emc-frequency = <150000000>;
+		nvidia,boost-cpu-freq = <1200>;
+	};
+
+	xhci@3530000 {
+		status = "okay";
+		phys = <&tegra_xusb_padctl TEGRA_PADCTL_PHY_UTMI_P(0)>,
+			<&tegra_xusb_padctl TEGRA_PADCTL_PHY_UTMI_P(1)>,
+			<&tegra_xusb_padctl TEGRA_PADCTL_PHY_USB3_P(1)>;
+		phy-names = "utmi-0", "utmi-1", "usb3-0";
+		nvidia,boost_cpu_freq = <800>;
+	};
+
+    bluedroid_pm {
+		bluedroid_pm,reset-gpio = <&tegra_main_gpio TEGRA_MAIN_GPIO(H, 5) 0>;
+	};
+
+	spi@c260000 {
+		status = "disabled";
+	};	
+
+	pinmux@2430000 {
+		common {
+			gpio_edp2_pp5 {
+				status = "disabled";
+			};
+		};
+
+		/* pinmuxing for B22/B20/B23 MDC/MDIO/SW_INTn */
+		pinctrl_mdio1_state: bitbangmdio {
+			gpio_wan2_pb5 {
+				status = "okay";
+				nvidia,pins = "gpio_wan2_pb5";
+				nvidia,function = "rsvd0";
+				nvidia,pull = <TEGRA_PIN_PULL_UP>;
+				nvidia,tristate = <TEGRA_PIN_ENABLE>;
+				nvidia,enable-input = <TEGRA_PIN_ENABLE>;
+				nvidia,lpdr = <TEGRA_PIN_DISABLE>;
+			};
+			gpio_wan4_pc0 {
+				status = "okay";
+				nvidia,pins = "gpio_wan4_pc0";
+				nvidia,function = "rsvd0";
+				nvidia,pull = <TEGRA_PIN_PULL_UP>;
+				nvidia,tristate = <TEGRA_PIN_ENABLE>;
+				nvidia,enable-input = <TEGRA_PIN_ENABLE>;
+				nvidia,lpdr = <TEGRA_PIN_DISABLE>;
+			};
+			safe_state_ps3 {
+				status = "okay";
+				nvidia,pins = "safe_state_ps3";
+				nvidia,function = "rsvd1";
+				//nvidia,pull = <TEGRA_PIN_PULL_UP>;
+				nvidia,tristate = <TEGRA_PIN_ENABLE>;
+				nvidia,enable-input = <TEGRA_PIN_ENABLE>;
+				nvidia,lpdr = <TEGRA_PIN_DISABLE>;
+			};
+		};
+	};
+
+	pinctrl@3520000 {
+		status = "okay";
+		pinctrl-0 = <&tegra_xusb_padctl_pinmux_default>;
+		pinctrl-1 = <&vbus_en0_sfio_tristate_state>;
+		pinctrl-2 = <&vbus_en1_sfio_tristate_state>;
+		pinctrl-3 = <&vbus_en0_sfio_passthrough_state>;
+		pinctrl-4 = <&vbus_en1_sfio_passthrough_state>;
+		pinctrl-5 = <&vbus_en0_default_state>;
+		pinctrl-6 = <&vbus_en1_default_state>;
+		pinctrl-names = "default",
+			"vbus_en0_sfio_tristate", "vbus_en1_sfio_tristate",
+			"vbus_en0_sfio_passthrough", "vbus_en1_sfio_passthrough",
+			"vbus_en0_default", "vbus_en1_default";
+
+		vbus-0-supply = <&battery_reg>;
+		vbus-1-supply = <&battery_reg>;
+		vbus-2-supply = <&battery_reg>;
+		vbus-3-supply = <&battery_reg>;
+
+		tegra_xusb_padctl_pinmux_default: pinmux {
+			/* Quill does not support usb3-micro AB */
+			usb2-micro-AB {
+				nvidia,lanes = "otg-0";
+				nvidia,function = "xusb";
+				nvidia,port-cap = <TEGRA_PADCTL_PORT_OTG_CAP>;
+				nvidia,oc-pin = <0>;
+			};
+			usb2-std-A-port2 {
+				nvidia,lanes = "otg-1";
+				nvidia,function = "xusb";
+				nvidia,port-cap = <TEGRA_PADCTL_PORT_HOST_ONLY>;
+				nvidia,oc-pin = <1>;
+			};
+			usb3-std-A-port2 {
+				nvidia,lanes = "usb3-1";
+				nvidia,port-cap = <TEGRA_PADCTL_PORT_HOST_ONLY>;
+				nvidia,oc-pin = <1>;
+			};
+
+			e3325-usb3-std-A-HS {
+				nvidia,lanes = "otg-2";
+				nvidia,function = "xusb";
+				nvidia,port-cap = <TEGRA_PADCTL_PORT_HOST_ONLY>;
+				status = "disabled";
+			};
+
+			e3325-usb3-std-A-SS {
+				nvidia,lanes = "usb3-0";
+				nvidia,port-cap = <TEGRA_PADCTL_PORT_HOST_ONLY>;
+				status = "disabled";
+			};
+		};
+	};
+
+	ahci-sata@3507000 {
+		status = "disabled";
+	};
+		
+	pcie-controller@10003000 {
+		status = "disabled";
+	};
+
+	fixed-regulators {
+		regulator@1 {
+			gpio = <&tegra_main_gpio TEGRA_MAIN_GPIO(P, 6) 0>;
+                };
+	};
+
+	gpio@2200000 {
+		sdmmc-wake-support-input {
+			status = "disabled";
+		};
+
+		sdmmc-wake-support-output {
+			status = "disabled";
+		};
+	};
+
+	i2c@3160000 {
+		lp8557-backlight-s-wuxga-8-0@2c {
+			status = "disabled";
+		};
+
+		ina3221x@40 {
+			status = "disabled";
+		};
+
+		ina3221x@41 {
+			status = "disabled";
+		};
+
+		ina3221x@42 {
+			status = "disabled";
+		};
+
+		ina3221x@43 {
+			status = "disabled";
+		};
+
+		gpio@74 {
+			status= "disabled";
+		};
+
+		gpio@77 {
+			status= "disabled";
+		};
+
+		lm75@48 {
+			compatible = "national,lm75";
+			reg = <0x48>;
+		};
+		
+		lm75@49 {
+			compatible = "national,lm75";
+			reg = <0x49>;
+		};
+		
+		lm75@4a {
+			compatible = "national,lm75";
+			reg = <0x4a>;
+		};
+		
+		lm63@4c {
+			compatible = "national,lm63";
+			reg = <0x4c>;
+		};
+		
+		mma8452@1c {
+			compatible = "fsl,mma8452";
+			reg = <0x1c>;
+			/*interrupt-parent=<&TX2A_ACCEL_INTn>;
+			interrupts=<0 0> */
+		};
+		
+		ab0805@69 {
+			compatible = "abracon,ab0805";
+			reg = <0x69>;
+		};
+
+		gpio_i2c_0_21: gpio@21 {
+			status = "disabled";
+		};
+
+		tps65132@3e {
+			status = "disabled";
+		};		
+
+	};
+
+	i2c@c240000 {
+		clock-frequency = <400000>;
+	};
+
+	i2c@3180000 {
+		status="disabled";
+	};
+	
+	i2c@3190000 {
+		status="disabled";
+	};
+	
+	i2c@31a0000 {
+		status="disabled";
+	};
+	
+	i2c@31b0000 {
+		status="disabled";
+	};
+	
+	i2c@31c0000 {
+		status="disabled";
+	};
+	
+	i2c@31e0000 {
+		status="disabled";
+	};
+	
+	i2c@c250000 {
+		status="disabled";
+	};
+	
+	cpus {
+		status = "disabled";
+	};
+
+	host1x {
+		sor {
+			status = "disabled";
+			dp-display {
+				status = "disabled";
+			};
+			hdmi-display {
+				status = "disabled";
+			};
+
+			panel-s-edp-uhdtv-15-6 {
+				smartdimmer {
+					status = "disabled";
+				};
+			};
+		};
+
+		dpaux@155c0000 {
+			status = "disabled";
+		};
+
+		sor1 {
+			status = "disabled";
+			hdmi-display {
+				status = "disabled";
+			};
+			dp-display {
+				status = "disabled";
+			};
+		};
+
+		nvdisplay@15200000 {
+			status = "disabled";
+		};
+
+		nvdisplay@15220000 {
+			status = "disabled";
+		};
+	};
+
+	tegra_udrm: tegra_udrm {
+		compatible = "nvidia,tegra-udrm";
+	};
+
+	bpmp_i2c {
+		spmic@3c {
+			pinmux@0 {
+				pin_gpio2 {
+					status = "disabled";
+				};
+				pin_gpio3 {
+					status = "disabled";
+				};
+				pin_gpio7 {
+					drive-push-pull = <1>;
+				};
+			};
+
+			regulators {
+				ldo0 {
+					maxim,active-fps-source = <MAX77620_FPS_SRC_NONE>;
+				};
+
+				ldo6 {
+					maxim,active-fps-source = <MAX77620_FPS_SRC_NONE>;
+					regulator-boot-on;
+					regulator-always-on;
+				};
+
+				ldo7 {
+					regulator-min-microvolt = <1000000>;
+					regulator-max-microvolt = <1000000>;
+				};
+
+				ldo8 {
+					regulator-name = "dvdd-pex";
+					regulator-min-microvolt = <1000000>;
+					regulator-max-microvolt = <1000000>;
+				};
+			};
+		};
+	};
+
+    pwm-fan {
+		vdd-fan-supply = <&battery_reg>;
+    };
+
+	mdio1: mdio {
+		smartsense,txslots = "a";
+		compatible = "virtual,mdio-gpio";
+		status = "okay";
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		pinctrl-names = "bitbangmdio";
+		pinctrl-0 = <&pinctrl_mdio1_state>;
+
+		/* B23 SW_INTn */
+		interrupt-parent = <&tegra_aon_gpio>;
+		interrupts = <TEGRA_AON_GPIO(S, 3) 8>;
+
+		/* B20/B22 MDC/MDIO */
+		gpios = <&tegra_main_gpio TEGRA_MAIN_GPIO(C, 0) GPIO_ACTIVE_HIGH
+			     &tegra_main_gpio TEGRA_MAIN_GPIO(B, 5) GPIO_ACTIVE_HIGH
+			    >;
+
+		switch0: switch@0 {
+			compatible = "marvell,mv88e6190";
+			#address-cells = <1>;
+			#size-cells = <0>;					
+			reg = <0>;
+			dsa,member = <0 0>;
+
+			ports {
+				#address-cells = <1>;
+				#size-cells = <0>;
+
+				port@1 {
+					reg = <0x1>;
+					label = "port1";
+					phy-handle = <&switch0phy1>;
+				};
+
+				port@2 {
+					reg = <0x2>;
+					label = "port2";
+					phy-handle = <&switch0phy2>;
+				};
+
+				port@3 {
+					reg = <0x3>;
+					label = "port3";
+					phy-handle = <&switch0phy3>;
+				};
+
+				port@4 {
+					reg = <0x4>;
+					label = "port4";
+					phy-handle = <&switch0phy4>;
+				};
+
+				port@5 {
+					reg = <0x5>;
+					label = "port5";
+					phy-handle = <&switch0phy5>;
+				};
+
+				port@6 {
+					reg = <0x6>;
+					label = "cpu";
+					ethernet = <&{/ether_qos@2490000}>;
+					phy-handle = <&switch0phy6>;
+				};
+
+				port@7 {
+					reg = <0x7>;
+					label = "port7";
+					phy-handle = <&switch0phy7>;
+				};
+
+				port@8 {
+					reg = <0x8>;
+					label = "port8";
+					phy-handle = <&switch0phy8>;
+				};
+			};		
+
+			mdio {
+				#address-cells = <1>;
+				#size-cells = <0>;
+
+			 	/* The MV88E6390 does not report the phy type on the MDIO bus properly, so we force it to the
+	 	   		correct value here using the compatible property. */
+				switch0phy0: ethernet-phy@0 {
+					compatible = "ethernet-phy-id0141.0f90";
+					reg = <0>;
+					broken-turn-around;
+				};
+				switch0phy1: ethernet-phy@1 {
+					compatible = "ethernet-phy-id0141.0f90";
+					reg = <1>;
+					broken-turn-around;
+				};
+				switch0phy2: ethernet-phy@2 {
+					compatible = "ethernet-phy-id0141.0f90";
+					reg = <2>;
+					broken-turn-around;
+				};
+				switch0phy3: ethernet-phy@3 {
+					compatible = "ethernet-phy-id0141.0f90";
+					reg = <3>;
+					broken-turn-around;
+				};
+				switch0phy4: ethernet-phy@4 {
+					compatible = "ethernet-phy-id0141.0f90";
+					reg = <4>;
+					broken-turn-around;
+				};
+				switch0phy5: ethernet-phy@5 {
+					compatible = "ethernet-phy-id0141.0f90";
+					reg = <5>;
+					broken-turn-around;
+				};
+				switch0phy6: ethernet-phy@6 {
+					compatible = "ethernet-phy-id0141.0f90";
+					reg = <6>;
+					broken-turn-around;
+				};
+				switch0phy7: ethernet-phy@7 {
+					compatible = "ethernet-phy-id0141.0f90";
+					reg = <7>;
+					broken-turn-around;
+				};
+				switch0phy8: ethernet-phy@8 {
+					compatible = "ethernet-phy-id0141.0f90";
+					reg = <8>;
+					broken-turn-around;
+				};
+				switch0phy9: ethernet-phy@9 {
+					compatible = "ethernet-phy-id0141.0f90";
+					reg = <9>;
+					broken-turn-around;
+				};
+				switch0phya: ethernet-phy@a {
+					compatible = "ethernet-phy-id0141.0f90";
+					reg = <0xa>;
+					broken-turn-around;
+				};
+				switch0phy1b: ethernet-phy@1b {
+					compatible = "ethernet-phy-id0141.0f90";
+					reg = <0x1b>;
+					broken-turn-around;
+				};
+				switch0phy1c: ethernet-phy@1c {
+					compatible = "ethernet-phy-id0141.0f90";
+					reg = <0x1c>;
+					broken-turn-around;
+				};
+			};
+
+		};	
+	};
+
+	thermal-zones {
+		BCPU-therm {
+			trips {
+				trip_bthrot {
+					temperature = <86500>;
+				};
+			};
+		};
+
+		MCPU-therm {
+			trips {
+				trip_bthrot {
+					temperature = <86500>;
+				};
+			};
+		};
+
+		AO-therm {
+			trips {
+				trip_bthrot {
+					temperature = <88000>;
+				};
+			};
+		};
+	};	
+
+};
+
+#if LINUX_VERSION >= 414
+#include <tegra186-linux-4.14.dtsi>
+#endif

@@ -139,8 +139,10 @@ struct fan_dev_data {
 	struct pwm_device *pwm_dev;
 	bool pwm_legacy_api;
 	int fan_cap_pwm;
+	int fan_min_pwm;
 	int fan_cur_pwm;
 	int next_target_pwm;
+	int requested_target_pwm;
 	struct thermal_cooling_device *cdev;
 	struct delayed_work fan_ramp_work;
 	struct delayed_work fan_hyst_work;

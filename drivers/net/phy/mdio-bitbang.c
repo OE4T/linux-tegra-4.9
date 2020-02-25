@@ -170,6 +170,13 @@ static int mdiobb_read(struct mii_bus *bus, int phy, int reg)
 	 */
 	if (mdiobb_get_bit(ctrl) != 0 &&
 	    !(bus->phy_ignore_ta_mask & (1 << phy))) {
+#ifdef CONFIG_MDIO_BITBANG_MIOVISION_DISABLE_TURNAROUND
+	  	// MIOVISION: Most PHY's should drive the mdio line low on turnaround, however on MV88E6390 this 
+		// does not happen. So we just skip this check.
+
+		// Fix compiler error with unused variable.
+		(void) i;
+#else
 		/* PHY didn't drive TA low -- flush any bits it
 		 * may be trying to send.
 		 */
@@ -177,6 +184,7 @@ static int mdiobb_read(struct mii_bus *bus, int phy, int reg)
 			mdiobb_get_bit(ctrl);
 
 		return 0xffff;
+#endif
 	}
 
 	ret = mdiobb_get_num(ctrl, 16);

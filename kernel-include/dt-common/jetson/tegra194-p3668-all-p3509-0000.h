@@ -6,7 +6,7 @@
  *
  */
 
-#define JETSON_COMPATIBLE	"nvidia,p3509-0000+p3668-0001"
+#define JETSON_COMPATIBLE	"nvidia,p3509-0000+p3668-0000", "nvidia,p3509-0000+p3668-0001"
 
 /* SoC function name for clock signal on 40-pin header pin 7 */
 #define HDR40_CLK	"aud"

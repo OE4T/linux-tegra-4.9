@@ -10,3 +10,55 @@
  * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
  * more details.
  */
+
+/ {
+	plugin-manager {
+		fragment-pcie-c5-rp {
+			odm-anded-override;
+			odm-data = "disable-pcie-c5-endpoint",
+					"enable-nvhs-uphy-pcie-c5";
+			override@0 {
+				target = <&{/pcie@141a0000}>;
+				_overlay_ {
+					status = "okay";
+				};
+			};
+			override@1 {
+				target = <&{/pcie_ep@141a0000}>;
+				_overlay_ {
+					status = "disabled";
+				};
+			};
+			override@2 {
+				target = <&{/gpio@c2f0000/pex-refclk-sel-low}>;
+				_overlay_ {
+					status = "okay";
+				};
+			};
+		};
+
+		fragment-pcie-c5-ep {
+			odm-anded-override;
+			odm-data = "enable-pcie-c5-endpoint",
+					"enable-nvhs-uphy-pcie-c5";
+			override@0 {
+				target = <&{/pcie@141a0000}>;
+				_overlay_ {
+					status = "disabled";
+				};
+			};
+			override@1 {
+				target = <&{/pcie_ep@141a0000}>;
+				_overlay_ {
+					status = "okay";
+				};
+			};
+			override@2 {
+				target = <&{/gpio@c2f0000/pex-refclk-sel-high}>;
+				_overlay_ {
+					status = "okay";
+				};
+			};
+		};
+	};
+};

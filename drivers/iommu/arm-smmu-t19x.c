@@ -1819,13 +1819,6 @@ static int arm_smmu_attach_dev(struct iommu_domain *domain, struct device *dev)
 	if (!cfg)
 		return -ENODEV;
 
-	ret = arm_smmu_domain_add_master(smmu_domain, cfg);
-	if (!ret) {
-		dev->archdata.iommu = domain;
-		add_smmu_master_debugfs(domain, dev,
-				find_smmu_master(smmu, dev_get_dev_node(dev)));
-	}
-
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 9, 0)
 	if (iommu_dma_init_domain(domain,
 				domain->geometry.aperture_start,
@@ -1837,6 +1830,12 @@ static int arm_smmu_attach_dev(struct iommu_domain *domain, struct device *dev)
 
 	arm_smmu_do_linear_map(dev);
 
+	ret = arm_smmu_domain_add_master(smmu_domain, cfg);
+	if (!ret) {
+		dev->archdata.iommu = domain;
+		add_smmu_master_debugfs(domain, dev,
+				find_smmu_master(smmu, dev_get_dev_node(dev)));
+	}
 	/* Enable stream Id override, which enables SMMU translation for dev */
 	for (i = 0; i < cfg->num_streamids; i++)
 		platform_override_streamid(cfg->streamids[i]);

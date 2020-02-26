@@ -4694,9 +4694,6 @@ static int gk20a_init_gr_prepare(struct gk20a *g)
 	/* Disable elcg until it gets enabled later in the init*/
 	nvgpu_cg_elcg_disable_no_wait(g);
 
-	/* Disable blcg until it gets enabled later in the init*/
-	nvgpu_cg_blcg_disable_no_wait(g);
-
 	/* enable fifo access */
 	gk20a_writel(g, gr_gpfifo_ctl_r(),
 		gr_gpfifo_ctl_access_enabled_f() |
@@ -5163,7 +5160,6 @@ int gk20a_gr_reset(struct gk20a *g)
 
 	nvgpu_cg_init_gr_load_gating_prod(g);
 	nvgpu_cg_elcg_enable_no_wait(g);
-	nvgpu_cg_blcg_enable_no_wait(g);
 
 	/* GR is inialized, signal possible waiters */
 	g->gr.initialized = true;

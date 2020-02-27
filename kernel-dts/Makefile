@@ -18,6 +18,7 @@ dtb-$(CONFIG_ARCH_TEGRA_210_SOC) += tegra210-jetson-tx1-p2597-2180-a01-devkit_as
 dtbo-$(CONFIG_ARCH_TEGRA_210_SOC) += tegra210-jetson-tx1-p2597-2180-a01-devkit-hdr40.dtbo
 dtbo-$(CONFIG_ARCH_TEGRA_210_SOC) += tegra210-jetson-tx1-p2597-2180-a01-devkit-adafruit-sph0645lm4h.dtbo
 dtbo-$(CONFIG_ARCH_TEGRA_210_SOC) += tegra210-jetson-tx1-p2597-2180-a01-devkit-fe-pi-audio-z-v2.dtbo
+dtbo-$(CONFIG_ARCH_TEGRA_210_SOC) += tegra210-jetson-tx1-p2597-2180-a01-devkit-respeaker-4-mic-array.dtbo
 
 ifneq ($(dtb-y),)
 dtb-y := $(addprefix $(makefile-path)/,$(dtb-y))

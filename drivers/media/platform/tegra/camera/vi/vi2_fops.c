@@ -614,8 +614,7 @@ static int tegra_channel_capture_frame_multi_thread(
 		if (err) {
 			buf->state = VB2_BUF_STATE_REQUEUEING;
 			chan->capture_state = CAPTURE_ERROR;
-			/* do we have to run recover here ?? */
-			/* tegra_channel_ec_recover(chan); */
+			tegra_channel_ec_recover(chan);
 		}
 	}
 

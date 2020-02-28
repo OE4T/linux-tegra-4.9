@@ -92,4 +92,16 @@
 					TEGRA194_MAIN_GPIO(GG, 1)
 					GPIO_ACTIVE_LOW>;
 	};
+
+	pcie@14120000 {
+		status = "disabled";
+	};
+
+	pcie@14140000 {
+		status = "disabled";
+	};
+
+	pcie@14160000 {
+		status = "disabled";
+	};
 };

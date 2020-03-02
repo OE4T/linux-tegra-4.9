@@ -296,7 +296,6 @@
 		mmc-ddr-1_8v;
 		mmc-ocr-mask = <3>;
 		uhs-mask = <0x0>;
-		max-clk-limit = <400000>;
 		tap-delay = <3>;
 	};
 

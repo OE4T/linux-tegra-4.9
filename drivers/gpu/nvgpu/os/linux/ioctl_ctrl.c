@@ -660,7 +660,8 @@ static int nvgpu_gpu_ioctl_trigger_suspend(struct gk20a *g)
 	    return err;
 
 	nvgpu_mutex_acquire(&g->dbg_sessions_lock);
-	err = g->ops.gr.trigger_suspend(g);
+	err = gr_gk20a_elpg_protected_call(g,
+			g->ops.gr.trigger_suspend(g));
 	nvgpu_mutex_release(&g->dbg_sessions_lock);
 
 	gk20a_idle(g);
@@ -695,7 +696,8 @@ static int nvgpu_gpu_ioctl_wait_for_pause(struct gk20a *g,
 		goto out_free;
 
 	nvgpu_mutex_acquire(&g->dbg_sessions_lock);
-	g->ops.gr.wait_for_pause(g, w_state);
+	(void)gr_gk20a_elpg_protected_call(g,
+			g->ops.gr.wait_for_pause(g, w_state));
 
 	for (sm_id = 0; sm_id < g->gr.no_of_sm; sm_id++) {
 		ioctl_w_state[sm_id].valid_warps[0] =
@@ -738,7 +740,8 @@ static int nvgpu_gpu_ioctl_resume_from_pause(struct gk20a *g)
 	    return err;
 
 	nvgpu_mutex_acquire(&g->dbg_sessions_lock);
-	err = g->ops.gr.resume_from_pause(g);
+	err = gr_gk20a_elpg_protected_call(g,
+			g->ops.gr.resume_from_pause(g));
 	nvgpu_mutex_release(&g->dbg_sessions_lock);
 
 	gk20a_idle(g);
@@ -754,7 +757,8 @@ static int nvgpu_gpu_ioctl_clear_sm_errors(struct gk20a *g)
 	if (err)
 		return err;
 
-	err = g->ops.gr.clear_sm_errors(g);
+	err = gr_gk20a_elpg_protected_call(g,
+			g->ops.gr.clear_sm_errors(g));
 
 	gk20a_idle(g);
 

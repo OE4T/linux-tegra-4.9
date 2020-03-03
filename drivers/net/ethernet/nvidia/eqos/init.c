@@ -1166,13 +1166,10 @@ int eqos_probe(struct platform_device *pdev)
 	eqos_get_slot_num_check_queues(pdata, pdt_cfg->slot_num_check);
 
 #ifndef DISABLE_TRISTATE
-	if (pdata->mac_ver == EQOS_MAC_CORE_4_10) {
-		/* enable tx tri state to save power during init */
-		ret = pinctrl_pm_select_idle_state(&pdev->dev);
-		if (ret < 0)
-			dev_err(&pdev->dev, "setting tx_tristate_enable \
-					state failed with %d\n", ret);
-	}
+	/* enable tx tri state to save power during init */
+	ret = pinctrl_pm_select_idle_state(&pdev->dev);
+	if (ret < 0)
+		dev_err(&pdev->dev, "enable txrx trisate failed(%d)\n", ret);
 #endif
 	pdata->rx_buffer_len = EQOS_RX_BUF_LEN;
 	pdata->rx_max_frame_size = EQOS_MAX_ETH_FRAME_LEN_DEFAULT;

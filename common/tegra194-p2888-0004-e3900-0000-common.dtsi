@@ -116,7 +116,8 @@
 						status = "okay";
 					};
 					usb2-1 {
-						status = "disabled";
+						nvidia,function = "xusb";
+						status = "okay";
 					};
 					usb2-2 {
 						nvidia,function = "xusb";
@@ -155,7 +156,9 @@
 				status = "okay";
 			};
 			usb2-1 {
-				status = "disabled";
+				mode = "host";
+				vbus-supply = <&e3900_vbus0_cvb>;
+				status = "okay";
 			};
 			usb2-2 {
 				mode = "host";
@@ -219,11 +222,12 @@
 		/delete-property/ extcon-cables;
 		/delete-property/ extcon-cable-names;
 #if TEGRA_XUSB_PADCONTROL_VERSION >= DT_VERSION_2
-		phys = <&{/xusb_padctl@3520000/pads/usb2/lanes/usb2-2}>,
+		phys = <&{/xusb_padctl@3520000/pads/usb2/lanes/usb2-1}>,
+			<&{/xusb_padctl@3520000/pads/usb2/lanes/usb2-2}>,
 			<&{/xusb_padctl@3520000/pads/usb2/lanes/usb2-3}>,
 			<&{/xusb_padctl@3520000/pads/usb3/lanes/usb3-2}>,
 			<&{/xusb_padctl@3520000/pads/usb3/lanes/usb3-3}>;
-		phy-names = "usb2-2", "usb2-3", "usb3-2", "usb3-3";
+		phy-names = "usb2-1", "usb2-2", "usb2-3", "usb3-2", "usb3-3";
 		nvidia,xusb-padctl = <&xusb_padctl>;
 #endif
 		status = "okay";

@@ -250,5 +250,14 @@
 			enable-active-high;
 			vin-supply = <&e3900_sys_1v8_cvb>;
 		};
+
+		e3900_vbus0_cvb: regulator@223 {
+			compatible = "regulator-fixed";
+			reg = <223>;
+			regulator-name = "e3900-vbus0-cvb";
+			regulator-min-microvolt = <5000000>;
+			regulator-max-microvolt = <5000000>;
+			vin-supply = <&e3900_atx_5v_cvb>;
+		};
 	};
 };

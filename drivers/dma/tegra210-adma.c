@@ -446,6 +446,8 @@ static void tegra_adma_stop(struct tegra_adma_chan *tdc)
 		return;
 	}
 
+	tegra_adma_irq_clear(tdc);
+
 	kfree(tdc->desc);
 	tdc->desc = NULL;
 	tdc->vc.cyclic = NULL;

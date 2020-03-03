@@ -1180,6 +1180,7 @@ static int nvgpu_vm_unmap_sync_buffer(struct vm_gk20a *vm,
 {
 	struct nvgpu_timeout timeout;
 	int ret = 0;
+	bool done = false;
 
 	nvgpu_mutex_release(&vm->update_gmmu_lock);
 
@@ -1189,16 +1190,18 @@ static int nvgpu_vm_unmap_sync_buffer(struct vm_gk20a *vm,
 	nvgpu_timeout_init(vm->mm->g, &timeout, 100, NVGPU_TIMER_CPU_TIMER);
 
 	do {
-		if (nvgpu_atomic_read(&mapped_buffer->ref.refcount) == 1) {
-			break;
-		}
-		nvgpu_msleep(10);
-	} while (nvgpu_timeout_expired_msg(&timeout,
+		if (nvgpu_atomic_read(&mapped_buffer->ref.refcount) <= 1) {
+			done = true;
+		} else if (nvgpu_timeout_expired_msg(&timeout,
 			    "sync-unmap failed on 0x%llx",
-			    mapped_buffer->addr) == 0);
+			    mapped_buffer->addr) != 0) {
+			done = true;
+		} else {
+			nvgpu_msleep(10);
+		}
+	} while (!done);
 
-	if (nvgpu_atomic_read(&mapped_buffer->ref.refcount) != 1 &&
-			nvgpu_timeout_expired(&timeout)) {
+	if (nvgpu_atomic_read(&mapped_buffer->ref.refcount) > 1) {
 		ret = -ETIMEDOUT;
 	}
 
@@ -1221,11 +1224,9 @@ void nvgpu_vm_unmap(struct vm_gk20a *vm, u64 offset,
 
 	if (mapped_buffer->flags & NVGPU_VM_MAP_FIXED_OFFSET) {
 		if (nvgpu_vm_unmap_sync_buffer(vm, mapped_buffer)) {
-			/*
-			 * Looks like we have failed... Better not continue in
-			 * case the buffer is in use.
-			 */
-			goto done;
+			nvgpu_warn(vm->mm->g, "%d references remaining on 0x%llx",
+				nvgpu_atomic_read(&mapped_buffer->ref.refcount),
+				mapped_buffer->addr);
 		}
 	}
 

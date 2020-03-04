@@ -1315,7 +1315,9 @@ static int nvhost_module_finalize_poweron(struct device *dev)
 	if (pdata->bwmgr_handle) {
 		for (i = 0; i < NVHOST_MODULE_MAX_CLOCKS; i++) {
 			if (nvhost_module_emc_clock(&pdata->clocks[i])) {
+				mutex_lock(&client_list_lock);
 				nvhost_module_update_rate(pdev, i);
+				mutex_unlock(&client_list_lock);
 				break;
 			}
 		}

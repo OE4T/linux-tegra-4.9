@@ -29,6 +29,8 @@
 #define MAX_VI_CHANNEL 12
 #define NUM_FIELDS_INTERLACED 2
 #define NUM_FIELDS_SINGLE 1
+#define TOP_FIELD 2
+#define BOTTOM_FIELD 1
 #define SOF_SYNCPT_IDX	0
 #define FE_SYNCPT_IDX	1
 /* 256 byte alignment in accordance to NvRmSurface Pitch alignment.
@@ -565,6 +567,14 @@ static int tegra_channel_capture_frame_single_thread(
 				chan->interlace_bplfactor =
 						NUM_FIELDS_INTERLACED;
 			} else {
+			/* Update the offset according to the field received.
+			 * Top field associated with buf sequence 1 should
+			 * be written first followed by the bottom field.
+			 * Unordered fields will be overwritten
+			 */
+				if ((j == BOTTOM_FIELD) &&
+					(vb->sequence != TOP_FIELD))
+					j--;
 				chan->buffer_offset[0] = j *
 				chan->format.bytesperline * chan->format.height;
 

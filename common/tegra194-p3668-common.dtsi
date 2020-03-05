@@ -19,12 +19,13 @@
 #include <tegra194-soc/tegra194-soc-cvm.dtsi>
 #include "tegra194-fixed-regulator-p3668.dtsi"
 #include <t19x-common-platforms/tegra194-comms.dtsi>
-#include "tegra194-plugin-manager-p3668.dtsi"
 #include <t19x-common-platforms/tegra194-platforms-eqos.dtsi>
 #include "tegra194-powermon-p3668.dtsi"
 #include "tegra194-power-tree-p3668.dtsi"
 #include "tegra194-thermal-p3668.dtsi"
 #include <t19x-common-platforms/tegra194-no-pll-aon-clock.dtsi>
+#include "tegra194-p3668-pcie-plugin-manager.dtsi"
+#include "tegra194-plugin-manager-p3668.dtsi"
 
 / {
 	nvidia,fastboot-usb-vid = <0x0955>;
@@ -295,17 +296,6 @@
 			gpios = <TEGRA194_AON_GPIO(AA, 5) 0>;
 			label = "pex_refclk_sel_high";
 			status = "disabled";
-		};
-	};
-
-	gpio@2200000 {
-		pcie-reg-enable {
-			gpio-hog;
-			gpios = <TEGRA194_MAIN_GPIO(Z, 2) GPIO_ACTIVE_HIGH
-				 TEGRA194_MAIN_GPIO(A, 1) GPIO_ACTIVE_LOW>;
-			label = "pcie-3v3-reg", "pcie-12v-reg";
-			output-high;
-			status = "okay";
 		};
 	};
 

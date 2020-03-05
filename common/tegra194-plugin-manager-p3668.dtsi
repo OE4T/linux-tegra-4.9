@@ -63,5 +63,32 @@
 				};
 			};
 		};
+
+		fragement-tegra-pcie-c5-num-lanes {
+			ids = ">=3449-0000-000";
+			override@0 {
+				target = <&{/pcie@141a0000}>;
+				_overlay_ {
+					num-lanes = <1>;
+					status = "okay";
+				};
+			};
+			override@1 {
+				target = <&{/pcie_ep@141a0000}>;
+				_overlay_ {
+					status = "disabled";
+				};
+			};
+		};
+
+		fragement-tegra-pcie-c4-dis {
+			ids = ">=3449-0000-000";
+			override@0 {
+				target = <&{/pcie@14160000}>;
+				_overlay_ {
+					status = "disabled";
+				};
+			};
+		};
 	};
 };

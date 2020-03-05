@@ -58,6 +58,8 @@
 #endif
 #include <linux/version.h>
 
+#include <clocksource/arm_arch_timer.h>
+
 #define CREATE_TRACE_POINTS
 #include <trace/events/display.h>
 EXPORT_TRACEPOINT_SYMBOL(display_writel);
@@ -5014,9 +5016,20 @@ inline u64 tegra_dc_get_tsc_time(void)
 #else
 inline u64 tegra_dc_get_tsc_time(void)
 {
-	/* TBD: Add support for kernel 4.9 */
-	/* arch_timer_get_timecounter() doesn't exist in 4.9 */
-	return 0;
+	u64 frac = 0;
+	const struct cyclecounter *cc;
+	struct arch_timer_kvm_info *info;
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 10, 0))
+	u64 value;
+#else
+	cycle_t value;
+#endif
+
+	info = arch_timer_get_kvm_info();
+	cc = info->timecounter.cc;
+
+	value = cc->read(cc);
+	return cyclecounter_cyc2ns(cc, value, 0, &frac);
 }
 #endif
 

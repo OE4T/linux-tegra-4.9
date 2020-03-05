@@ -25,6 +25,7 @@
 #include "tegra194-thermal-p3668.dtsi"
 #include "tegra194-p3668-pcie-plugin-manager.dtsi"
 #include "tegra194-plugin-manager-p3668.dtsi"
+#include <t19x-common-platforms/tegra194-no-pll-aon-clock.dtsi>
 
 / {
 	nvidia,fastboot-usb-vid = <0x0955>;
@@ -476,6 +477,15 @@
 				nvidia,x4-is-ddr=<0>;
 				nvidia,ctrl-bus-clk-ratio = <1>;
 			};
+		};
+	};
+	clocks-init {
+		compatible = "nvidia,clocks-config";
+		status = "okay";
+		disable {
+			clocks = <&aon_clks TEGRA194_CLK_PLLAON>,
+				<&bpmp_clks TEGRA194_CLK_CAN1>,
+				<&bpmp_clks TEGRA194_CLK_CAN2>;
 		};
 	};
 };

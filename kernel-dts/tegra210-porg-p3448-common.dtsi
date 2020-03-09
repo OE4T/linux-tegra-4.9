@@ -196,7 +196,7 @@
 		};
 	};
 
-	spi@7000d400 { /* SPI 1 to 40 pin header */
+	hdr40_spi1: spi@7000d400 { /* SPI 1 to 40 pin header */
 		status = "okay";
 		spi@0 {
 			compatible = "spidev";
@@ -218,7 +218,7 @@
 		};
 	};
 
-	spi@7000d600 { /* SPI 2 to 40 pin header */
+	hdr40_spi2: spi@7000d600 { /* SPI 2 to 40 pin header */
 		status = "okay";
 		spi@0 {
 			compatible = "spidev";

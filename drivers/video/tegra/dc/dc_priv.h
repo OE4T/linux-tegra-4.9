@@ -4,7 +4,7 @@
  * Copyright (C) 2010 Google, Inc.
  * Author: Erik Gilling <konkers@android.com>
  *
- * Copyright (c) 2010-2019, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2010-2020, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -265,6 +265,9 @@ int tegra_dc_slgc_disp0(struct notifier_block *nb, unsigned long unused0,
 
 /* defined in dc.c, used in dc_sysfs.c and ext/dev.c */
 int tegra_dc_update_winmask(struct tegra_dc *dc, unsigned long winmask);
+
+/* defined in dc.c, used in sor.c */
+struct tegra_dc_sor_info *tegra_dc_get_sor_cap(void);
 
 /* common display clock calls */
 struct clk *tegra_disp_clk_get(struct device *dev, const char *id);

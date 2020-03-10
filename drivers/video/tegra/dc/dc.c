@@ -7439,6 +7439,14 @@ int tegra_dc_get_numof_dispsors(void)
 }
 EXPORT_SYMBOL(tegra_dc_get_numof_dispsors);
 
+struct tegra_dc_sor_info *tegra_dc_get_sor_cap(void)
+{
+	if (!hw_data || !hw_data->valid)
+		return NULL;
+
+	return hw_data->sor_info;
+}
+
 /* tegra_dc_get_max_lines() - gets v_total for current mode
  * @disp_id : the display id of the concerned head.
  *
@@ -7686,6 +7694,11 @@ inline bool tegra_dc_is_nvdisplay(void)
 }
 EXPORT_SYMBOL(tegra_dc_is_nvdisplay);
 
+static struct tegra_dc_sor_info t21x_sor_info[] = {
+	{ .hdcp_supported = false },  /* SOR0 */
+	{ .hdcp_supported = true },   /* SOR1 */
+};
+
 static void tegra_dc_populate_t21x_hw_data(struct tegra_dc_hw_data *hw_data)
 {
 	if (!hw_data)
@@ -7694,6 +7707,7 @@ static void tegra_dc_populate_t21x_hw_data(struct tegra_dc_hw_data *hw_data)
 	hw_data->nheads = 2;
 	hw_data->nwins = 5;
 	hw_data->nsors = 2;
+	hw_data->sor_info = t21x_sor_info;
 
 	/* unused */
 	hw_data->pd_table = NULL;

@@ -115,7 +115,13 @@ static int tegra_pwm_config(struct pwm_chip *chip, struct pwm_device *pwm,
 	 * cycles at the PWM clock rate will take period_ns nanoseconds.
 	 */
 	if (pc->soc->num_channels == 1) {
-		rate = ((rate << PWM_DUTY_WIDTH) << PWM_SCALE_WIDTH) * 80/100;
+		/*
+		 * Rate is multiplied with 2^PWM_DUTY_WIDTH so that it matches with the
+		 * hieghest applicable rate that the controller can provide. Any further
+		 * lower value can be derived by setting PFM bits[0:12]
+		 * Higher mark is taken since BPMP has round-up mechanism implemented.
+		 */
+		rate = rate << PWM_DUTY_WIDTH;
 
 		err = clk_set_rate(pc->clk, rate);
 		if (err < 0)

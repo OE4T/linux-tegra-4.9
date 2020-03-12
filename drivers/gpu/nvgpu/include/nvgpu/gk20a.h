@@ -1787,6 +1787,7 @@ int gk20a_wait_for_idle(struct gk20a *g);
 
 int gk20a_init_gpu_characteristics(struct gk20a *g);
 
+bool gk20a_check_poweron(struct gk20a *g);
 int gk20a_prepare_poweroff(struct gk20a *g);
 int gk20a_finalize_poweron(struct gk20a *g);
 

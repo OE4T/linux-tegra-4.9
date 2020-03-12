@@ -107,10 +107,7 @@ struct device_node *nvgpu_get_node(struct gk20a *g)
 
 void gk20a_busy_noresume(struct gk20a *g)
 {
-	int ret = pm_runtime_get_if_in_use(dev_from_gk20a(g));
-
-	if (ret <= 0)
-		pm_runtime_get_noresume(dev_from_gk20a(g));
+	pm_runtime_get_noresume(dev_from_gk20a(g));
 }
 
 /*
@@ -260,6 +257,17 @@ int nvgpu_finalize_poweron_linux(struct nvgpu_os_linux *l)
 	l->init_done = true;
 
 	return 0;
+}
+
+bool gk20a_check_poweron(struct gk20a *g)
+{
+	bool ret;
+
+	nvgpu_mutex_acquire(&g->power_lock);
+	ret = g->power_on;
+	nvgpu_mutex_release(&g->power_lock);
+
+	return ret;
 }
 
 int gk20a_pm_finalize_poweron(struct device *dev)

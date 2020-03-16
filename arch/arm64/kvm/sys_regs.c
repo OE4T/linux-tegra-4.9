@@ -1754,6 +1754,16 @@ int kvm_handle_cp14_32(struct kvm_vcpu *vcpu, struct kvm_run *run)
 				NULL, 0);
 }
 
+static int handle_imp_def_sys_reg(struct kvm_vcpu *vcpu,
+				  struct sys_reg_params *params)
+{
+	if (vcpu->kvm->arch.return_idsr_to_user)
+		return 0;
+
+	kvm_inject_undefined(vcpu);
+	return 1;
+}
+
 static bool is_imp_def_sys_reg(struct sys_reg_params *params)
 {
 	// See ARM DDI 0487E.a, section D12.3.2
@@ -1789,7 +1799,7 @@ static int emulate_sys_reg(struct kvm_vcpu *vcpu,
 		}
 		/* If access function fails, it should complain. */
 	} else if (is_imp_def_sys_reg(params)) {
-	       kvm_inject_undefined(vcpu);
+		return handle_imp_def_sys_reg(vcpu, params);
 	} else {
 		kvm_err("Unsupported guest sys_reg access at: %lx\n",
 			*vcpu_pc(vcpu));
@@ -1837,7 +1847,61 @@ int kvm_handle_sys_reg(struct kvm_vcpu *vcpu, struct kvm_run *run)
 
 	if (!params.is_write)
 		vcpu_set_reg(vcpu, Rt, params.regval);
+
+	if (unlikely(!ret)) {
+		run->arm_idsr.Op0 = params.Op0;
+		run->arm_idsr.Op1 = params.Op1;
+		run->arm_idsr.CRn = params.CRn;
+		run->arm_idsr.CRm = params.CRm;
+		run->arm_idsr.Op2 = params.Op2;
+		run->arm_idsr.regval = params.regval;
+		run->arm_idsr.is_write = params.is_write;
+		run->arm_idsr.is_needed = 1;
+		run->arm_idsr.is_handled = 0;
+
+		run->exit_reason = KVM_EXIT_ARM_IDSR;
+	}
+
 	return ret;
+}
+
+/**
+ * kvm_handle_idsr_return -- Handle syncing register state after user
+ *                           user space emulation
+ *
+ * @vcpu: The VCPU pointer
+ * @run:  The VCPU run struct containing the system register data
+ */
+int kvm_handle_idsr_return(struct kvm_vcpu *vcpu, struct kvm_run *run)
+{
+	int Rt = kvm_vcpu_sys_get_rt(vcpu);
+
+	/* Detect an already handled IDSR return */
+	if (unlikely(!run->arm_idsr.is_needed))
+		return 0;
+
+	run->arm_idsr.is_needed = 0;
+
+	if (!run->arm_idsr.is_handled) {
+		/*
+		 * User space couldn't handle this register - revert to
+		 * default behavior, which is injecting an undefined
+		 * instruction exception into the guest.
+		 */
+		kvm_inject_undefined(vcpu);
+		return 0;
+	}
+
+	if (!run->arm_idsr.is_write)
+		vcpu_set_reg(vcpu, Rt, run->arm_idsr.regval);
+
+	/*
+	 * The access to the implementation-defined system register is emulated
+	 * and should not be re-executed in the guest.
+	 */
+	kvm_skip_instr(vcpu, kvm_vcpu_trap_il_is32bit(vcpu));
+
+	return 0;
 }
 
 /******************************************************************************

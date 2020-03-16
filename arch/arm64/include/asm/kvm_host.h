@@ -82,6 +82,12 @@ struct kvm_arch {
 	 * supported.
 	 */
 	bool return_nisv_io_abort_to_user;
+
+	/*
+	 * If we encounter an access to an implementation-defined system
+	 * register, report this to user space.
+	 */
+	bool return_idsr_to_user;
 };
 
 #define KVM_NR_MEM_OBJS     40

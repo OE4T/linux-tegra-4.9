@@ -2619,9 +2619,7 @@ cleanup:
 
 		handling_skipped_tds = ep->skip &&
 			trb_comp_code != COMP_MISSED_INT &&
-			trb_comp_code != COMP_PING_ERR &&
-			trb_comp_code != COMP_OVERRUN &&
-			trb_comp_code != COMP_STOP;
+			trb_comp_code != COMP_PING_ERR;
 
 		/*
 		 * Do not update event ring dequeue pointer if we're in a loop

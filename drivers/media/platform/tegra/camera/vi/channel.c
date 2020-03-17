@@ -2284,8 +2284,8 @@ int tegra_channel_init_video(struct tegra_channel *chan)
 	return ret;
 
 ctrl_init_error:
-	video_device_release(chan->video);
 	media_entity_cleanup(&chan->video->entity);
+	video_device_release(chan->video);
 	v4l2_ctrl_handler_free(&chan->ctrl_handler);
 	return ret;
 }

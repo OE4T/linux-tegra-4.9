@@ -1,7 +1,7 @@
 /*
  * tegra_asoc_machine_alt.c - Tegra xbar dai link for machine drivers
  *
- * Copyright (c) 2014-2019 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2020 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -2898,17 +2898,19 @@ EXPORT_SYMBOL_GPL(tegra186_xbar_codec_conf);
 
 struct snd_soc_dai_link *tegra_machine_get_dai_link(void)
 {
-	struct snd_soc_dai_link *link;
+	struct snd_soc_dai_link *link = NULL;
 	unsigned int size = 0;
+
+	if (tegra_asoc_machine_links)
+		return tegra_asoc_machine_links;
 
 	if (of_machine_is_compatible("nvidia,tegra210")  ||
 		of_machine_is_compatible("nvidia,tegra210b01")) {
 		link = tegra210_xbar_dai_links;
 		size = TEGRA210_XBAR_DAI_LINKS;
+	} else {
+		return NULL;
 	}
-
-	if (tegra_asoc_machine_links)
-		return tegra_asoc_machine_links;
 
 	num_dai_links = size;
 
@@ -3009,17 +3011,19 @@ EXPORT_SYMBOL_GPL(tegra_machine_set_dai_fmt);
 
 struct snd_soc_codec_conf *tegra_machine_get_codec_conf(void)
 {
-	struct snd_soc_codec_conf *conf;
+	struct snd_soc_codec_conf *conf = NULL;
 	unsigned int size = 0;
+
+	if (tegra_asoc_codec_conf)
+		return tegra_asoc_codec_conf;
 
 	if (of_machine_is_compatible("nvidia,tegra210")  ||
 		of_machine_is_compatible("nvidia,tegra210b01")) {
 		conf = tegra210_xbar_codec_conf;
 		size = TEGRA210_XBAR_CODEC_CONF;
+	} else {
+		return NULL;
 	}
-
-	if (tegra_asoc_codec_conf)
-		return tegra_asoc_codec_conf;
 
 	tegra_asoc_codec_conf = kzalloc(size *
 		sizeof(struct snd_soc_codec_conf), GFP_KERNEL);

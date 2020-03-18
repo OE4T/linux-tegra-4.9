@@ -4,7 +4,7 @@
  * Copyright (C) 2010 Google, Inc.
  * Author: Erik Gilling <konkers@android.com>
  *
- * Copyright (c) 2010-2019, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2010-2020, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -2008,7 +2008,7 @@ static ssize_t dbg_nvdisp_topology_write(struct file *file,
 {
 	int res = 0, ret = 0;
 	int i = 0;
-	char buf[CHAR_BUF_SIZE_MAX] = {'\0'};
+	char buf[CHAR_BUF_SIZE_MAX+1] = {'\0'};
 	struct tegra_dc *primary =  NULL;
 	struct tegra_dc *curr = NULL;
 	bool dangling = false;

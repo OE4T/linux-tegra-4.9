@@ -32,6 +32,10 @@
 		board-has-eeprom;
 	};
 
+	psci {
+		nvidia,system-lp0-disable;
+	};
+
 	spi@c260000 {
 		status = "disabled";
 	};

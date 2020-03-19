@@ -253,6 +253,8 @@ static void tegra_channel_update_format(struct tegra_channel *chan,
 	chan->format.height = height;
 	chan->format.pixelformat = fourcc;
 	chan->format.bytesperline = preferred_stride ?: bytesperline;
+	chan->buffer_offset[0] = 0;
+	chan->interlace_bplfactor = 1;
 
 	dev_dbg(&chan->video->dev,
 			"%s: Resolution= %dx%d bytesperline=%d\n",

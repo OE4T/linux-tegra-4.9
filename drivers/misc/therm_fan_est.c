@@ -1,7 +1,7 @@
 /*
  * drivers/misc/therm_fan_est.c
  *
- * Copyright (c) 2013-2019, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013-2020, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -112,7 +112,7 @@ static void therm_fan_est_work_func(struct work_struct *work)
 			/* temperature is cooling */
 			read_lock(&est->state_lock);
 			for (trip_index = 1;
-				trip_index < (MAX_ACTIVE_STATES + 1); trip_index++) {
+				trip_index < MAX_ACTIVE_STATES; trip_index++) {
 				if (est->cur_temp < (est->active_trip_temps[trip_index]
 					- est->active_hysteresis[trip_index]))
 					break;

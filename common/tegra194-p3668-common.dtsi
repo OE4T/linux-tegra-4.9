@@ -334,7 +334,7 @@
 		vddio-pex-ctl-supply = <&p3668_spmic_sd3>;
 		nvidia,disable-aspm-states = <0xf>;
 		nvidia,enable-power-down;
-		nvidia,max-speed = <3>;
+		nvidia,max-speed = <4>;
 
 		phys = <&p2u_12>,
 		       <&p2u_13>,

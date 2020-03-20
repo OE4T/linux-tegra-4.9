@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2019, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2018-2020, NVIDIA CORPORATION. All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -36,11 +36,11 @@
 
 
 #define MAX_NVPPS_SOURCES	1
-#define NVPPS_DEF_MODE 		NVPPS_MODE_GPIO
+#define NVPPS_DEF_MODE	NVPPS_MODE_GPIO
 
 /* statics */
 static struct class	*s_nvpps_class;
-static dev_t 		s_nvpps_devt;
+static dev_t		s_nvpps_devt;
 static DEFINE_MUTEX(s_nvpps_lock);
 static DEFINE_IDR(s_nvpps_idr);
 
@@ -49,29 +49,29 @@ static DEFINE_IDR(s_nvpps_idr);
 /* platform device instance data */
 struct nvpps_device_data {
 	struct platform_device	*pdev;
-	struct cdev 		cdev;
-	struct device 		*dev;
-	unsigned int 		id;
-	unsigned int 		gpio_pin;
-	int 			irq;
+	struct cdev		cdev;
+	struct device		*dev;
+	unsigned int		id;
+	unsigned int		gpio_pin;
+	int			irq;
 	bool			irq_registered;
 
 	bool			pps_event_id_valid;
 	unsigned int		pps_event_id;
-	u64 			tsc;
+	u64			tsc;
 	u64			phc;
 	u64			irq_latency;
-	u64 			tsc_res_ns;
+	u64			tsc_res_ns;
 	raw_spinlock_t		lock;
 
 	u32			evt_mode;
 	u32			tsc_mode;
 
-	struct timer_list 	timer;
+	struct timer_list	timer;
 	volatile bool		timer_inited;
 
 	wait_queue_head_t	pps_event_queue;
-	struct fasync_struct 	*pps_event_async_queue;
+	struct fasync_struct	*pps_event_async_queue;
 
 #ifdef NVPPS_MAP_EQOS_REGS
 	u64			eqos_base_addr;
@@ -95,10 +95,17 @@ struct nvpps_file_data {
 #define MAC_STNSR_TSSS_HPOS 30
 
 #define GET_VALUE(data, lbit, hbit) ((data >> lbit) & (~(~0<<(hbit-lbit+1))))
-#define MAC_STNSR_OFFSET ((volatile u32 *)(BASE_ADDRESS + 0xb0c))
-#define MAC_STNSR_RD(data) (data) = ioread32((void *)MAC_STNSR_OFFSET);
-#define MAC_STSR_OFFSET ((volatile u32 *)(BASE_ADDRESS + 0xb08))
-#define MAC_STSR_RD(data) (data) = ioread32((void *)MAC_STSR_OFFSET);
+#define MAC_STNSR_OFFSET ((u32 *)(BASE_ADDRESS + 0xb0c))
+#define MAC_STNSR_RD(data) \
+	do { \
+		data = ioread32((void *)MAC_STNSR_OFFSET); \
+	} while(0)
+
+#define MAC_STSR_OFFSET ((u32 *)(BASE_ADDRESS + 0xb08))
+#define MAC_STSR_RD(data) \
+	do { \
+		data = ioread32((void *)MAC_STSR_OFFSET); \
+	} while(0)
 
 #endif /*NVPPS_MAP_EQOS_REGS*/
 
@@ -130,8 +137,10 @@ static inline u64 get_systime(struct nvpps_device_data *pdev_data, u64 *tsc)
 	/* read the nsec part of the PHC one more time */
 	MAC_STNSR_RD(varmac_stnsr2);
 
-	ns1 = GET_VALUE(varmac_stnsr1, MAC_STNSR_TSSS_LPOS, MAC_STNSR_TSSS_HPOS);
-	ns2 = GET_VALUE(varmac_stnsr2, MAC_STNSR_TSSS_LPOS, MAC_STNSR_TSSS_HPOS);
+	ns1 = GET_VALUE(varmac_stnsr1, MAC_STNSR_TSSS_LPOS,
+			MAC_STNSR_TSSS_HPOS);
+	ns2 = GET_VALUE(varmac_stnsr2, MAC_STNSR_TSSS_LPOS,
+			MAC_STNSR_TSSS_HPOS);
 
 	/* if ns1 is greater than ns2, it means nsec counter rollover
 	 * happened. In that case read the updated sec counter again

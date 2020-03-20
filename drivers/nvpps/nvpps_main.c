@@ -286,8 +286,11 @@ static int set_mode(struct nvpps_device_data *pdev_data, u32 mode)
 				}
 				if (!pdev_data->irq_registered) {
 					/* register IRQ handler */
-					err = request_irq(pdev_data->irq, nvpps_gpio_isr,
-							IRQF_TRIGGER_RISING | IRQF_NO_THREAD, "nvpps_isr", pdev_data);
+					err = devm_request_irq(&pdev_data->pdev->dev,
+					pdev_data->irq, nvpps_gpio_isr,
+					IRQF_TRIGGER_RISING | IRQF_NO_THREAD,
+					"nvpps_isr", pdev_data);
+
 					if (err) {
 						dev_err(pdev_data->dev, "failed to acquire IRQ %d\n", pdev_data->irq);
 					} else {
@@ -486,16 +489,7 @@ static const struct file_operations nvpps_fops = {
 
 static void nvpps_dev_release(struct device *dev)
 {
-	struct nvpps_device_data	*pdev_data = dev_get_drvdata(dev);
-
-	cdev_del(&pdev_data->cdev);
-
-	mutex_lock(&s_nvpps_lock);
-	idr_remove(&s_nvpps_idr, pdev_data->id);
-	mutex_unlock(&s_nvpps_lock);
-
 	kfree(dev);
-	kfree(pdev_data);
 }
 
 
@@ -514,7 +508,8 @@ static int nvpps_probe(struct platform_device *pdev)
 		return -EINVAL;
 	}
 
-	pdev_data = kzalloc(sizeof(struct nvpps_device_data), GFP_KERNEL);
+	pdev_data = devm_kzalloc(&pdev->dev, sizeof(struct nvpps_device_data),
+				GFP_KERNEL);
 	if (!pdev_data) {
 		return -ENOMEM;
 	}
@@ -595,6 +590,10 @@ static int nvpps_probe(struct platform_device *pdev)
 			err = -EBUSY;
 		}
 		mutex_unlock(&s_nvpps_lock);
+#ifndef NVPPS_NO_DT
+		unregister_chrdev_region(s_nvpps_devt, MAX_NVPPS_SOURCES);
+		class_destroy(s_nvpps_class);
+#endif
 		return err;
 	}
 	pdev_data->id = err;
@@ -620,7 +619,7 @@ static int nvpps_probe(struct platform_device *pdev)
 	if (err) {
 		dev_err(&pdev->dev, "nvpps: failed to add char device %d:%d\n",	MAJOR(s_nvpps_devt), pdev_data->id);
 		device_destroy(s_nvpps_class, pdev_data->dev->devt);
-		return err;
+		goto error_ret;
 	}
 
 	dev_info(&pdev->dev, "nvpps cdev(%d:%d)\n", MAJOR(s_nvpps_devt), pdev_data->id);
@@ -630,18 +629,22 @@ static int nvpps_probe(struct platform_device *pdev)
 	err = set_mode(pdev_data, NVPPS_DEF_MODE);
 	if (err) {
 		dev_err(&pdev->dev, "set_mode failed err = %d\n", err);
+		cdev_del(&pdev_data->cdev);
 		device_destroy(s_nvpps_class, pdev_data->dev->devt);
-		return err;
+		goto error_ret;
 	}
 	pdev_data->evt_mode = NVPPS_DEF_MODE;
 
 	return 0;
 
 error_ret:
-	cdev_del(&pdev_data->cdev);
 	mutex_lock(&s_nvpps_lock);
 	idr_remove(&s_nvpps_idr, pdev_data->id);
 	mutex_unlock(&s_nvpps_lock);
+#ifndef NVPPS_NO_DT
+	unregister_chrdev_region(s_nvpps_devt, MAX_NVPPS_SOURCES);
+	class_destroy(s_nvpps_class);
+#endif
 	return err;
 }
 
@@ -653,12 +656,6 @@ static int nvpps_remove(struct platform_device *pdev)
 	printk("%s\n", __FUNCTION__);
 
 	if (pdev_data) {
-		if (pdev_data->irq_registered) {
-			/* unregister IRQ handler */
-			free_irq(pdev_data->irq, pdev_data);
-			pdev_data->irq_registered = false;
-			dev_info(&pdev->dev, "removed IRQ %d for nvpps\n", pdev_data->irq);
-		}
 		if (pdev_data->timer_inited) {
 			pdev_data->timer_inited = false;
 			del_timer_sync(&pdev_data->timer);
@@ -669,13 +666,16 @@ static int nvpps_remove(struct platform_device *pdev)
 			dev_info(&pdev->dev, "unmap EQOS reg space %p for nvpps\n", (void *)pdev_data->eqos_base_addr);
 		}
 #endif /*NVPPS_MAP_EQOS_REGS*/
+		cdev_del(&pdev_data->cdev);
 		device_destroy(s_nvpps_class, pdev_data->dev->devt);
+		mutex_lock(&s_nvpps_lock);
+		idr_remove(&s_nvpps_idr, pdev_data->id);
+		mutex_unlock(&s_nvpps_lock);
 	}
 
 #ifndef NVPPS_NO_DT
-	class_unregister(s_nvpps_class);
-	class_destroy(s_nvpps_class);
 	unregister_chrdev_region(s_nvpps_devt, MAX_NVPPS_SOURCES);
+	class_destroy(s_nvpps_class);
 #endif /* !NVPPS_NO_DT */
 	return 0;
 }
@@ -758,8 +758,6 @@ static void __exit nvpps_exit(void)
 {
 	printk("%s\n", __FUNCTION__);
 	platform_driver_unregister(&nvpps_plat_driver);
-
-	class_unregister(s_nvpps_class);
 	class_destroy(s_nvpps_class);
 	unregister_chrdev_region(s_nvpps_devt, MAX_NVPPS_SOURCES);
 }

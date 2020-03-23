@@ -1,0 +1,53 @@
+/*
+ * Top level DTS file for CVM:P2888-0001 and CVB:P2822-0000.
+ *
+ * Copyright (c) 2020, Miovision.  All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 2 of the License.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ */
+#include "common/tegra194-p2888-0001-p2822-0000-common.dtsi"
+#include "common/tegra194-p2822-camera-modules.dtsi"
+#include "t19x-common-modules/tegra194-camera-plugin-manager.dtsi"
+#include <dt-bindings/gpio/tegra194-gpio.h>
+
+/ {
+    nvidia,dtsfilename = __FILE__;
+
+	// The PINMUX NVidia provides does not actually enable the SPI port on the 40 PIN header. These changes were
+	// made to correct this in the PINMUX in the royal oak bsp repository.
+	//
+	// pinmux.0x0243d040 = 0x00000400; # spi1_sck_pz3: spi1, tristate-disable, input-disable, io_high_voltage-disable, lpdr-disable
+	// pinmux.0x0243d020 = 0x00000450; # spi1_miso_pz4: spi1, tristate-enable, input-enable, io_high_voltage-disable, lpdr-disable
+	// pinmux.0x0243d058 = 0x00000400; # spi1_mosi_pz5: spi1, tristate-disable, input-disable, io_high_voltage-disable, lpdr-disable
+	// pinmux.0x0243d010 = 0x00000405; # spi1_cs0_pz6: rsvd1, pull-up, tristate-disable, input-disable, io_high_voltage-disable, lpdr-disable
+	// pinmux.0x0243d050 = 0x00000400; # spi1_cs1_pz7: spi1, tristate-disable, input-disable, io_high_voltage-disable, lpdr-disable
+
+	spi@3210000 {
+		status = "okay";
+		// Not actually 100% sure this does anything, it was suggested on the NVidia forums. The kernel doesn't
+		// look for this, but possibly one of the boot loaders does. This is suppose to disable power management
+		// on the interface.
+		nvidia,disable-runtime-pm;
+
+		// The PINMUX needed to be adjusted to put the CS line as a GPIO pin which is software controlled,
+		// the hardware control was dropping the CS line between transactions resetting the TPM.	
+		cs-gpios = <&tegra_main_gpio TEGRA194_MAIN_GPIO(Z,6) 0>;
+
+		spi@0 {
+			reg = <0x0>;
+			compatible = "tcg,tpm_tis-spi";
+			spi-max-frequency = <33000000>;
+            controller-data {
+				// This setting along with the cs-gpios keeps the CS active during the full transaction.
+				nvidia,clk-delay-between-packets = <0x1>;
+            };
+		};
+	};
+};

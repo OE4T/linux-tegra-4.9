@@ -78,14 +78,6 @@
 		status = "okay";
 	};
 
-	watchdog@60005100 {
-		status = "okay";
-	};
-
-	tegra_wdt: watchdog@60005100 {
-		status = "disabled";
-	};
-
 	host1x {
 		/* Camera unit clocks */
 		assigned-clocks = <&tegra_car TEGRA210_CLK_EXTERN3>,
@@ -820,7 +812,14 @@
 		compatible = "nvidia,tegra-udrm";
 	};
 
+	tegra_wdt: watchdog@60005100 {
+		dt-override-status-odm-data = <0x00010000 0x00010000>;
+		status = "disabled";
+	};
+
 	soft_wdt: soft_watchdog {
+		compatible = "softdog-platform";
+		dt-override-status-odm-data = <0x00030000 0x00000000>;
 		status = "okay";
 	};
 

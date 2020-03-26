@@ -132,6 +132,7 @@
 		dt-override-status-odm-data = <0x00010000 0x00010000>;
 		nvidia,enable-on-init;
 		timeout-sec = <120>;
+		status = "disabled";
 	};
 
 	soft_wdt: soft_watchdog {

@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Jetson Device-tree overlay for FE-PI Audio Z V2.
+ * Jetson Device-tree overlay for FE-PI Audio V1 and Z V2.
  *
- * Copyright (c) 2019 NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2019-20 NVIDIA CORPORATION. All rights reserved.
  *
  */
 
 #include <dt-bindings/pinctrl/pinctrl-tegra.h>
 
 / {
-	overlay-name = "FE-PI Audio Z V2";
+	overlay-name = "FE-PI Audio V1 and Z V2";
 	compatible = JETSON_COMPATIBLE;
 
 	fragment@0 {

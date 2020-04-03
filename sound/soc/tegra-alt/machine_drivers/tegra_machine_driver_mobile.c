@@ -164,6 +164,11 @@ static const struct snd_soc_dapm_widget tegra_machine_dapm_widgets[] = {
 	SND_SOC_DAPM_MIC("c Mic", NULL),
 	SND_SOC_DAPM_MIC("d Mic", NULL),
 	SND_SOC_DAPM_MIC("s Mic", NULL),
+
+	SND_SOC_DAPM_LINE("x Line Out", NULL),
+	SND_SOC_DAPM_LINE("y Line Out", NULL),
+	SND_SOC_DAPM_LINE("x Line In", NULL),
+	SND_SOC_DAPM_LINE("y Line In", NULL),
 };
 
 static struct snd_soc_pcm_stream tegra_machine_asrc_link_params[] = {

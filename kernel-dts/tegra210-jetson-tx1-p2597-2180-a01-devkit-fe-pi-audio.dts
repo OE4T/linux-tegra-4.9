@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Device-tree overlay for FE-PI Audio Z V2 with board
+ * Device-tree overlay for FE-PI Audio V1 and Z V2 with board
  * tegra210-jetson-tx1-p2597-2180-a01-devkit.
  *
- * Copyright (c) 2019 NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2020 NVIDIA CORPORATION. All rights reserved.
  *
  */
 
@@ -11,4 +11,4 @@
 /plugin/;
 
 #include <dt-common/jetson/tegra210-jetson-tx1-p2597-2180-a01-devkit.h>
-#include <overlays/jetson-fe-pi-audio-z-v2.dts>
+#include <overlays/jetson-fe-pi-audio.dts>

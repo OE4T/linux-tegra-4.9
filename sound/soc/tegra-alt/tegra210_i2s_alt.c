@@ -178,7 +178,7 @@ static int tegra210_i2s_rx_stop(struct snd_soc_dapm_widget *w,
 	/* HW needs sw reset to make sure previous transaction be clean */
 	ret = tegra210_i2s_sw_reset(i2s, SNDRV_PCM_STREAM_CAPTURE, 0xffff);
 	if (ret) {
-		dev_err(dev, "Failed at I2S%d_RX sw reset\n", dev->id);
+		dev_err(dev, "Failed at %s sw reset\n", w->name);
 		return ret;
 	}
 	return 0;
@@ -201,7 +201,7 @@ static int tegra210_i2s_tx_stop(struct snd_soc_dapm_widget *w,
 	/* HW needs sw reset to make sure previous transaction be clean */
 	ret = tegra210_i2s_sw_reset(i2s, SNDRV_PCM_STREAM_PLAYBACK, 0xffff);
 	if (ret) {
-		dev_err(dev, "Failed at I2S%d_TX sw reset\n", dev->id);
+		dev_err(dev, "Failed at %s sw reset\n", w->name);
 		return ret;
 	}
 	return 0;

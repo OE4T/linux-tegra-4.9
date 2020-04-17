@@ -1,0 +1,647 @@
+/*
+ * arch/arm64/boot/dts/tegra210-p3448-0000-p3449-0000-a00.dts
+ *
+ * Copyright (c) 2018-2019, NVIDIA CORPORATION.  All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 2 of the License.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ *
+ */
+
+#include "tegra210-porg-p3448-common.dtsi"
+
+// FIXME
+// FIXME - NEED TO REPLACE WHEN WE GET THE PINMUX FOR ROYAL OAK
+// FIXME
+#include "porg-platforms/tegra210-porg-pinmux-p3448-0000-a00.dtsi"
+#include "porg-platforms/tegra210-porg-gpio-p3448-0000-a00.dtsi"
+// FIXME
+// FIXME - NEED TO REPLACE WHEN WE GET THE PINMUX FOR ROYAL OAK
+// FIXME
+
+// TODO - Ask Mike Ball to set SPI-0 CS0 to a gpio so it can be software controlled
+
+/ {
+    model = "Royal Oak CTM";
+    compatible = "nvidia,jetson-nano", "nvidia,tegra210";
+    nvidia,dtsfilename = __FILE__;
+
+    //*********************************************************************
+    // host1x Setup
+    //*********************************************************************
+
+    host1x {
+        // Disable the display controllers
+        dc@54200000 {
+            status = "disabled";
+        };
+        dc@54240000 {
+            status = "disabled";
+        };
+
+        // Disable the display serial output resources
+        sor {
+            status = "disabled";
+            dp-display {
+                status = "disabled";
+            };
+        };
+        sor1 {
+            status = "disabled";
+            hdmi-display {
+                status = "disabled";
+            };
+        };
+
+        // Disable the DisplayPort AUX interfaces
+        dpaux {
+            status = "disabled";
+        };
+        dpaux1 {
+            status = "disabled";
+        };
+    };
+
+    //*********************************************************************
+    // SPI Setup
+    //
+    // Notes:
+    //		Nano supports up to 65Mhz SPI clocks.
+    //*********************************************************************
+
+    // Nano Module SPI 0 --> Tegra SPI 1 (TPM)
+    spi@7000d400 {
+        status = "okay";
+        // Not actually 100% sure this does anything, it was suggested on the NVidia forums. The kernel doesn't
+        // look for this, but possibly one of the boot loaders does. This is suppose to disable power management
+        // on the interface.
+        nvidia,disable-runtime-pm;
+
+        // The PINMUX needed to be adjusted to put the CS line as a GPIO pin which is software controlled,
+        // the hardware control was dropping the CS line between transactions resetting the TPM.
+        cs-gpios = <&gpio TEGRA_GPIO(C, 3) 0>;
+
+        spi@0 {
+            reg = <0x0>;
+            compatible = "tcg,tpm_tis-spi";
+            spi-max-frequency = <33000000>;
+            controller-data {
+                // This setting along with the cs-gpios keeps the CS active during the full transaction.
+                nvidia,clk-delay-between-packets = <0x1>;
+            };
+        };
+    };
+
+    // Nano Module SPI 1 --> Tegra SPI 2 (DPDI to DCM, Future expansion)
+    spi@7000d600 {
+        status = "okay";
+
+        // Configure the SPI link between the boards using a generic SPIDEV so tools
+        // can be used.
+        spi@0 {
+            compatible = "spidev";
+            reg = <0x0>;
+
+            // Set the max speed to 10Mhz as its cross board and we don't know whats going
+            // to be connected yet.
+            spi-max-frequency = <10000000>;
+            nvidia,enable-hw-based-cs;
+            nvidia,rx-clk-tap-delay = <6>;
+        };
+    };
+
+    //*********************************************************************
+    // SDHCI Setup
+    //*********************************************************************
+
+    // SDIO port in the M.2 interface for the Wifi Module
+    sdhci@700b0400 {
+        status = "okay";
+        cap-sdio-irq;
+        non-removable;
+        enable-sdio-wakeup;
+        bus-width = <4>;
+        only-1-8-v;
+        force-non-removable-rescan;
+        nvidia,disable-rtpm;
+        max-clk-limit = <204000000>;
+        tap-delay = <1>;
+        mmc-ddr-1_8v;
+        mmc-ocr-mask = <0>;
+        uhs-mask = <0x00000000>;
+        /delete-property/ mmc-ddr-1_8v;
+        /delete-property/ keep-power-in-suspend;
+    };
+
+    //*********************************************************************
+    // Sound Setup
+    //*********************************************************************
+
+    // Disable the sound cores
+    tegra_sound: sound {
+        status = "disabled";
+
+        hdr40_snd_link_i2s: i2s_dai_link1: nvidia,dai-link-1 {
+            status = "disabled";
+        };
+        nvidia,dai-link-2 {
+            status = "disabled";
+        };
+        nvidia,dai-link-3 {
+            status = "disabled";
+        };
+        nvidia,dai-link-4 {
+            status = "disabled";
+        };
+    };
+
+    //*********************************************************************
+    // Serial UART Setup
+    //*********************************************************************
+
+    // Nano Module UART 2 --> Tegra UART 1 (Debug Port)
+    serial@70006000 {
+        compatible = "nvidia,tegra210-uart", "nvidia,tegra114-hsuart", "nvidia,tegra20-uart";
+        console-port;
+        sqa-automation-port;
+        /delete-property/ resets;
+        /delete-property/ reset-names;
+        status = "okay";
+    };
+
+    // Nano Module UART 1 --> Tegra UART 2 (Unused GPIOs)
+    serial@70006040 {
+        status = "disabled";
+    };
+
+    // Nano Module UART 0 --> Tegra UART 3 (Bluetooth M.2 Key E)
+    serial@70006200 {
+        compatible = "nvidia,tegra114-hsuart";
+        dma-names = "tx";
+        // This adjustment comes from the common file, leaving in place as not sure why its needed
+        nvidia,adjust-baud-rates = <921600 921600 100>;
+        status = "okay";
+    };
+
+    //*********************************************************************
+    // Clocks Setup
+    //*********************************************************************
+
+    clocks {
+        // Define the clock parameters the UART is configured for
+        sc16is752_clk: sc16is752_clk {
+            status = "okay";
+            compatible = "fixed-clock";
+            #clock-cells = <0>;
+            clock-output-name = "sc16is752_clk";
+            clock-frequency = <1843200>;
+        };
+    };
+
+    //*********************************************************************
+    // I2C Setup
+    //*********************************************************************
+
+    // Nano Module I2C-0 --> Tegra I2C1
+    // 		TMP451 Temperature    0x4C (Nano Internal Temp)
+    //		NXP SC16IS762IBS      0x4D (Dual UART)
+    i2c@7000c000 {
+         status = "okay";
+
+        sc16is750@4D {
+                compatible = "nxp,sc16is762";
+                reg = <0x4D>;
+                clocks = <&sc16is752_clk>;
+                interrupt-parent = <&gpio>;
+                interrupts = <TEGRA_GPIO(J, 6) IRQ_TYPE_EDGE_FALLING>;
+                 gpio-controller;
+                #gpio-cells = <2>;
+        };
+
+    };
+
+    // Nano Module I2C-1 --> Tegra I2C2
+    //		LM75 Temperature      0x48 (Ethernet Switch)
+    //		LM75 Temperature      0x49 (+53 Power Module)
+    //		LM75 Temperature      0x4A (+12 Power Module)
+    //		LM75 Temperature      0x4B (Ambient)
+    //		MAX6650 AUX Fan       0x1F (Aux Fan)
+    // 		PCA9546 MUX           0x70 (Nano Internal Mux)
+    i2c@7000c400 {
+         status = "okay";
+
+        lm75@48 {
+            status= "okay";
+            compatible = "national,lm75";
+            reg = <0x48>;
+        };
+
+        lm75@49 {
+            status= "okay";
+            compatible = "national,lm75";
+            reg = <0x48>;
+        };
+
+        lm75@4a {
+            status= "okay";
+            compatible = "national,lm75";
+            reg = <0x4a>;
+        };
+
+        lm75@4b {
+            status= "okay";
+            compatible = "national,lm75";
+            reg = <0x4b>;
+        };
+
+        max6650@1f {
+            reg = <0x1f>;
+            compatible = "maxim,max6650";
+            maxim,fan-microvolt = <12000000>;
+            maxim,fan-prescale = <4>;
+            maxim,fan-target-rpm = <0>;
+        };
+
+    };
+
+    // Nano Module I2C-2 --> Tegra I2C3
+    //		MMA8452               0x1C (Accelerometer)
+    //		SSD M.2 Interface	  ????
+    i2c@7000c500 {
+        status = "okay";
+
+        mma8452@1c {
+            compatible = "fsl,mma8452";
+            reg = <0x1c>;
+            interrupt-parent = <&gpio>;
+            interrupts = <TEGRA_GPIO(J, 5) 0x01>;
+            interrupt-names = "INT1";
+        };
+    };
+
+    //*********************************************************************
+    // GPIO Setup
+    //*********************************************************************
+
+    gpio: gpio@6000d000 {
+        //*****************
+        // Inputs
+        //*****************
+        simcard1-present {
+            status = "okay";
+            input;
+            gpios = <TEGRA_GPIO(T, 0) GPIO_ACTIVE_LOW>;
+            line-name = "SIMCARD1-PRESENTn";
+        };
+
+        simcard2-present {
+            status = "okay";
+            input;
+            gpios = <TEGRA_GPIO(S, 1) GPIO_ACTIVE_LOW>;
+            line-name = "SIMCARD2-PRESENTn";
+        };
+
+        usb2-overcurrent {
+            status = "okay";
+            input;
+            gpios = <TEGRA_GPIO(C, 1) GPIO_ACTIVE_LOW>;
+            line-name = "USB2-OVERCURRENTn";
+        };
+
+        cell-dtr {
+            status = "okay";
+            input;
+            gpios = <TEGRA_GPIO(Z, 0) GPIO_ACTIVE_HIGH>;
+            line-name = "CELL-DTR";
+        };
+
+        overtemp-shutdown {
+            status = "okay";
+            input;
+            gpios = <TEGRA_GPIO(V, 1) GPIO_ACTIVE_LOW>;
+            line-name = "OVERTEMP-SHUTDOWNn";
+        };
+
+        cell-to-host-wake {
+            status = "okay";
+            input;
+            gpios = <TEGRA_GPIO(V, 1) GPIO_ACTIVE_LOW>;
+            line-name = "CELL-TO-HOST-WAKEn";
+        };
+
+        cell-ring-indicator {
+            status = "okay";
+            input;
+            gpios = <TEGRA_GPIO(I, 2) GPIO_ACTIVE_HIGH>;
+            line-name = "CELL-RING-INDICATOR";
+        };
+
+        wifi-wake {
+            status = "okay";
+            input;
+            gpios = <TEGRA_GPIO(H, 6) GPIO_ACTIVE_HIGH>;
+            line-name = "WIFI-WAKE";
+        };
+
+        ssd-power-loss {
+            status = "okay";
+            input;
+            gpios = <TEGRA_GPIO(S, 7) GPIO_ACTIVE_HIGH>;
+            line-name = "SSD-POWER-LOSS";
+        };
+
+        ssd-alert {
+            status = "okay";
+            input;
+            gpios = <TEGRA_GPIO(S, 5) GPIO_ACTIVE_HIGH>;
+            line-name = "SSD-ALERT";
+        };
+
+        tpm-irq {
+            status = "okay";
+            input;
+            gpios = <TEGRA_GPIO(I, 0) GPIO_ACTIVE_HIGH>;
+            line-name = "TPM-IRQ";
+        };
+
+        //*****************
+        // Outputs
+        //*****************
+
+        cell-reset {
+            status = "okay";
+            gpio-hog;
+            output-high;
+            gpios = <TEGRA_GPIO(S, 0) GPIO_ACTIVE_HIGH>;
+            line-name = "CALL-RESET";
+        };
+
+        usb2-vbus-en {
+            status = "okay";
+            gpio-hog;
+            output-high;
+            gpios = <TEGRA_GPIO(C, 6) GPIO_ACTIVE_HIGH>;
+            line-name = "USB2-VBUS-EN";
+        };
+
+        testpoint-50 {
+            status = "okay";
+            gpio-hog;
+            output-low;
+            gpios = <TEGRA_GPIO(C, 0) GPIO_ACTIVE_HIGH>;
+            line-name = "TESTPOINT-50";
+        };
+
+        testpoint-51 {
+            status = "okay";
+            gpio-hog;
+            output-low;
+            gpios = <TEGRA_GPIO(J, 4) GPIO_ACTIVE_HIGH>;
+            line-name = "TESTPOINT-51";
+        };
+
+        uart-bridge-reset {
+            status = "okay";
+            gpio-hog;
+            output-high;
+            gpios = <TEGRA_GPIO(J, 7) GPIO_ACTIVE_LOW>;
+            line-name = "UART-BRIDGE-RESETn";
+        };
+
+        wifi-disable {
+            status = "okay";
+            gpio-hog;
+            output-low;
+            gpios = <TEGRA_GPIO(E, 1) GPIO_ACTIVE_HIGH>;
+            line-name = "WIFI-DISABLE";
+        };
+
+        bluetooth-wake {
+            status = "okay";
+            gpio-hog;
+            output-low;
+            gpios = <TEGRA_GPIO(E, 0) GPIO_ACTIVE_HIGH>;
+            line-name = "BLUETOOTH-WAKE";
+        };
+
+        cell-disable {
+            status = "okay";
+            gpio-hog;
+            output-low;
+            gpios = <TEGRA_GPIO(E, 6) GPIO_ACTIVE_HIGH>;
+            line-name = "CELL-DISABLE";
+        };
+
+        tpm-reset {
+            status = "okay";
+            gpio-hog;
+            output-high;
+            gpios = <TEGRA_GPIO(H, 7) GPIO_ACTIVE_LOW>;
+            line-name = "TPM-RESETn";
+        };
+
+        cell-sim-select {
+            status = "okay";
+            gpio-hog;
+            output-low;
+            gpios = <TEGRA_GPIO(I, 1) GPIO_ACTIVE_HIGH>;
+            line-name = "CELL-SIM-SELECT";
+        };
+
+        ssd-power-loss-ack {
+            status = "okay";
+            gpio-hog;
+            output-high;
+            gpios = <TEGRA_GPIO(V, 1) GPIO_ACTIVE_LOW>;
+            line-name = "SSD-POWER-LOSS-ACKn";
+        };
+
+    };
+
+    //*********************************************************************
+    // LED Setup
+    //*********************************************************************
+
+    leds {
+        status = "okay";
+        compatible = "gpio-leds";
+
+        heart-beat {
+            gpios = <&gpio TEGRA_GPIO(G, 0) GPIO_ACTIVE_HIGH>;
+            default-state = "off";
+            linux,default-trigger = "heartbeat";
+        };
+
+        // We don't have a power LED, so we need to remove the lower level definition
+        /delete-node/ pwr;
+    };
+
+    //*********************************************************************
+    // MDIO / Ethernet Switch Setup
+    //*********************************************************************
+
+    mdio1: mdio {
+        compatible = "virtual,mdio-gpio";
+        status = "okay";
+        #address-cells = <1>;
+        #size-cells = <0>;
+
+        //pinctrl-names = "bitbangmdio";
+        //pinctrl-0 = <&pinctrl_mdio1_state>;
+
+        interrupt-parent = <&gpio>;
+        interrupts = <TEGRA_GPIO(E, 2) 8>;
+
+        gpios = <&gpio TEGRA_GPIO(Y, 2) GPIO_ACTIVE_HIGH
+                 &gpio TEGRA_GPIO(E, 3) GPIO_ACTIVE_HIGH
+                >;
+
+        switch0: switch@0 {
+            compatible = "marvell,mv88e6190";
+            #address-cells = <1>;
+            #size-cells = <0>;
+            reg = <0>;
+            dsa,member = <0 0>;
+
+            ports {
+                #address-cells = <1>;
+                #size-cells = <0>;
+
+                port@1 {
+                    reg = <0x1>;
+                    label = "dcm";
+                    phy-handle = <&switch0phy1>;
+                };
+
+                port@2 {
+                    reg = <0x2>;
+                    label = "poe1";
+                    phy-handle = <&switch0phy2>;
+                };
+
+                port@3 {
+                    reg = <0x3>;
+                    label = "wan";
+                    phy-handle = <&switch0phy3>;
+                };
+
+                port@4 {
+                    reg = <0x4>;
+                    label = "poe2";
+                    phy-handle = <&switch0phy4>;
+                };
+
+                port@5 {
+                    reg = <0x5>;
+                    label = "port1";
+                    phy-handle = <&switch0phy5>;
+                };
+
+                port@6 {
+                    reg = <0x6>;
+                    label = "poe3";
+                    phy-handle = <&switch0phy6>;
+                };
+
+                port@7 {
+                    reg = <0x7>;
+                    label = "port2";
+                    phy-handle = <&switch0phy7>;
+                };
+
+                port@8 {
+                    reg = <0x8>;
+                    label = "cpu";
+                    ethernet = <&{/pcie@1003000/pci@2,0/ethernet@0,0}>;
+                    phy-handle = <&switch0phy8>;
+                };
+            };
+
+            mdio {
+                #address-cells = <1>;
+                #size-cells = <0>;
+
+                 /* The MV88E6390 does not report the phy type on the MDIO bus properly, so we force it to the
+                    correct value here using the compatible property. */
+                switch0phy0: ethernet-phy@0 {
+                    compatible = "ethernet-phy-id0141.0f90";
+                    reg = <0>;
+                    broken-turn-around;
+                };
+                switch0phy1: ethernet-phy@1 {
+                    compatible = "ethernet-phy-id0141.0f90";
+                    reg = <1>;
+                    broken-turn-around;
+                };
+                switch0phy2: ethernet-phy@2 {
+                    compatible = "ethernet-phy-id0141.0f90";
+                    reg = <2>;
+                    broken-turn-around;
+                };
+                switch0phy3: ethernet-phy@3 {
+                    compatible = "ethernet-phy-id0141.0f90";
+                    reg = <3>;
+                    broken-turn-around;
+                };
+                switch0phy4: ethernet-phy@4 {
+                    compatible = "ethernet-phy-id0141.0f90";
+                    reg = <4>;
+                    broken-turn-around;
+                };
+                switch0phy5: ethernet-phy@5 {
+                    compatible = "ethernet-phy-id0141.0f90";
+                    reg = <5>;
+                    broken-turn-around;
+                };
+                switch0phy6: ethernet-phy@6 {
+                    compatible = "ethernet-phy-id0141.0f90";
+                    reg = <6>;
+                    broken-turn-around;
+                };
+                switch0phy7: ethernet-phy@7 {
+                    compatible = "ethernet-phy-id0141.0f90";
+                    reg = <7>;
+                    broken-turn-around;
+                };
+                switch0phy8: ethernet-phy@8 {
+                    compatible = "ethernet-phy-id0141.0f90";
+                    reg = <8>;
+                    broken-turn-around;
+                };
+                switch0phy9: ethernet-phy@9 {
+                    compatible = "ethernet-phy-id0141.0f90";
+                    reg = <9>;
+                    broken-turn-around;
+                };
+                switch0phya: ethernet-phy@a {
+                    compatible = "ethernet-phy-id0141.0f90";
+                    reg = <0xa>;
+                    broken-turn-around;
+                };
+                switch0phy1b: ethernet-phy@1b {
+                    compatible = "ethernet-phy-id0141.0f90";
+                    reg = <0x1b>;
+                    broken-turn-around;
+                };
+                switch0phy1c: ethernet-phy@1c {
+                    compatible = "ethernet-phy-id0141.0f90";
+                    reg = <0x1c>;
+                    broken-turn-around;
+                };
+            };
+
+        };
+    };
+
+};
+

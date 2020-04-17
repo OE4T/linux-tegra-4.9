@@ -13,6 +13,7 @@ dtb-$(CONFIG_ARCH_TEGRA_210_SOC) += tegra210-p3448-0000-p3449-0000-b00.dtb
 dtb-$(CONFIG_ARCH_TEGRA_210_SOC) += tegra210-p3448-0002-p3449-0000-b00.dtb
 dtb-$(CONFIG_ARCH_TEGRA_210_SOC) += tegra210-p3448-0000-p3449-0000-b00-hdmi-dsi.dtb
 dtb-$(CONFIG_ARCH_TEGRA_210_SOC) += tegra210-p3448-0000-p3449-0000-a02-hdmi-dsi.dtb
+dtb-$(CONFIG_ARCH_TEGRA_210_SOC) += tegra210-p3448-0000-p3449-0000-royaloak-ctm.dtb
 dtbo-$(CONFIG_ARCH_TEGRA_210_SOC) += tegra210-p3448-0000-p3449-0000-a01-adafruit-sph0645lm4h.dtbo
 dtbo-$(CONFIG_ARCH_TEGRA_210_SOC) += tegra210-p3448-0000-p3449-0000-a02-adafruit-sph0645lm4h.dtbo
 dtbo-$(CONFIG_ARCH_TEGRA_210_SOC) += tegra210-p3448-0000-p3449-0000-a01-fe-pi-audio-z-v2.dtbo

@@ -24,11 +24,11 @@
 	};
 
 	sdhci@3400000 {
-		vmmc-supply = <&e3900_vdd_1v8_sd_cvb>;
+		vmmc-supply = <&e3900_vdd_3v3_sd_cvb>;
 	};
 
 	ufshci@2450000 {
-		vcc-supply = <&e3900_vdd_1v8_sd_cvb>;
+		vcc-supply = <&e3900_vdd_3v3_sd_cvb>;
 		vccq-supply = <&p2888_spmic_ldo7>;
 		vccq2-supply = <&p2888_spmic_sd2>;
 	};

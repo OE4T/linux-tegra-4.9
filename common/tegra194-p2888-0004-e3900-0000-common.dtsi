@@ -157,7 +157,7 @@
 
 		ports {
 			usb2-0 {
-				mode = "device";
+				mode = "otg";
 				vbus-supply = <&e3900_atx_5v_cvb>;
 				status = "okay";
 			};
@@ -204,7 +204,7 @@
 			/delete-property/ extcon-gpio,wait-for-gpio-scan;
 			/delete-property/ extcon-gpio,cable-states;
 			/delete-property/ gpios;
-			extcon-gpio,out-cable-names = <EXTCON_USB EXTCON_NONE>;
+			extcon-gpio,out-cable-names = <EXTCON_USB EXTCON_USB_HOST EXTCON_NONE>;
 			cable-connected-on-boot = <0>;
 			#extcon-cells = <1>;
 			status = "okay";
@@ -225,15 +225,17 @@
 	};
 
 	tegra_xhci: xhci@3610000 {
-		/delete-property/ extcon-cables;
-		/delete-property/ extcon-cable-names;
+		extcon-cables = <&vbus_extcon 1>;
+		extcon-cable-names = "id";
+		#extcon-cells = <1>;
 #if TEGRA_XUSB_PADCONTROL_VERSION >= DT_VERSION_2
-		phys = <&{/xusb_padctl@3520000/pads/usb2/lanes/usb2-1}>,
+		phys = <&{/xusb_padctl@3520000/pads/usb2/lanes/usb2-0}>,
+			<&{/xusb_padctl@3520000/pads/usb2/lanes/usb2-1}>,
 			<&{/xusb_padctl@3520000/pads/usb2/lanes/usb2-2}>,
 			<&{/xusb_padctl@3520000/pads/usb2/lanes/usb2-3}>,
 			<&{/xusb_padctl@3520000/pads/usb3/lanes/usb3-2}>,
 			<&{/xusb_padctl@3520000/pads/usb3/lanes/usb3-3}>;
-		phy-names = "usb2-1", "usb2-2", "usb2-3", "usb3-2", "usb3-3";
+		phy-names = "usb2-0", "usb2-1", "usb2-2", "usb2-3", "usb3-2", "usb3-3";
 		nvidia,xusb-padctl = <&xusb_padctl>;
 #endif
 		status = "okay";

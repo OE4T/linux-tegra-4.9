@@ -949,6 +949,16 @@ exit:
 	return e;
 }
 
+static void reset_repeater_info(struct tegra_nvhdcp *nvhdcp)
+{
+	nvhdcp_vdbg("reset repeater info\n");
+
+	memset(nvhdcp->v_prime, 0, sizeof(nvhdcp->v_prime));
+	nvhdcp->b_status = 0;
+	nvhdcp->num_bksv_list = 0;
+	memset(nvhdcp->bksv_list, 0, sizeof(nvhdcp->bksv_list));
+}
+
 static int get_repeater_info(struct tegra_nvhdcp *nvhdcp)
 {
 	int e, retries;
@@ -1826,6 +1836,10 @@ static void nvhdcp1_downstream_worker(struct work_struct *work)
 			mutex_lock(&nvhdcp->lock);
 			goto failure;
 		}
+	} else {
+	    /* if not repeater reset repeater info, so it does not linger when a receiver
+	     * is connected */
+	    reset_repeater_info(nvhdcp);
 	}
 	/* T210/T210B01 vprime verification is handled in the upstream lib */
 	if (tegra_dc_is_nvdisplay()) {

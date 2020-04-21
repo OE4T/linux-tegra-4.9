@@ -26,6 +26,7 @@
 #include "tegra194-audio-e3900-0000.dtsi"
 #include "tegra194-super-module-e2614-e3900-0000.dtsi"
 #include "tegra194-pwm-fan-e3900-0000.dtsi"
+#include <t19x-common-platforms/tegra194-no-pll-aon-clock.dtsi>
 
 / {
 	chosen {
@@ -275,10 +276,22 @@
 
 	mttcan@c310000 {
 		status = "okay";
+		pll_source = "pllc";
+		clocks = <&bpmp_clks TEGRA194_CLK_CAN1_CORE>,
+			<&bpmp_clks TEGRA194_CLK_CAN1_HOST>,
+			<&bpmp_clks TEGRA194_CLK_CAN1>,
+			<&bpmp_clks TEGRA194_CLK_PLLC>;
+		clock-names = "can_core", "can_host","can", "pllc";
 	};
 
 	mttcan@c320000 {
 		status = "okay";
+		pll_source = "pllc";
+		clocks = <&bpmp_clks TEGRA194_CLK_CAN2_CORE>,
+			<&bpmp_clks TEGRA194_CLK_CAN2_HOST>,
+			<&bpmp_clks TEGRA194_CLK_CAN2>,
+			<&bpmp_clks TEGRA194_CLK_PLLC>;
+		clock-names = "can_core", "can_host","can", "pllc";
 	};
 
 	serial@3110000 {
@@ -332,6 +345,16 @@
 	pfsd {
 		pwm_polarity= <PWM_POLARITY_NORMAL>;
 		suspend_state = <0>;
+	};
+
+	clocks-init {
+		compatible = "nvidia,clocks-config";
+		status = "okay";
+		disable {
+			clocks = <&aon_clks TEGRA194_CLK_PLLAON>,
+				<&bpmp_clks TEGRA194_CLK_CAN1>,
+				<&bpmp_clks TEGRA194_CLK_CAN2>;
+		};
 	};
 };
 

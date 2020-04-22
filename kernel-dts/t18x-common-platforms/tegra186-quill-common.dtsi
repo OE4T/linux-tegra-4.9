@@ -994,9 +994,37 @@
 		status = "okay";
 	};
 
-    sce-ivc-channels {
-        i2c@480 {
-            status = "okay";
-        };
-    };
+	sce-ivc-channels {
+		i2c@480 {
+			status = "okay";
+		};
+	};
+
+	/* One can reserved memory in either static or dynamic way as per
+	   https://www.kernel.org/doc/Documentation/devicetree/bindings/reserved-memory/reserved-memory.txt
+	   So, Comment out static memory reservation and uncomment Dynamic
+	   memory reservation when need to use dynamic one.
+	 */
+	reserved-memory {
+		dummy_reserved: dummy_mem_region {
+			compatible = "nvidia,dummy_mem_region";
+
+			/* static memory reservation */
+			reg = <0x2 0x60000000 0x0 0xfff0000>;
+
+			/* Dynamic memory resevation */
+			/*size = <0x0 0xfff0000>;
+			alignment = <0x10000>;
+			alloc-ranges = <0x2 0x60000000 0x0 0xfff0000>;*/
+
+			no-map;
+			status = "disabled";
+		};
+	};
+
+	dummy-mem-carveout {
+		compatible = "nvidia,dummy_mem_carveout";
+		memory-region = <&dummy_reserved>;
+		status = "disabled";
+	};
 };

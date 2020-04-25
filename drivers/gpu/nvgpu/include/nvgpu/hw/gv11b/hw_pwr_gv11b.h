@@ -840,6 +840,14 @@ static inline u32 pwr_pmu_idle_mask_ce_2_enabled_f(void)
 {
 	return 0x200000U;
 }
+static inline u32 pwr_pmu_idle_mask_1_r(u32 i)
+{
+	return 0x0010aa34U + i*8U;
+}
+static inline u32 pwr_pmu_idle_mask_2_r(u32 i)
+{
+	return 0x0010a840U + i*4U;
+}
 static inline u32 pwr_pmu_idle_count_r(u32 i)
 {
 	return 0x0010a508U + i*16U;
@@ -935,6 +943,10 @@ static inline u32 pwr_pmu_idle_mask_supp_r(u32 i)
 static inline u32 pwr_pmu_idle_mask_1_supp_r(u32 i)
 {
 	return 0x0010a9f4U + i*8U;
+}
+static inline u32 pwr_pmu_idle_mask_2_supp_r(u32 i)
+{
+	return 0x0010a690U + i*4U;
 }
 static inline u32 pwr_pmu_idle_ctrl_supp_r(u32 i)
 {

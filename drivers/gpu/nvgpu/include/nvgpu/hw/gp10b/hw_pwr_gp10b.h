@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2020, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -754,7 +754,7 @@ static inline u32 pwr_pmu_idle_intr_status_intr_f(u32 v)
 }
 static inline u32 pwr_pmu_idle_intr_status_intr_m(void)
 {
-	return U32(0x1U) << 0U;
+	return 0x1U << 0U;
 }
 static inline u32 pwr_pmu_idle_intr_status_intr_v(u32 r)
 {

@@ -762,6 +762,7 @@ static struct tegra_fuse_hw_feature tegra194_fuse_chip_data = {
 		FUSE_BURN_DATA(kek0, 0x6f, 30, 128, 0x2c0, false, true),
 		FUSE_BURN_DATA(kek1, 0x73, 30, 128, 0x2d0, false, true),
 		FUSE_BURN_DATA(kek2, 0x77, 30, 128, 0x2e0, false, true),
+		FUSE_BURN_DATA(boot_device_info, 0x65, 1, 24, 0xbc, false, false),
 		FUSE_SYSFS_DATA(opt_tpc_disable,
 				tegra_fuse_read_opt_tpc_disable, NULL, FPERM_R),
 		{},

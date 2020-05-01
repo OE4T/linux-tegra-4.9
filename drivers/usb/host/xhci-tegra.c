@@ -3732,6 +3732,8 @@ static void tegra_xusb_shutdown(struct platform_device *pdev)
 	if (!tegra->fw_loaded && !tegra->soc->is_xhci_vf)
 		return;
 
+	pm_runtime_get_sync(tegra->dev);
+
 	if (tegra->hcd)
 		xhci_shutdown(tegra->hcd);
 }

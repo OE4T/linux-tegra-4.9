@@ -21,6 +21,8 @@
 #include <linux/bitmap.h>
 #include <linux/errno.h>
 
+#include <soc/tegra/chip-id.h>
+
 #include <asm/sysreg.h>
 
 #include "carmel_pmu.h"
@@ -500,6 +502,9 @@ quadd_carmel_uncore_pmu_init(void)
 {
 	int i;
 	struct carmel_unit *unit;
+
+	if (tegra_get_chipid() != TEGRA_CHIPID_TEGRA19)
+		return NULL;
 
 	INIT_LIST_HEAD(&ctx.units);
 

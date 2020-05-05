@@ -25,8 +25,19 @@
                                         iovdd-supply = <&e3900_atx_3v3_cvb>;
                                 };
                         };
+
+                        i2c@3 {
+                                rt5659.12-001a@1a {
+                                        /* gpio for jack detection */
+                                        gpios = <&tegra_main_gpio TEGRA194_MAIN_GPIO(P, 4) 0>;
+                                };
+                        };
                 };
 
+                rt5659.1-001a@1a {
+                        /* gpio for jack detection */
+                        gpios = <&tegra_main_gpio TEGRA194_MAIN_GPIO(P, 4) 0>;
+                };
         };
 
         plugin-manager {

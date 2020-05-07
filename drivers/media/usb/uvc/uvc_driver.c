@@ -3,7 +3,7 @@
  *
  *      Copyright (C) 2005-2010
  *          Laurent Pinchart (laurent.pinchart@ideasonboard.com)
- *      Copyright (C) 2018-2019, NVIDIA CORPORATION. All rights reserved.
+ *      Copyright (C) 2018-2020, NVIDIA CORPORATION. All rights reserved.
  *
  *      This program is free software; you can redistribute it and/or modify
  *      it under the terms of the GNU General Public License as published by
@@ -168,6 +168,91 @@ static struct uvc_format_desc uvc_fmts[] = {
 		.name		= "Bayer 10-bit (SRGGB10P)",
 		.guid		= UVC_GUID_FORMAT_RW10,
 		.fcc		= V4L2_PIX_FMT_SRGGB10P,
+	},
+	{
+		.name		= "Raw data 8-bit (RAW8)",
+		.guid		= UVC_GUID_FORMAT_RAW8,
+		.fcc		= V4L2_PIX_FMT_GREY,
+	},
+	{
+		.name		= "Raw data 16-bit (RW16)",
+		.guid		= UVC_GUID_FORMAT_RW16,
+		.fcc		= V4L2_PIX_FMT_RW16,
+	},
+	{
+		.name		= "Depth 16-bit (INVZ)",
+		.guid		= UVC_GUID_FORMAT_INVZ,
+		.fcc		= V4L2_PIX_FMT_Z16,
+	},
+	{
+		.name		= "Depth:IR 16:8 24-bit (INZI)",
+		.guid		= UVC_GUID_FORMAT_INZI,
+		.fcc		= V4L2_PIX_FMT_INZI,
+	},
+	{
+		.name		= "Depth 16-bit (INVR)",
+		.guid		= UVC_GUID_FORMAT_INVR,
+		.fcc		= V4L2_PIX_FMT_INVR,
+	},
+	{
+		.name		= "Depth:IR 16:8 24-bit (INRI)",
+		.guid		= UVC_GUID_FORMAT_INRI,
+		.fcc		= V4L2_PIX_FMT_INRI,
+	},
+	{
+		.name		= "Infrared 8-bit (INVI)",
+		.guid		= UVC_GUID_FORMAT_INVI,
+		.fcc		= V4L2_PIX_FMT_GREY,
+	},
+	{
+		.name		= "FlickerIR 8-bit (RELI)",
+		.guid		= UVC_GUID_FORMAT_RELI,
+		.fcc		= V4L2_PIX_FMT_RELI,
+	},
+	{
+		.name		= "Luminosity data 8-bit (L8)",
+		.guid		= UVC_GUID_FORMAT_L8,
+		.fcc		= V4L2_PIX_FMT_GREY,
+	},
+	{
+		.name		= "Luminosity data 16-bit (L16)",
+		.guid		= UVC_GUID_FORMAT_L16,
+		.fcc		= V4L2_PIX_FMT_Y16,
+	},
+	{
+		.name		= "Depth data 16-bit (D16)",
+		.guid		= UVC_GUID_FORMAT_D16,
+		.fcc		= V4L2_PIX_FMT_Z16,
+	},
+	{
+		.name		= "16-bit Bayer BGBG/GRGR",
+		.guid		= UVC_GUID_FORMAT_BAYER16,
+		.fcc		= V4L2_PIX_FMT_SBGGR16,
+	},
+	{
+		.name		= "Packed raw data 10-bit",
+		.guid		= UVC_GUID_FORMAT_W10,
+		.fcc		= V4L2_PIX_FMT_W10,
+	},
+	{
+		.name		= "Confidence data (C   )",
+		.guid		= UVC_GUID_FORMAT_CONFIDENCE_MAP,
+		.fcc		= V4L2_PIX_FMT_CONFIDENCE_MAP,
+	},
+	{
+		.name		= "Frame Grabber (FG  )",
+		.guid		= UVC_GUID_FORMAT_FG,
+		.fcc		= V4L2_PIX_FMT_FG,
+	},
+	{
+		.name		= "SR300 Depth/Confidence (INZC)",
+		.guid		= UVC_GUID_FORMAT_INZC,
+		.fcc		= V4L2_PIX_FMT_INZC,
+	},
+	{
+		.name		= "Relative IR (PAIR)",
+		.guid		= UVC_GUID_FORMAT_PAIR,
+		.fcc		= V4L2_PIX_FMT_PAIR,
 	},
 };
 

@@ -14,7 +14,7 @@
  * option) any later version.
  *
  * Support : Micrel Phys:
- *		Giga phys: ksz9021, ksz9031
+ *		Giga phys: ksz9021, ksz9031, ksz9131
  *		100/10 Phys : ksz8001, ksz8721, ksz8737, ksz8041
  *			   ksz8021, ksz8031, ksz8051,
  *			   ksz8081, ksz8091,
@@ -427,6 +427,7 @@ static int ksz9021_config_init(struct phy_device *phydev)
 #define MII_KSZ9031RN_MMD_REGDATA_REG	0x0e
 #define OP_DATA				1
 #define KSZ9031_PS_TO_REG		60
+#define KSZ9131_PS_TO_REG		100
 
 /* Extended registers */
 /* MMD Address 0x0 */
@@ -472,6 +473,10 @@ static int ksz9031_of_load_skew_values(struct phy_device *phydev,
 	u16 maxval;
 	u16 newval;
 	int i;
+	int pstoreg = KSZ9031_PS_TO_REG;
+
+	if (phydev->drv->phy_id == PHY_ID_KSZ9131)
+		pstoreg = KSZ9131_PS_TO_REG;
 
 	for (i = 0; i < numfields; i++)
 		if (!of_property_read_u32(of_node, field[i], val + i))
@@ -491,7 +496,7 @@ static int ksz9031_of_load_skew_values(struct phy_device *phydev,
 			mask = 0xffff;
 			mask ^= maxval << (field_sz * i);
 			newval = (newval & mask) |
-				(((val[i] / KSZ9031_PS_TO_REG) & maxval)
+				(((val[i] / pstoreg) & maxval)
 					<< (field_sz * i));
 		}
 
@@ -574,8 +579,11 @@ static int ksz9031_config_init(struct phy_device *phydev)
 				MII_KSZ9031RN_TX_DATA_PAD_SKEW, 4,
 				tx_data_skews, 4);
 	}
+       if (phydev->drv->phy_id == PHY_ID_KSZ9031)
+               return ksz9031_center_flp_timing(phydev);
+       else
+               return 0;
 
-	return ksz9031_center_flp_timing(phydev);
 }
 
 #define KSZ8873MLL_GLOBAL_CONTROL_4	0x06
@@ -986,6 +994,23 @@ static struct phy_driver ksphy_driver[] = {
 	.suspend	= genphy_suspend,
 	.resume		= kszphy_resume,
 }, {
+	.phy_id		= PHY_ID_KSZ9131,
+	.phy_id_mask	= MICREL_PHY_ID_MASK,
+	.name		= "Microchip KSZ9131 Gigabit PHY",
+	.features	= PHY_GBIT_FEATURES,
+	.flags		= PHY_HAS_INTERRUPT,
+	.driver_data	= &ksz9021_type,
+	.probe		= kszphy_probe,
+	.config_init	= ksz9031_config_init,
+	.read_status	= ksz9031_read_status,
+	.ack_interrupt	= kszphy_ack_interrupt,
+	.config_intr	= kszphy_config_intr,
+	.get_sset_count = kszphy_get_sset_count,
+	.get_strings	= kszphy_get_strings,
+	.get_stats	= kszphy_get_stats,
+	.suspend	= genphy_suspend,
+	.resume		= kszphy_resume,
+}, {
 	.phy_id		= PHY_ID_KSZ8873MLL,
 	.phy_id_mask	= MICREL_PHY_ID_MASK,
 	.name		= "Micrel KSZ8873MLL Switch",
@@ -1029,6 +1054,7 @@ MODULE_LICENSE("GPL");
 static struct mdio_device_id __maybe_unused micrel_tbl[] = {
 	{ PHY_ID_KSZ9021, 0x000ffffe },
 	{ PHY_ID_KSZ9031, MICREL_PHY_ID_MASK },
+	{ PHY_ID_KSZ9131, MICREL_PHY_ID_MASK },
 	{ PHY_ID_KSZ8001, 0x00fffffc },
 	{ PHY_ID_KS8737, MICREL_PHY_ID_MASK },
 	{ PHY_ID_KSZ8021, 0x00ffffff },

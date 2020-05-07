@@ -5214,7 +5214,7 @@ static int tegra_xhci_hub_control(struct usb_hcd *hcd, u16 type_req,
 	int port = (index & 0xff) - 1;
 	u32 status;
 	unsigned long timeout;
-	int ret;
+	int ret, wait;
 
 	if (bus_state->resuming_ports && hcd->speed == HCD_USB2) {
 		__le32 __iomem **port_array;
@@ -5248,17 +5248,23 @@ static int tegra_xhci_hub_control(struct usb_hcd *hcd, u16 type_req,
 	ret = xhci_hub_control(hcd, type_req, value, index, buf, length);
 
 	if ((value == USB_PORT_FEAT_POWER) && !ret) {
+		u32 pp_stat = (hcd->speed == HCD_USB2) ? USB_PORT_STAT_POWER :
+			USB_SS_PORT_STAT_POWER;
 		timeout = jiffies + HZ;
+		wait = 5;
 		do {
 			xhci_hub_control(hcd, GetPortStatus, 0, index,
 				(char *) &status, sizeof(status));
 			if ((type_req == ClearPortFeature) &&
-				!(status & USB_PORT_STAT_POWER))
+				!(status & pp_stat))
 				break;
 			else if ((type_req == SetPortFeature) &&
-				(status & USB_PORT_STAT_POWER))
+				(status & pp_stat))
 				break;
-			msleep(200);
+			if (--wait > 0)
+				usleep_range(10, 20);
+			else
+				msleep(200);
 		} while (time_is_after_jiffies(timeout));
 	}
 

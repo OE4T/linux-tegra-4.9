@@ -203,9 +203,14 @@ static int tegracam_setup_string_ctrls(struct tegracam_device *tc_dev,
 				struct tegracam_ctrl_handler *handler)
 {
 	const struct tegracam_ctrl_ops *ops = handler->ctrl_ops;
-	u32 numctrls = ops->numctrls;
+	u32 numctrls = 0;
 	int i;
 	int err = 0;
+
+	if (ops == NULL)
+		return 0;
+
+	numctrls = ops->numctrls;
 
 	for (i = 0; i < numctrls; i++) {
 		struct v4l2_ctrl *ctrl = handler->ctrls[i];
@@ -371,9 +376,14 @@ int tegracam_ctrl_set_overrides(struct tegracam_ctrl_handler *hdl)
 	const struct tegracam_ctrl_ops *ops = hdl->ctrl_ops;
 	struct tegracam_sensor_data *sensor_data = &hdl->sensor_data;
 	struct sensor_blob *blob = &sensor_data->ctrls_blob;
-	bool is_blob_supported = ops->is_blob_supported;
+	bool is_blob_supported = false;
 	int err, result = 0;
 	int i;
+
+	if (ops == NULL)
+		return 0;
+
+	is_blob_supported = ops->is_blob_supported;
 
 	/*
 	 * write list of override regs for the asking frame length,
@@ -446,6 +456,9 @@ int tegracam_init_ctrl_ranges_by_mode(
 	s64 max_short_exp_time = 0;
 	s64 default_short_exp_time = 0;
 	int i;
+
+	if (handler->numctrls == 0)
+		return 0;
 
 	if (modeidx >= s_data->sensor_props.num_modes)
 		return -EINVAL;
@@ -570,13 +583,15 @@ int tegracam_init_ctrl_ranges(struct tegracam_ctrl_handler *handler)
 }
 EXPORT_SYMBOL_GPL(tegracam_init_ctrl_ranges);
 
-static int tegracam_check_ctrl_ops(struct tegracam_ctrl_handler *handler)
+static int tegracam_check_ctrl_ops(
+	struct tegracam_ctrl_handler *handler, int *numctrls)
 {
 	struct tegracam_device *tc_dev = handler->tc_dev;
 	struct device *dev = tc_dev->dev;
 	const struct tegracam_ctrl_ops *ops = handler->ctrl_ops;
 	const u32 *cids = ops->ctrl_cid_list;
-	int sensor_ops = 0, string_ops = 0, default_ops = 0, total_ops = 0;
+	int sensor_ops = 0, mode_ops = 0, string_ops = 0;
+	int default_ops = 0, total_ops = 0;
 	int i;
 
 	/* Find missing sensor controls */
@@ -638,7 +653,7 @@ static int tegracam_check_ctrl_ops(struct tegracam_ctrl_handler *handler)
 		/* The below controls are handled by framework */
 		case TEGRA_CAMERA_CID_SENSOR_MODE_ID:
 		case TEGRA_CAMERA_CID_HDR_EN:
-			sensor_ops++;
+			mode_ops++;
 			break;
 		default:
 			break;
@@ -657,7 +672,7 @@ static int tegracam_check_ctrl_ops(struct tegracam_ctrl_handler *handler)
 	for (i = 0; i < TEGRACAM_DEF_CTRLS; i++) {
 		switch (tegracam_def_cids[i]) {
 		case TEGRA_CAMERA_CID_GROUP_HOLD:
-			if (ops->set_group_hold == NULL)
+			if (sensor_ops > 0 && ops->set_group_hold == NULL)
 				dev_err(dev,
 					"Missing TEGRA_CAMERA_CID_GROUP_HOLD implementation\n");
 			else
@@ -668,7 +683,7 @@ static int tegracam_check_ctrl_ops(struct tegracam_ctrl_handler *handler)
 		}
 	}
 
-	total_ops = sensor_ops + string_ops + default_ops;
+	total_ops = sensor_ops + mode_ops + string_ops + default_ops;
 
 	if (total_ops != (ops->numctrls + TEGRACAM_DEF_CTRLS)) {
 		dev_err(dev,
@@ -676,6 +691,12 @@ static int tegracam_check_ctrl_ops(struct tegracam_ctrl_handler *handler)
 			(ops->numctrls + TEGRACAM_DEF_CTRLS) - total_ops);
 		return -EINVAL;
 	}
+
+	*numctrls = sensor_ops + mode_ops + string_ops;
+
+	/* default controls are only needed if sensor controls are registered */
+	if (sensor_ops > 0)
+		*numctrls += default_ops;
 
 	return 0;
 }
@@ -789,23 +810,26 @@ int tegracam_ctrl_handler_init(struct tegracam_ctrl_handler *handler)
 	struct v4l2_ctrl_config *ctrl_cfg;
 	struct device *dev = tc_dev->dev;
 	const struct tegracam_ctrl_ops *ops = handler->ctrl_ops;
-	const u32 *cids = ops->ctrl_cid_list;
-	u32 numctrls = ops->numctrls + TEGRACAM_DEF_CTRLS;
+	const u32 *cids = NULL;
+	u32 numctrls = 0;
 	int i, j;
 	int err = 0;
 
-	err = tegracam_check_ctrl_ops(handler);
-	if (err) {
-		dev_err(dev, "Error %d in control ops setup\n", err);
-		goto ctrl_error;
-	}
+	if (ops != NULL) {
+		cids = ops->ctrl_cid_list;
 
-	err = tegracam_check_ctrl_cids(handler);
-	if (err) {
-		dev_err(dev, "Error %d in control cids setup\n", err);
-		goto ctrl_error;
-	}
+		err = tegracam_check_ctrl_ops(handler, &numctrls);
+		if (err) {
+			dev_err(dev, "Error %d in control ops setup\n", err);
+			goto ctrl_error;
+		}
 
+		err = tegracam_check_ctrl_cids(handler);
+		if (err) {
+			dev_err(dev, "Error %d in control cids setup\n", err);
+			goto ctrl_error;
+		}
+	}
 	err = v4l2_ctrl_handler_init(&handler->ctrl_handler, numctrls);
 
 	for (i = 0, j = 0; i < numctrls; i++) {

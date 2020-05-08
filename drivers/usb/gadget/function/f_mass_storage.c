@@ -3,7 +3,6 @@
  *
  * Copyright (C) 2003-2008 Alan Stern
  * Copyright (C) 2009 Samsung Electronics
- * Copyright (c) 2019, NVIDIA CORPORATION.  All rights reserved.
  *                    Author: Michal Nazarewicz <mina86@mina86.com>
  * All rights reserved.
  *
@@ -2348,7 +2347,7 @@ static void fsg_disable(struct usb_function *f)
 {
 	struct fsg_dev *fsg = fsg_from_func(f);
 	fsg->common->new_fsg = NULL;
-	raise_exception(fsg->common, FSG_STATE_DISCONNECT);
+	raise_exception(fsg->common, FSG_STATE_CONFIG_CHANGE);
 }
 
 
@@ -2361,7 +2360,6 @@ static void handle_exception(struct fsg_common *common)
 	enum fsg_state		old_state;
 	struct fsg_lun		*curlun;
 	unsigned int		exception_req_tag;
-	struct fsg_dev		*fsg;
 
 	/*
 	 * Clear the existing signals.  Anything but SIGUSR1 is converted
@@ -2478,19 +2476,9 @@ static void handle_exception(struct fsg_common *common)
 		break;
 
 	case FSG_STATE_CONFIG_CHANGE:
-		fsg = common->new_fsg;
-		/*
-		 * Add a check here to double confirm if a disconnect event
-		 * occurs and common->new_fsg has been cleared.
-		 */
-		if (fsg) {
-			do_set_interface(common, fsg);
+		do_set_interface(common, common->new_fsg);
+		if (common->new_fsg)
 			usb_composite_setup_continue(common->cdev);
-		}
-		break;
-
-	case FSG_STATE_DISCONNECT:
-		do_set_interface(common, NULL);
 		break;
 
 	case FSG_STATE_EXIT:
@@ -2502,6 +2490,7 @@ static void handle_exception(struct fsg_common *common)
 		break;
 
 	case FSG_STATE_INTERFACE_CHANGE:
+	case FSG_STATE_DISCONNECT:
 	case FSG_STATE_COMMAND_PHASE:
 	case FSG_STATE_DATA_PHASE:
 	case FSG_STATE_STATUS_PHASE:

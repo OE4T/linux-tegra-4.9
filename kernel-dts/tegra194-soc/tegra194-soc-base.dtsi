@@ -141,7 +141,10 @@
 		reg = <0x0 0x14000000 0x0 0x20000>, /* CV0_REG0_BASE */
 		      <0x0 0x14020000 0x0 0x10000>, /* CV0_SRAM_BASE */
 		      <0x0 0x0b240000 0x0 0x10000>; /* HSM_BASE */
-		clocks = <&bpmp_clks TEGRA194_CLK_CVNAS>;
+		clocks = <&bpmp_clks TEGRA194_CLK_CVNAS>,
+		         <&bpmp_clks TEGRA194_CLK_NAFLL_CVNAS>,
+		         <&bpmp_clks TEGRA194_CLK_CLK_M>;
+		clock-names = "cvnas", "nafll_cvnas", "clk_m";
 		resets = <&bpmp_resets TEGRA194_RESET_CVNAS>,
 			 <&bpmp_resets TEGRA194_RESET_CVNAS_FCM>;
 		reset-names = "rst", "rst_fcm";

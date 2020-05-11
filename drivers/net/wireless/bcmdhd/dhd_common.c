@@ -2,7 +2,7 @@
  * Broadcom Dongle Host Driver (DHD), common DHD core.
  *
  * Copyright (C) 1999-2015, Broadcom Corporation
- * Copyright (c) 2017-2019, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2017-2020, NVIDIA CORPORATION. All rights reserved.
  * 
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -2294,7 +2294,7 @@ dhd_pktfilter_offload_enable(dhd_pub_t * dhd, char *arg, int enable, int master_
 	str = "pkt_filter_enable";
 	str_len = strlen(str);
 	bcm_strncpy_s(buf, sizeof(buf) - 1, str, sizeof(buf) - 1);
-	buf[ sizeof(buf) - 1 ] = '\0';
+	buf[ sizeof(buf) - 1] = '\0';
 	buf_len = str_len + 1;
 
 	pkt_filterp = (wl_pkt_filter_enable_t *)(buf + str_len + 1);

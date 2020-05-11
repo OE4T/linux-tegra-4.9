@@ -3936,7 +3936,7 @@ EXPORT_SYMBOL_GPL(release_asoc_phandles);
 
 int tegra_asoc_populate_dai_links(struct platform_device *pdev)
 {
-	struct device_node *np = pdev->dev.of_node, *subnp;
+	struct device_node *np = pdev->dev.of_node, *subnp = NULL;
 	struct snd_soc_card *card = platform_get_drvdata(pdev);
 	struct tegra_machine *machine = snd_soc_card_get_drvdata(card);
 	struct snd_soc_dai_link *dai_links, *ahub_links;
@@ -4136,7 +4136,7 @@ int tegra_asoc_populate_dai_links(struct platform_device *pdev)
 	 * release subnp here. DAI links and codec conf release will be
 	 * taken care during error exit of machine driver probe()
 	 */
-	if (ret < 0) {
+	if (ret < 0 && subnp) {
 		of_node_put(subnp);
 		return ret;
 	}

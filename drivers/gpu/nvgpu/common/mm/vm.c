@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2019, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2020, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -339,7 +339,8 @@ int __nvgpu_vm_init(struct mm_gk20a *mm,
 #endif
 
 	/* Initialize the page table data structures. */
-	strncpy(vm->name, name, min(strlen(name), sizeof(vm->name)));
+	strncpy(vm->name, name, sizeof(vm->name));
+	vm->name[sizeof(vm->name) - 1] = '\0';
 	err = nvgpu_gmmu_init_page_table(vm);
 	if (err) {
 		goto clean_up_vgpu_vm;

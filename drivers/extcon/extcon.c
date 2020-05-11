@@ -14,7 +14,7 @@
  * Copyright (C) 2008 Google, Inc.
  * Author: Mike Lockwood <lockwood@android.com>
  *
- * Copyright (c) 2018-2019, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2018-2020, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -1275,8 +1275,7 @@ int extcon_dev_register(struct extcon_dev *edev)
 			cable = &edev->cables[index];
 
 			snprintf(buf, 10, "cable.%d", index);
-			str = kzalloc(sizeof(char) * (strlen(buf) + 1),
-				      GFP_KERNEL);
+			str = kstrdup(buf, GFP_KERNEL);
 			if (!str) {
 				for (index--; index >= 0; index--) {
 					cable = &edev->cables[index];
@@ -1286,7 +1285,6 @@ int extcon_dev_register(struct extcon_dev *edev)
 
 				goto err_alloc_cables;
 			}
-			strncpy(str, buf, strlen(buf));
 
 			cable->edev = edev;
 			cable->cable_index = index;
@@ -1333,8 +1331,7 @@ int extcon_dev_register(struct extcon_dev *edev)
 
 		for (index = 0; edev->mutually_exclusive[index]; index++) {
 			snprintf(buf, sizeof(buf), "0x%x", edev->mutually_exclusive[index]);
-			name = kzalloc(sizeof(char) * (strlen(buf) + 1),
-				       GFP_KERNEL);
+			name = kstrdup(buf, GFP_KERNEL);
 			if (!name) {
 				for (index--; index >= 0; index--) {
 					kfree(edev->d_attrs_muex[index].attr.
@@ -1345,7 +1342,6 @@ int extcon_dev_register(struct extcon_dev *edev)
 				ret = -ENOMEM;
 				goto err_muex;
 			}
-			strncpy(name, buf, strlen(buf));
 			sysfs_attr_init(&edev->d_attrs_muex[index].attr);
 			edev->d_attrs_muex[index].attr.name = name;
 			edev->d_attrs_muex[index].attr.mode = 0000;

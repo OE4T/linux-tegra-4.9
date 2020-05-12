@@ -77,3 +77,11 @@ config NVS_TRIGGERED_BUFFER
 	  This is required for NVS (NVidia Sensor) drivers (nvs_<device>)
 	  that control a proximity sensor in their device.
 
+config NVS_GTE
+	tristate "NVSensor Generic Timestamping Engine"
+	depends on TEGRA_HTS_GTE
+	help
+	  Enable this option for hardware timestamping support on NVS
+	  (NVidia Sensor) interrupts. The NVS framework will use the nVidia
+	  Tegra GTE hardware.
+

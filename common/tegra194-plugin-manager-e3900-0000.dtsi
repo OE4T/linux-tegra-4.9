@@ -60,5 +60,17 @@
 				};
 			};
 		};
+
+		/* E2832 (LT6911UXC) drives I2S clocks */
+		fragment-e2832-i2s {
+			ids = "2832-*";
+			override@0 {
+				target = <&csi_conn_i2s>;
+				_overlay_ {
+					bitclock-master;
+					frame-master;
+				};
+			};
+		};
 	};
 };

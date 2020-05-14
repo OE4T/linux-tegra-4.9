@@ -1525,6 +1525,14 @@ static void config_plat_gpio(struct tegra_pcie_dw *pcie, bool flag)
 
 	for (count = 0; count < pcie->n_gpios; ++count)
 		gpiod_set_value(gpio_to_desc(pcie->gpios[count]), flag);
+
+	/*
+	 * According to PCI Express Card Electromechanical Specification
+	 * Revision 1.1, Table-2.4, T_PVPERL (Power stable to PERST# inactive)
+	 * should be a minimum of 100ms.
+	 */
+	if (flag && pcie->n_gpios > 0)
+		msleep(100);
 }
 
 static int apply_speed_change(struct seq_file *s, void *data)

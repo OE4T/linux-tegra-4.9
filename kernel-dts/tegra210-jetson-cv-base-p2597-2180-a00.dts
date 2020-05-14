@@ -1,7 +1,7 @@
 /*
  * arch/arm64/boot/dts/tegra210-jetson-cv-base-p2597-2180-a00.dts
  *
- * Copyright (c) 2015-2019, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2020, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -379,8 +379,11 @@
 			 <&tegra_car TEGRA210_CLK_PLL_A_OUT0>,
 			 <&tegra_car TEGRA210_CLK_EXTERN1>;
 		clock-names = "pll_a", "pll_a_out0", "extern1";
-		assigned-clocks = <&tegra_car TEGRA210_CLK_EXTERN1>;
+		assigned-clocks = <&tegra_car TEGRA210_CLK_EXTERN1>,
+				  <&tegra_car TEGRA210_CLK_PLL_A_OUT0>,
+				  <&tegra_car TEGRA210_CLK_PLL_A>;
 		assigned-clock-parents = <&tegra_car TEGRA210_CLK_PLL_A_OUT0>;
+		assigned-clock-rates = <12288000>, <49152000>, <368640000>;
 
 		nvidia,num-codec-link = <8>;
 

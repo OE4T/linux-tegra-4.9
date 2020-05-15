@@ -269,6 +269,14 @@
 			enable-active-high;
 			vin-supply = <&e3900_sys_3v3_cvb>;
 		};
-
+		e3900_vdd_sys_en: regulator@113 {
+			compatible = "regulator-fixed";
+			reg = <225>;
+			regulator-name = "e3900_vdd_sys_en";
+			regulator-min-microvolt = <1200000>;
+			regulator-max-microvolt = <1200000>;
+			gpio = <&tegra_main_gpio TEGRA194_MAIN_GPIO(M, 5) 0>;
+			enable-active-high;
+		};
 	};
 };

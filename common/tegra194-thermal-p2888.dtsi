@@ -18,5 +18,9 @@
 			vdd-supply = <&p2822_vdd_1v8_slt>;
 		};
 	};
+
+	soctherm-oc-event {
+		status = "okay";
+	};
 };
 

@@ -133,7 +133,7 @@
 			};
 			usb2-2 {
 				mode = "host";
-				vbus-supply = <&p3509_vdd_usb2_5v>;
+				vbus-supply = <&battery_reg>;
 				status = "okay";
 			};
 			usb3-2 {
@@ -296,6 +296,20 @@
 			gpios = <TEGRA194_AON_GPIO(AA, 5) 0>;
 			label = "pex_refclk_sel_high";
 			status = "disabled";
+		};
+		w-disable1 {
+			gpio-hog;
+			output-high;
+			gpios = <TEGRA194_AON_GPIO(CC, 2) GPIO_ACTIVE_LOW>;
+			label = "w-disable1";
+			status = "okay";
+		};
+		w-disable2 {
+			gpio-hog;
+			output-high;
+			gpios = <TEGRA194_AON_GPIO(CC, 0) GPIO_ACTIVE_LOW>;
+			label = "w-disable2";
+			status = "okay";
 		};
 	};
 

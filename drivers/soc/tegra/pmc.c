@@ -389,30 +389,50 @@
 /* PMIC watchdog reset bit */
 #define PMIC_WATCHDOG_RESET		0x02
 
+#ifdef CONFIG_ARM64
+#define SMC_ARG0		"x0"
+#define SMC_ARG1		"x1"
+#define SMC_ARG2		"x2"
+#define SMC_ARG3		"x3"
+#define SMC_ARCH_EXTENSION	""
+#define SMC_REGISTERS_TRASHED	"x4","x5","x6","x7","x8","x9","x10","x11", \
+				"x12","x13","x14","x15","x16","x17"
+#else
+#define SMC_ARG0		"r0"
+#define SMC_ARG1		"r1"
+#define SMC_ARG2		"r2"
+#define SMC_ARG3		"r3"
+#define SMC_ARCH_EXTENSION	".arch_extension sec\n"
+#define SMC_REGISTERS_TRASHED	"ip"
+#endif
+
 struct pmc_smc_regs {
 	u64 args[NR_SMC_REGS];
 };
 
-static void send_smc(u32 func, struct pmc_smc_regs *regs)
+static inline ulong send_smc(u32 func, struct pmc_smc_regs *regs)
 {
-	u32 ret = func;
+	register ulong _r0 asm(SMC_ARG0) = func;
+	register ulong _r1 asm(SMC_ARG1) = (*regs).args[0];
+	register ulong _r2 asm(SMC_ARG2) = (*regs).args[1];
+	register ulong _r3 asm(SMC_ARG3) = (*regs).args[2];
 
 	asm volatile(
-		"mov x0, %0\n"
-		"ldp x1, x2, [%1, #16 * 0]\n"
-		"ldp x3, x4, [%1, #16 * 1]\n"
-		"ldp x5, x6, [%1, #16 * 2]\n"
-		"smc #0\n"
-		"mov %0, x0\n"
-		"stp x1, x2, [%1, #16 * 0]\n"
-		: "+r" (ret)
-		: "r" (regs)
-		: "x0", "x1", "x2", "x3", "x4", "x5", "x6", "x7", "x8",
-		  "x9", "x10", "x11", "x12", "x13", "x14", "x15", "x16", "x17");
-	if (ret) {
-			pr_err("%s: failed (ret=%d)\n", __func__, ret);
-			WARN_ON(1);
-	}
+		__asmeq("%0", SMC_ARG0)
+		__asmeq("%1", SMC_ARG1)
+		__asmeq("%2", SMC_ARG2)
+		__asmeq("%3", SMC_ARG3)
+		__asmeq("%4", SMC_ARG0)
+		__asmeq("%5", SMC_ARG1)
+		__asmeq("%6", SMC_ARG2)
+		__asmeq("%7", SMC_ARG3)
+		SMC_ARCH_EXTENSION
+		"smc	#0"	/* switch to secure world */
+		: "=r" (_r0), "=r" (_r1), "=r" (_r2), "=r" (_r3)
+		: "r" (_r0), "r" (_r1), "r" (_r2), "r" (_r3)
+		: SMC_REGISTERS_TRASHED);
+	(*regs).args[0] = _r1;
+	return _r0;
 }
 
 struct io_dpd_reg_info {

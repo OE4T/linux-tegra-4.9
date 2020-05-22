@@ -2338,16 +2338,23 @@ static long nvhdcp_dev_ioctl(struct file *filp,
 {
 	struct tegra_nvhdcp *nvhdcp = filp->private_data;
 	struct tegra_nvhdcp_packet *pkt;
+	struct tegra_hdmi *hdmi = nvhdcp->hdmi;
 	int e = -ENOTTY;
 
 	switch (cmd) {
 	case TEGRAIO_NVHDCP_ON:
+		mutex_lock(&nvhdcp->lock);
+		nvhdcp_set_plugged(nvhdcp, hdmi->enabled);
+		mutex_unlock(&nvhdcp->lock);
 		return tegra_nvhdcp_on(nvhdcp);
 
 	case TEGRAIO_NVHDCP_OFF:
 		return tegra_nvhdcp_off(nvhdcp);
 
 	case TEGRAIO_NVHDCP_SET_POLICY:
+		mutex_lock(&nvhdcp->lock);
+		nvhdcp_set_plugged(nvhdcp, hdmi->enabled);
+		mutex_unlock(&nvhdcp->lock);
 		return tegra_nvhdcp_set_policy(nvhdcp, arg);
 
 	case TEGRAIO_NVHDCP_READ_M:
@@ -2383,6 +2390,9 @@ static long nvhdcp_dev_ioctl(struct file *filp,
 		return e;
 
 	case TEGRAIO_NVHDCP_RENEGOTIATE:
+		mutex_lock(&nvhdcp->lock);
+		nvhdcp_set_plugged(nvhdcp, hdmi->enabled);
+		mutex_unlock(&nvhdcp->lock);
 		e = tegra_nvhdcp_renegotiate(nvhdcp);
 		break;
 

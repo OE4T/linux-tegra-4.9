@@ -2141,23 +2141,35 @@ static long dphdcp_dev_ioctl(struct file *filp,
 {
 	struct tegra_dphdcp *dphdcp;
 	struct tegra_nvhdcp_packet *pkt;
+	struct tegra_dc_dp_data *dp;
 	int e = -ENOTTY;
 
 	if (!filp)
 		return -EINVAL;
 
 	dphdcp = filp->private_data;
+	dp = dphdcp->dp;
+
 	switch (cmd) {
 	case TEGRAIO_NVHDCP_ON:
+		mutex_lock(&dphdcp->lock);
+		dphdcp_set_plugged(dphdcp, dp->enabled);
+		mutex_unlock(&dphdcp->lock);
 		return tegra_dphdcp_on(dphdcp);
 
 	case TEGRAIO_NVHDCP_OFF:
 		return tegra_dphdcp_off(dphdcp);
 
 	case TEGRAIO_NVHDCP_SET_POLICY:
+		mutex_lock(&dphdcp->lock);
+		dphdcp_set_plugged(dphdcp, dp->enabled);
+		mutex_unlock(&dphdcp->lock);
 		return tegra_dphdcp_set_policy(dphdcp, arg);
 
 	case TEGRAIO_NVHDCP_RENEGOTIATE:
+		mutex_lock(&dphdcp->lock);
+		dphdcp_set_plugged(dphdcp, dp->enabled);
+		mutex_unlock(&dphdcp->lock);
 		e = tegra_dphdcp_renegotiate(dphdcp);
 		break;
 

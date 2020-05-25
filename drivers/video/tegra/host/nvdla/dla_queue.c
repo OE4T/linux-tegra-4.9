@@ -1,7 +1,7 @@
 /*
  * NVDLA queue management
  *
- * Copyright (c) 2019, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2019-2020, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -336,7 +336,6 @@ struct nvdla_queue *nvdla_queue_alloc(struct nvdla_queue_pool *pool,
 		if (err < 0)
 			goto err_alloc_channel;
 
-		queue->channel->syncpts[0] = queue->syncpt_id;
 		queue->vm_pdev = queue->channel->vm->pdev;
 	} else {
 		queue->vm_pdev = pdev;

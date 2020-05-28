@@ -17,8 +17,6 @@
 #include "t19x-common-modules/tegra194-camera-plugin-manager.dtsi"
 #include <dt-bindings/gpio/tegra194-gpio.h>
 #include "tegra19x-dcm_0v6-gpio-default.dtsi"
-#include "tegra19x-dcm_0v6-padvoltage-default.dtsi"
-#include "tegra19x-dcm_0v6-pinmux.dtsi"
 
 / {
     model = "Royal Oak DCM";

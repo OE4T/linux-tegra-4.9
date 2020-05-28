@@ -31,19 +31,10 @@
 		board-has-eeprom;
 	};
 
-	// The PINMUX NVidia provides does not actually enable the SPI port on the 40 PIN header. These changes were
-	// made to correct this in the PINMUX in the royal oak bsp repository.
-	//
-	// pinmux.0x0243d040 = 0x00000400; # spi1_sck_pz3: spi1, tristate-disable, input-disable, io_high_voltage-disable, lpdr-disable
-	// pinmux.0x0243d020 = 0x00000450; # spi1_miso_pz4: spi1, tristate-enable, input-enable, io_high_voltage-disable, lpdr-disable
-	// pinmux.0x0243d058 = 0x00000400; # spi1_mosi_pz5: spi1, tristate-disable, input-disable, io_high_voltage-disable, lpdr-disable
-	// pinmux.0x0243d010 = 0x00000405; # spi1_cs0_pz6: rsvd1, pull-up, tristate-disable, input-disable, io_high_voltage-disable, lpdr-disable
-	// pinmux.0x0243d050 = 0x00000400; # spi1_cs1_pz7: spi1, tristate-disable, input-disable, io_high_voltage-disable, lpdr-disable
 
-  //*********************************************************************
+    //*********************************************************************
     // Serial UART Setup
     //*********************************************************************
-    // UART 3 == C or D ?
     // Xavier Module UART 3 -->  UART 1 (Debug Port)
     serial@0c280000 {
         compatible = "nvidia,tegra184-uart", "nvidia,tegra114-hsuart", "nvidia,tegra20-uart";
@@ -64,9 +55,7 @@
         status = "disabled";
     };
 
-
-
-   // Xavier Module I2C-1 --> Tegra I2C2
+    // Xavier Module I2C-1 --> Tegra I2C2
     //		LM75 Temperature      0x48 (Ethernet Switch)
     //		LM75 Temperature      0x49 (+53 Power Module)
     //		MAX6650 AUX Fan       0x1F (Aux Fan)
@@ -94,7 +83,7 @@
         };
     };
 
-   //*********************************************************************
+    //*********************************************************************
     // SPI Setup
     //
     // Notes:

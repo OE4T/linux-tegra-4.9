@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2020, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2020, NVIDIA CORPORATION
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -85,6 +85,23 @@
 
 /**
  * @ingroup MRQ_Format
+ * Request an answer from the peer.
+ * This should be set in mrq_request::flags for all requests targetted
+ * at BPMP. For requests originating in BPMP, this flag is optional.
+ * When this flag is not set, the remote peer must not send a response
+ * back.
+ */
+#define BPMP_MAIL_DO_ACK	(1U << 0U)
+
+/**
+ * @ingroup MRQ_Format
+ * Ring the sender's doorbell when responding.
+ * An optional direction that can be specified in mrq_request::flags.
+ */
+#define BPMP_MAIL_RING_DB	(1U << 1U)
+
+/**
+ * @ingroup MRQ_Format
  * @brief Header for an MRQ message
  *
  * Provides the MRQ number for the MRQ message: #mrq. The remainder of
@@ -94,13 +111,12 @@
 struct mrq_request {
 	/** @brief MRQ number of the request */
 	uint32_t mrq;
+
 	/**
 	 * @brief Flags providing follow up directions to the receiver
 	 *
-	 * | Bit | Description                                |
-	 * |-----|--------------------------------------------|
-	 * | 1   | ring the sender's doorbell when responding |
-	 * | 0   | should be 1                                |
+	 * A combination of #BPMP_MAIL_DO_ACK and #BPMP_MAIL_RING_DB.
+	 * #BPMP_MAIL_DO_ACK must be always set for requests targeting BPMP.
 	 */
 	uint32_t flags;
 } BPMP_ABI_PACKED;
@@ -708,14 +724,41 @@ struct mrq_debugfs_response {
  */
 
 enum mrq_reset_commands {
-	/** @brief Assert module reset */
+	/**
+	 * @brief Assert module reset
+	 *
+	 * mrq_response::err is 0 if the operation was successful, or @n
+	 * -#BPMP_EINVAL if mrq_reset_request::reset_id is invalid @n
+	 * -#BPMP_EACCES if mrq master is not an owner of target domain reset @n
+	 * -#BPMP_ENOTSUP if target domain h/w state does not allow reset
+	 */
 	CMD_RESET_ASSERT = 1,
-	/** @brief Deassert module reset */
+	/**
+	 * @brief Deassert module reset
+	 *
+	 * mrq_response::err is 0 if the operation was successful, or @n
+	 * -#BPMP_EINVAL if mrq_reset_request::reset_id is invalid @n
+	 * -#BPMP_EACCES if mrq master is not an owner of target domain reset @n
+	 * -#BPMP_ENOTSUP if target domain h/w state does not allow reset
+	 */
 	CMD_RESET_DEASSERT = 2,
-	/** @brief Assert and deassert the module reset */
+	/**
+	 * @brief Assert and deassert the module reset
+	 *
+	 * mrq_response::err is 0 if the operation was successful, or @n
+	 * -#BPMP_EINVAL if mrq_reset_request::reset_id is invalid @n
+	 * -#BPMP_EACCES if mrq master is not an owner of target domain reset @n
+	 * -#BPMP_ENOTSUP if target domain h/w state does not allow reset
+	 */
 	CMD_RESET_MODULE = 3,
-	/** @brief Get the highest reset ID */
+	/**
+	 * @brief Get the highest reset ID
+	 *
+	 * mrq_response::err is 0 if the operation was successful, or @n
+	 * -#BPMP_ENODEV if no reset domains are supported (number of IDs is 0)
+	 */
 	CMD_RESET_GET_MAX_ID = 4,
+
 	/** @brief Not part of ABI and subject to change */
 	CMD_RESET_MAX,
 };
@@ -779,17 +822,17 @@ struct mrq_reset_response {
  * @addtogroup I2C
  * @{
  */
-#define TEGRA_I2C_IPC_MAX_IN_BUF_SIZE	(MSG_DATA_MIN_SZ - 12)
-#define TEGRA_I2C_IPC_MAX_OUT_BUF_SIZE	(MSG_DATA_MIN_SZ - 4)
+#define TEGRA_I2C_IPC_MAX_IN_BUF_SIZE	(MSG_DATA_MIN_SZ - 12U)
+#define TEGRA_I2C_IPC_MAX_OUT_BUF_SIZE	(MSG_DATA_MIN_SZ - 4U)
 
-#define SERIALI2C_TEN           0x0010
-#define SERIALI2C_RD            0x0001
-#define SERIALI2C_STOP          0x8000
-#define SERIALI2C_NOSTART       0x4000
-#define SERIALI2C_REV_DIR_ADDR  0x2000
-#define SERIALI2C_IGNORE_NAK    0x1000
-#define SERIALI2C_NO_RD_ACK     0x0800
-#define SERIALI2C_RECV_LEN      0x0400
+#define SERIALI2C_TEN           0x0010U
+#define SERIALI2C_RD            0x0001U
+#define SERIALI2C_STOP          0x8000U
+#define SERIALI2C_NOSTART       0x4000U
+#define SERIALI2C_REV_DIR_ADDR  0x2000U
+#define SERIALI2C_IGNORE_NAK    0x1000U
+#define SERIALI2C_NO_RD_ACK     0x0800U
+#define SERIALI2C_RECV_LEN      0x0400U
 
 enum {
 	CMD_I2C_XFER = 1
@@ -861,6 +904,17 @@ struct mrq_i2c_request {
 
 /**
  * @brief Response to #MRQ_I2C
+ *
+ * mrq_response:err is
+ *  0: Success
+ *  -#BPMP_EBADCMD: if mrq_i2c_request::cmd is other than 1
+ *  -#BPMP_EINVAL: if cmd_i2c_xfer_request does not contain correctly formatted request
+ *  -#BPMP_ENODEV: if cmd_i2c_xfer_request::bus_id is not supported by BPMP
+ *  -#BPMP_EACCES: if i2c transaction is not allowed due to firewall rules
+ *  -#BPMP_ETIMEDOUT: if i2c transaction times out
+ *  -#BPMP_ENXIO: if i2c slave device does not reply with ACK to the transaction
+ *  -#BPMP_EAGAIN: if ARB_LOST condition is detected by the i2c controller
+ *  -#BPMP_EIO: any other i2c controller error code than NO_ACK or ARB_LOST
  */
 struct mrq_i2c_response {
 	struct cmd_i2c_xfer_response xfer;
@@ -901,8 +955,8 @@ enum {
 #define BPMP_CLK_HAS_SET_RATE	(1U << 1U)
 #define BPMP_CLK_IS_ROOT	(1U << 2U)
 
-#define MRQ_CLK_NAME_MAXLEN	40
-#define MRQ_CLK_MAX_PARENTS	16
+#define MRQ_CLK_NAME_MAXLEN	40U
+#define MRQ_CLK_MAX_PARENTS	16U
 
 /** @private */
 struct cmd_clk_get_rate_request {
@@ -953,7 +1007,21 @@ struct cmd_clk_is_enabled_request {
 	BPMP_ABI_EMPTY
 } BPMP_ABI_PACKED;
 
+/**
+ * @brief Response data to #MRQ_CLK sub-command CMD_CLK_IS_ENABLED
+ */
 struct cmd_clk_is_enabled_response {
+	/**
+	 * @brief The state of the clock that has been succesfully
+	 * requested with CMD_CLK_ENABLE or CMD_CLK_DISABLE by the
+	 * master invoking the command earlier.
+	 *
+	 * The state may not reflect the physical state of the clock
+	 * if there are some other masters requesting it to be
+	 * enabled.
+	 *
+	 * Value 0 is disabled, all other values indicate enabled.
+	 */
 	int32_t state;
 } BPMP_ABI_PACKED;
 
@@ -1335,8 +1403,21 @@ struct cmd_pg_set_state_request {
 	uint32_t state;
 } BPMP_ABI_PACKED;
 
+/**
+ * @brief Response data to #MRQ_PG sub command #CMD_PG_GET_STATE
+ */
 struct cmd_pg_get_state_response {
-	/** @ref pg_states */
+	/**
+	 * @brief The state of the power partition that has been
+	 * succesfuly requested by the master earlier using #MRQ_PG
+	 * command #CMD_PG_SET_STATE.
+	 *
+	 * The state may not reflect the physical state of the power
+	 * partition if there are some other masters requesting it to
+	 * be enabled.
+	 *
+	 * See @ref pg_states for possible values
+	 */
 	uint32_t state;
 } BPMP_ABI_PACKED;
 
@@ -2585,6 +2666,21 @@ struct ec_err_reg_parity_desc {
 } BPMP_ABI_PACKED;
 
 /**
+ * |error type                        | err_source_id values     |
+ * |--------------------------------- |--------------------------|
+ * |@ref EC_ERR_TYPE_SW_CORRECTABLE   | @ref bpmp_ec_ce_swd_ids  |
+ * |@ref EC_ERR_TYPE_SW_UNCORRECTABLE | @ref bpmp_ec_ue_swd_ids  |
+ */
+struct ec_err_sw_error_desc {
+	/** @brief Bitmask of @ref bpmp_ec_desc_flags  */
+	uint16_t desc_flags;
+	/** @brief Error source id */
+	uint16_t err_source_id;
+	/** @brief Sw error data */
+	uint32_t sw_error_data;
+} BPMP_ABI_PACKED;
+
+/**
  * |error type                              | err_source_id values      |
  * |----------------------------------------|---------------------------|
  * |@ref EC_ERR_TYPE_PARITY_INTERNAL        |@ref bpmp_ec_ipath_ids     |
@@ -2592,10 +2688,8 @@ struct ec_err_reg_parity_desc {
  * |@ref EC_ERR_TYPE_ECC_DED_INTERNAL       |@ref bpmp_ec_ipath_ids     |
  * |@ref EC_ERR_TYPE_COMPARATOR             |@ref bpmp_ec_comparator_ids|
  * |@ref EC_ERR_TYPE_PARITY_SRAM            |@ref bpmp_clock_ids        |
- * |@ref EC_ERR_TYPE_SW_CORRECTABLE         |@ref bpmp_ec_misc_ids      |
- * |@ref EC_ERR_TYPE_SW_UNCORRECTABLE       |@ref bpmp_ec_misc_ids      |
- * |@ref EC_ERR_TYPE_OTHER_HW_CORRECTABLE   |@ref bpmp_ec_misc_ids      |
- * |@ref EC_ERR_TYPE_OTHER_HW_UNCORRECTABLE |@ref bpmp_ec_misc_ids      |
+ * |@ref EC_ERR_TYPE_OTHER_HW_CORRECTABLE   |@ref bpmp_ec_misc_hwd_ids  |
+ * |@ref EC_ERR_TYPE_OTHER_HW_UNCORRECTABLE |@ref bpmp_ec_misc_hwd_ids  |
  */
 struct ec_err_simple_desc {
 	/** @brief Bitmask of @ref bpmp_ec_desc_flags  */
@@ -2618,7 +2712,7 @@ struct cmd_ec_status_get_request {
 } BPMP_ABI_PACKED;
 
 /** EC status maximum number of descriptors */
-#define EC_ERR_STATUS_DESC_MAX_NUM	4
+#define EC_ERR_STATUS_DESC_MAX_NUM	4U
 
 struct cmd_ec_status_get_response {
 	/** @brief Target EC id (the same id received with request). */
@@ -2723,6 +2817,8 @@ struct mrq_fbvolt_status_response {
  * @{
  */
 
+/** @brief Operation not permitted */
+#define BPMP_EPERM	1
 /** @brief No such file or directory */
 #define BPMP_ENOENT	2
 /** @brief No MRQ handler */
@@ -2731,6 +2827,8 @@ struct mrq_fbvolt_status_response {
 #define BPMP_EIO	5
 /** @brief Bad sub-MRQ command */
 #define BPMP_EBADCMD	6
+/** @brief Resource temporarily unavailable */
+#define BPMP_EAGAIN	11
 /** @brief Not enough memory */
 #define BPMP_ENOMEM	12
 /** @brief Permission denied */
@@ -2751,6 +2849,10 @@ struct mrq_fbvolt_status_response {
 #define BPMP_ENOSYS	38
 /** @brief Invalid slot */
 #define BPMP_EBADSLT	57
+/** @brief Not supported */
+#define BPMP_ENOTSUP	134
+/** @brief No such device or address */
+#define BPMP_ENXIO	140
 
 /** @} */
 

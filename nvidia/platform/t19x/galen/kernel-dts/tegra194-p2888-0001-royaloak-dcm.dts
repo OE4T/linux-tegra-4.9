@@ -1,0 +1,315 @@
+/*
+ * Top level DTS file for CVM:P2888-0001 and CVB:P2822-0000.
+ *
+ * Copyright (c) 2020, Miovision.  All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 2 of the License.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ */
+#include "common/tegra194-p2888-0001-p2822-0000-common.dtsi"
+#include "common/tegra194-p2822-camera-modules.dtsi"
+#include "t19x-common-modules/tegra194-camera-plugin-manager.dtsi"
+#include <dt-bindings/gpio/tegra194-gpio.h>
+#include "tegra19x-dcm_0v6-gpio-default.dtsi"
+#include "tegra19x-dcm_0v6-padvoltage-default.dtsi"
+#include "tegra19x-dcm_0v6-pinmux.dtsi"
+
+/ {
+    model = "Royal Oak DCM";
+    compatible = "nvidia,jetson-xavier", "nvidia,tegra194";
+    nvidia,dtsfilename = __FILE__;
+
+	// Default boot ARGS
+    chosen {
+		bootargs ="console=ttyTCU0,115200";
+		board-has-eeprom;
+	};
+
+
+    //*********************************************************************
+    // Serial UART Setup
+    //*********************************************************************
+    // Xavier Module UART 3 -->  UART 1 (Debug Port)
+    serial@0c280000 {
+        compatible = "nvidia,tegra184-uart", "nvidia,tegra114-hsuart", "nvidia,tegra20-uart";
+        console-port;
+        sqa-automation-port;
+        /delete-property/ resets;
+        /delete-property/ reset-names;
+        status = "okay";
+    };
+
+    // Xavier Module UART 0
+    serial@3100000 {
+        status = "disabled";
+    };
+
+    // Xavier Module UART 1
+    serial@3110000 {
+        status = "disabled";
+    };
+
+    // Xavier Module I2C-1 --> Tegra I2C2
+    //		LM75 Temperature      0x48 (Ethernet Switch)
+    //		LM75 Temperature      0x49 (+53 Power Module)
+    //		MAX6650 AUX Fan       0x1F (Aux Fan)
+    i2c@03160000 {
+         status = "okay";
+
+        lm75@48 {
+            status= "okay";
+            compatible = "national,lm75";
+            reg = <0x48>;
+        };
+
+         lm75@49 {
+            status= "okay";
+            compatible = "national,lm75";
+            reg = <0x49>;
+        };
+
+        max6650@1f {
+            reg = <0x1f>;
+            compatible = "maxim,max6650";
+            maxim,fan-microvolt = <12000000>;
+            maxim,fan-prescale = <4>;
+            maxim,fan-target-rpm = <0>;
+        };
+    };
+
+    //*********************************************************************
+    // SPI Setup
+    //
+    // Notes:
+    //		Xavier supports up to 65Mhz SPI clocks.
+    //*********************************************************************
+
+    // Xavier Module SPI 1--> Tegra SPI 1 (TPM)
+    spi@3210000 {
+        status = "okay";
+        // Not actually 100% sure this does anything, it was suggested on the NVidia forums. The kernel doesn't
+        // look for this, but possibly one of the boot loaders does. This is suppose to disable power management
+        // on the interface.
+        nvidia,disable-runtime-pm;
+
+        // The PINMUX needed to be adjusted to put the CS line as a GPIO pin which is software controlled,
+        // the hardware control was dropping the CS line between transactions resetting the TPM.
+       	cs-gpios = <&tegra_main_gpio TEGRA_GPIO(Z,6) 0>;
+
+        spi@0 {
+            reg = <0x0>;
+            compatible = "tcg,tpm_tis-spi";
+            spi-max-frequency = <33000000>;
+            controller-data {
+                // This setting along with the cs-gpios keeps the CS active during the full transaction.
+                nvidia,clk-delay-between-packets = <0x1>;
+            };
+        };
+    };
+
+    // Xavier Module SPI 2 --> Tegra SPI 2 (LCD, )
+    spi@0c260000 {
+        status = "okay";
+
+        // Configure the SPI link between the boards using a generic SPIDEV so tools
+        // can be used.
+
+
+        spi@0 {
+            compatible = "spidev";
+            reg = <0x0>;
+
+            // Set the max speed to 10Mhz as its cross board and we don't know whats going
+            // to be connected yet.
+            spi-max-frequency = <10000000>;
+            nvidia,enable-hw-based-cs;
+            nvidia,rx-clk-tap-delay = <6>;
+        };
+    };
+
+    //*********************************************************************
+    // GPIO Setup
+    //*********************************************************************
+
+
+    /////////////////////////////////////
+    // Input Buttons
+    /////////////////////////////////////
+    gpio: gpio@02200000 {
+        //*****************
+        // Inputs
+        //*****************
+
+        // BUT_CENTERn => GPIO18 => SOC_GPIO40 GPIO03 => P(Q,4) *
+       button_center {
+            status = "okay";
+            input;
+            gpios = <TEGRA_GPIO(Q, 4) GPIO_ACTIVE_HIGH>;
+            line-name = "BUTTON-CENTERn";
+        };
+
+        // BUT_UPn => GPIO33 => SOC_GPIO05  GPIO3 => P(P,5) *
+        button_up {
+            status = "okay";
+            input;
+            gpios = <TEGRA_GPIO(P, 5) GPIO_ACTIVE_HIGH>;
+            line-name = "BUTTON-UPn";
+        };
+
+
+        // BUT_DOWNn => GPIO17 => SOC_GPIO21 GPIO3 => P(Q,1) *
+        button_down {
+            status = "okay";
+            input;
+            gpios = <TEGRA_GPIO(Q, 1) GPIO_ACTIVE_HIGH>;
+            line-name = "BUTTON-DOWNn";
+        };
+
+        // BUT_LEFTn => GPIO29 => SOC_GPIO31   GPIO3 => P(S,6) *
+        button_left {
+            status = "okay";
+            input;
+            gpios = <TEGRA_GPIO(S, 6) GPIO_ACTIVE_HIGH>;
+            line-name = "BUTTON-LEFTn";
+        };
+
+        // BUT_RIGHTn => GPIO11 => SOC_GPIO30   GPIO3 => P(S,5) *
+        button_right {
+            status = "okay";
+            input;
+            gpios = <TEGRA_GPIO(S, 5) GPIO_ACTIVE_HIGH>;
+            line-name = "BUTTON-LEFTn";
+        };
+
+        /////////////////////////////////////
+        // Input Power good
+        /////////////////////////////////////
+        // PM_CTM_PWR_GOOD => GPIO36 => SOC_GPIO53  => GPIO3 P(N,0) *
+        ctm_pwr_good {
+            status = "okay";
+            input;
+            gpios = <TEGRA_GPIO(N, 0) GPIO_ACTIVE_HIGH>;
+            line-name = "CTM_PWR_GOOD";
+        };
+
+        /////////////////////////////////////
+        // Over Temp Shutdown
+        /////////////////////////////////////
+        // OVERTEMP_SHDN => GPIO23 => USB_VBUS_EN1  => GPIO3 P(Z,2) *
+        overtemp_shdn {
+            status = "okay";
+            input;
+            gpios = <TEGRA_GPIO(Z, 2) GPIO_ACTIVE_HIGH>;
+            line-name = "OVERTEMP_SHDN";
+        };
+
+        /////////////////////////////////////
+        // USB
+        /////////////////////////////////////
+        // USB0_EN => GPIO22 => USB_VBUS_EN0  => GPIO3 P(Z,1) *
+
+        usb0_enable {
+            status = "okay";
+            gpio-hog;
+            output-low;
+            gpios = <TEGRA_GPIO(Z, 1) GPIO_ACTIVE_LOW>;
+            line-name = "USB0_ENABLE";
+        };
+
+        //USB_VBUS_DET => GPIO10 => CAN1_WAKE => GPIO3 P(BB,2) *
+        usb0_vbus_detect {
+            status = "okay";
+            input;
+            gpios = <TEGRA_GPIO(BB, 2) GPIO_ACTIVE_HIGH>;
+            line-name = "USB0_VBUS_DETECT";
+        };
+
+        //USB_ID => GPIO30 => GPIO20 => GPIO3 P(Q,0) *
+        usb0_id {
+            status = "okay";
+            input;
+            gpios = <TEGRA_GPIO(Q, 0) GPIO_ACTIVE_HIGH>;
+            line-name = "USB0_ID";
+        };
+
+        /////////////////////////////////////
+        // PM_LED_BL_ST
+        /////////////////////////////////////
+        // PM_LED_BL_ST => GPIO32 => SOC_GPIO04 => GPIO3 P(P,4) *
+        pm_led_bl_st {
+            status = "okay";
+            input;
+            gpios = <TEGRA_GPIO(P, 4) GPIO_ACTIVE_HIGH>;
+            line-name = "PM_LED_LB_ST";
+        };
+
+        // TPM_RSTn => GPIO24 => DP_AUX_CH3_HPD => GPIO3 P(M,3) *
+        tpm_rst {
+            status = "okay";
+            gpio-hog;
+            output-low;
+            gpios = <TEGRA_GPIO(M, 3) GPIO_ACTIVE_LOW>;
+            line-name = "TPM_RST";
+        };
+
+        /////////////////////////////////////
+        // LCD
+        /////////////////////////////////////
+        // LCD_RESET => GPIO26 => SOC_GPIO51  => GPIO3 P(M,6) *
+        lcd_reset {
+            status = "okay";
+            gpio-hog;
+            output-high;
+            gpios = <TEGRA_GPIO(M, 6) GPIO_ACTIVE_HIGH>;
+            line-name = "LCD_RESET";
+        };
+         //LCD_D_C => GPIO31 => SAFE_STATE  => GPIO3 P(EE,0)
+        lcd_d_c {
+            status = "okay";
+            gpio-hog;
+            output-high;
+            gpios = <TEGRA_GPIO(E, 0) GPIO_ACTIVE_HIGH>;
+            line-name = "LCD_D_C";
+        };
+    };
+
+    /////////////////////////////////////
+    // Output Test LEDs
+    /////////////////////////////////////
+
+    leds {
+        status = "okay";
+        compatible = "gpio-leds";
+
+        //TEST_LED1_G => GPIO_21  3.3v
+        //GPIO_21 => DAP6_SCLK GPIO3 => P(A,0) *
+        test_led_g {
+            gpios = <TEGRA_GPIO(A, 0) GPIO_ACTIVE_HIGH>;
+            default-state = "off";
+            linux,default-trigger = "test_led_g";
+        };
+
+        //TEST_LED1_B => GPIO 04  3.3v
+        //GPIO_04 => DAP6_DIN GPIO3 => P(A,02) *
+        test_led_b {
+            gpios = <TEGRA_GPIO(N, 2) GPIO_ACTIVE_HIGH>;
+            default-state = "off";
+            linux,default-trigger = "test_led_b";
+        };
+
+        //TEST_LED1_O => GPIO 09  3.3v
+        //GPIO_09 => CAN1_EN GPIO3 => P(BB,1) *
+        test_led_o {
+            gpios = <TEGRA_GPIO(BB, 1) GPIO_ACTIVE_HIGH>;
+            default-state = "off";
+            linux,default-trigger = "test_led_o";
+        };
+     };
+
+};

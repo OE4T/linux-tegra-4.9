@@ -488,7 +488,8 @@ static netdev_tx_t tvnet_host_start_xmit(struct sk_buff *skb,
 	mb();
 
 	timeout = jiffies + msecs_to_jiffies(1000);
-	dma_common_wr8(tvnet->dma_base, DMA_RD_DATA_CH, DMA_READ_DOORBELL_OFF);
+	dma_common_wr(tvnet->dma_base, DMA_RD_DATA_CH, DMA_READ_DOORBELL_OFF);
+
 	desc_cnt->wr_cnt++;
 
 	while (true) {

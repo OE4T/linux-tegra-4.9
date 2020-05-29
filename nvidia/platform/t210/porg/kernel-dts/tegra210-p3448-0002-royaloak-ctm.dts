@@ -526,13 +526,13 @@
 
                 port@2 {
                     reg = <0x2>;
-                    label = "poe1";
+                    label = "poe3";
                     phy-handle = <&switch0phy2>;
                 };
 
                 port@3 {
                     reg = <0x3>;
-                    label = "wan";
+                    label = "port2";
                     phy-handle = <&switch0phy3>;
                 };
 
@@ -550,13 +550,13 @@
 
                 port@6 {
                     reg = <0x6>;
-                    label = "poe3";
+                    label = "poe1";
                     phy-handle = <&switch0phy6>;
                 };
 
                 port@7 {
                     reg = <0x7>;
-                    label = "port2";
+                    label = "wan";
                     phy-handle = <&switch0phy7>;
                 };
 

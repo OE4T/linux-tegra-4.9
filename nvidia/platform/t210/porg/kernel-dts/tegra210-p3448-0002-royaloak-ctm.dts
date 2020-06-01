@@ -241,7 +241,7 @@
         lm75@49 {
             status= "okay";
             compatible = "national,lm75";
-            reg = <0x48>;
+            reg = <0x49>;
         };
 
         lm75@4a {

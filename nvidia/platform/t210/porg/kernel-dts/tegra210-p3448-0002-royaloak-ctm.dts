@@ -312,11 +312,15 @@
     //*********************************************************************
 
     gpio: gpio@6000d000 {
+        // Remove definitions that we don't need, or that conflict with those below
+        /delete-node/ camera-control-output-low;
+
         //*****************
         // Inputs
         //*****************
         simcard1-present {
             status = "okay";
+            gpio-hog;
             input;
             gpios = <TEGRA_GPIO(T, 0) GPIO_ACTIVE_LOW>;
             line-name = "SIMCARD1-PRESENTn";
@@ -324,6 +328,7 @@
 
         simcard2-present {
             status = "okay";
+            gpio-hog;
             input;
             gpios = <TEGRA_GPIO(S, 1) GPIO_ACTIVE_LOW>;
             line-name = "SIMCARD2-PRESENTn";
@@ -334,13 +339,6 @@
             input;
             gpios = <TEGRA_GPIO(CC, 1) GPIO_ACTIVE_LOW>;
             line-name = "USB2-OVERCURRENTn";
-        };
-
-        cell-dtr {
-            status = "okay";
-            input;
-            gpios = <TEGRA_GPIO(Z, 0) GPIO_ACTIVE_HIGH>;
-            line-name = "CELL-DTR";
         };
 
         overtemp-shutdown {
@@ -359,6 +357,7 @@
 
         cell-ring-indicator {
             status = "okay";
+            gpio-hog;
             input;
             gpios = <TEGRA_GPIO(I, 2) GPIO_ACTIVE_HIGH>;
             line-name = "CELL-RING-INDICATOR";
@@ -400,7 +399,7 @@
         cell-reset {
             status = "okay";
             gpio-hog;
-            output-high;
+            output-low;
             gpios = <TEGRA_GPIO(S, 0) GPIO_ACTIVE_HIGH>;
             line-name = "CELL-RESET";
         };
@@ -459,6 +458,13 @@
             output-low;
             gpios = <TEGRA_GPIO(E, 6) GPIO_ACTIVE_HIGH>;
             line-name = "CELL-DISABLE";
+        };
+
+        cell-dtr {
+            status = "okay";
+            output-low;
+            gpios = <TEGRA_GPIO(Z, 0) GPIO_ACTIVE_HIGH>;
+            line-name = "CELL-DTR";
         };
 
         tpm-reset {

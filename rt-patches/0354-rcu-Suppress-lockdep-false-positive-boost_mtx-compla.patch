@@ -1,7 +1,7 @@
-From 59acc386f2f4665551662ab287be668cc79882d7 Mon Sep 17 00:00:00 2001
+From 68a3371dd9b62ab9edfe0c1625bf4974b930af67 Mon Sep 17 00:00:00 2001
 From: "Paul E. McKenney" <paulmck@linux.vnet.ibm.com>
 Date: Wed, 6 Jun 2018 15:31:31 +0200
-Subject: [PATCH 353/369] rcu: Suppress lockdep false-positive ->boost_mtx
+Subject: [PATCH 354/371] rcu: Suppress lockdep false-positive ->boost_mtx
  complaints
 
 [ Upstream commit 02a7c234e54052101164368ff981bd72f7acdd65 ]
@@ -40,5 +40,5 @@ index 3d18d08..510de72 100644
  		/*
  		 * If this was the last task on the expedited lists,
 -- 
-1.9.1
+2.7.4
 

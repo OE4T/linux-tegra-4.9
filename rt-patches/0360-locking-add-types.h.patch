@@ -1,7 +1,7 @@
-From e3f2d581bdad632b928abc594cff730f2c93825d Mon Sep 17 00:00:00 2001
+From 2e3e7a36ad4f3e596875bc9e86b10456a1657690 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Tue, 9 Jan 2018 11:02:24 +0100
-Subject: [PATCH 358/369] locking: add types.h
+Subject: [PATCH 360/371] locking: add types.h
 
 During the stable update the arm architecture did not compile anymore
 due to missing definition of u16/32.
@@ -28,5 +28,5 @@ index edffc4d..03235b4 100644
  # include <asm/spinlock_types.h>
  #else
 -- 
-1.9.1
+2.7.4
 

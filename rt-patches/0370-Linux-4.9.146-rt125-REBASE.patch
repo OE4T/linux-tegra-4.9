@@ -1,7 +1,7 @@
-From b823049b012ba6ea78022ea265cbdbbd922aaa88 Mon Sep 17 00:00:00 2001
+From 5b0fcaedf6d1129a2bf38289fb3dbb541fe528dd Mon Sep 17 00:00:00 2001
 From: Julia Cartwright <julia@ni.com>
 Date: Thu, 20 Dec 2018 14:25:00 -0600
-Subject: [PATCH 368/369] Linux 4.9.146-rt125 REBASE
+Subject: [PATCH 370/371] Linux 4.9.146-rt125 REBASE
 
 ---
  localversion-rt | 2 +-
@@ -15,5 +15,5 @@ index 9a218ca..9d0cfbc 100644
 --rt23
 +-rt125
 -- 
-1.9.1
+2.7.4
 

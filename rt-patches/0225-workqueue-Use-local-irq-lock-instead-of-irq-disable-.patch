@@ -1,7 +1,7 @@
-From c52c5eaf6d36dff19f090d157096a49cb61832d8 Mon Sep 17 00:00:00 2001
+From 85919a39cc3dfe4d4aa5ad9ace94bbeef95158fc Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Sun, 17 Jul 2011 21:42:26 +0200
-Subject: [PATCH 225/369] workqueue: Use local irq lock instead of irq disable
+Subject: [PATCH 225/371] workqueue: Use local irq lock instead of irq disable
  regions
 
 Use a local_irq_lock as a replacement for irq off regions. We keep the
@@ -24,7 +24,7 @@ index 875bcede..6d82876 100644
  #include <linux/nmi.h>
  
  #include "workqueue_internal.h"
-@@ -350,6 +351,8 @@ struct workqueue_struct {
+@@ -350,6 +351,8 @@ EXPORT_SYMBOL_GPL(system_power_efficient_wq);
  struct workqueue_struct *system_freezable_power_efficient_wq __read_mostly;
  EXPORT_SYMBOL_GPL(system_freezable_power_efficient_wq);
  
@@ -126,7 +126,7 @@ index 875bcede..6d82876 100644
  
  	flush_work(work);
  	clear_work_data(work);
-@@ -2967,10 +2972,10 @@ bool cancel_work_sync(struct work_struct *work)
+@@ -2967,10 +2972,10 @@ EXPORT_SYMBOL_GPL(cancel_work_sync);
   */
  bool flush_delayed_work(struct delayed_work *dwork)
  {
@@ -149,5 +149,5 @@ index 875bcede..6d82876 100644
  }
  
 -- 
-1.9.1
+2.7.4
 

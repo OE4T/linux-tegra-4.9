@@ -1,7 +1,7 @@
-From a64c77f88c50e0918ad37c77799f4410e78752b3 Mon Sep 17 00:00:00 2001
+From 0fa3ac7abfb95ebabc3c6ecf759fde2aa3d85ccf Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Thu, 21 Sep 2017 14:42:04 +0200
-Subject: [PATCH 346/369] net: use trylock in icmp_sk
+Subject: [PATCH 346/371] net: use trylock in icmp_sk
 
 The locking path can be recursive (same as for sk->sk_lock.slock) and
 therefore we need a trylock version for the locallock, too.
@@ -31,5 +31,5 @@ index 68953e5..5f3f49f 100644
  
  	if (unlikely(!spin_trylock(&sk->sk_lock.slock))) {
 -- 
-1.9.1
+2.7.4
 

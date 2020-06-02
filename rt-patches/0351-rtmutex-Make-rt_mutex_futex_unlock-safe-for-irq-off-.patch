@@ -1,7 +1,7 @@
-From 4576745bce66b9cfef869561a85f549e38e1f037 Mon Sep 17 00:00:00 2001
+From f131229f324cae15b0957fc717c0dd6ee96ed6d5 Mon Sep 17 00:00:00 2001
 From: Boqun Feng <boqun.feng@gmail.com>
 Date: Wed, 6 Jun 2018 15:31:30 +0200
-Subject: [PATCH 351/369] rtmutex: Make rt_mutex_futex_unlock() safe for
+Subject: [PATCH 351/371] rtmutex: Make rt_mutex_futex_unlock() safe for
  irq-off callsites
 
 [ Upstream commit 6b0ef92fee2a3189eba6d6b827b247cb4f6da7e9 ]
@@ -123,5 +123,5 @@ index 57361d6..5e15f5c 100644
  	if (postunlock)
  		rt_mutex_postunlock(&wake_q, &wake_sleeper_q);
 -- 
-1.9.1
+2.7.4
 

@@ -1,7 +1,7 @@
-From cadcfc144cdda093294b951b3b5f08cb195b1ee0 Mon Sep 17 00:00:00 2001
+From 69adc84cd5c0d943477be4d91b0241838f8107fa Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Sun, 17 Jul 2011 19:35:29 +0200
-Subject: [PATCH 149/369] hotplug: Use migrate disable on unplug
+Subject: [PATCH 149/371] hotplug: Use migrate disable on unplug
 
 Migration needs to be disabled accross the unplug handling to make
 sure that the unplug thread is off the unplugged cpu.
@@ -41,5 +41,5 @@ index ee08823..3b026a1 100644
  	if (!ret && hasdied)
  		cpu_notify_nofail(CPU_POST_DEAD, cpu);
 -- 
-1.9.1
+2.7.4
 

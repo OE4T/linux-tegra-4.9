@@ -1,7 +1,7 @@
-From 4777a6d34f025bfb9b44a7d11d8756e1f4a31156 Mon Sep 17 00:00:00 2001
+From feb9a67e0d0ce2edf660e65fad22aad9360a79e2 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Sat, 1 Apr 2017 12:51:02 +0200
-Subject: [PATCH 184/369] rwsem/rt: Lift single reader restriction
+Subject: [PATCH 184/371] rwsem/rt: Lift single reader restriction
 
 The RT specific R/W semaphore implementation restricts the number of readers
 to one because a writer cannot block on multiple readers and inherit its
@@ -68,7 +68,7 @@ index 8e1f44f..aa2ac1f 100644
  /*
   * lock for reading
   */
-@@ -188,6 +195,4 @@ static inline int rwsem_is_contended(struct rw_semaphore *sem)
+@@ -188,6 +195,4 @@ extern void up_read_non_owner(struct rw_semaphore *sem);
  # define up_read_non_owner(sem)			up_read(sem)
  #endif
  
@@ -299,7 +299,7 @@ index 5e27fb1..6ff9e80 100644
  obj-$(CONFIG_QUEUED_RWLOCKS) += qrwlock.o
  obj-$(CONFIG_LOCK_TORTURE_TEST) += locktorture.o
 diff --git a/kernel/locking/rt.c b/kernel/locking/rt.c
-index 665754c..6284e3b1 100644
+index 665754c..6284e3b 100644
 --- a/kernel/locking/rt.c
 +++ b/kernel/locking/rt.c
 @@ -306,173 +306,6 @@ void __rt_rwlock_init(rwlock_t *rwlock, char *name, struct lock_class_key *key)
@@ -478,7 +478,7 @@ index 665754c..6284e3b1 100644
   * @cnt: the atomic which we are to dec
 diff --git a/kernel/locking/rwsem-rt.c b/kernel/locking/rwsem-rt.c
 new file mode 100644
-index 0000000..4a708ffc
+index 0000000..4a708ff
 --- /dev/null
 +++ b/kernel/locking/rwsem-rt.c
 @@ -0,0 +1,268 @@
@@ -751,5 +751,5 @@ index 0000000..4a708ffc
 +	__up_write_unlock(sem, WRITER_BIAS - 1, flags);
 +}
 -- 
-1.9.1
+2.7.4
 

@@ -1,7 +1,7 @@
-From 42fc69c999bcac4d0febda0a1fe80ca6532fb156 Mon Sep 17 00:00:00 2001
+From 86a6a42694b06cb6a5b197ee465ff8bd80e76129 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Tue, 14 Jul 2015 14:26:34 +0200
-Subject: [PATCH 228/369] idr: Use local lock instead of preempt enable/disable
+Subject: [PATCH 228/371] idr: Use local lock instead of preempt enable/disable
 
 We need to protect the per cpu variable and prevent migration.
 
@@ -15,7 +15,7 @@ diff --git a/include/linux/idr.h b/include/linux/idr.h
 index 083d61e..5899796 100644
 --- a/include/linux/idr.h
 +++ b/include/linux/idr.h
-@@ -95,10 +95,14 @@ int idr_for_each(struct idr *idp,
+@@ -95,10 +95,14 @@ bool idr_is_empty(struct idr *idp);
   * Each idr_preload() should be matched with an invocation of this
   * function.  See idr_preload() for details.
   */
@@ -42,7 +42,7 @@ index 6098336..9decbe9 100644
  
  #define MAX_IDR_SHIFT		(sizeof(int) * 8 - 1)
  #define MAX_IDR_BIT		(1U << MAX_IDR_SHIFT)
-@@ -45,6 +46,37 @@
+@@ -45,6 +46,37 @@ static DEFINE_PER_CPU(struct idr_layer *, idr_preload_head);
  static DEFINE_PER_CPU(int, idr_preload_cnt);
  static DEFINE_SPINLOCK(simple_ida_lock);
  
@@ -127,5 +127,5 @@ index 6098336..9decbe9 100644
  			break;
  
 -- 
-1.9.1
+2.7.4
 

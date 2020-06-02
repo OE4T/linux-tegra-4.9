@@ -1,7 +1,7 @@
-From c14bba583200368e9547da8ba965603683372dd1 Mon Sep 17 00:00:00 2001
+From f47ef243d4e0b95012febb23247cec5215e5c5fe Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Thu, 30 Nov 2017 13:40:10 +0100
-Subject: [PATCH 355/369] crypto: limit more FPU-enabled sections
+Subject: [PATCH 357/371] crypto: limit more FPU-enabled sections
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
@@ -215,10 +215,10 @@ index 50e6847..8caf9ba 100644
  	}
  
 diff --git a/arch/x86/crypto/chacha20_glue.c b/arch/x86/crypto/chacha20_glue.c
-index f910d1d..f9e5820 100644
+index 0a5fedf..15dee15 100644
 --- a/arch/x86/crypto/chacha20_glue.c
 +++ b/arch/x86/crypto/chacha20_glue.c
-@@ -80,23 +80,24 @@ static int chacha20_simd(struct blkcipher_desc *desc, struct scatterlist *dst,
+@@ -81,23 +81,24 @@ static int chacha20_simd(struct blkcipher_desc *desc, struct scatterlist *dst,
  
  	crypto_chacha20_init(state, crypto_blkcipher_ctx(desc->tfm), walk.iv);
  
@@ -466,7 +466,7 @@ diff --git a/arch/x86/include/asm/fpu/api.h b/arch/x86/include/asm/fpu/api.h
 index 1429a7c..85428df 100644
 --- a/arch/x86/include/asm/fpu/api.h
 +++ b/arch/x86/include/asm/fpu/api.h
-@@ -24,6 +24,7 @@
+@@ -24,6 +24,7 @@ extern void __kernel_fpu_begin(void);
  extern void __kernel_fpu_end(void);
  extern void kernel_fpu_begin(void);
  extern void kernel_fpu_end(void);
@@ -498,5 +498,5 @@ index fc96511..d7f4216 100644
   * CR0::TS save/restore functions:
   */
 -- 
-1.9.1
+2.7.4
 

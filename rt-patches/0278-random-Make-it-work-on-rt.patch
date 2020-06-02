@@ -1,7 +1,7 @@
-From f30fe6f9b2a048de050a7f16dbefba2ae733077c Mon Sep 17 00:00:00 2001
+From 59155d333a1d341a36a5b31f78acb674c31d7994 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Tue, 21 Aug 2012 20:38:50 +0200
-Subject: [PATCH 278/369] random: Make it work on rt
+Subject: [PATCH 278/371] random: Make it work on rt
 
 Delegate the random insertion to the forced threaded interrupt
 handler. Store the return IP of the hard interrupt handler in the irq
@@ -57,10 +57,10 @@ index 74300e8..002f686 100644
  	fast_mix(fast_pool);
  	add_interrupt_bench(cycles);
 diff --git a/drivers/hv/vmbus_drv.c b/drivers/hv/vmbus_drv.c
-index 0276d2e..8868045 100644
+index 9a0d0d0..c2546dd 100644
 --- a/drivers/hv/vmbus_drv.c
 +++ b/drivers/hv/vmbus_drv.c
-@@ -761,6 +761,8 @@ static void vmbus_isr(void)
+@@ -781,6 +781,8 @@ static void vmbus_isr(void)
  	void *page_addr;
  	struct hv_message *msg;
  	union hv_synic_event_flags *event;
@@ -69,7 +69,7 @@ index 0276d2e..8868045 100644
  	bool handled = false;
  
  	page_addr = hv_context.synic_event_page[cpu];
-@@ -808,7 +810,7 @@ static void vmbus_isr(void)
+@@ -828,7 +830,7 @@ static void vmbus_isr(void)
  			tasklet_schedule(hv_context.msg_dpc[cpu]);
  	}
  
@@ -143,5 +143,5 @@ index 8867672..4e0f709 100644
  	}
  
 -- 
-1.9.1
+2.7.4
 

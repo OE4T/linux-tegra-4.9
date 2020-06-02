@@ -1,7 +1,7 @@
-From 52b91a545aba5e933549d621849bc068f7deb1a5 Mon Sep 17 00:00:00 2001
+From 48daa64952b1f6357fe623c663b5c08f9459c897 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Tue, 12 Jul 2011 15:38:34 +0200
-Subject: [PATCH 234/369] net: Use skbufhead with raw lock
+Subject: [PATCH 234/371] net: Use skbufhead with raw lock
 
 Use the rps lock as rawlock so we can keep irq-off regions. It looks low
 latency. However we can't kfree() from this context therefore we defer this
@@ -15,10 +15,10 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  3 files changed, 32 insertions(+), 7 deletions(-)
 
 diff --git a/include/linux/netdevice.h b/include/linux/netdevice.h
-index f254982..b495762 100644
+index 2ecf0f3..3b0fa22 100644
 --- a/include/linux/netdevice.h
 +++ b/include/linux/netdevice.h
-@@ -2863,6 +2863,7 @@ struct softnet_data {
+@@ -2866,6 +2866,7 @@ struct softnet_data {
  	unsigned int		dropped;
  	struct sk_buff_head	input_pkt_queue;
  	struct napi_struct	backlog;
@@ -27,7 +27,7 @@ index f254982..b495762 100644
  };
  
 diff --git a/include/linux/skbuff.h b/include/linux/skbuff.h
-index e90fe6b..2b37bde 100644
+index f876177..9710252a 100644
 --- a/include/linux/skbuff.h
 +++ b/include/linux/skbuff.h
 @@ -284,6 +284,7 @@ struct sk_buff_head {
@@ -52,7 +52,7 @@ index e90fe6b..2b37bde 100644
  		struct lock_class_key *class)
  {
 diff --git a/net/core/dev.c b/net/core/dev.c
-index f5b9c29..ee1b90f 100644
+index 778b5d2..343d212 100644
 --- a/net/core/dev.c
 +++ b/net/core/dev.c
 @@ -211,14 +211,14 @@ static inline struct hlist_head *dev_index_hash(struct net *net, int ifindex)
@@ -163,5 +163,5 @@ index f5b9c29..ee1b90f 100644
  		sd->output_queue_tailp = &sd->output_queue;
  #ifdef CONFIG_RPS
 -- 
-1.9.1
+2.7.4
 

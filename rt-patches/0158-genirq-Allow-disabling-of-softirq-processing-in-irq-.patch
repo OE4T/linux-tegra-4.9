@@ -1,7 +1,7 @@
-From a00abf7364260b3cd95916d50ca230d4f0f46953 Mon Sep 17 00:00:00 2001
+From dcb52b3dc472f1b8530bb8a70a71481554e798ca Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Tue, 31 Jan 2012 13:01:27 +0100
-Subject: [PATCH 158/369] genirq: Allow disabling of softirq processing in irq
+Subject: [PATCH 158/371] genirq: Allow disabling of softirq processing in irq
  thread context
 
 The processing of softirqs in irq thread context is a performance gain
@@ -43,7 +43,7 @@ diff --git a/include/linux/irq.h b/include/linux/irq.h
 index 39e3254..8ebac94 100644
 --- a/include/linux/irq.h
 +++ b/include/linux/irq.h
-@@ -72,6 +72,7 @@
+@@ -72,6 +72,7 @@ enum irqchip_irq_state;
   * IRQ_IS_POLLED		- Always polled by another interrupt. Exclude
   *				  it from the spurious interrupt detection
   *				  mechanism and from core side polling.
@@ -71,7 +71,7 @@ diff --git a/kernel/irq/manage.c b/kernel/irq/manage.c
 index a841ad3..18c90de 100644
 --- a/kernel/irq/manage.c
 +++ b/kernel/irq/manage.c
-@@ -884,7 +884,15 @@ static void irq_finalize_oneshot(struct irq_desc *desc,
+@@ -884,7 +884,15 @@ irq_forced_thread_fn(struct irq_desc *desc, struct irqaction *action)
  		atomic_inc(&desc->threads_handled);
  
  	irq_finalize_oneshot(desc, action);
@@ -88,7 +88,7 @@ index a841ad3..18c90de 100644
  	return ret;
  }
  
-@@ -1351,6 +1359,9 @@ static void irq_release_resources(struct irq_desc *desc)
+@@ -1351,6 +1359,9 @@ __setup_irq(unsigned int irq, struct irq_desc *desc, struct irqaction *new)
  			irqd_set(&desc->irq_data, IRQD_NO_BALANCING);
  		}
  
@@ -118,7 +118,7 @@ index 320579d..2df2d44 100644
  #undef IRQF_MODIFY_MASK
  #define IRQF_MODIFY_MASK	GOT_YOU_MORON
  
-@@ -40,6 +42,16 @@ enum {
+@@ -40,6 +42,16 @@ irq_settings_clr_and_set(struct irq_desc *desc, u32 clr, u32 set)
  	desc->status_use_accessors |= (set & _IRQF_MODIFY_MASK);
  }
  
@@ -156,5 +156,5 @@ index 654cebf..8957a27 100644
  {
  	return current->flags & PF_IN_SOFTIRQ;
 -- 
-1.9.1
+2.7.4
 

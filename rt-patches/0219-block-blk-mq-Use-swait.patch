@@ -1,7 +1,7 @@
-From 4783c0a073a382f3b7911aba96cf1cec5f0781bb Mon Sep 17 00:00:00 2001
+From 2b79418d1a2b04423c8478005ceb2319d777185a Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Fri, 13 Feb 2015 11:01:26 +0100
-Subject: [PATCH 219/369] block: blk-mq: Use swait
+Subject: [PATCH 219/371] block: blk-mq: Use swait
 
 | BUG: sleeping function called from invalid context at kernel/locking/rtmutex.c:914
 | in_atomic(): 1, irqs_disabled(): 0, pid: 255, name: kworker/u257:6
@@ -83,7 +83,7 @@ diff --git a/block/blk-mq.c b/block/blk-mq.c
 index 25c6919..9835286 100644
 --- a/block/blk-mq.c
 +++ b/block/blk-mq.c
-@@ -69,7 +69,7 @@ void blk_mq_freeze_queue_start(struct request_queue *q)
+@@ -69,7 +69,7 @@ EXPORT_SYMBOL_GPL(blk_mq_freeze_queue_start);
  
  void blk_mq_freeze_queue_wait(struct request_queue *q)
  {
@@ -124,5 +124,5 @@ index 7b18f20..7fcbaae 100644
  	struct list_head	all_q_node;
  
 -- 
-1.9.1
+2.7.4
 

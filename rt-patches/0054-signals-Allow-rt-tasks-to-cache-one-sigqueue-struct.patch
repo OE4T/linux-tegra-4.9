@@ -1,7 +1,7 @@
-From b1551acfe96627683cb1be3c6886f3177f4b8d75 Mon Sep 17 00:00:00 2001
+From be9876a6192e098023b7c46e000bd31fde789a37 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Fri, 3 Jul 2009 08:44:56 -0500
-Subject: [PATCH 054/369] signals: Allow rt tasks to cache one sigqueue struct
+Subject: [PATCH 054/371] signals: Allow rt tasks to cache one sigqueue struct
 
 To avoid allocation allow rt tasks to cache one sigqueue struct in
 task struct.
@@ -16,10 +16,10 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  5 files changed, 69 insertions(+), 5 deletions(-)
 
 diff --git a/include/linux/sched.h b/include/linux/sched.h
-index 4559d0e..6ab5c04 100644
+index 2ff0369..59529fa 100644
 --- a/include/linux/sched.h
 +++ b/include/linux/sched.h
-@@ -1863,6 +1863,7 @@ struct task_struct {
+@@ -1864,6 +1864,7 @@ struct task_struct {
  /* signal handlers */
  	struct signal_struct *signal;
  	struct sighand_struct *sighand;
@@ -40,7 +40,7 @@ index 5308304..aa9c1a6 100644
  /* Test if 'sig' is valid signal. Use this instead of testing _NSIG directly */
  static inline int valid_signal(unsigned long sig)
 diff --git a/kernel/exit.c b/kernel/exit.c
-index dde0e5d..60eea1f 100644
+index 145aba7..71ceb78 100644
 --- a/kernel/exit.c
 +++ b/kernel/exit.c
 @@ -146,7 +146,7 @@ static void __exit_signal(struct task_struct *tsk)
@@ -53,7 +53,7 @@ index dde0e5d..60eea1f 100644
  	spin_unlock(&sighand->siglock);
  
 diff --git a/kernel/fork.c b/kernel/fork.c
-index a200ccc..897a4c6 100644
+index f60d2b0..76f92bd 100644
 --- a/kernel/fork.c
 +++ b/kernel/fork.c
 @@ -1594,6 +1594,7 @@ static __latent_entropy struct task_struct *copy_process(
@@ -65,7 +65,7 @@ index a200ccc..897a4c6 100644
  	p->utime = p->stime = p->gtime = 0;
  	p->utimescaled = p->stimescaled = 0;
 diff --git a/kernel/signal.c b/kernel/signal.c
-index d0b3c0e..f5465ea 100644
+index 99007f1..c79c96a 100644
 --- a/kernel/signal.c
 +++ b/kernel/signal.c
 @@ -14,6 +14,7 @@
@@ -108,7 +108,7 @@ index d0b3c0e..f5465ea 100644
  {
  	struct sigqueue *q = NULL;
  	struct user_struct *user;
-@@ -377,7 +395,10 @@ static bool task_participate_group_stop(struct task_struct *task)
+@@ -377,7 +395,10 @@ __sigqueue_alloc(int sig, struct task_struct *t, gfp_t flags, int override_rlimi
  	if (override_rlimit ||
  	    atomic_read(&user->sigpending) <=
  			task_rlimit(t, RLIMIT_SIGPENDING)) {
@@ -120,7 +120,7 @@ index d0b3c0e..f5465ea 100644
  	} else {
  		print_dropped_signal(sig);
  	}
-@@ -394,6 +415,13 @@ static bool task_participate_group_stop(struct task_struct *task)
+@@ -394,6 +415,13 @@ __sigqueue_alloc(int sig, struct task_struct *t, gfp_t flags, int override_rlimi
  	return q;
  }
  
@@ -196,7 +196,7 @@ index d0b3c0e..f5465ea 100644
  	/* We only dequeue private signals from ourselves, we don't let
  	 * signalfd steal them
  	 */
-@@ -1499,7 +1559,8 @@ int kill_pid(struct pid *pid, int sig, int priv)
+@@ -1541,7 +1601,8 @@ EXPORT_SYMBOL(kill_pid);
   */
  struct sigqueue *sigqueue_alloc(void)
  {
@@ -207,5 +207,5 @@ index d0b3c0e..f5465ea 100644
  	if (q)
  		q->flags |= SIGQUEUE_PREALLOC;
 -- 
-1.9.1
+2.7.4
 

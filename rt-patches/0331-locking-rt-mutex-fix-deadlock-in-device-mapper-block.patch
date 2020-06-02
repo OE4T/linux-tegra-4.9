@@ -1,7 +1,7 @@
-From 8d7d12798b382549ca518ce5a9df1fa33c72cc36 Mon Sep 17 00:00:00 2001
+From 2acda0c803600e8649f1095a75ceb6488bd2d2bc Mon Sep 17 00:00:00 2001
 From: Mikulas Patocka <mpatocka@redhat.com>
 Date: Mon, 13 Nov 2017 12:56:53 -0500
-Subject: [PATCH 331/369] locking/rt-mutex: fix deadlock in device mapper /
+Subject: [PATCH 331/371] locking/rt-mutex: fix deadlock in device mapper /
  block-IO
 
 When some block device driver creates a bio and submits it to another
@@ -50,7 +50,7 @@ index 78a6c4a..b73cd7c 100644
  
  #include "rtmutex_common.h"
  
-@@ -1968,6 +1969,15 @@ static bool __sched rt_mutex_slowunlock(struct rt_mutex *lock,
+@@ -1968,6 +1969,15 @@ rt_mutex_fastlock(struct rt_mutex *lock, int state,
  	if (likely(rt_mutex_cmpxchg_acquire(lock, NULL, current)))
  		return 0;
  
@@ -66,7 +66,7 @@ index 78a6c4a..b73cd7c 100644
  	return slowfn(lock, state, NULL, RT_MUTEX_MIN_CHAINWALK, ww_ctx);
  }
  
-@@ -1985,6 +1995,9 @@ static bool __sched rt_mutex_slowunlock(struct rt_mutex *lock,
+@@ -1985,6 +1995,9 @@ rt_mutex_timed_fastlock(struct rt_mutex *lock, int state,
  	    likely(rt_mutex_cmpxchg_acquire(lock, NULL, current)))
  		return 0;
  
@@ -77,5 +77,5 @@ index 78a6c4a..b73cd7c 100644
  }
  
 -- 
-1.9.1
+2.7.4
 

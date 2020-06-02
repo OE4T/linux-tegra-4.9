@@ -1,7 +1,7 @@
-From 4e492222cfd3178d3ba0154341a48f8209cd04d6 Mon Sep 17 00:00:00 2001
+From b0c42eadade1ad10b8e82bf2be05b207f9c02b21 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Tue, 10 Jul 2018 18:53:18 +0200
-Subject: [PATCH 354/369] sched, tracing: Fix trace_sched_pi_setprio() for
+Subject: [PATCH 356/371] sched, tracing: Fix trace_sched_pi_setprio() for
  deboosting
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
@@ -46,7 +46,7 @@ diff --git a/include/trace/events/sched.h b/include/trace/events/sched.h
 index 531343ad..2d10f9d 100644
 --- a/include/trace/events/sched.h
 +++ b/include/trace/events/sched.h
-@@ -453,7 +453,9 @@ static inline long __trace_sched_switch_state(bool preempt, struct task_struct *
+@@ -453,7 +453,9 @@ TRACE_EVENT(sched_pi_setprio,
  		memcpy(__entry->comm, tsk->comm, TASK_COMM_LEN);
  		__entry->pid		= tsk->pid;
  		__entry->oldprio	= tsk->prio;
@@ -58,5 +58,5 @@ index 531343ad..2d10f9d 100644
  	),
  
 -- 
-1.9.1
+2.7.4
 

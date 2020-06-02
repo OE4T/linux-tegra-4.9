@@ -1,7 +1,7 @@
-From 31bf8ecde5c7c21d82740245ac0dec76863ff9c5 Mon Sep 17 00:00:00 2001
+From d487e4ce1e074c8daf0456486be11116c99f8f06 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Fri, 27 May 2016 15:11:51 +0200
-Subject: [PATCH 080/369] locallock: add local_lock_on()
+Subject: [PATCH 080/371] locallock: add local_lock_on()
 
 Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 ---
@@ -33,5 +33,5 @@ index 218e5a4..96f22c5 100644
  {
  	spin_lock_irqsave(&lv->lock, lv->flags);
 -- 
-1.9.1
+2.7.4
 

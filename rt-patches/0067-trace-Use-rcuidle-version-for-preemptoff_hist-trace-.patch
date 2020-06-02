@@ -1,7 +1,7 @@
-From 34d77dfac56d5cd526458a5240394581ac908ef8 Mon Sep 17 00:00:00 2001
+From b54baed8d50f55ba3bfdf3723c32d5835e4d51a7 Mon Sep 17 00:00:00 2001
 From: Yang Shi <yang.shi@windriver.com>
 Date: Tue, 23 Feb 2016 13:23:23 -0800
-Subject: [PATCH 067/369] trace: Use rcuidle version for preemptoff_hist trace
+Subject: [PATCH 067/371] trace: Use rcuidle version for preemptoff_hist trace
  point
 
 When running -rt kernel with both PREEMPT_OFF_HIST and LOCKDEP enabled,
@@ -52,7 +52,7 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  1 file changed, 4 insertions(+), 4 deletions(-)
 
 diff --git a/kernel/trace/trace_irqsoff.c b/kernel/trace/trace_irqsoff.c
-index 3a03bf08..609a4fb 100644
+index 3a03bf0..609a4fb 100644
 --- a/kernel/trace/trace_irqsoff.c
 +++ b/kernel/trace/trace_irqsoff.c
 @@ -429,13 +429,13 @@ void start_critical_timings(void)
@@ -71,7 +71,7 @@ index 3a03bf08..609a4fb 100644
  	if (preempt_trace() || irq_trace())
  		stop_critical_timing(CALLER_ADDR0, CALLER_ADDR1);
  }
-@@ -445,7 +445,7 @@ void stop_critical_timings(void)
+@@ -445,7 +445,7 @@ EXPORT_SYMBOL_GPL(stop_critical_timings);
  #ifdef CONFIG_PROVE_LOCKING
  void time_hardirqs_on(unsigned long a0, unsigned long a1)
  {
@@ -90,5 +90,5 @@ index 3a03bf08..609a4fb 100644
  
  #else /* !CONFIG_PROVE_LOCKING */
 -- 
-1.9.1
+2.7.4
 

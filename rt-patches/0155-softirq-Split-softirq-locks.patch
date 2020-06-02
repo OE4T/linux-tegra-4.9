@@ -1,7 +1,7 @@
-From fa06fce255bcf3df19834c28b6809c7a3914d5e1 Mon Sep 17 00:00:00 2001
+From 4c0725c8e3a08211ba3e4e9d8ec0241d6985244a Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Thu, 4 Oct 2012 14:20:47 +0100
-Subject: [PATCH 155/369] softirq: Split softirq locks
+Subject: [PATCH 155/371] softirq: Split softirq locks
 
 The 3.x RT series removed the split softirq implementation in favour
 of pushing softirq processing into the context of the thread which
@@ -114,7 +114,7 @@ index e5f4cea..94b32e8 100644
  
  extern void open_softirq(int nr, void (*action)(struct softirq_action *));
  extern void softirq_init(void);
-@@ -488,6 +492,7 @@ static inline void do_softirq_own_stack(void)
+@@ -488,6 +492,7 @@ extern void __raise_softirq_irqoff(unsigned int nr);
  
  extern void raise_softirq_irqoff(unsigned int nr);
  extern void raise_softirq(unsigned int nr);
@@ -178,10 +178,10 @@ index 2eed4b5..0c734628 100644
  #define in_task()		(!(preempt_count() & \
  				   (NMI_MASK | HARDIRQ_MASK | SOFTIRQ_OFFSET)))
 diff --git a/include/linux/sched.h b/include/linux/sched.h
-index db8a724..b769083 100644
+index f50a667..ca592ad 100644
 --- a/include/linux/sched.h
 +++ b/include/linux/sched.h
-@@ -2144,6 +2144,8 @@ struct task_struct {
+@@ -2145,6 +2145,8 @@ struct task_struct {
  #endif
  #ifdef CONFIG_PREEMPT_RT_BASE
  	struct rcu_head put_rcu;
@@ -190,7 +190,7 @@ index db8a724..b769083 100644
  #endif
  #ifdef CONFIG_DEBUG_ATOMIC_SLEEP
  	unsigned long	task_state_change;
-@@ -2464,6 +2466,7 @@ static inline cputime_t task_gtime(struct task_struct *t)
+@@ -2465,6 +2467,7 @@ extern void thread_group_cputime_adjusted(struct task_struct *p, cputime_t *ut,
  /*
   * Per process flags
   */
@@ -222,7 +222,7 @@ index 02d1106..9fb267a 100644
  #include <linux/irq.h>
  
  #define CREATE_TRACE_POINTS
-@@ -63,6 +64,98 @@
+@@ -63,6 +64,98 @@ const char * const softirq_to_name[NR_SOFTIRQS] = {
  	"TASKLET", "SCHED", "HRTIMER", "RCU"
  };
  
@@ -775,7 +775,7 @@ index 02d1106..9fb267a 100644
  void open_softirq(int nr, void (*action)(struct softirq_action *))
  {
  	softirq_vec[nr].action = action;
-@@ -751,23 +1102,7 @@ void tasklet_unlock_wait(struct tasklet_struct *t)
+@@ -751,23 +1102,7 @@ EXPORT_SYMBOL(tasklet_unlock_wait);
  
  static int ksoftirqd_should_run(unsigned int cpu)
  {
@@ -830,7 +830,7 @@ index 6a1b656..943d0f77 100644
  	}
  
 diff --git a/net/core/dev.c b/net/core/dev.c
-index 7ff9f83e..f5b9c29 100644
+index 9f30c3e..778b5d2 100644
 --- a/net/core/dev.c
 +++ b/net/core/dev.c
 @@ -3916,11 +3916,9 @@ int netif_rx_ni(struct sk_buff *skb)
@@ -848,5 +848,5 @@ index 7ff9f83e..f5b9c29 100644
  	return err;
  }
 -- 
-1.9.1
+2.7.4
 

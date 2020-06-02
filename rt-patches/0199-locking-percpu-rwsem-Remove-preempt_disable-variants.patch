@@ -1,7 +1,7 @@
-From 4a4de65228cac46328e2945fcd41a864794a774c Mon Sep 17 00:00:00 2001
+From eb229f38005b9cdaafa584084e8544935f6c8a13 Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Wed, 23 Nov 2016 16:29:32 +0100
-Subject: [PATCH 199/369] locking/percpu-rwsem: Remove preempt_disable variants
+Subject: [PATCH 199/371] locking/percpu-rwsem: Remove preempt_disable variants
 
 Effective revert commit:
 
@@ -108,7 +108,7 @@ index 22c5b4a..269c6a4 100644
  
  		locks_dispose_list(&dispose);
  	}
-@@ -1694,7 +1694,7 @@ int fcntl_getlease(struct file *filp)
+@@ -1694,7 +1694,7 @@ generic_add_lease(struct file *filp, long arg, struct file_lock **flp, void **pr
  		return -EINVAL;
  	}
  
@@ -117,7 +117,7 @@ index 22c5b4a..269c6a4 100644
  	spin_lock(&ctx->flc_lock);
  	time_out_leases(inode, &dispose);
  	error = check_conflicting_open(dentry, arg, lease->fl_flags);
-@@ -1765,7 +1765,7 @@ int fcntl_getlease(struct file *filp)
+@@ -1765,7 +1765,7 @@ generic_add_lease(struct file *filp, long arg, struct file_lock **flp, void **pr
  		lease->fl_lmops->lm_setup(lease, priv);
  out:
  	spin_unlock(&ctx->flc_lock);
@@ -144,7 +144,7 @@ index 22c5b4a..269c6a4 100644
  	locks_dispose_list(&dispose);
  	return error;
  }
-@@ -2532,13 +2532,13 @@ void locks_remove_posix(struct file *filp, fl_owner_t owner)
+@@ -2532,13 +2532,13 @@ locks_remove_lease(struct file *filp, struct file_lock_context *ctx)
  	if (list_empty(&ctx->flc_lease))
  		return;
  
@@ -164,7 +164,7 @@ diff --git a/include/linux/percpu-rwsem.h b/include/linux/percpu-rwsem.h
 index 82d54a4..ea940f4 100644
 --- a/include/linux/percpu-rwsem.h
 +++ b/include/linux/percpu-rwsem.h
-@@ -28,7 +28,7 @@ struct percpu_rw_semaphore {
+@@ -28,7 +28,7 @@ static struct percpu_rw_semaphore name = {				\
  extern int __percpu_down_read(struct percpu_rw_semaphore *, int);
  extern void __percpu_up_read(struct percpu_rw_semaphore *);
  
@@ -221,5 +221,5 @@ index 82d54a4..ea940f4 100644
  extern void percpu_up_write(struct percpu_rw_semaphore *);
  
 -- 
-1.9.1
+2.7.4
 

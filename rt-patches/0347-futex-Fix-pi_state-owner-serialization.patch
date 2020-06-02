@@ -1,7 +1,7 @@
-From 4b2bf97bd4ff47c14f7793710535ac33c06803f0 Mon Sep 17 00:00:00 2001
+From a90368ac4cf642d3de0eac837568ab12dec5d935 Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Wed, 6 Jun 2018 15:31:26 +0200
-Subject: [PATCH 347/369] futex: Fix pi_state->owner serialization
+Subject: [PATCH 347/371] futex: Fix pi_state->owner serialization
 
 [ Upstream commit c74aef2d06a9f59cece89093eecc552933cba72a ]
 
@@ -118,5 +118,5 @@ index 12d03af..d07f8e7 100644
  	raw_spin_unlock_irq(&p->pi_lock);
  
 -- 
-1.9.1
+2.7.4
 

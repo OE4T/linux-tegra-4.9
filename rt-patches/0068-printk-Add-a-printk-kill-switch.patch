@@ -1,7 +1,7 @@
-From 708be401071ed78c153719f6c52f65aea3eb54cb Mon Sep 17 00:00:00 2001
+From 6ab22e782e7a377c21a45bfceb056f744b2fe964 Mon Sep 17 00:00:00 2001
 From: Ingo Molnar <mingo@elte.hu>
 Date: Fri, 22 Jul 2011 17:58:40 +0200
-Subject: [PATCH 068/369] printk: Add a printk kill switch
+Subject: [PATCH 068/371] printk: Add a printk kill switch
 
 Add a prinkt-kill-switch. This is used from (NMI) watchdog to ensure that
 it does not dead-lock with the early printk code.
@@ -34,7 +34,7 @@ diff --git a/kernel/printk/printk.c b/kernel/printk/printk.c
 index 4063140..f2f417d 100644
 --- a/kernel/printk/printk.c
 +++ b/kernel/printk/printk.c
-@@ -403,6 +403,58 @@ __packed __aligned(4)
+@@ -403,6 +403,58 @@ DEFINE_RAW_SPINLOCK(logbuf_lock);
  		printk_safe_exit_irqrestore(flags);	\
  	} while (0)
  
@@ -107,7 +107,7 @@ index 4063140..f2f417d 100644
  	if (level == LOGLEVEL_SCHED) {
  		level = LOGLEVEL_DEFAULT;
  		in_sched = true;
-@@ -2032,26 +2091,6 @@ static size_t msg_print_text(const struct printk_log *msg, enum log_flags prev,
+@@ -2032,26 +2091,6 @@ static bool suppress_message_printing(int level) { return false; }
  
  #endif /* CONFIG_PRINTK */
  
@@ -138,7 +138,7 @@ diff --git a/kernel/watchdog_hld.c b/kernel/watchdog_hld.c
 index e5709b8..9566409 100644
 --- a/kernel/watchdog_hld.c
 +++ b/kernel/watchdog_hld.c
-@@ -25,6 +25,7 @@
+@@ -25,6 +25,7 @@ static DEFINE_PER_CPU(unsigned long, hrtimer_interrupts_saved);
  #ifdef CONFIG_HARDLOCKUP_DETECTOR_OTHER_CPU
  static cpumask_t __read_mostly watchdog_cpus;
  #endif
@@ -169,5 +169,5 @@ index e5709b8..9566409 100644
  			nmi_panic(regs, "Hard LOCKUP");
  
 -- 
-1.9.1
+2.7.4
 

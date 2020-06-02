@@ -1,8 +1,7 @@
-From a25d19d2f32d30118162bbd4ea59c5d12e08702b Mon Sep 17 00:00:00 2001
+From 40f42222589487749a2486e13dae3de08ce1c378 Mon Sep 17 00:00:00 2001
 From: Sumit Gupta <sumitg@nvidia.com>
 Date: Tue, 7 May 2019 18:31:30 +0530
-Subject: [PATCH 353/353] cpufreq: times: Use raw spinlock variants
-X-NVConfidentiality: public
+Subject: [PATCH 353/371] cpufreq: times: Use raw spinlock variants
 
 Use raw spinlock variants for not-sleeping in RT kernels.
 This was reported and suggested in devtalk to fix lockup

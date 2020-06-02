@@ -1,7 +1,7 @@
-From 11e50b56c97dd8e75084ad52dd940a59337b4a5f Mon Sep 17 00:00:00 2001
+From 3ae60e82eb196ab22db22745dd22bca4176c1913 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Fri, 11 Jan 2013 11:23:51 +0100
-Subject: [PATCH 195/369] completion: Use simple wait queues
+Subject: [PATCH 195/371] completion: Use simple wait queues
 
 Completions have no long lasting callbacks and therefor do not need
 the complex waitqueue variant. Use simple waitqueues which reduces the
@@ -54,7 +54,7 @@ diff --git a/drivers/usb/gadget/legacy/inode.c b/drivers/usb/gadget/legacy/inode
 index b8534d3..8fcaf02 100644
 --- a/drivers/usb/gadget/legacy/inode.c
 +++ b/drivers/usb/gadget/legacy/inode.c
-@@ -347,7 +347,7 @@ static void epio_complete (struct usb_ep *ep, struct usb_request *req)
+@@ -347,7 +347,7 @@ ep_io (struct ep_data *epdata, void *buf, unsigned len)
  	spin_unlock_irq (&epdata->dev->lock);
  
  	if (likely (value == 0)) {
@@ -63,7 +63,7 @@ index b8534d3..8fcaf02 100644
  		if (value != 0) {
  			spin_lock_irq (&epdata->dev->lock);
  			if (likely (epdata->ep != NULL)) {
-@@ -356,7 +356,7 @@ static void epio_complete (struct usb_ep *ep, struct usb_request *req)
+@@ -356,7 +356,7 @@ ep_io (struct ep_data *epdata, void *buf, unsigned len)
  				usb_ep_dequeue (epdata->ep, epdata->req);
  				spin_unlock_irq (&epdata->dev->lock);
  
@@ -244,7 +244,7 @@ index 8d0f35d..b62cf64 100644
  }
  EXPORT_SYMBOL(complete_all);
  
-@@ -62,20 +62,20 @@ void complete_all(struct completion *x)
+@@ -62,20 +62,20 @@ do_wait_for_common(struct completion *x,
  		   long (*action)(long), long timeout, int state)
  {
  	if (!x->done) {
@@ -270,7 +270,7 @@ index 8d0f35d..b62cf64 100644
  		if (!x->done)
  			return timeout;
  	}
-@@ -89,9 +89,9 @@ void complete_all(struct completion *x)
+@@ -89,9 +89,9 @@ __wait_for_common(struct completion *x,
  {
  	might_sleep();
  
@@ -307,10 +307,10 @@ index 8d0f35d..b62cf64 100644
  }
  EXPORT_SYMBOL(completion_done);
 diff --git a/kernel/sched/core.c b/kernel/sched/core.c
-index 080adee..73bfb25 100644
+index 21b1e97..c1bc682 100644
 --- a/kernel/sched/core.c
 +++ b/kernel/sched/core.c
-@@ -3426,7 +3426,10 @@ void migrate_disable(void)
+@@ -3449,7 +3449,10 @@ void migrate_disable(void)
  	}
  
  #ifdef CONFIG_SCHED_DEBUG
@@ -322,7 +322,7 @@ index 080adee..73bfb25 100644
  #endif
  
  	if (p->migrate_disable) {
-@@ -3453,7 +3456,10 @@ void migrate_enable(void)
+@@ -3476,7 +3479,10 @@ void migrate_enable(void)
  	}
  
  #ifdef CONFIG_SCHED_DEBUG
@@ -372,5 +372,5 @@ index 9c2da06..a26906f 100644
  {
  	unsigned long flags;
 -- 
-1.9.1
+2.7.4
 

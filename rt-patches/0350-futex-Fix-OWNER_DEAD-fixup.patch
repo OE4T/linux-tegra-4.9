@@ -1,7 +1,7 @@
-From d97d7d949b359fab00957df20f3d0c663915bea1 Mon Sep 17 00:00:00 2001
+From 0f9df2854894fe5232bd6d2475a745bbe32b202a Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Wed, 6 Jun 2018 15:31:29 +0200
-Subject: [PATCH 350/369] futex: Fix OWNER_DEAD fixup
+Subject: [PATCH 350/371] futex: Fix OWNER_DEAD fixup
 
 [ Upstream commit a97cb0e7b3f4c6297fd857055ae8e895f402f501 ]
 
@@ -57,5 +57,5 @@ index 5716d3d..196218d 100644
  	if (get_futex_value_locked(&uval, uaddr))
  		goto handle_fault;
 -- 
-1.9.1
+2.7.4
 

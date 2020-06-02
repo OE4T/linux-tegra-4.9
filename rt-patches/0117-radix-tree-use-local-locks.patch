@@ -1,7 +1,7 @@
-From 2a1ef88d83f49dc7bfe360cbd3a93e84f3799b05 Mon Sep 17 00:00:00 2001
+From 23993d429536ca13dc19e363842420d92ca0a823 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Wed, 25 Jan 2017 16:34:27 +0100
-Subject: [PATCH 117/369] radix-tree: use local locks
+Subject: [PATCH 117/371] radix-tree: use local locks
 
 The preload functionality uses per-CPU variables and preempt-disable to
 ensure that it does not switch CPUs during its usage. This patch adds
@@ -62,7 +62,7 @@ index 8e6d552..741da5a 100644
  
  static inline void *node_to_entry(void *ptr)
  {
-@@ -290,13 +291,14 @@ static void radix_tree_dump(struct radix_tree_root *root)
+@@ -290,13 +291,14 @@ radix_tree_node_alloc(struct radix_tree_root *root)
  		 * succeed in getting a node here (and never reach
  		 * kmem_cache_alloc)
  		 */
@@ -128,5 +128,5 @@ index 8e6d552..741da5a 100644
   * The maximum index which can be stored in a radix tree
   */
 -- 
-1.9.1
+2.7.4
 

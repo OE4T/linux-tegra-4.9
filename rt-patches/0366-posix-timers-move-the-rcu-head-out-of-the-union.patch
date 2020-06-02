@@ -1,7 +1,7 @@
-From d5ccab7f63f326d4544772f84ab786ed27b44256 Mon Sep 17 00:00:00 2001
+From aacc8fae9917fea412bf39a70c7f67163bd55d94 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Wed, 28 Mar 2018 11:15:19 +0200
-Subject: [PATCH 364/369] posix-timers: move the rcu head out of the union
+Subject: [PATCH 366/371] posix-timers: move the rcu head out of the union
 
 On RT the timer can be preempted while running and therefore we wait
 with timer_wait_for_callback() for the timer to complete (instead of
@@ -58,5 +58,5 @@ index 558e420..d6d6c19 100644
  
  static struct k_clock *clockid_to_kclock(const clockid_t id)
 -- 
-1.9.1
+2.7.4
 

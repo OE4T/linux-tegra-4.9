@@ -1,7 +1,7 @@
-From 07aaec33886ab2813f3432d81d551eb8438c0751 Mon Sep 17 00:00:00 2001
+From 25e4fd7f22bae5520fcf8e6f7b28c25f328a07fd Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Wed, 13 Jul 2016 18:22:23 +0200
-Subject: [PATCH 001/369] timer: make the base lock raw
+Subject: [PATCH 001/371] timer: make the base lock raw
 
 The part where the base lock is held got more predictable / shorter after the
 timer rework. One reason is the lack of re-cascading.
@@ -16,7 +16,7 @@ diff --git a/kernel/time/timer.c b/kernel/time/timer.c
 index b625cc7..f14e352 100644
 --- a/kernel/time/timer.c
 +++ b/kernel/time/timer.c
-@@ -193,7 +193,7 @@
+@@ -193,7 +193,7 @@ EXPORT_SYMBOL(jiffies_64);
  #endif
  
  struct timer_base {
@@ -38,7 +38,7 @@ index b625cc7..f14e352 100644
  		}
  		cpu_relax();
  	}
-@@ -1033,9 +1033,9 @@ static struct timer_base *lock_timer_base(struct timer_list *timer,
+@@ -1033,9 +1033,9 @@ __mod_timer(struct timer_list *timer, unsigned long expires, bool pending_only)
  			/* See the comment in lock_timer_base() */
  			timer->flags |= TIMER_MIGRATING;
  
@@ -50,7 +50,7 @@ index b625cc7..f14e352 100644
  			WRITE_ONCE(timer->flags,
  				   (timer->flags & ~TIMER_BASEMASK) | base->cpu);
  			forward_timer_base(base);
-@@ -1060,7 +1060,7 @@ static struct timer_base *lock_timer_base(struct timer_list *timer,
+@@ -1060,7 +1060,7 @@ __mod_timer(struct timer_list *timer, unsigned long expires, bool pending_only)
  	}
  
  out_unlock:
@@ -184,5 +184,5 @@ index b625cc7..f14e352 100644
  	}
  }
 -- 
-1.9.1
+2.7.4
 

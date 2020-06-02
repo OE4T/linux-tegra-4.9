@@ -1,7 +1,7 @@
-From f303fe8ea80facbaedda18af53c1de11dd2d3deb Mon Sep 17 00:00:00 2001
+From 0c3c55ba5d5e763d82cc41251c8e883ee345f3ed Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Wed, 14 Sep 2011 11:57:04 +0200
-Subject: [PATCH 268/369] ipc/sem: Rework semaphore wakeups
+Subject: [PATCH 268/371] ipc/sem: Rework semaphore wakeups
 
 Current sysv sems have a weird ass wakeup scheme that involves keeping
 preemption disabled over a potential O(n^2) loop and busy waiting on
@@ -71,5 +71,5 @@ index 10b94bc..b8360ea 100644
  
  static void unlink_queue(struct sem_array *sma, struct sem_queue *q)
 -- 
-1.9.1
+2.7.4
 

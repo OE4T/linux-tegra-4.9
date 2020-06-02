@@ -1,7 +1,7 @@
-From 501d82da4dee42aaf02fad59a9bb8ae3913645b3 Mon Sep 17 00:00:00 2001
+From 2d7f0189e4841b3c34d59877b2824bcea544a674 Mon Sep 17 00:00:00 2001
 From: Mike Galbraith <efault@gmx.de>
 Date: Wed, 23 Aug 2017 11:57:29 +0200
-Subject: [PATCH 327/369] drivers/zram: fix zcomp_stream_get()
+Subject: [PATCH 327/371] drivers/zram: fix zcomp_stream_get()
  smp_processor_id() use in preemptible code
 
 Use get_local_ptr() instead this_cpu_ptr() to avoid a warning regarding
@@ -40,5 +40,5 @@ index fa8329a..8c93ee1 100644
  
  int zcomp_compress(struct zcomp_strm *zstrm,
 -- 
-1.9.1
+2.7.4
 

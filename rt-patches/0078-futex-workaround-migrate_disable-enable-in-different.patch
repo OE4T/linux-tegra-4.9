@@ -1,7 +1,7 @@
-From 5b0c9500a65884de963f21b0194128b8ba2b305b Mon Sep 17 00:00:00 2001
+From f0436f4a5223b5c2a7c97d4f92a18ab52f4bbee0 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Wed, 8 Mar 2017 14:23:35 +0100
-Subject: [PATCH 078/369] futex: workaround migrate_disable/enable in different
+Subject: [PATCH 078/371] futex: workaround migrate_disable/enable in different
  context
 
 migrate_disable()/migrate_enable() takes a different path in atomic() vs
@@ -61,5 +61,5 @@ index 239d5ea..7431ff3 100644
  
  		/*
 -- 
-1.9.1
+2.7.4
 

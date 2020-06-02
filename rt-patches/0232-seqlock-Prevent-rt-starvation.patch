@@ -1,7 +1,7 @@
-From e9d862e22408e4d30b491a55d0749c6eab3e55c5 Mon Sep 17 00:00:00 2001
+From 608e4cd9c5953e27075fcb3e0513ea33b35d6f01 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Wed, 22 Feb 2012 12:03:30 +0100
-Subject: [PATCH 232/369] seqlock: Prevent rt starvation
+Subject: [PATCH 232/371] seqlock: Prevent rt starvation
 
 If a low prio writer gets preempted while holding the seqlock write
 locked, a high prio reader spins forever on RT.
@@ -64,7 +64,7 @@ index ead9765..17a8721 100644
  /**
   * raw_write_seqcount_barrier - do a seq write barrier
   * @s: pointer to seqcount_t
-@@ -428,10 +438,32 @@ static inline void write_seqcount_invalidate(seqcount_t *s)
+@@ -428,10 +438,32 @@ typedef struct {
  /*
   * Read side functions for starting and finalizing a read side section.
   */
@@ -194,5 +194,5 @@ index f6017dd..0ba4328 100644
  {
  	unsigned int seq;
 -- 
-1.9.1
+2.7.4
 

@@ -1,7 +1,7 @@
-From 7deb188b62c23369b9bce26880a2afc8146511a8 Mon Sep 17 00:00:00 2001
+From a920386688b2f23865bf2a4be8fbcd9a6450905b Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Wed, 6 Jun 2018 15:31:27 +0200
-Subject: [PATCH 348/369] futex: Fix more put_pi_state() vs.
+Subject: [PATCH 348/371] futex: Fix more put_pi_state() vs.
  exit_pi_state_list() races
 
 [ Upstream commit 51d00899f7e6ded15c89cb4e2cb11a35283bac81 ]
@@ -114,5 +114,5 @@ index d07f8e7..49e5a6f2 100644
  		spin_unlock(&hb->lock);
  
 -- 
-1.9.1
+2.7.4
 

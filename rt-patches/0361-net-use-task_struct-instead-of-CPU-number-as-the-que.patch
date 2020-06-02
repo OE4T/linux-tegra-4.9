@@ -1,7 +1,7 @@
-From f57c578277542cf3edf8adac7ccf066a2e729cb6 Mon Sep 17 00:00:00 2001
+From b83f016e78f3451211fe5d69dfd090d9d0c7aa1a Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Wed, 21 Feb 2018 10:39:54 +0100
-Subject: [PATCH 359/369] net: use task_struct instead of CPU number as the
+Subject: [PATCH 361/371] net: use task_struct instead of CPU number as the
  queue owner on -RT
 
 In commit ("net: move xmit_recursion to per-task variable on -RT") the
@@ -22,7 +22,7 @@ Signed-off-by: Julia Cartwright <julia@ni.com>
  2 files changed, 53 insertions(+), 7 deletions(-)
 
 diff --git a/include/linux/netdevice.h b/include/linux/netdevice.h
-index 53bda7b..37dc2de 100644
+index 47fb329..0366e2f 100644
 --- a/include/linux/netdevice.h
 +++ b/include/linux/netdevice.h
 @@ -594,7 +594,11 @@ struct netdev_queue {
@@ -37,7 +37,7 @@ index 53bda7b..37dc2de 100644
  	/*
  	 * Time (in jiffies) of last Tx
  	 */
-@@ -3617,41 +3621,79 @@ static inline u32 netif_msg_init(int debug_value, int default_msg_enable_bits)
+@@ -3620,41 +3624,79 @@ static inline u32 netif_msg_init(int debug_value, int default_msg_enable_bits)
  	return (1 << debug_value) - 1;
  }
  
@@ -124,7 +124,7 @@ index 53bda7b..37dc2de 100644
  }
  
 diff --git a/net/core/dev.c b/net/core/dev.c
-index 9ccac1a..044bb7a 100644
+index 92b8d90..cb080d9 100644
 --- a/net/core/dev.c
 +++ b/net/core/dev.c
 @@ -3471,7 +3471,11 @@ static int __dev_queue_xmit(struct sk_buff *skb, void *accel_priv)
@@ -149,5 +149,5 @@ index 9ccac1a..044bb7a 100644
  	queue->dev = dev;
  #ifdef CONFIG_BQL
 -- 
-1.9.1
+2.7.4
 

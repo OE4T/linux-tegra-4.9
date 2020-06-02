@@ -1,7 +1,7 @@
-From c0550a8d09af92a5fe0f3cb4c2237159d790fd1d Mon Sep 17 00:00:00 2001
+From 54c30c89d13976ab0561bcb43842d3f8fd185df1 Mon Sep 17 00:00:00 2001
 From: Mike Galbraith <efault@gmx.de>
 Date: Sun, 8 Jan 2017 09:32:25 +0100
-Subject: [PATCH 322/369] cpuset: Convert callback_lock to raw_spinlock_t
+Subject: [PATCH 322/371] cpuset: Convert callback_lock to raw_spinlock_t
 
 The two commits below add up to a cpuset might_sleep() splat for RT:
 
@@ -58,7 +58,7 @@ diff --git a/kernel/cpuset.c b/kernel/cpuset.c
 index 435d500..934329e 100644
 --- a/kernel/cpuset.c
 +++ b/kernel/cpuset.c
-@@ -286,7 +286,7 @@ static inline int is_spread_slab(const struct cpuset *cs)
+@@ -286,7 +286,7 @@ static struct cpuset top_cpuset = {
   */
  
  static DEFINE_MUTEX(cpuset_mutex);
@@ -195,7 +195,7 @@ index 435d500..934329e 100644
  	mutex_unlock(&cpuset_mutex);
  }
  
-@@ -2206,12 +2206,12 @@ static void remove_tasks_in_empty_cpuset(struct cpuset *cs)
+@@ -2206,12 +2206,12 @@ hotplug_update_tasks_legacy(struct cpuset *cs,
  {
  	bool is_empty;
  
@@ -210,7 +210,7 @@ index 435d500..934329e 100644
  
  	/*
  	 * Don't call update_tasks_cpumask() if the cpuset becomes empty,
-@@ -2248,10 +2248,10 @@ static void remove_tasks_in_empty_cpuset(struct cpuset *cs)
+@@ -2248,10 +2248,10 @@ hotplug_update_tasks(struct cpuset *cs,
  	if (nodes_empty(*new_mems))
  		*new_mems = parent_cs(cs)->effective_mems;
  
@@ -295,5 +295,5 @@ index 435d500..934329e 100644
  }
  
 -- 
-1.9.1
+2.7.4
 

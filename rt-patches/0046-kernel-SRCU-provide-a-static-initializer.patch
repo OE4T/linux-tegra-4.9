@@ -1,7 +1,7 @@
-From b8ecdd8608bcba095ae6999eae56d863ddf426aa Mon Sep 17 00:00:00 2001
+From f2d7c267405cbde0f05d1e46ce63b8fa521567b6 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Tue, 19 Mar 2013 14:44:30 +0100
-Subject: [PATCH 046/369] kernel/SRCU: provide a static initializer
+Subject: [PATCH 046/371] kernel/SRCU: provide a static initializer
 
 There are macros for static initializer for the three out of four
 possible notifier types, that are:
@@ -51,7 +51,7 @@ index 4149868..babe5b9 100644
  extern void srcu_init_notifier_head(struct srcu_notifier_head *nh);
  #define srcu_cleanup_notifier_head(name)	\
  		cleanup_srcu_struct(&(name)->srcu);
-@@ -103,7 +101,13 @@ struct srcu_notifier_head {
+@@ -103,7 +101,13 @@ extern void srcu_init_notifier_head(struct srcu_notifier_head *nh);
  		.head = NULL }
  #define RAW_NOTIFIER_INIT(name)	{				\
  		.head = NULL }
@@ -66,7 +66,7 @@ index 4149868..babe5b9 100644
  
  #define ATOMIC_NOTIFIER_HEAD(name)				\
  	struct atomic_notifier_head name =			\
-@@ -115,6 +119,18 @@ struct srcu_notifier_head {
+@@ -115,6 +119,18 @@ extern void srcu_init_notifier_head(struct srcu_notifier_head *nh);
  	struct raw_notifier_head name =				\
  		RAW_NOTIFIER_INIT(name)
  
@@ -105,7 +105,7 @@ diff --git a/include/linux/srcu.h b/include/linux/srcu.h
 index dc8eb63..e793d3a 100644
 --- a/include/linux/srcu.h
 +++ b/include/linux/srcu.h
-@@ -84,10 +84,10 @@ int __init_srcu_struct(struct srcu_struct *sp, const char *name,
+@@ -84,10 +84,10 @@ int init_srcu_struct(struct srcu_struct *sp);
  
  void process_srcu(struct work_struct *work);
  
@@ -118,7 +118,7 @@ index dc8eb63..e793d3a 100644
  		.queue_lock = __SPIN_LOCK_UNLOCKED(name.queue_lock),	\
  		.running = false,					\
  		.batch_queue = RCU_BATCH_INIT(name.batch_queue),	\
-@@ -119,7 +119,7 @@ int __init_srcu_struct(struct srcu_struct *sp, const char *name,
+@@ -119,7 +119,7 @@ void process_srcu(struct work_struct *work);
   */
  #define __DEFINE_SRCU(name, is_static)					\
  	static DEFINE_PER_CPU(struct srcu_struct_array, name##_srcu_array);\
@@ -128,5 +128,5 @@ index dc8eb63..e793d3a 100644
  #define DEFINE_STATIC_SRCU(name)	__DEFINE_SRCU(name, static)
  
 -- 
-1.9.1
+2.7.4
 

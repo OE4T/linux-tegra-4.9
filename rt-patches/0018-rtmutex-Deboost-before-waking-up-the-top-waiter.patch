@@ -1,7 +1,7 @@
-From 46de31a71d8b1dcafe68fd9dc6eedc47ae205606 Mon Sep 17 00:00:00 2001
+From 4009d3900901b453c69a482328251825aae45a55 Mon Sep 17 00:00:00 2001
 From: Xunlei Pang <xlpang@redhat.com>
 Date: Thu, 23 Mar 2017 15:56:07 +0100
-Subject: [PATCH 018/369] rtmutex: Deboost before waking up the top waiter
+Subject: [PATCH 018/371] rtmutex: Deboost before waking up the top waiter
 
 Upstream commit 2a1c6029940675abb2217b590512dbf691867ec4
 
@@ -113,7 +113,7 @@ index 7f8ee5d..a77f7ca 100644
  	raw_spin_unlock_irqrestore(&lock->wait_lock, flags);
  
  	/* check PI boosting */
-@@ -1465,6 +1458,18 @@ static bool __sched rt_mutex_slowunlock(struct rt_mutex *lock,
+@@ -1465,6 +1458,18 @@ rt_mutex_fasttrylock(struct rt_mutex *lock,
  	return slowfn(lock);
  }
  
@@ -132,7 +132,7 @@ index 7f8ee5d..a77f7ca 100644
  static inline void
  rt_mutex_fastunlock(struct rt_mutex *lock,
  		    bool (*slowfn)(struct rt_mutex *lock,
-@@ -1478,11 +1483,7 @@ static bool __sched rt_mutex_slowunlock(struct rt_mutex *lock,
+@@ -1478,11 +1483,7 @@ rt_mutex_fastunlock(struct rt_mutex *lock,
  
  	deboost = slowfn(lock, &wake_q);
  
@@ -175,7 +175,7 @@ diff --git a/kernel/locking/rtmutex_common.h b/kernel/locking/rtmutex_common.h
 index f4c34c4..dad9229 100644
 --- a/kernel/locking/rtmutex_common.h
 +++ b/kernel/locking/rtmutex_common.h
-@@ -123,7 +123,7 @@ extern bool rt_mutex_cleanup_proxy_lock(struct rt_mutex *lock,
+@@ -123,7 +123,7 @@ extern void rt_mutex_futex_unlock(struct rt_mutex *lock);
  extern bool __rt_mutex_futex_unlock(struct rt_mutex *lock,
  				 struct wake_q_head *wqh);
  
@@ -185,5 +185,5 @@ index f4c34c4..dad9229 100644
  #ifdef CONFIG_DEBUG_RT_MUTEXES
  # include "rtmutex-debug.h"
 -- 
-1.9.1
+2.7.4
 

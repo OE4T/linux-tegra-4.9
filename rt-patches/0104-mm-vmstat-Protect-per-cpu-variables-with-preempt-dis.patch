@@ -1,7 +1,7 @@
-From 20e1ebe2cba348b69eeeaef80de32f7741dca268 Mon Sep 17 00:00:00 2001
+From ff8555e04604be6372c865081187ef7603b52c8e Mon Sep 17 00:00:00 2001
 From: Ingo Molnar <mingo@elte.hu>
 Date: Fri, 3 Jul 2009 08:30:13 -0500
-Subject: [PATCH 104/369] mm/vmstat: Protect per cpu variables with preempt
+Subject: [PATCH 104/371] mm/vmstat: Protect per cpu variables with preempt
  disable on RT
 
 Disable preemption on -RT for the vmstat code. On vanila the code runs in
@@ -19,7 +19,7 @@ diff --git a/include/linux/vmstat.h b/include/linux/vmstat.h
 index 6137719..e28c5a4 100644
 --- a/include/linux/vmstat.h
 +++ b/include/linux/vmstat.h
-@@ -33,7 +33,9 @@ struct vm_event_state {
+@@ -33,7 +33,9 @@ DECLARE_PER_CPU(struct vm_event_state, vm_event_states);
   */
  static inline void __count_vm_event(enum vm_event_item item)
  {
@@ -140,5 +140,5 @@ index 5e6a4d7..20dbbb6 100644
  
  void __dec_zone_page_state(struct page *page, enum zone_stat_item item)
 -- 
-1.9.1
+2.7.4
 

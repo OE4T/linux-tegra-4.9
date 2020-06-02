@@ -1,7 +1,7 @@
-From 80cc6c14706acfd615ce865bac0a4368247d5544 Mon Sep 17 00:00:00 2001
+From d587388943a1d044f4e2770ebb880dabe9e17ec4 Mon Sep 17 00:00:00 2001
 From: Julia Cartwright <julia@ni.com>
 Date: Thu, 26 Apr 2018 15:02:03 -0500
-Subject: [PATCH 367/369] seqlock: provide the same ordering semantics as
+Subject: [PATCH 369/371] seqlock: provide the same ordering semantics as
  mainline
 
 The mainline implementation of read_seqbegin() orders prior loads w.r.t.
@@ -34,5 +34,5 @@ index 3d7223f..de04d6d 100644
  }
  #endif
 -- 
-1.9.1
+2.7.4
 

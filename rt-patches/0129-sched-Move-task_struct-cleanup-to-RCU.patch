@@ -1,7 +1,7 @@
-From 94ddeee3553dec7d81cbb744f7dbb8ca915697ea Mon Sep 17 00:00:00 2001
+From fb42091eb544a249f8d32aeeeda9a0ba20184240 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Tue, 31 May 2011 16:59:16 +0200
-Subject: [PATCH 129/369] sched: Move task_struct cleanup to RCU
+Subject: [PATCH 129/371] sched: Move task_struct cleanup to RCU
 
 __put_task_struct() does quite some expensive work. We don't want to
 burden random tasks with that.
@@ -13,10 +13,10 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  2 files changed, 27 insertions(+), 1 deletion(-)
 
 diff --git a/include/linux/sched.h b/include/linux/sched.h
-index d9fb0e6..18ef84d 100644
+index e8a6cfb..b49659e 100644
 --- a/include/linux/sched.h
 +++ b/include/linux/sched.h
-@@ -2142,6 +2142,9 @@ struct task_struct {
+@@ -2143,6 +2143,9 @@ struct task_struct {
  	unsigned int	sequential_io;
  	unsigned int	sequential_io_avg;
  #endif
@@ -26,7 +26,7 @@ index d9fb0e6..18ef84d 100644
  #ifdef CONFIG_DEBUG_ATOMIC_SLEEP
  	unsigned long	task_state_change;
  #endif
-@@ -2403,6 +2406,15 @@ static inline int is_global_init(struct task_struct *tsk)
+@@ -2404,6 +2407,15 @@ extern struct pid *cad_pid;
  extern void free_task(struct task_struct *tsk);
  #define get_task_struct(tsk) do { atomic_inc(&(tsk)->usage); } while(0)
  
@@ -42,7 +42,7 @@ index d9fb0e6..18ef84d 100644
  extern void __put_task_struct(struct task_struct *t);
  
  static inline void put_task_struct(struct task_struct *t)
-@@ -2410,6 +2422,7 @@ static inline void put_task_struct(struct task_struct *t)
+@@ -2411,6 +2423,7 @@ static inline void put_task_struct(struct task_struct *t)
  	if (atomic_dec_and_test(&t->usage))
  		__put_task_struct(t);
  }
@@ -51,7 +51,7 @@ index d9fb0e6..18ef84d 100644
  struct task_struct *task_rcu_dereference(struct task_struct **ptask);
  struct task_struct *try_get_task_struct(struct task_struct **ptask);
 diff --git a/kernel/fork.c b/kernel/fork.c
-index 206afae..2a04c19 100644
+index 4dbe0fb..df90ea6 100644
 --- a/kernel/fork.c
 +++ b/kernel/fork.c
 @@ -386,7 +386,9 @@ static inline void put_signal_struct(struct signal_struct *sig)
@@ -85,5 +85,5 @@ index 206afae..2a04c19 100644
  void __init __weak arch_task_cache_init(void) { }
  
 -- 
-1.9.1
+2.7.4
 

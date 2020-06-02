@@ -1,7 +1,7 @@
-From 38e8749d5cca0b5de125c2346f4d5befbac7746b Mon Sep 17 00:00:00 2001
+From 490d2216a056d8ff708de5d1ecf945c5f3e03f67 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <sebastian@breakpoint.cc>
 Date: Mon, 28 Oct 2013 09:36:37 +0100
-Subject: [PATCH 180/369] rtmutex: Add RT aware ww locks
+Subject: [PATCH 180/371] rtmutex: Add RT aware ww locks
 
 lockdep says:
 | --------------------------------------------------------------------------
@@ -38,7 +38,7 @@ index c1a3b9f..c3756e5 100644
  
  #include "rtmutex_common.h"
  
-@@ -1300,6 +1301,40 @@ int atomic_dec_and_spin_lock(atomic_t *atomic, spinlock_t *lock)
+@@ -1300,6 +1301,40 @@ EXPORT_SYMBOL(__rt_spin_lock_init);
  
  #endif /* PREEMPT_RT_FULL */
  
@@ -89,7 +89,7 @@ index c1a3b9f..c3756e5 100644
  {
  	int ret = 0;
  
-@@ -1598,6 +1634,12 @@ void rt_mutex_init_waiter(struct rt_mutex_waiter *waiter, bool savestate)
+@@ -1598,6 +1634,12 @@ __rt_mutex_slowlock(struct rt_mutex *lock, int state,
  			break;
  		}
  
@@ -194,7 +194,7 @@ index c1a3b9f..c3756e5 100644
  {
  	struct rt_mutex_waiter waiter;
  	unsigned long flags;
-@@ -1658,6 +1777,8 @@ static void rt_mutex_handle_deadlock(int res, int detect_deadlock,
+@@ -1658,6 +1777,8 @@ rt_mutex_slowlock(struct rt_mutex *lock, int state,
  
  	/* Try to acquire the lock again: */
  	if (try_to_take_rt_mutex(lock, current, NULL)) {
@@ -203,7 +203,7 @@ index c1a3b9f..c3756e5 100644
  		raw_spin_unlock_irqrestore(&lock->wait_lock, flags);
  		return 0;
  	}
-@@ -1672,13 +1793,23 @@ static void rt_mutex_handle_deadlock(int res, int detect_deadlock,
+@@ -1672,13 +1793,23 @@ rt_mutex_slowlock(struct rt_mutex *lock, int state,
  
  	if (likely(!ret))
  		/* sleep on the mutex */
@@ -294,7 +294,7 @@ index c1a3b9f..c3756e5 100644
  }
  EXPORT_SYMBOL_GPL(rt_mutex_lock_killable);
  
-@@ -1949,6 +2084,7 @@ int __sched rt_mutex_lock_killable(struct rt_mutex *lock)
+@@ -1949,6 +2084,7 @@ rt_mutex_timed_lock(struct rt_mutex *lock, struct hrtimer_sleeper *timeout)
  
  	return rt_mutex_timed_fastlock(lock, TASK_INTERRUPTIBLE, timeout,
  				       RT_MUTEX_MIN_CHAINWALK,
@@ -413,5 +413,5 @@ index c1a3b9f..c3756e5 100644
 +EXPORT_SYMBOL(ww_mutex_unlock);
  #endif
 -- 
-1.9.1
+2.7.4
 

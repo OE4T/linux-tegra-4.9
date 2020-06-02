@@ -1,7 +1,7 @@
-From 8eedb8c8e45a91a3c1ad18ea8e6178d25f3247b0 Mon Sep 17 00:00:00 2001
+From 376ae740e23c8f613374fb339e045a916589d5e3 Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Wed, 6 Jun 2018 15:31:28 +0200
-Subject: [PATCH 349/369] futex: Avoid violating the 10th rule of futex
+Subject: [PATCH 349/371] futex: Avoid violating the 10th rule of futex
 
 [ Upstream commit c1e2f0eaf015fb7076d51a339011f2383e6dd389 ]
 
@@ -238,7 +238,7 @@ diff --git a/kernel/locking/rtmutex.c b/kernel/locking/rtmutex.c
 index 3a8b5d4..57361d6 100644
 --- a/kernel/locking/rtmutex.c
 +++ b/kernel/locking/rtmutex.c
-@@ -1849,6 +1849,19 @@ int __sched rt_mutex_slowlock_locked(struct rt_mutex *lock, int state,
+@@ -1849,6 +1849,19 @@ rt_mutex_slowlock(struct rt_mutex *lock, int state,
  	return ret;
  }
  
@@ -298,5 +298,5 @@ index 64d89d7..50c0a10 100644
  extern void rt_mutex_futex_unlock(struct rt_mutex *lock);
  extern bool __rt_mutex_futex_unlock(struct rt_mutex *lock,
 -- 
-1.9.1
+2.7.4
 

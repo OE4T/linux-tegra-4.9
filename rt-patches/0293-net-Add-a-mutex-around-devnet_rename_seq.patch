@@ -1,7 +1,7 @@
-From 36afdf6d5c61b80ba7c1ae9414f7a293921def86 Mon Sep 17 00:00:00 2001
+From 2db55cdf97aa5138bc49c8a5912c94e616ea3fdd Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Wed, 20 Mar 2013 18:06:20 +0100
-Subject: [PATCH 293/369] net: Add a mutex around devnet_rename_seq
+Subject: [PATCH 293/371] net: Add a mutex around devnet_rename_seq
 
 On RT write_seqcount_begin() disables preemption and device_rename()
 allocates memory with GFP_KERNEL and grabs later the sysfs_mutex
@@ -21,10 +21,10 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  1 file changed, 20 insertions(+), 14 deletions(-)
 
 diff --git a/net/core/dev.c b/net/core/dev.c
-index 0e67996..9ccac1a 100644
+index 03f3c25..92b8d90 100644
 --- a/net/core/dev.c
 +++ b/net/core/dev.c
-@@ -190,6 +190,7 @@ static int call_netdevice_notifiers_info(unsigned long val,
+@@ -190,6 +190,7 @@ static unsigned int napi_gen_id = NR_CPUS;
  static DEFINE_READ_MOSTLY_HASHTABLE(napi_hash, 8);
  
  static seqcount_t devnet_rename_seq;
@@ -108,5 +108,5 @@ index 0e67996..9ccac1a 100644
  
  /**
 -- 
-1.9.1
+2.7.4
 

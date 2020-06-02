@@ -1,7 +1,7 @@
-From d16d63c4d09c780f729d601807628c18591497c4 Mon Sep 17 00:00:00 2001
+From beda75d57e4753a70a9294b5f8db065ecb616f41 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Wed, 5 Oct 2011 11:59:38 -0700
-Subject: [PATCH 187/369] rcu: Merge RCU-bh into RCU-preempt
+Subject: [PATCH 187/371] rcu: Merge RCU-bh into RCU-preempt
 
 The Linux kernel has long RCU-bh read-side critical sections that
 intolerably increase scheduling latency under mainline's RCU-bh rules,
@@ -66,7 +66,7 @@ index a5b130e..c19c711 100644
  void rcu_check_callbacks(int user);
  void rcu_report_dead(unsigned int cpu);
  void rcu_cpu_starting(unsigned int cpu);
-@@ -513,7 +521,14 @@ static inline void rcu_lock_release(struct lockdep_map *map)
+@@ -513,7 +521,14 @@ extern struct lockdep_map rcu_callback_map;
  int debug_lockdep_rcu_enabled(void);
  
  int rcu_read_lock_held(void);
@@ -139,7 +139,7 @@ index 63a4e4c..08ab12d 100644
  void rcu_barrier_sched(void);
  unsigned long get_state_synchronize_rcu(void);
  void cond_synchronize_rcu(unsigned long oldstate);
-@@ -82,17 +90,14 @@ static inline void synchronize_rcu_bh_expedited(void)
+@@ -82,17 +90,14 @@ void cond_synchronize_sched(unsigned long oldstate);
  extern unsigned long rcutorture_testseq;
  extern unsigned long rcutorture_vernum;
  unsigned long rcu_batches_started(void);
@@ -157,7 +157,7 @@ index 63a4e4c..08ab12d 100644
  void rcu_sched_force_quiescent_state(void);
  
  void rcu_idle_enter(void);
-@@ -109,6 +114,16 @@ static inline void synchronize_rcu_bh_expedited(void)
+@@ -109,6 +114,16 @@ extern int rcu_scheduler_active __read_mostly;
  
  bool rcu_is_watching(void);
  
@@ -178,7 +178,7 @@ diff --git a/kernel/rcu/rcutorture.c b/kernel/rcu/rcutorture.c
 index bf08fee..eeb8ce4 100644
 --- a/kernel/rcu/rcutorture.c
 +++ b/kernel/rcu/rcutorture.c
-@@ -404,6 +404,7 @@ static void rcu_sync_torture_init(void)
+@@ -404,6 +404,7 @@ static struct rcu_torture_ops rcu_ops = {
  	.name		= "rcu"
  };
  
@@ -186,7 +186,7 @@ index bf08fee..eeb8ce4 100644
  /*
   * Definitions for rcu_bh torture testing.
   */
-@@ -443,6 +444,12 @@ static void rcu_bh_torture_deferred_free(struct rcu_torture *p)
+@@ -443,6 +444,12 @@ static struct rcu_torture_ops rcu_bh_ops = {
  	.name		= "rcu_bh"
  };
  
@@ -219,7 +219,7 @@ index d1a0287..2653613 100644
  
  static DEFINE_PER_CPU(int, rcu_sched_qs_mask);
  
-@@ -449,11 +451,13 @@ unsigned long rcu_batches_started_sched(void)
+@@ -449,11 +451,13 @@ EXPORT_SYMBOL_GPL(rcu_batches_started_sched);
  /*
   * Return the number of RCU BH batches started thus far for debug & stats.
   */
@@ -345,7 +345,7 @@ diff --git a/kernel/rcu/tree.h b/kernel/rcu/tree.h
 index e99a523..e803255 100644
 --- a/kernel/rcu/tree.h
 +++ b/kernel/rcu/tree.h
-@@ -588,7 +588,9 @@ struct rcu_state {
+@@ -588,7 +588,9 @@ extern struct list_head rcu_struct_flavors;
   */
  extern struct rcu_state rcu_sched_state;
  
@@ -376,5 +376,5 @@ index 019b470..949714f 100644
  #endif /* #ifdef CONFIG_DEBUG_LOCK_ALLOC */
  
 -- 
-1.9.1
+2.7.4
 

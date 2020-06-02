@@ -1,7 +1,7 @@
-From a94c87ade590ef518b242c81f05351c2ac652f3b Mon Sep 17 00:00:00 2001
+From c3f1c347bf462207d15825aa75e8b33394160592 Mon Sep 17 00:00:00 2001
 From: Yong Zhang <yong.zhang0@gmail.com>
 Date: Sun, 16 Oct 2011 18:56:43 +0800
-Subject: [PATCH 146/369] hotplug: sync_unplug: No "\n" in task name
+Subject: [PATCH 146/371] hotplug: sync_unplug: No "\n" in task name
 
 Otherwise the output will look a little odd.
 
@@ -26,5 +26,5 @@ index b09a1ba..de4d685 100644
  		return (PTR_ERR(tsk));
  	kthread_bind(tsk, cpu);
 -- 
-1.9.1
+2.7.4
 

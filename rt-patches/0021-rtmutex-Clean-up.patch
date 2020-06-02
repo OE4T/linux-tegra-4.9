@@ -1,7 +1,7 @@
-From 95eb802d99835e704eecd0b8fde8eb81f83e9042 Mon Sep 17 00:00:00 2001
+From 683ab73c8154cb36198564adb9de9d7f96752553 Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Thu, 23 Mar 2017 15:56:10 +0100
-Subject: [PATCH 021/369] rtmutex: Clean up
+Subject: [PATCH 021/371] rtmutex: Clean up
 
 Upstream commit aa2bfe55366552cb7e93e8709d66e698d79ccc47
 
@@ -77,7 +77,7 @@ index 03a345d..9f55d7a 100644
  }
  
  /*
-@@ -1472,15 +1472,14 @@ static bool __sched rt_mutex_slowunlock(struct rt_mutex *lock,
+@@ -1472,15 +1472,14 @@ rt_mutex_fasttrylock(struct rt_mutex *lock,
  }
  
  /*
@@ -96,7 +96,7 @@ index 03a345d..9f55d7a 100644
  }
  
  static inline void
-@@ -1489,14 +1488,12 @@ void rt_mutex_postunlock(struct wake_q_head *wake_q, bool deboost)
+@@ -1489,14 +1488,12 @@ rt_mutex_fastunlock(struct rt_mutex *lock,
  				   struct wake_q_head *wqh))
  {
  	WAKE_Q(wake_q);
@@ -142,7 +142,7 @@ diff --git a/kernel/locking/rtmutex_common.h b/kernel/locking/rtmutex_common.h
 index dad9229..722e3cf 100644
 --- a/kernel/locking/rtmutex_common.h
 +++ b/kernel/locking/rtmutex_common.h
-@@ -123,7 +123,7 @@ extern bool rt_mutex_cleanup_proxy_lock(struct rt_mutex *lock,
+@@ -123,7 +123,7 @@ extern void rt_mutex_futex_unlock(struct rt_mutex *lock);
  extern bool __rt_mutex_futex_unlock(struct rt_mutex *lock,
  				 struct wake_q_head *wqh);
  
@@ -152,5 +152,5 @@ index dad9229..722e3cf 100644
  #ifdef CONFIG_DEBUG_RT_MUTEXES
  # include "rtmutex-debug.h"
 -- 
-1.9.1
+2.7.4
 

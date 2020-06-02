@@ -1,7 +1,7 @@
-From a0cadefea649612dba3f3758af1a0f387daf3002 Mon Sep 17 00:00:00 2001
+From a917ec666f9bc1b077339d7dcbabfca3006b6c3a Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Thu, 23 Nov 2017 17:51:51 +0100
-Subject: [PATCH 334/369] Revert "fs: jbd2: pull your plug when waiting for
+Subject: [PATCH 334/371] Revert "fs: jbd2: pull your plug when waiting for
  space"
 
 This reverts commit "fs: jbd2: pull your plug when waiting for space".
@@ -29,5 +29,5 @@ index b95c108..4d5a5a4 100644
  
  		/*
 -- 
-1.9.1
+2.7.4
 

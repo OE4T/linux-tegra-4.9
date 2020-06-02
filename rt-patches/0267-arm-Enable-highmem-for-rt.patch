@@ -1,7 +1,7 @@
-From c249e0972e0020c48335d71fb8448d38f39bc906 Mon Sep 17 00:00:00 2001
+From 98097a6dc3a0cdba906393b5ed819f7f4f620e92 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Wed, 13 Feb 2013 11:03:11 +0100
-Subject: [PATCH 267/369] arm: Enable highmem for rt
+Subject: [PATCH 267/371] arm: Enable highmem for rt
 
 fixup highmem for ARM.
 
@@ -30,7 +30,7 @@ index 12ebfcc..c962084 100644
  /*
   * For v7 SMP cores running a preemptible kernel we may be pre-empted
   * during a TLB maintenance operation, so execute an inner-shareable dsb
-@@ -25,6 +32,7 @@
+@@ -25,6 +32,7 @@ extern struct task_struct *__switch_to(struct task_struct *, struct thread_info
  #define switch_to(prev,next,last)					\
  do {									\
  	__complete_pending_tlbi();					\
@@ -54,7 +54,7 @@ index eb4b225d..542692d 100644
  void *kmap(struct page *page)
  {
  	might_sleep();
-@@ -54,12 +59,13 @@ void kunmap(struct page *page)
+@@ -54,12 +59,13 @@ EXPORT_SYMBOL(kunmap);
  
  void *kmap_atomic(struct page *page)
  {
@@ -179,5 +179,5 @@ index 2f56829..a2a50f5 100644
  #include <asm/cacheflush.h>
  
 -- 
-1.9.1
+2.7.4
 

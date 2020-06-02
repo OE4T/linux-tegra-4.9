@@ -1,7 +1,7 @@
-From dbe1294f58b87ff7dedf646229cb0dba6e43f6b8 Mon Sep 17 00:00:00 2001
+From 81f0f4bfcaf5efb0bdc82f9344714ef4e9fe588b Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Mon, 16 Feb 2015 18:49:10 +0100
-Subject: [PATCH 196/369] fs/aio: simple simple work
+Subject: [PATCH 196/371] fs/aio: simple simple work
 
 |BUG: sleeping function called from invalid context at kernel/locking/rtmutex.c:768
 |in_atomic(): 1, irqs_disabled(): 0, pid: 26, name: rcuos/2
@@ -21,6 +21,7 @@ Subject: [PATCH 196/369] fs/aio: simple simple work
 
 replace this preempt_disable() friendly swork.
 
+Change-Id: Ic023ab1b62f021c1d29f07594e98614754570512
 Reported-By: Mike Galbraith <umgwanakikbuti@gmail.com>
 Suggested-by: Benjamin LaHaise <bcrl@kvack.org>
 Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
@@ -29,18 +30,18 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  1 file changed, 13 insertions(+), 2 deletions(-)
 
 diff --git a/fs/aio.c b/fs/aio.c
-index ed68116..95ca936 100644
+index 30f0b63..7681385 100644
 --- a/fs/aio.c
 +++ b/fs/aio.c
-@@ -40,6 +40,7 @@
- #include <linux/ramfs.h>
+@@ -41,6 +41,7 @@
  #include <linux/percpu-refcount.h>
  #include <linux/mount.h>
+ #include <linux/nospec.h>
 +#include <linux/swork.h>
  
  #include <asm/kmap_types.h>
  #include <asm/uaccess.h>
-@@ -117,6 +118,7 @@ struct kioctx {
+@@ -118,6 +119,7 @@ struct kioctx {
  
  	struct rcu_head		free_rcu;
  	struct work_struct	free_work;	/* see free_ioctx() */
@@ -48,7 +49,7 @@ index ed68116..95ca936 100644
  
  	/*
  	 * signals when all in-flight requests are done
-@@ -259,6 +261,7 @@ static int __init aio_setup(void)
+@@ -260,6 +262,7 @@ static int __init aio_setup(void)
  		.mount		= aio_mount,
  		.kill_sb	= kill_anon_super,
  	};
@@ -56,7 +57,7 @@ index ed68116..95ca936 100644
  	aio_mnt = kern_mount(&aio_fs);
  	if (IS_ERR(aio_mnt))
  		panic("Failed to create aio fs mount.");
-@@ -634,9 +637,9 @@ static void free_ioctx_reqs(struct percpu_ref *ref)
+@@ -635,9 +638,9 @@ static void free_ioctx_reqs(struct percpu_ref *ref)
   * and ctx->users has dropped to 0, so we know no more kiocbs can be submitted -
   * now it's safe to cancel any that need to be.
   */
@@ -68,7 +69,7 @@ index ed68116..95ca936 100644
  	struct aio_kiocb *req;
  
  	spin_lock_irq(&ctx->ctx_lock);
-@@ -654,6 +657,14 @@ static void free_ioctx_users(struct percpu_ref *ref)
+@@ -655,6 +658,14 @@ static void free_ioctx_users(struct percpu_ref *ref)
  	percpu_ref_put(&ctx->reqs);
  }
  
@@ -84,5 +85,5 @@ index ed68116..95ca936 100644
  {
  	unsigned i, new_nr;
 -- 
-1.9.1
+2.7.4
 

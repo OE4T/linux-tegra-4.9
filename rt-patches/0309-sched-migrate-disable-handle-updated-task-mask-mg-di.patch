@@ -1,7 +1,7 @@
-From 049fdfe05cf64896ecb0aa171582995e7c21f867 Mon Sep 17 00:00:00 2001
+From cf8eb17ea6db78d864e08c6c3ebbf8de0156320c Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Mon, 19 Jun 2017 09:55:47 +0200
-Subject: [PATCH 309/369] sched/migrate disable: handle updated task-mask
+Subject: [PATCH 309/371] sched/migrate disable: handle updated task-mask
  mg-dis section
 
 If task's cpumask changes while in the task is in a migrate_disable()
@@ -22,10 +22,10 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  2 files changed, 54 insertions(+), 6 deletions(-)
 
 diff --git a/include/linux/sched.h b/include/linux/sched.h
-index 1123df7..766af84 100644
+index d74a2f5..8c79e96 100644
 --- a/include/linux/sched.h
 +++ b/include/linux/sched.h
-@@ -1717,6 +1717,7 @@ struct task_struct {
+@@ -1718,6 +1718,7 @@ struct task_struct {
  	unsigned int policy;
  #ifdef CONFIG_PREEMPT_RT_FULL
  	int migrate_disable;
@@ -34,10 +34,10 @@ index 1123df7..766af84 100644
  	int migrate_disable_atomic;
  # endif
 diff --git a/kernel/sched/core.c b/kernel/sched/core.c
-index 7116c38..ab6229f 100644
+index a4df439..b66e385 100644
 --- a/kernel/sched/core.c
 +++ b/kernel/sched/core.c
-@@ -1167,18 +1167,14 @@ void set_cpus_allowed_common(struct task_struct *p, const struct cpumask *new_ma
+@@ -1191,18 +1191,14 @@ void set_cpus_allowed_common(struct task_struct *p, const struct cpumask *new_ma
  	p->nr_cpus_allowed = cpumask_weight(new_mask);
  }
  
@@ -58,7 +58,7 @@ index 7116c38..ab6229f 100644
  	queued = task_on_rq_queued(p);
  	running = task_current(rq, p);
  
-@@ -1201,6 +1197,20 @@ void do_set_cpus_allowed(struct task_struct *p, const struct cpumask *new_mask)
+@@ -1225,6 +1221,20 @@ void do_set_cpus_allowed(struct task_struct *p, const struct cpumask *new_mask)
  		set_curr_task(rq, p);
  }
  
@@ -79,7 +79,7 @@ index 7116c38..ab6229f 100644
  static DEFINE_PER_CPU(struct cpumask, sched_cpumasks);
  static DEFINE_MUTEX(sched_down_mutex);
  static cpumask_t sched_down_cpumask;
-@@ -3533,6 +3543,43 @@ void migrate_enable(void)
+@@ -3556,6 +3566,43 @@ void migrate_enable(void)
  	 */
  	p->migrate_disable = 0;
  
@@ -124,5 +124,5 @@ index 7116c38..ab6229f 100644
  	preempt_enable();
  	preempt_lazy_enable();
 -- 
-1.9.1
+2.7.4
 

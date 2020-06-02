@@ -1,7 +1,7 @@
-From a4fe01726e21521d8d21d999b86a51c1d2afe557 Mon Sep 17 00:00:00 2001
+From 18c9928fb7905f7fb3acac64757d46761417c42d Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Wed, 26 Sep 2012 16:21:08 +0200
-Subject: [PATCH 290/369] net: Another local_irq_disable/kmalloc headache
+Subject: [PATCH 290/371] net: Another local_irq_disable/kmalloc headache
 
 Replace it by a local lock. Though that's pretty inefficient :(
 
@@ -11,7 +11,7 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  1 file changed, 6 insertions(+), 4 deletions(-)
 
 diff --git a/net/core/skbuff.c b/net/core/skbuff.c
-index dca1fed..09c22f2 100644
+index 4a71d78..cb64c6b 100644
 --- a/net/core/skbuff.c
 +++ b/net/core/skbuff.c
 @@ -64,6 +64,7 @@
@@ -43,7 +43,7 @@ index dca1fed..09c22f2 100644
  	return data;
  }
  
-@@ -438,13 +440,13 @@ struct sk_buff *__netdev_alloc_skb(struct net_device *dev, unsigned int len,
+@@ -442,13 +444,13 @@ struct sk_buff *__netdev_alloc_skb(struct net_device *dev, unsigned int len,
  	if (sk_memalloc_socks())
  		gfp_mask |= __GFP_MEMALLOC;
  
@@ -60,5 +60,5 @@ index dca1fed..09c22f2 100644
  	if (unlikely(!data))
  		return NULL;
 -- 
-1.9.1
+2.7.4
 

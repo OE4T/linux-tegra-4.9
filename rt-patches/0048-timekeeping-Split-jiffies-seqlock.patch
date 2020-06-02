@@ -1,7 +1,7 @@
-From e606d6057aba154cf1c9dfa433b48d3b6077796c Mon Sep 17 00:00:00 2001
+From 5690cb7e9b992ccdcaa8b62d21e75653dd6a732e Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Thu, 14 Feb 2013 22:36:59 +0100
-Subject: [PATCH 048/369] timekeeping: Split jiffies seqlock
+Subject: [PATCH 048/371] timekeeping: Split jiffies seqlock
 
 Replace jiffies_lock seqlock with a simple seqcounter and a rawlock so
 it can be taken in atomic context on RT.
@@ -19,7 +19,7 @@ diff --git a/kernel/time/jiffies.c b/kernel/time/jiffies.c
 index 2a6e41e..faea04a 100644
 --- a/kernel/time/jiffies.c
 +++ b/kernel/time/jiffies.c
-@@ -74,7 +74,8 @@ static cycle_t jiffies_read(struct clocksource *cs)
+@@ -74,7 +74,8 @@ static struct clocksource clocksource_jiffies = {
  	.max_cycles	= 10,
  };
  
@@ -135,10 +135,10 @@ index 65aafad..065f663 100644
  
  	/*
 diff --git a/kernel/time/timekeeping.c b/kernel/time/timekeeping.c
-index 831d3f0..07cfb84 100644
+index c257fe7..6c50076 100644
 --- a/kernel/time/timekeeping.c
 +++ b/kernel/time/timekeeping.c
-@@ -2391,8 +2391,10 @@ void hardpps(const struct timespec64 *phase_ts, const struct timespec64 *raw_ts)
+@@ -2404,8 +2404,10 @@ EXPORT_SYMBOL(hardpps);
   */
  void xtime_update(unsigned long ticks)
  {
@@ -155,7 +155,7 @@ diff --git a/kernel/time/timekeeping.h b/kernel/time/timekeeping.h
 index 704f595..763a3e5 100644
 --- a/kernel/time/timekeeping.h
 +++ b/kernel/time/timekeeping.h
-@@ -19,7 +19,8 @@ extern ktime_t ktime_get_update_offsets_now(unsigned int *cwsseq,
+@@ -19,7 +19,8 @@ extern void timekeeping_resume(void);
  extern void do_timer(unsigned long ticks);
  extern void update_wall_time(void);
  
@@ -166,5 +166,5 @@ index 704f595..763a3e5 100644
  #define CS_NAME_LEN	32
  
 -- 
-1.9.1
+2.7.4
 

@@ -1,7 +1,7 @@
-From e1fb974de0ae6d37634c6bc84fa6aa0d91196f1e Mon Sep 17 00:00:00 2001
+From 16ee76fb60b1fb559a2d9f00e50d4db289468dd4 Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Wed, 22 Mar 2017 11:35:57 +0100
-Subject: [PATCH 014/369] futex,rt_mutex: Restructure
+Subject: [PATCH 014/371] futex,rt_mutex: Restructure
  rt_mutex_finish_proxy_lock()
 
 Upstream commit 38d589f2fd08f1296aea3ce62bebd185125c6d81
@@ -149,7 +149,7 @@ diff --git a/kernel/locking/rtmutex_common.h b/kernel/locking/rtmutex_common.h
 index 74b4cf2f..8e81b17 100644
 --- a/kernel/locking/rtmutex_common.h
 +++ b/kernel/locking/rtmutex_common.h
-@@ -108,9 +108,11 @@ extern void rt_mutex_proxy_unlock(struct rt_mutex *lock,
+@@ -108,9 +108,11 @@ extern void rt_mutex_init_waiter(struct rt_mutex_waiter *waiter);
  extern int rt_mutex_start_proxy_lock(struct rt_mutex *lock,
  				     struct rt_mutex_waiter *waiter,
  				     struct task_struct *task);
@@ -165,5 +165,5 @@ index 74b4cf2f..8e81b17 100644
  extern int rt_mutex_timed_futex_lock(struct rt_mutex *l, struct hrtimer_sleeper *to);
  extern int rt_mutex_futex_trylock(struct rt_mutex *l);
 -- 
-1.9.1
+2.7.4
 

@@ -1,7 +1,7 @@
-From eff044a54200b79b6ff11f16072b1ba9351383a8 Mon Sep 17 00:00:00 2001
+From b6c650203885682c5f6f3ce1927893986a6a5f59 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Sun, 13 Nov 2011 17:17:09 +0100
-Subject: [PATCH 153/369] softirq: Check preemption after reenabling interrupts
+Subject: [PATCH 153/371] softirq: Check preemption after reenabling interrupts
 
 raise_softirq_irqoff() disables interrupts and wakes the softirq
 daemon, but after reenabling interrupts there is no preemption check,
@@ -52,7 +52,7 @@ diff --git a/include/linux/preempt.h b/include/linux/preempt.h
 index f17045b..2eed4b5 100644
 --- a/include/linux/preempt.h
 +++ b/include/linux/preempt.h
-@@ -165,8 +165,10 @@
+@@ -165,8 +165,10 @@ do { \
  
  #ifdef CONFIG_PREEMPT_RT_BASE
  # define preempt_enable_no_resched() sched_preempt_enable_no_resched()
@@ -63,7 +63,7 @@ index f17045b..2eed4b5 100644
  #endif
  
  #define preemptible()	(preempt_count() == 0 && !irqs_disabled())
-@@ -237,6 +239,7 @@
+@@ -237,6 +239,7 @@ do { \
  #define preempt_disable_notrace()		barrier()
  #define preempt_enable_no_resched_notrace()	barrier()
  #define preempt_enable_notrace()		barrier()
@@ -116,7 +116,7 @@ index 1d6565e8..b23a797 100644
  	return 0;
  }
 diff --git a/net/core/dev.c b/net/core/dev.c
-index 071c589..7ff9f83e 100644
+index 8e187f9..9f30c3e 100644
 --- a/net/core/dev.c
 +++ b/net/core/dev.c
 @@ -2316,6 +2316,7 @@ static void __netif_reschedule(struct Qdisc *q)
@@ -176,5 +176,5 @@ index 071c589..7ff9f83e 100644
  	/* Process offline CPU's input_pkt_queue */
  	while ((skb = __skb_dequeue(&oldsd->process_queue))) {
 -- 
-1.9.1
+2.7.4
 

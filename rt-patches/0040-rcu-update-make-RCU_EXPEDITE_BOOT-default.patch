@@ -1,7 +1,7 @@
-From b91216723685e74f0cf2bca48cfb3d688a5dc4ca Mon Sep 17 00:00:00 2001
+From 28ab3c52788fb2c7b9f86a429b0fdda3d2c90786 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Wed, 2 Nov 2016 16:45:58 +0100
-Subject: [PATCH 040/369] rcu: update: make RCU_EXPEDITE_BOOT default
+Subject: [PATCH 040/371] rcu: update: make RCU_EXPEDITE_BOOT default
 
 RCU_EXPEDITE_BOOT should speed up the boot process by enforcing
 synchronize_rcu_expedited() instead of synchronize_rcu() during the boot
@@ -53,7 +53,7 @@ index 4f6db7e..019b470 100644
  
  /*
   * Should normal grace-period primitives be expedited?  Intended for
-@@ -182,8 +181,7 @@ void rcu_unexpedite_gp(void)
+@@ -182,8 +181,7 @@ EXPORT_SYMBOL_GPL(rcu_unexpedite_gp);
   */
  void rcu_end_inkernel_boot(void)
  {
@@ -64,5 +64,5 @@ index 4f6db7e..019b470 100644
  		WRITE_ONCE(rcu_normal, 1);
  }
 -- 
-1.9.1
+2.7.4
 

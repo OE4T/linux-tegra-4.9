@@ -1,7 +1,7 @@
-From 7372fc549b1f406683e7df652b07a9eb77ef6928 Mon Sep 17 00:00:00 2001
+From edf16ff1e1ba062b8d65fa21e1c300cb9d2d16a5 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Sat, 25 Jun 2011 09:21:04 +0200
-Subject: [PATCH 133/369] sched: Add saved_state for tasks blocked on sleeping
+Subject: [PATCH 133/371] sched: Add saved_state for tasks blocked on sleeping
  locks
 
 Spinlocks are state preserving in !RT. RT changes the state when a
@@ -18,10 +18,10 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  3 files changed, 33 insertions(+), 1 deletion(-)
 
 diff --git a/include/linux/sched.h b/include/linux/sched.h
-index f1a50a6..307c217 100644
+index 1d9c8b3..d040925 100644
 --- a/include/linux/sched.h
 +++ b/include/linux/sched.h
-@@ -1641,6 +1641,7 @@ struct task_struct {
+@@ -1642,6 +1642,7 @@ struct task_struct {
  	struct thread_info thread_info;
  #endif
  	volatile long state;	/* -1 unrunnable, 0 runnable, >0 stopped */
@@ -29,7 +29,7 @@ index f1a50a6..307c217 100644
  	void *stack;
  	atomic_t usage;
  	unsigned int flags;	/* per process flags, defined below */
-@@ -2891,6 +2892,7 @@ static inline struct user_struct *get_uid(struct user_struct *u)
+@@ -2892,6 +2893,7 @@ extern void xtime_update(unsigned long ticks);
  
  extern int wake_up_state(struct task_struct *tsk, unsigned int state);
  extern int wake_up_process(struct task_struct *tsk);
@@ -38,10 +38,10 @@ index f1a50a6..307c217 100644
  #ifdef CONFIG_SMP
   extern void kick_process(struct task_struct *tsk);
 diff --git a/kernel/sched/core.c b/kernel/sched/core.c
-index 4846993..4ecc7c3 100644
+index 631ac414..c553a8d 100644
 --- a/kernel/sched/core.c
 +++ b/kernel/sched/core.c
-@@ -2059,8 +2059,25 @@ static void ttwu_queue(struct task_struct *p, int cpu, int wake_flags)
+@@ -2082,8 +2082,25 @@ try_to_wake_up(struct task_struct *p, unsigned int state, int wake_flags)
  	 */
  	smp_mb__before_spinlock();
  	raw_spin_lock_irqsave(&p->pi_lock, flags);
@@ -68,7 +68,7 @@ index 4846993..4ecc7c3 100644
  
  	trace_sched_waking(p);
  
-@@ -2222,6 +2239,18 @@ int wake_up_process(struct task_struct *p)
+@@ -2245,6 +2262,18 @@ int wake_up_process(struct task_struct *p)
  }
  EXPORT_SYMBOL(wake_up_process);
  
@@ -100,5 +100,5 @@ index a2e94a0..0c6e005 100644
  /*
   * To aid in avoiding the subversion of "niceness" due to uneven distribution
 -- 
-1.9.1
+2.7.4
 

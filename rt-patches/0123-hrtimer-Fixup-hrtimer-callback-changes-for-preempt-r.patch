@@ -1,7 +1,7 @@
-From ca22225a347ddbd930888493778944881824fb05 Mon Sep 17 00:00:00 2001
+From 528eb8f02040fc5b01846e15fc8d9ea30b60c592 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Fri, 3 Jul 2009 08:44:31 -0500
-Subject: [PATCH 123/369] hrtimer: Fixup hrtimer callback changes for
+Subject: [PATCH 123/371] hrtimer: Fixup hrtimer callback changes for
  preempt-rt
 
 In preempt-rt we can not call the callbacks which take sleeping locks
@@ -68,7 +68,7 @@ index b7c2d54..65d0671 100644
  	unsigned int			active_bases;
  	unsigned int			clock_was_set_seq;
 diff --git a/kernel/sched/core.c b/kernel/sched/core.c
-index 0c4ce3a..bf55d87 100644
+index f56953c..9515b90 100644
 --- a/kernel/sched/core.c
 +++ b/kernel/sched/core.c
 @@ -360,6 +360,7 @@ static void init_rq_hrtick(struct rq *rq)
@@ -95,7 +95,7 @@ diff --git a/kernel/time/hrtimer.c b/kernel/time/hrtimer.c
 index 7ab5110..5493ae4 100644
 --- a/kernel/time/hrtimer.c
 +++ b/kernel/time/hrtimer.c
-@@ -720,11 +720,8 @@ void clock_was_set_delayed(void)
+@@ -720,11 +720,8 @@ static inline int hrtimer_is_hres_enabled(void) { return 0; }
  static inline void hrtimer_switch_to_hres(void) { }
  static inline void
  hrtimer_force_reprogram(struct hrtimer_cpu_base *base, int skip_equal) { }
@@ -352,5 +352,5 @@ index 395721f..953297f 100644
  	/* Enable the perf event */
  	watchdog_nmi_enable(cpu);
 -- 
-1.9.1
+2.7.4
 

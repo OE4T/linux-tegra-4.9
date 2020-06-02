@@ -1,7 +1,7 @@
-From 52416708450f73ff79dcf5eba4243e14548c3ecc Mon Sep 17 00:00:00 2001
+From 81e4c2f5d1854857542004e88a7e9b9c01aad517 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Tue, 5 Sep 2017 14:11:41 +0200
-Subject: [PATCH 343/369] iommu/amd: Use raw_cpu_ptr() instead of get_cpu_ptr()
+Subject: [PATCH 343/371] iommu/amd: Use raw_cpu_ptr() instead of get_cpu_ptr()
  for ->flush_queue
 
 get_cpu_ptr() disabled preemption and returns the ->flush_queue object
@@ -23,10 +23,10 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  1 file changed, 1 insertion(+), 3 deletions(-)
 
 diff --git a/drivers/iommu/amd_iommu.c b/drivers/iommu/amd_iommu.c
-index e8801a8..7cf12b3 100644
+index 0fc3c9e..14dab4a 100644
 --- a/drivers/iommu/amd_iommu.c
 +++ b/drivers/iommu/amd_iommu.c
-@@ -2289,7 +2289,7 @@ static void queue_add(struct dma_ops_domain *dma_dom,
+@@ -2296,7 +2296,7 @@ static void queue_add(struct dma_ops_domain *dma_dom,
  	pages     = __roundup_pow_of_two(pages);
  	address >>= PAGE_SHIFT;
  
@@ -35,7 +35,7 @@ index e8801a8..7cf12b3 100644
  	spin_lock_irqsave(&queue->lock, flags);
  
  	if (queue->next == FLUSH_QUEUE_SIZE)
-@@ -2306,8 +2306,6 @@ static void queue_add(struct dma_ops_domain *dma_dom,
+@@ -2313,8 +2313,6 @@ static void queue_add(struct dma_ops_domain *dma_dom,
  
  	if (atomic_cmpxchg(&queue_timer_on, 0, 1) == 0)
  		mod_timer(&queue_timer, jiffies + msecs_to_jiffies(10));
@@ -45,5 +45,5 @@ index e8801a8..7cf12b3 100644
  
  
 -- 
-1.9.1
+2.7.4
 

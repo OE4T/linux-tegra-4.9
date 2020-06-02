@@ -1,7 +1,7 @@
-From dedd57c84659cbde8d58b3df24eabd0b5c05520c Mon Sep 17 00:00:00 2001
+From 376e82d4c738c526f3669066bdb4590b98677cb6 Mon Sep 17 00:00:00 2001
 From: Steven Rostedt <rostedt@goodmis.org>
 Date: Thu, 5 Dec 2013 09:16:52 -0500
-Subject: [PATCH 282/369] cpu hotplug: Document why PREEMPT_RT uses a spinlock
+Subject: [PATCH 282/371] cpu hotplug: Document why PREEMPT_RT uses a spinlock
 
 The patch:
 
@@ -57,5 +57,5 @@ index 87424f1..583f6ac 100644
  #else
  	struct mutex mutex;
 -- 
-1.9.1
+2.7.4
 

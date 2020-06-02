@@ -1,7 +1,7 @@
-From c2e29a938c9cf8af677ac58163b9608c8f4fde9f Mon Sep 17 00:00:00 2001
+From b3d136a3545336b541469c0d3a7957a53f99c303 Mon Sep 17 00:00:00 2001
 From: Tiejun Chen <tiejun.chen@windriver.com>
 Date: Wed, 18 Dec 2013 17:51:49 +0800
-Subject: [PATCH 189/369] rcutree/rcu_bh_qs: Disable irq while calling
+Subject: [PATCH 189/371] rcutree/rcu_bh_qs: Disable irq while calling
  rcu_preempt_qs()
 
 Any callers to the function rcu_preempt_qs() must disable irqs in
@@ -36,7 +36,7 @@ diff --git a/kernel/rcu/tree.c b/kernel/rcu/tree.c
 index b33efec..dc5638f 100644
 --- a/kernel/rcu/tree.c
 +++ b/kernel/rcu/tree.c
-@@ -265,7 +265,12 @@ void rcu_sched_qs(void)
+@@ -265,7 +265,12 @@ static void rcu_preempt_qs(void);
  
  void rcu_bh_qs(void)
  {
@@ -50,5 +50,5 @@ index b33efec..dc5638f 100644
  #else
  void rcu_bh_qs(void)
 -- 
-1.9.1
+2.7.4
 

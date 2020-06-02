@@ -1,7 +1,7 @@
-From cadb56a18a44eaa23cd53828da78ac4ca2a9ba4b Mon Sep 17 00:00:00 2001
+From 9d8aaf80dd1052698e525e08026fd3b9fa17ecaa Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Mon, 9 Jul 2018 11:58:08 +0200
-Subject: [PATCH 352/369] rcu: Do not include rtmutex_common.h unconditionally
+Subject: [PATCH 352/371] rcu: Do not include rtmutex_common.h unconditionally
 
 [ upstream commit b88697810d7c1d102a529990f9071b0f14cfe6df ]
 
@@ -40,5 +40,5 @@ index a1a7baf..3d18d08 100644
  
  static void rcu_initiate_boost_trace(struct rcu_node *rnp)
 -- 
-1.9.1
+2.7.4
 

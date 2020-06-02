@@ -1,7 +1,7 @@
-From 4d01cb0fa065b42cf01136ff95ff0ddb630cb76b Mon Sep 17 00:00:00 2001
+From dbf4d76ae6837b4f9066235369037019cabc42d5 Mon Sep 17 00:00:00 2001
 From: Frank Rowand <frank.rowand@am.sony.com>
 Date: Mon, 19 Sep 2011 14:51:14 -0700
-Subject: [PATCH 051/369] arm: Convert arm boot_lock to raw
+Subject: [PATCH 051/371] arm: Convert arm boot_lock to raw
 
 The arm boot_lock is used by the secondary processor startup code.  The locking
 task is the idle thread, which has idle->sched_class == &idle_sched_class.
@@ -174,7 +174,7 @@ diff --git a/arch/arm/mach-omap2/omap-smp.c b/arch/arm/mach-omap2/omap-smp.c
 index f7f36da..7e865f1 100644
 --- a/arch/arm/mach-omap2/omap-smp.c
 +++ b/arch/arm/mach-omap2/omap-smp.c
-@@ -64,7 +64,7 @@ struct omap_smp_config {
+@@ -64,7 +64,7 @@ static const struct omap_smp_config omap5_cfg __initconst = {
  	.startup_addr = omap5_secondary_startup,
  };
  
@@ -423,5 +423,5 @@ index c236651..6b60f58 100644
  	return pen_release != -1 ? -ENOSYS : 0;
  }
 -- 
-1.9.1
+2.7.4
 

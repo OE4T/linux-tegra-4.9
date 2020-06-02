@@ -1,7 +1,7 @@
-From 610d8e76db821224ed8e110e65ea0f0fc208c355 Mon Sep 17 00:00:00 2001
+From d55c8f4bbc4302561abb18f3ca513c37f68ac751 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Sun, 15 Nov 2015 18:40:17 +0100
-Subject: [PATCH 245/369] irqwork: Move irq safe work to irq context
+Subject: [PATCH 245/371] irqwork: Move irq safe work to irq context
 
 On architectures where arch_irq_work_has_interrupt() returns false, we
 end up running the irq safe work from the softirq context. That
@@ -25,7 +25,7 @@ diff --git a/include/linux/irq_work.h b/include/linux/irq_work.h
 index 0e427a9..2543aab 100644
 --- a/include/linux/irq_work.h
 +++ b/include/linux/irq_work.h
-@@ -52,4 +52,10 @@ void init_irq_work(struct irq_work *work, void (*func)(struct irq_work *))
+@@ -52,4 +52,10 @@ static inline bool irq_work_needs_cpu(void) { return false; }
  static inline void irq_work_run(void) { }
  #endif
  
@@ -37,7 +37,7 @@ index 0e427a9..2543aab 100644
 +
  #endif /* _LINUX_IRQ_WORK_H */
 diff --git a/kernel/irq_work.c b/kernel/irq_work.c
-index 0ddaf1e..2899ba0d 100644
+index 0ddaf1e..2899ba0 100644
 --- a/kernel/irq_work.c
 +++ b/kernel/irq_work.c
 @@ -200,8 +200,17 @@ void irq_work_tick(void)
@@ -83,5 +83,5 @@ index e345117..f8b954f 100644
  	__run_timers(base);
  	if (IS_ENABLED(CONFIG_NO_HZ_COMMON))
 -- 
-1.9.1
+2.7.4
 

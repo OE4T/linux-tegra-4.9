@@ -1,7 +1,7 @@
-From 915f1071e4d89dce132e7ff67cf3cdf2754806b8 Mon Sep 17 00:00:00 2001
+From a82be2c7da01db0440d24527976613a2a710eb9a Mon Sep 17 00:00:00 2001
 From: Alex Shi <alex.shi@linaro.org>
 Date: Thu, 6 Jul 2017 16:47:46 +0800
-Subject: [PATCH 336/369] cpu_pm: replace raw_notifier to atomic_notifier
+Subject: [PATCH 336/371] cpu_pm: replace raw_notifier to atomic_notifier
 
 This patch replace a rwlock and raw notifier by atomic notifier which
 protected by spin_lock and rcu.
@@ -96,7 +96,7 @@ index b14df91..10f4640 100644
  }
  EXPORT_SYMBOL_GPL(cpu_pm_register_notifier);
  
-@@ -69,14 +61,7 @@ int cpu_pm_register_notifier(struct notifier_block *nb)
+@@ -69,14 +61,7 @@ EXPORT_SYMBOL_GPL(cpu_pm_register_notifier);
   */
  int cpu_pm_unregister_notifier(struct notifier_block *nb)
  {
@@ -130,7 +130,7 @@ index b14df91..10f4640 100644
  
  	return ret;
  }
-@@ -129,14 +111,7 @@ int cpu_pm_enter(void)
+@@ -129,14 +111,7 @@ EXPORT_SYMBOL_GPL(cpu_pm_enter);
   */
  int cpu_pm_exit(void)
  {
@@ -164,7 +164,7 @@ index b14df91..10f4640 100644
  
  	return ret;
  }
-@@ -193,14 +165,7 @@ int cpu_cluster_pm_enter(void)
+@@ -193,14 +165,7 @@ EXPORT_SYMBOL_GPL(cpu_cluster_pm_enter);
   */
  int cpu_cluster_pm_exit(void)
  {
@@ -181,5 +181,5 @@ index b14df91..10f4640 100644
  EXPORT_SYMBOL_GPL(cpu_cluster_pm_exit);
  
 -- 
-1.9.1
+2.7.4
 

@@ -1,7 +1,7 @@
-From 431ddd8e0e2f86b688c5db0cbfc7a592d49d5d10 Mon Sep 17 00:00:00 2001
+From ae20591e968716a55d7e74df88c2b0c05bbf1769 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Wed, 13 Jan 2016 15:55:02 +0100
-Subject: [PATCH 236/369] net: move xmit_recursion to per-task variable on -RT
+Subject: [PATCH 236/371] net: move xmit_recursion to per-task variable on -RT
 
 A softirq on -RT can be preempted. That means one task is in
 __dev_queue_xmit(), gets preempted and another task may enter
@@ -23,10 +23,10 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  4 files changed, 51 insertions(+), 8 deletions(-)
 
 diff --git a/include/linux/netdevice.h b/include/linux/netdevice.h
-index b495762..54ca094 100644
+index 3b0fa22..8325b61 100644
 --- a/include/linux/netdevice.h
 +++ b/include/linux/netdevice.h
-@@ -2471,14 +2471,53 @@ static inline void unregister_netdevice(struct net_device *dev)
+@@ -2474,14 +2474,53 @@ void netdev_freemem(struct net_device *dev);
  void synchronize_net(void);
  int init_dummy_netdev(struct net_device *dev);
  
@@ -82,10 +82,10 @@ index b495762..54ca094 100644
  struct net_device *__dev_get_by_index(struct net *net, int ifindex);
  struct net_device *dev_get_by_index_rcu(struct net *net, int ifindex);
 diff --git a/include/linux/sched.h b/include/linux/sched.h
-index 43183df..778f0591 100644
+index d674247..c12018e 100644
 --- a/include/linux/sched.h
 +++ b/include/linux/sched.h
-@@ -2175,6 +2175,9 @@ struct task_struct {
+@@ -2176,6 +2176,9 @@ struct task_struct {
  #ifdef CONFIG_DEBUG_ATOMIC_SLEEP
  	unsigned long	task_state_change;
  #endif
@@ -96,7 +96,7 @@ index 43183df..778f0591 100644
  #ifdef CONFIG_MMU
  	struct task_struct *oom_reaper_list;
 diff --git a/net/core/dev.c b/net/core/dev.c
-index 7e9749e..1b44303 100644
+index 95016f9..bb6c223 100644
 --- a/net/core/dev.c
 +++ b/net/core/dev.c
 @@ -3225,8 +3225,10 @@ static void skb_update_prio(struct sk_buff *skb)
@@ -158,5 +158,5 @@ index c385c55..feb96c2 100644
  	return ret;
  }
 -- 
-1.9.1
+2.7.4
 

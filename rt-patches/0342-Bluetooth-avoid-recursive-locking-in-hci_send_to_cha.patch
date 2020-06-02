@@ -1,7 +1,7 @@
-From 91e449f40a953ad68ac581decf696ad568d4aace Mon Sep 17 00:00:00 2001
+From 631f219e75d366bb9e005b7145536df6b1ff51bb Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Thu, 21 Sep 2017 15:35:57 +0200
-Subject: [PATCH 342/369] Bluetooth: avoid recursive locking in
+Subject: [PATCH 342/371] Bluetooth: avoid recursive locking in
  hci_send_to_channel()
 
 Mart reported a deadlock in -RT in the call path:
@@ -72,5 +72,5 @@ index c88a600..5de85b5 100644
  	}
  
 -- 
-1.9.1
+2.7.4
 

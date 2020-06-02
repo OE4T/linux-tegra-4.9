@@ -1,7 +1,7 @@
-From 3f99b513fb91a87be94e684d05eeb225cb2c3f6e Mon Sep 17 00:00:00 2001
+From 36c725eb31f63b513ef54ed1973d96d0362cc369 Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Wed, 22 Mar 2017 11:35:54 +0100
-Subject: [PATCH 011/369] futex: Rework inconsistent rt_mutex/futex_q state
+Subject: [PATCH 011/371] futex: Rework inconsistent rt_mutex/futex_q state
 
 Upstream commit 73d786bd043ebc855f349c81ea805f6b11cbf2aa
 
@@ -86,7 +86,7 @@ index d561ceb..6c0eb8a 100644
  
  	/*
  	 * We pass it to the next owner. The WAITERS bit is always
-@@ -2381,7 +2388,6 @@ static int fixup_pi_state_owner(u32 __user *uaddr, struct futex_q *q,
+@@ -2381,7 +2388,6 @@ static long futex_wait_restart(struct restart_block *restart);
   */
  static int fixup_owner(u32 __user *uaddr, struct futex_q *q, int locked)
  {
@@ -141,5 +141,5 @@ index d561ceb..6c0eb8a 100644
  out:
  	return ret ? ret : locked;
 -- 
-1.9.1
+2.7.4
 

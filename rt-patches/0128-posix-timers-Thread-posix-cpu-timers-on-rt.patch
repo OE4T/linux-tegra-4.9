@@ -1,7 +1,7 @@
-From d95ff7886f7c67e2ce06a78c87ebf368b4e6606a Mon Sep 17 00:00:00 2001
+From f5ad7efa8f8c3bd295ceeea7989fb09af2284528 Mon Sep 17 00:00:00 2001
 From: John Stultz <johnstul@us.ibm.com>
 Date: Fri, 3 Jul 2009 08:29:58 -0500
-Subject: [PATCH 128/369] posix-timers: Thread posix-cpu-timers on -rt
+Subject: [PATCH 128/371] posix-timers: Thread posix-cpu-timers on -rt
 
 posix-cpu-timer code takes non -rt safe locks in hard irq
 context. Move it to a thread.
@@ -21,7 +21,7 @@ diff --git a/include/linux/init_task.h b/include/linux/init_task.h
 index d359b1a..a56e263 100644
 --- a/include/linux/init_task.h
 +++ b/include/linux/init_task.h
-@@ -150,6 +150,12 @@
+@@ -150,6 +150,12 @@ extern struct task_group root_task_group;
  # define INIT_PERF_EVENTS(tsk)
  #endif
  
@@ -34,7 +34,7 @@ index d359b1a..a56e263 100644
  #ifdef CONFIG_VIRT_CPU_ACCOUNTING_GEN
  # define INIT_VTIME(tsk)						\
  	.vtime_seqcount = SEQCNT_ZERO(tsk.vtime_seqcount),	\
-@@ -251,6 +257,7 @@
+@@ -251,6 +257,7 @@ extern struct task_group root_task_group;
  	.cpu_timers	= INIT_CPU_TIMERS(tsk.cpu_timers),		\
  	.pi_lock	= __RAW_SPIN_LOCK_UNLOCKED(tsk.pi_lock),	\
  	.timer_slack_ns = 50000, /* 50 usec default slack */		\
@@ -43,10 +43,10 @@ index d359b1a..a56e263 100644
  		[PIDTYPE_PID]  = INIT_PID_LINK(PIDTYPE_PID),		\
  		[PIDTYPE_PGID] = INIT_PID_LINK(PIDTYPE_PGID),		\
 diff --git a/include/linux/sched.h b/include/linux/sched.h
-index 132a0ea..d9fb0e6 100644
+index f0d5ba3..e8a6cfb 100644
 --- a/include/linux/sched.h
 +++ b/include/linux/sched.h
-@@ -1838,6 +1838,9 @@ struct task_struct {
+@@ -1839,6 +1839,9 @@ struct task_struct {
  
  	struct task_cputime cputime_expires;
  	struct list_head cpu_timers[3];
@@ -57,7 +57,7 @@ index 132a0ea..d9fb0e6 100644
  /* process credentials */
  	const struct cred __rcu *ptracer_cred; /* Tracer's credentials at attach */
 diff --git a/kernel/fork.c b/kernel/fork.c
-index 897a4c6..206afae 100644
+index 76f92bd..4dbe0fb 100644
 --- a/kernel/fork.c
 +++ b/kernel/fork.c
 @@ -1454,6 +1454,9 @@ static void rt_mutex_init_task(struct task_struct *p)
@@ -308,5 +308,5 @@ index 21a27bb..6ee4181 100644
   * Set one of the process-wide special case CPU timers or RLIMIT_CPU.
   * The tsk->sighand->siglock must be held by the caller.
 -- 
-1.9.1
+2.7.4
 

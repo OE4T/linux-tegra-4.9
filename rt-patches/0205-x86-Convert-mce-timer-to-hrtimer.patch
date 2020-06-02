@@ -1,7 +1,7 @@
-From 1984bdaeb9301651116d026ad08fa6d86aaaa55b Mon Sep 17 00:00:00 2001
+From 79274d9709f88576aadb2aef589efb86ef0f86ff Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Mon, 13 Dec 2010 16:33:39 +0100
-Subject: [PATCH 205/369] x86: Convert mce timer to hrtimer
+Subject: [PATCH 205/371] x86: Convert mce timer to hrtimer
 
 mce_timer is started in atomic contexts of cpu bringup. This results
 in might_sleep() warnings on RT. Convert mce_timer to a hrtimer to
@@ -26,7 +26,7 @@ fold in:
  1 file changed, 20 insertions(+), 32 deletions(-)
 
 diff --git a/arch/x86/kernel/cpu/mcheck/mce.c b/arch/x86/kernel/cpu/mcheck/mce.c
-index 7e6163c..d8febf3 100644
+index 25310d2..3565b5d 100644
 --- a/arch/x86/kernel/cpu/mcheck/mce.c
 +++ b/arch/x86/kernel/cpu/mcheck/mce.c
 @@ -41,6 +41,7 @@
@@ -37,7 +37,7 @@ index 7e6163c..d8febf3 100644
  #include <linux/jump_label.h>
  
  #include <asm/processor.h>
-@@ -1335,7 +1336,7 @@ void mce_log_therm_throt_event(__u64 status)
+@@ -1336,7 +1337,7 @@ void mce_log_therm_throt_event(__u64 status)
  static unsigned long check_interval = INITIAL_CHECK_INTERVAL;
  
  static DEFINE_PER_CPU(unsigned long, mce_next_interval); /* in jiffies */
@@ -46,7 +46,7 @@ index 7e6163c..d8febf3 100644
  
  static unsigned long mce_adjust_timer_default(unsigned long interval)
  {
-@@ -1344,32 +1345,18 @@ static unsigned long mce_adjust_timer_default(unsigned long interval)
+@@ -1345,32 +1346,18 @@ static unsigned long mce_adjust_timer_default(unsigned long interval)
  
  static unsigned long (*mce_adjust_timer)(unsigned long interval) = mce_adjust_timer_default;
  
@@ -85,7 +85,7 @@ index 7e6163c..d8febf3 100644
  	iv = __this_cpu_read(mce_next_interval);
  
  	if (mce_available(this_cpu_ptr(&cpu_info))) {
-@@ -1392,7 +1379,7 @@ static void mce_timer_fn(unsigned long data)
+@@ -1393,7 +1380,7 @@ static void mce_timer_fn(unsigned long data)
  
  done:
  	__this_cpu_write(mce_next_interval, iv);
@@ -94,7 +94,7 @@ index 7e6163c..d8febf3 100644
  }
  
  /*
-@@ -1400,7 +1387,7 @@ static void mce_timer_fn(unsigned long data)
+@@ -1401,7 +1388,7 @@ static void mce_timer_fn(unsigned long data)
   */
  void mce_timer_kick(unsigned long interval)
  {
@@ -103,7 +103,7 @@ index 7e6163c..d8febf3 100644
  	unsigned long iv = __this_cpu_read(mce_next_interval);
  
  	__restart_timer(t, interval);
-@@ -1415,7 +1402,7 @@ static void mce_timer_delete_all(void)
+@@ -1416,7 +1403,7 @@ static void mce_timer_delete_all(void)
  	int cpu;
  
  	for_each_online_cpu(cpu)
@@ -112,7 +112,7 @@ index 7e6163c..d8febf3 100644
  }
  
  static void mce_do_trigger(struct work_struct *work)
-@@ -1755,7 +1742,7 @@ static void __mcheck_cpu_clear_vendor(struct cpuinfo_x86 *c)
+@@ -1756,7 +1743,7 @@ static void __mcheck_cpu_clear_vendor(struct cpuinfo_x86 *c)
  	}
  }
  
@@ -121,7 +121,7 @@ index 7e6163c..d8febf3 100644
  {
  	unsigned long iv = check_interval * HZ;
  
-@@ -1764,16 +1751,17 @@ static void mce_start_timer(unsigned int cpu, struct timer_list *t)
+@@ -1765,16 +1752,17 @@ static void mce_start_timer(unsigned int cpu, struct timer_list *t)
  
  	per_cpu(mce_next_interval, cpu) = iv;
  
@@ -143,7 +143,7 @@ index 7e6163c..d8febf3 100644
  	mce_start_timer(cpu, t);
  }
  
-@@ -2518,6 +2506,8 @@ static void mce_disable_cpu(void *h)
+@@ -2519,6 +2507,8 @@ static void mce_disable_cpu(void *h)
  	if (!mce_available(raw_cpu_ptr(&cpu_info)))
  		return;
  
@@ -152,7 +152,7 @@ index 7e6163c..d8febf3 100644
  	if (!(action & CPU_TASKS_FROZEN))
  		cmci_clear();
  
-@@ -2540,6 +2530,7 @@ static void mce_reenable_cpu(void *h)
+@@ -2541,6 +2531,7 @@ static void mce_reenable_cpu(void *h)
  		if (b->init)
  			wrmsrl(msr_ops.ctl(i), b->ctl);
  	}
@@ -160,7 +160,7 @@ index 7e6163c..d8febf3 100644
  }
  
  /* Get notified when a cpu comes on/off. Be hotplug friendly. */
-@@ -2547,7 +2538,6 @@ static void mce_reenable_cpu(void *h)
+@@ -2548,7 +2539,6 @@ static int
  mce_cpu_callback(struct notifier_block *nfb, unsigned long action, void *hcpu)
  {
  	unsigned int cpu = (unsigned long)hcpu;
@@ -168,7 +168,7 @@ index 7e6163c..d8febf3 100644
  
  	switch (action & ~CPU_TASKS_FROZEN) {
  	case CPU_ONLINE:
-@@ -2567,11 +2557,9 @@ static void mce_reenable_cpu(void *h)
+@@ -2568,11 +2558,9 @@ mce_cpu_callback(struct notifier_block *nfb, unsigned long action, void *hcpu)
  		break;
  	case CPU_DOWN_PREPARE:
  		smp_call_function_single(cpu, mce_disable_cpu, &action, 1);
@@ -181,5 +181,5 @@ index 7e6163c..d8febf3 100644
  	}
  
 -- 
-1.9.1
+2.7.4
 

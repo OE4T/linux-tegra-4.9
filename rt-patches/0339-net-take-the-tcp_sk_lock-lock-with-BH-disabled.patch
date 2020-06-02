@@ -1,7 +1,7 @@
-From cc6d13e65767e81eb9aa8c5d2855e0554674492f Mon Sep 17 00:00:00 2001
+From f67c1da5de39274078f24b68b61ade22017fff26 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Mon, 21 Aug 2017 15:09:13 +0200
-Subject: [PATCH 339/369] net: take the tcp_sk_lock lock with BH disabled
+Subject: [PATCH 339/371] net: take the tcp_sk_lock lock with BH disabled
 
 Lockdep may complain about an unsafe locking scenario:
 |      CPU0                    CPU1
@@ -27,10 +27,10 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  1 file changed, 4 insertions(+), 4 deletions(-)
 
 diff --git a/net/ipv4/tcp_ipv4.c b/net/ipv4/tcp_ipv4.c
-index e7306c5..0550fd1 100644
+index 2dc3449..e7850d0 100644
 --- a/net/ipv4/tcp_ipv4.c
 +++ b/net/ipv4/tcp_ipv4.c
-@@ -704,8 +704,8 @@ static void tcp_v4_send_reset(const struct sock *sk, struct sk_buff *skb)
+@@ -705,8 +705,8 @@ static void tcp_v4_send_reset(const struct sock *sk, struct sk_buff *skb)
  	arg.tos = ip_hdr(skb)->tos;
  	arg.uid = sock_net_uid(net, sk && sk_fullsock(sk) ? sk : NULL);
  
@@ -40,7 +40,7 @@ index e7306c5..0550fd1 100644
  	ip_send_unicast_reply(*this_cpu_ptr(net->ipv4.tcp_sk),
  			      skb, &TCP_SKB_CB(skb)->header.h4.opt,
  			      ip_hdr(skb)->saddr, ip_hdr(skb)->daddr,
-@@ -713,8 +713,8 @@ static void tcp_v4_send_reset(const struct sock *sk, struct sk_buff *skb)
+@@ -714,8 +714,8 @@ static void tcp_v4_send_reset(const struct sock *sk, struct sk_buff *skb)
  
  	__TCP_INC_STATS(net, TCP_MIB_OUTSEGS);
  	__TCP_INC_STATS(net, TCP_MIB_OUTRSTS);
@@ -50,7 +50,7 @@ index e7306c5..0550fd1 100644
  
  #ifdef CONFIG_TCP_MD5SIG
  out:
-@@ -793,16 +793,16 @@ static void tcp_v4_send_ack(const struct sock *sk,
+@@ -794,16 +794,16 @@ static void tcp_v4_send_ack(const struct sock *sk,
  	arg.tos = tos;
  	arg.uid = sock_net_uid(net, sk_fullsock(sk) ? sk : NULL);
  
@@ -70,5 +70,5 @@ index e7306c5..0550fd1 100644
  
  static void tcp_v4_timewait_ack(struct sock *sk, struct sk_buff *skb)
 -- 
-1.9.1
+2.7.4
 

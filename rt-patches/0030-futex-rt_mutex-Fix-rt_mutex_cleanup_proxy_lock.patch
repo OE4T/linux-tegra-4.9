@@ -1,7 +1,7 @@
-From 26abd9105f98c6b2f84f7597385fa8c45bd8a84b Mon Sep 17 00:00:00 2001
+From a9e28890f579749acc8df19149ebce87a6566738 Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Mon, 22 May 2017 13:04:50 -0700
-Subject: [PATCH 030/369] futex,rt_mutex: Fix rt_mutex_cleanup_proxy_lock()
+Subject: [PATCH 030/371] futex,rt_mutex: Fix rt_mutex_cleanup_proxy_lock()
 
 Markus reported that the glibc/nptl/tst-robustpi8 test was failing after
 commit:
@@ -127,5 +127,5 @@ index ed2755b..4b2126d 100644
  	 * try_to_take_rt_mutex() sets the waiter bit unconditionally. We might
  	 * have to fix that up.
 -- 
-1.9.1
+2.7.4
 

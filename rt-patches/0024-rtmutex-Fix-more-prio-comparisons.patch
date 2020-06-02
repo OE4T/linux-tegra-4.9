@@ -1,7 +1,7 @@
-From 6853812168241fdf300e4b5c6a80aed29cdeec02 Mon Sep 17 00:00:00 2001
+From 7248d426021a179f9b629c8dd636db863575a600 Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Thu, 23 Mar 2017 15:56:14 +0100
-Subject: [PATCH 024/369] rtmutex: Fix more prio comparisons
+Subject: [PATCH 024/371] rtmutex: Fix more prio comparisons
 
 Upstream commit 19830e55247cddb3f46f1bf60b8e245593491bea
 
@@ -48,7 +48,7 @@ index e275b81..a8202c7 100644
  static inline int
  rt_mutex_waiter_less(struct rt_mutex_waiter *left,
  		     struct rt_mutex_waiter *right)
-@@ -241,6 +247,25 @@ static inline bool unlock_rt_mutex_safe(struct rt_mutex *lock,
+@@ -241,6 +247,25 @@ rt_mutex_waiter_less(struct rt_mutex_waiter *left,
  	return 0;
  }
  
@@ -103,5 +103,5 @@ index e275b81..a8202c7 100644
  		return;
  	}
 -- 
-1.9.1
+2.7.4
 

@@ -1,7 +1,7 @@
-From bb089083a6b8643ccb99f62e09e47d9d4f6b457c Mon Sep 17 00:00:00 2001
+From d189c93847c5f810f3935ffd761b92b2083c00ac Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Wed, 7 Mar 2012 21:00:34 +0100
-Subject: [PATCH 221/369] fs: dcache: Use cpu_chill() in trylock loops
+Subject: [PATCH 221/371] fs: dcache: Use cpu_chill() in trylock loops
 
 Retry loops on RT might loop forever when the modifying side was
 preempted. Use cpu_chill() instead of cpu_relax() to let the system
@@ -41,7 +41,7 @@ index d8e6d42..2e689ab 100644
  			}
  			spin_unlock(&p->d_lock);
 diff --git a/fs/dcache.c b/fs/dcache.c
-index 1fa3ca8..fc4bb74 100644
+index 80a3e1e..9e8b2cb 100644
 --- a/fs/dcache.c
 +++ b/fs/dcache.c
 @@ -19,6 +19,7 @@
@@ -83,7 +83,7 @@ index 1fa3ca8..fc4bb74 100644
  		goto repeat;
  	}
  }
-@@ -2386,7 +2398,7 @@ void d_delete(struct dentry * dentry)
+@@ -2382,7 +2394,7 @@ void d_delete(struct dentry * dentry)
  	if (dentry->d_lockref.count == 1) {
  		if (!spin_trylock(&inode->i_lock)) {
  			spin_unlock(&dentry->d_lock);
@@ -114,5 +114,5 @@ index 1b6d18b..95a7bc8 100644
  	}
  	/*
 -- 
-1.9.1
+2.7.4
 

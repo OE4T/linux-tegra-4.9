@@ -1,7 +1,7 @@
-From eb1edd60177e293fac3b63ab7794b483dfc8dd69 Mon Sep 17 00:00:00 2001
+From 6d0eaab5c76d9deca3182adebda171562de58c28 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Tue, 23 Jun 2015 15:32:51 +0200
-Subject: [PATCH 244/369] irqwork: push most work into softirq context
+Subject: [PATCH 244/371] irqwork: push most work into softirq context
 
 Initially we defered all irqwork into softirq because we didn't want the
 latency spikes if perf or another user was busy and delayed the RT task.
@@ -74,7 +74,7 @@ index bcf107c..0ddaf1e 100644
  		arch_send_call_function_single_ipi(cpu);
  
  	return true;
-@@ -86,6 +94,9 @@ bool irq_work_queue_on(struct irq_work *work, int cpu)
+@@ -86,6 +94,9 @@ EXPORT_SYMBOL_GPL(irq_work_queue_on);
  /* Enqueue the irq work @work on the current CPU */
  bool irq_work_queue(struct irq_work *work)
  {
@@ -147,10 +147,10 @@ index bcf107c..0ddaf1e 100644
  EXPORT_SYMBOL_GPL(irq_work_run);
  
 diff --git a/kernel/sched/core.c b/kernel/sched/core.c
-index 57bc1b7..f39ef52 100644
+index 2c4f4df..6522f8b 100644
 --- a/kernel/sched/core.c
 +++ b/kernel/sched/core.c
-@@ -6149,6 +6149,7 @@ static int init_rootdomain(struct root_domain *rd)
+@@ -6172,6 +6172,7 @@ static int init_rootdomain(struct root_domain *rd)
  	rd->rto_cpu = -1;
  	raw_spin_lock_init(&rd->rto_lock);
  	init_irq_work(&rd->rto_push_work, rto_push_irq_work_func);
@@ -195,5 +195,5 @@ index a416cee..e345117 100644
  	if (IS_ENABLED(CONFIG_NO_HZ_COMMON))
  		__run_timers(this_cpu_ptr(&timer_bases[BASE_DEF]));
 -- 
-1.9.1
+2.7.4
 

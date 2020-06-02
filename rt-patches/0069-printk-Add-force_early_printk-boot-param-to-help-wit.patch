@@ -1,7 +1,7 @@
-From a88636b022ad56bcc37de00fbc98629cf92acd8e Mon Sep 17 00:00:00 2001
+From f611285ee3b15ddd5bd9cf08f47ba355550cff94 Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Fri, 2 Sep 2011 14:41:29 +0200
-Subject: [PATCH 069/369] printk: Add "force_early_printk" boot param to help
+Subject: [PATCH 069/371] printk: Add "force_early_printk" boot param to help
  with debugging
 
 Gives me an option to screw printk and actually see what the machine
@@ -34,5 +34,5 @@ index f2f417d..7693563 100644
  {
  	printk_killswitch = true;
 -- 
-1.9.1
+2.7.4
 

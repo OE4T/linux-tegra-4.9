@@ -1,7 +1,7 @@
-From 58a353609ccf28a6fea96b1722d00c9f1ff6ccf5 Mon Sep 17 00:00:00 2001
+From def544e1c91190433bff31c9adc8fc1e902c6488 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Thu, 31 Aug 2017 18:19:06 +0200
-Subject: [PATCH 340/369] kernel/hrtimer: don't wakeup a process while holding
+Subject: [PATCH 340/371] kernel/hrtimer: don't wakeup a process while holding
  the hrtimer base lock
 
 We must not wake any process (and thus acquire the pi->lock) while
@@ -21,7 +21,7 @@ diff --git a/kernel/time/hrtimer.c b/kernel/time/hrtimer.c
 index a5b4e9a..2158fc5 100644
 --- a/kernel/time/hrtimer.c
 +++ b/kernel/time/hrtimer.c
-@@ -1447,7 +1447,7 @@ static int hrtimer_rt_defer(struct hrtimer *timer)
+@@ -1447,7 +1447,7 @@ static inline int hrtimer_rt_defer(struct hrtimer *timer) { return 0; }
  
  static enum hrtimer_restart hrtimer_wakeup(struct hrtimer *timer);
  
@@ -87,5 +87,5 @@ index a5b4e9a..2158fc5 100644
  
  /*
 -- 
-1.9.1
+2.7.4
 

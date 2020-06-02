@@ -1,7 +1,7 @@
-From e7d2dba41991afae8d06e43942de658ecafaac41 Mon Sep 17 00:00:00 2001
+From c323c9e3330eb088a9026598a528abe08d4119b4 Mon Sep 17 00:00:00 2001
 From: Julia Cartwright <julia@ni.com>
 Date: Mon, 7 May 2018 08:58:56 -0500
-Subject: [PATCH 365/369] locallock: provide {get,put}_locked_ptr() variants
+Subject: [PATCH 367/371] locallock: provide {get,put}_locked_ptr() variants
 
 Provide a set of locallocked accessors for pointers to per-CPU data;
 this is useful for dynamically-allocated per-CPU regions, for example.
@@ -46,5 +46,5 @@ index 280f884..0c3ff5b 100644
  #define local_lock_cpu(lvar)			get_cpu()
  #define local_unlock_cpu(lvar)			put_cpu()
 -- 
-1.9.1
+2.7.4
 

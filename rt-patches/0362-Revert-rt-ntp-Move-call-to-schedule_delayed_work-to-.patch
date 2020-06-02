@@ -1,7 +1,7 @@
-From 75ff78c9032c07a0fbf9a019c51d1bfc52b446f6 Mon Sep 17 00:00:00 2001
+From 13c3ddeaa1d419be0f6b87b4d70f1e6cb6e51f79 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Fri, 2 Mar 2018 11:37:57 +0100
-Subject: [PATCH 360/369] Revert "rt,ntp: Move call to schedule_delayed_work()
+Subject: [PATCH 362/371] Revert "rt,ntp: Move call to schedule_delayed_work()
  to helper thread"
 
 I've been looking at this in v3.10-RT where it got in. The patch
@@ -75,5 +75,5 @@ index 05b7391..6df8927 100644
  #else
  void ntp_notify_cmos_timer(void) { }
 -- 
-1.9.1
+2.7.4
 

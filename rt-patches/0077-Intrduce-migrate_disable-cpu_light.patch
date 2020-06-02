@@ -1,7 +1,7 @@
-From b9030cca5fe22cd26837d3231dd51b6d31481bd5 Mon Sep 17 00:00:00 2001
+From 67d4515ee3c239ed3ce0d634d3ee46122a385470 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Fri, 17 Jun 2011 15:42:38 +0200
-Subject: [PATCH 077/369] Intrduce migrate_disable() + cpu_light()
+Subject: [PATCH 077/371] Intrduce migrate_disable() + cpu_light()
 
 Introduce migrate_disable(). The task can't be pushed to another CPU but can
 be preempted.
@@ -59,7 +59,7 @@ diff --git a/include/linux/preempt.h b/include/linux/preempt.h
 index 26e0eaa..64f1488 100644
 --- a/include/linux/preempt.h
 +++ b/include/linux/preempt.h
-@@ -262,11 +262,20 @@
+@@ -262,11 +262,20 @@ do { \
  # define preempt_enable_rt()		preempt_enable()
  # define preempt_disable_nort()		barrier()
  # define preempt_enable_nort()		barrier()
@@ -81,10 +81,10 @@ index 26e0eaa..64f1488 100644
  
  #ifdef CONFIG_PREEMPT_NOTIFIERS
 diff --git a/include/linux/sched.h b/include/linux/sched.h
-index 4f44cae..6b573b0 100644
+index f60d1ea..9f77e2c 100644
 --- a/include/linux/sched.h
 +++ b/include/linux/sched.h
-@@ -1690,6 +1690,12 @@ struct task_struct {
+@@ -1691,6 +1691,12 @@ struct task_struct {
  #endif
  
  	unsigned int policy;
@@ -97,7 +97,7 @@ index 4f44cae..6b573b0 100644
  	int nr_cpus_allowed;
  	cpumask_t cpus_allowed;
  
-@@ -2171,14 +2177,6 @@ static inline struct vm_struct *task_stack_vm_area(const struct task_struct *t)
+@@ -2172,14 +2178,6 @@ static inline struct vm_struct *task_stack_vm_area(const struct task_struct *t)
  }
  #endif
  
@@ -112,7 +112,7 @@ index 4f44cae..6b573b0 100644
  #define TNF_MIGRATED	0x01
  #define TNF_NO_GROUP	0x02
  #define TNF_SHARED	0x04
-@@ -3717,6 +3715,31 @@ static inline void set_task_cpu(struct task_struct *p, unsigned int cpu)
+@@ -3718,6 +3716,31 @@ static inline void set_task_cpu(struct task_struct *p, unsigned int cpu)
  extern void task_decayed_load(struct task_struct *p, struct sched_avg *avg);
  #endif
  
@@ -159,10 +159,10 @@ index 68123c1..891c533 100644
   * Callback to arch code if there's nosmp or maxcpus=0 on the
   * boot command line:
 diff --git a/kernel/sched/core.c b/kernel/sched/core.c
-index 4809a11..01968de 100644
+index 5b64c77..8796245 100644
 --- a/kernel/sched/core.c
 +++ b/kernel/sched/core.c
-@@ -1117,6 +1117,11 @@ void do_set_cpus_allowed(struct task_struct *p, const struct cpumask *new_mask)
+@@ -1141,6 +1141,11 @@ void do_set_cpus_allowed(struct task_struct *p, const struct cpumask *new_mask)
  
  	lockdep_assert_held(&p->pi_lock);
  
@@ -174,7 +174,7 @@ index 4809a11..01968de 100644
  	queued = task_on_rq_queued(p);
  	running = task_current(rq, p);
  
-@@ -1197,7 +1202,7 @@ static int __set_cpus_allowed_ptr(struct task_struct *p,
+@@ -1221,7 +1226,7 @@ static int __set_cpus_allowed_ptr(struct task_struct *p,
  	}
  
  	/* Can the task run on the task's current CPU? If so, we're done */
@@ -183,7 +183,7 @@ index 4809a11..01968de 100644
  		goto out;
  
  	dest_cpu = cpumask_any_and(cpu_valid_mask, new_mask);
-@@ -3343,6 +3348,69 @@ static inline void schedule_debug(struct task_struct *prev)
+@@ -3366,6 +3371,69 @@ static inline void schedule_debug(struct task_struct *prev)
  	schedstat_inc(this_rq()->sched_count);
  }
  
@@ -295,5 +295,5 @@ index 1afec32..11fa431 100644
  	print_symbol("caller is %s\n", (long)__builtin_return_address(0));
  	dump_stack();
 -- 
-1.9.1
+2.7.4
 

@@ -1,7 +1,7 @@
-From 7bd6ff846f7c7e32e6fa73630195a2e94ea90c98 Mon Sep 17 00:00:00 2001
+From cc9fd93c94ccca5d49f9e5d84a40ccf55c809aa3 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Fri, 1 Dec 2017 10:42:03 +0100
-Subject: [PATCH 356/369] arm*: disable NEON in kernel mode
+Subject: [PATCH 358/371] arm*: disable NEON in kernel mode
 
 NEON in kernel mode is used by the crypto algorithms and raid6 code.
 While the raid6 code looks okay, the crypto algorithms do not: NEON
@@ -87,5 +87,5 @@ index 2b10984..b85a3b0 100644
  	select CRYPTO_AES
  	select CRYPTO_ABLK_HELPER
 -- 
-1.9.1
+2.7.4
 

@@ -1,7 +1,7 @@
-From bf55411ae39e4e8e8637cd5c2e9ffdf78670b39c Mon Sep 17 00:00:00 2001
+From a62b90b676d7949b1320e8262dbeadeb0f84e7eb Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Sat, 1 Apr 2017 12:51:00 +0200
-Subject: [PATCH 181/369] rtmutex: Provide rt_mutex_lock_state()
+Subject: [PATCH 181/371] rtmutex: Provide rt_mutex_lock_state()
 
 Allow rtmutex to be locked with arbitrary states. Preparatory patch for the
 rt rwsem rework.
@@ -17,7 +17,7 @@ diff --git a/include/linux/rtmutex.h b/include/linux/rtmutex.h
 index 30211c62..294a8b4 100644
 --- a/include/linux/rtmutex.h
 +++ b/include/linux/rtmutex.h
-@@ -105,6 +105,7 @@ static inline int rt_mutex_is_locked(struct rt_mutex *lock)
+@@ -105,6 +105,7 @@ extern void __rt_mutex_init(struct rt_mutex *lock, const char *name);
  extern void rt_mutex_destroy(struct rt_mutex *lock);
  
  extern void rt_mutex_lock(struct rt_mutex *lock);
@@ -29,7 +29,7 @@ diff --git a/kernel/locking/rtmutex.c b/kernel/locking/rtmutex.c
 index c3756e5..9076a74 100644
 --- a/kernel/locking/rtmutex.c
 +++ b/kernel/locking/rtmutex.c
-@@ -2008,21 +2008,32 @@ void rt_mutex_postunlock(struct wake_q_head *wake_q,
+@@ -2008,21 +2008,32 @@ rt_mutex_fastunlock(struct rt_mutex *lock,
  }
  
  /**
@@ -66,7 +66,7 @@ index c3756e5..9076a74 100644
   * @lock:		the rt_mutex to be locked
   *
   * Returns:
-@@ -2031,20 +2042,10 @@ void __sched rt_mutex_lock(struct rt_mutex *lock)
+@@ -2031,20 +2042,10 @@ EXPORT_SYMBOL_GPL(rt_mutex_lock);
   */
  int __sched rt_mutex_lock_interruptible(struct rt_mutex *lock)
  {
@@ -115,5 +115,5 @@ index c3756e5..9076a74 100644
   * rt_mutex_timed_lock - lock a rt_mutex interruptible
   *			the timeout structure is provided
 -- 
-1.9.1
+2.7.4
 

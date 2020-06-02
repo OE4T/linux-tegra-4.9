@@ -375,7 +375,7 @@
             gpio-hog;
             output-high;
             gpios = <TEGRA_GPIO(S, 0) GPIO_ACTIVE_HIGH>;
-            line-name = "CALL-RESET";
+            line-name = "CELL-RESET";
         };
 
         usb2-vbus-en {

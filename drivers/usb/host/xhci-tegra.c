@@ -1649,7 +1649,7 @@ static irqreturn_t tegra_xusb_mbox_thread(int irq, void *data)
 
 	mutex_lock(&tegra->lock);
 
-	if (tegra->suspended) {
+	if (tegra->suspended || pm_runtime_suspended(tegra->dev)) {
 		mutex_unlock(&tegra->lock);
 		return IRQ_HANDLED;
 	}

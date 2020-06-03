@@ -119,20 +119,46 @@
     // SDIO port in the M.2 interface for the Wifi Module
     sdhci@700b0400 {
         status = "okay";
-        cap-sdio-irq;
-        non-removable;
-        enable-sdio-wakeup;
-        bus-width = <4>;
-        only-1-8-v;
-        force-non-removable-rescan;
-        nvidia,disable-rtpm;
-        max-clk-limit = <204000000>;
-        tap-delay = <1>;
-        mmc-ddr-1_8v;
-        mmc-ocr-mask = <0>;
-        uhs-mask = <0x00000000>;
+        cap-sdio-irq;                    // Enable SDIO IRQ signaling on this interface
+        broken-cd;                       // There is no card detection available; polling must be used.
+        bus-width = <4>;                 // Module uses a 4 bit bus
+        force-non-removable-rescan;      // Enable to force rescan/reinit for non-removable devices
+        nvidia,disable-rtpm;             // Disable run time power management on this port.
+        max-clk-limit = <204000000>;     // Max clock 204 MHz
+        tap-delay = <1>;                 // Set by NVidia
+        default-drv-type = <0>;          // Type B - 50-ohm impedance on data lines
+        only-1-8-v;                      // Only use 1v8 signal levels
+        no-mmc;                          // Disable MMC memory detection on this port
+        no-sd;                           // Disable SD card detection on this port.
+
+        // Mask off HS200, HS400, and DDR50 modes which are not supported on our device.
+        uhs-mask = <0x68>;
+
+        // SDIO modes supported by the laird device.
+        sd-uhs-sdr104;
+        sd-uhs-sdr50;
+        sd-uhs-sdr25;
+        sd-uhs-sdr12;
+
+        // Remove properties already defined we don't want.
         /delete-property/ mmc-ddr-1_8v;
-        /delete-property/ keep-power-in-suspend;
+        /delete-property/ cap-mmc-highspeed;
+        /delete-property/ cap-sd-highspeed;
+        /delete-property/ mmc-ocr-mask;
+        /delete-property/ cd-inverted;
+        /delete-property/ wp-inverted;
+    };
+
+    // The plugin-manager settings disable SDIO support on the interface, this
+    // overrides the override to remove the setting.
+    plugin-manager {
+        fragement@10 {
+            override@1 {
+                _overlay_ {
+                    /delete-property/ no-sdio;
+                };
+            };
+        };
     };
 
     //*********************************************************************

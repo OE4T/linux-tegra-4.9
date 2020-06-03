@@ -297,7 +297,7 @@ static void scsi_strcpy_devinfo(char *name, char *to, size_t to_length,
 	size_t from_length;
 
 	from_length = strlen(from);
-	/* This zero-pads the destination */
+	/* this zero-pads the destination */
 	strncpy(to, from, to_length);
 	if (from_length < to_length && !compatible) {
 		/*

@@ -1,7 +1,7 @@
 /*
  * dsi.h: Functions implementing tegra dsi interface.
  *
- * Copyright (c) 2011-2019, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2011-2021, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -348,7 +348,7 @@ enum {
 #define	MIPI_T_HSTRAIL_PS_MIN(clk_ps)	max((8 * (clk_ps)), \
 					(60 * 1000 + 4 * (clk_ps)))
 #define MIPI_T_HSTRAIL_PS_MAX		NOT_DEFINED
-#define MIPI_T_HSZERO_PS_MIN		NOT_DEFINED
+#define MIPI_T_HSZERO_PS_MIN(clk_ps)	(105 * 1000 + 6 * (clk_ps))
 #define MIPI_T_HSZERO_PS_MAX		NOT_DEFINED
 #define MIPI_T_HSPREPARE_PS_MIN(clk_ps)	(40 * 1000 + 4 * (clk_ps))
 #define MIPI_T_HSPREPARE_PS_MAX(clk_ps)	(85 * 1000 + 6 * (clk_ps))
@@ -364,7 +364,7 @@ enum {
 #define MIPI_T_CLKPREPARE_PS_MAX	(95 * 1000)
 #define MIPI_T_CLKPRE_PS_MIN		(8 * 1000)
 #define MIPI_T_CLKPRE_PS_MAX		NOT_DEFINED
-#define	MIPI_T_WAKEUP_PS_MIN		(1 * 1000)
+#define	MIPI_T_WAKEUP_PS_MIN		(1 * 1000 * 1000)
 #define MIPI_T_WAKEUP_PS_MAX		NOT_DEFINED
 #define MIPI_T_TASURE_PS_MIN(tlpx_ps)	(tlpx_ps)
 #define MIPI_T_TASURE_PS_MAX(tlpx_ps)	(2 * (tlpx_ps))
@@ -382,37 +382,142 @@ enum {
 #define DSI_CONVERT_T_PHY_TO_T_PHY_PS(t_phy, clk_ps, hw_inc) \
 				(((t_phy) + (hw_inc)) * (DSI_TBYTE(clk_ps)))
 
+/* T210 */
 /* Default phy timing in ns */
-#define T_HSEXIT_PS_DEFAULT		(120 * 1000)
-#define T_HSTRAIL_PS_DEFAULT(clk_ps) \
-					max((8 * (clk_ps)), \
-					(60 * 1000 + 4 * (clk_ps)))
-#define T_DATZERO_PS_DEFAULT(clk_ps)	(145 * 1000 + 5 * (clk_ps))
-#define T_HSPREPARE_PS_DEFAULT(clk_ps)	(65 * 1000 + 5 * (clk_ps))
-#define T_CLKTRAIL_PS_DEFAULT		(80 * 1000)
-#define T_CLKPOST_PS_DEFAULT(clk_ps)	(70 * 1000 + 52 * (clk_ps))
-#define T_CLKZERO_PS_DEFAULT		(260 * 1000)
-#define T_TLPX_PS_DEFAULT		(60 * 1000)
-#define T_CLKPREPARE_PS_DEFAULT		(65 * 1000)
-#define T_TAGO_PS_DEFAULT		(4 * (T_TLPX_PS_DEFAULT))
-#define T_TASURE_PS_DEFAULT		(2 * (T_TLPX_PS_DEFAULT))
-#define T_TAGET_PS_DEFAULT		(5 * (T_TLPX_PS_DEFAULT))
+#define T_HSEXIT_PS_DEFAULT_t210		(120 * 1000)
+#define T_HSTRAIL_PS_DEFAULT_t210(clk_ps) \
+						max((8 * (clk_ps)), \
+						(60 * 1000 + 4 * (clk_ps)))
+#define T_DATZERO_PS_DEFAULT_t210(clk_ps)	(145 * 1000 + 5 * (clk_ps))
+#define T_HSPREPARE_PS_DEFAULT_t210(clk_ps)	(65 * 1000 + 5 * (clk_ps))
+#define T_CLKTRAIL_PS_DEFAULT_t210		(80 * 1000)
+#define T_CLKPOST_PS_DEFAULT_t210(clk_ps)	(70 * 1000 + 52 * (clk_ps))
+#define T_CLKZERO_PS_DEFAULT_t210		(260 * 1000)
+#define T_TLPX_PS_DEFAULT_t210			(60 * 1000)
+#define T_CLKPREPARE_PS_DEFAULT_t210		(65 * 1000)
+#define T_TAGO_PS_DEFAULT_t210			(4 * (T_TLPX_PS_DEFAULT))
+#define T_TASURE_PS_DEFAULT_t210		(2 * (T_TLPX_PS_DEFAULT))
+#define T_TAGET_PS_DEFAULT_t210			(5 * (T_TLPX_PS_DEFAULT))
 
 /* HW increment to phy register values */
-#define T_HSEXIT_HW_INC		1
-#define T_HSTRAIL_HW_INC	0
-#define T_DATZERO_HW_INC	3
-#define T_HSPREPARE_HW_INC	1
-#define T_CLKTRAIL_HW_INC	1
-#define T_CLKPOST_HW_INC	1
-#define T_CLKZERO_HW_INC	1
-#define T_TLPX_HW_INC		1
-#define T_CLKPREPARE_HW_INC	1
-#define T_TAGO_HW_INC		1
-#define T_TASURE_HW_INC		1
-#define T_TAGET_HW_INC		1
-#define T_CLKPRE_HW_INC		1
-#define T_WAKEUP_HW_INC		1
+#define T_HSEXIT_HW_INC_t210		1
+#define T_HSTRAIL_HW_INC_t210		0
+#define T_DATZERO_HW_INC_t210		3
+#define T_HSPREPARE_HW_INC_t210		1
+#define T_CLKTRAIL_HW_INC_t210		1
+#define T_CLKPOST_HW_INC_t210		1
+#define T_CLKZERO_HW_INC_t210		1
+#define T_TLPX_HW_INC_t210		1
+#define T_CLKPREPARE_HW_INC_t210	1
+#define T_TAGO_HW_INC_t210		1
+#define T_TASURE_HW_INC_t210		1
+#define T_TAGET_HW_INC_t210		1
+#define T_CLKPRE_HW_INC_t210		1
+#define T_WAKEUP_HW_INC_t210		1
+
+/* T186 */
+/* Default phy timing in ns */
+#define T_HSEXIT_PS_DEFAULT_t186		(120 * 1000)
+#define T_HSTRAIL_PS_DEFAULT_t186(clk_ps) \
+						max((8 * (clk_ps)), \
+						(60 * 1000 + 4 * (clk_ps)))
+#define T_DATZERO_PS_DEFAULT_t186(clk_ps)	(145 * 1000 + 5 * (clk_ps))
+#define T_HSPREPARE_PS_DEFAULT_t186(clk_ps)	(40 * 1000 + 4 * (clk_ps))
+#define T_CLKTRAIL_PS_DEFAULT_t186		(80 * 1000)
+#define T_CLKPOST_PS_DEFAULT_t186(clk_ps)	(70 * 1000 + 52 * (clk_ps))
+#define T_CLKZERO_PS_DEFAULT_t186		(260 * 1000)
+#define T_TLPX_PS_DEFAULT_t186			(60 * 1000)
+#define T_CLKPREPARE_PS_DEFAULT_t186		(60 * 1000)
+#define T_TAGO_PS_DEFAULT_t186			(4 * (T_TLPX_PS_DEFAULT))
+#define T_TASURE_PS_DEFAULT_t186		(T_TLPX_PS_DEFAULT)
+#define T_TAGET_PS_DEFAULT_t186			(5 * (T_TLPX_PS_DEFAULT))
+
+/* HW increment to phy register values */
+#define T_HSEXIT_HW_INC_t186		1
+#define T_HSTRAIL_HW_INC_t186		1
+#define T_DATZERO_HW_INC_t186		3
+#define T_HSPREPARE_HW_INC_t186		1
+#define T_CLKTRAIL_HW_INC_t186		1
+#define T_CLKPOST_HW_INC_t186		(1 + (T_HSEXIT_HW_INC + 1))
+#define T_CLKZERO_HW_INC_t186		1
+#define T_TLPX_HW_INC_t186		1
+#define T_CLKPREPARE_HW_INC_t186	1
+#define T_TAGO_HW_INC_t186		1
+#define T_TASURE_HW_INC_t186		1
+#define T_TAGET_HW_INC_t186		1
+#define T_CLKPRE_HW_INC_t186		2
+#define T_WAKEUP_HW_INC_t186		1
+
+/* Wrapper to abstract over HW */
+/* Default phy timing in ns */
+#define T_HSEXIT_PS_DEFAULT		(tegra_dc_is_t21x() ? \
+					T_HSEXIT_PS_DEFAULT_t210 : \
+					T_HSEXIT_PS_DEFAULT_t186)
+#define T_HSTRAIL_PS_DEFAULT(clk_ps)    (tegra_dc_is_t21x() ? \
+					T_HSTRAIL_PS_DEFAULT_t210(clk_ps) : \
+					T_HSTRAIL_PS_DEFAULT_t186(clk_ps))
+#define T_DATZERO_PS_DEFAULT(clk_ps)    (tegra_dc_is_t21x() ? \
+					T_DATZERO_PS_DEFAULT_t210(clk_ps) : \
+					T_DATZERO_PS_DEFAULT_t186(clk_ps))
+#define T_HSPREPARE_PS_DEFAULT(clk_ps)  (tegra_dc_is_t21x() ? \
+					T_HSPREPARE_PS_DEFAULT_t210(clk_ps) : \
+					T_HSPREPARE_PS_DEFAULT_t186(clk_ps))
+#define T_CLKTRAIL_PS_DEFAULT           (tegra_dc_is_t21x() ? \
+					T_CLKTRAIL_PS_DEFAULT_t210 : \
+					T_CLKTRAIL_PS_DEFAULT_t186)
+#define T_CLKPOST_PS_DEFAULT(clk_ps)    (tegra_dc_is_t21x() ? \
+					T_CLKPOST_PS_DEFAULT_t210(clk_ps) : \
+					T_CLKPOST_PS_DEFAULT_t186(clk_ps))
+#define T_CLKZERO_PS_DEFAULT            (tegra_dc_is_t21x() ? \
+					T_CLKZERO_PS_DEFAULT_t210 : \
+					T_CLKZERO_PS_DEFAULT_t186)
+#define T_TLPX_PS_DEFAULT               (tegra_dc_is_t21x() ? \
+					T_TLPX_PS_DEFAULT_t210 : \
+					T_TLPX_PS_DEFAULT_t186)
+#define T_CLKPREPARE_PS_DEFAULT         (tegra_dc_is_t21x() ? \
+					T_CLKPREPARE_PS_DEFAULT_t210 : \
+					T_CLKPREPARE_PS_DEFAULT_t186)
+#define T_TAGO_PS_DEFAULT               (tegra_dc_is_t21x() ? \
+					T_TAGO_PS_DEFAULT_t210 : \
+					T_TAGO_PS_DEFAULT_t186)
+#define T_TASURE_PS_DEFAULT             (tegra_dc_is_t21x() ? \
+					T_TASURE_PS_DEFAULT_t210 : \
+					T_TASURE_PS_DEFAULT_t186)
+#define T_TAGET_PS_DEFAULT              (tegra_dc_is_t21x() ? \
+					T_TAGET_PS_DEFAULT_t210 : \
+					T_TAGET_PS_DEFAULT_t186)
+
+/* HW increment to phy register values */
+#define T_HSEXIT_HW_INC		(tegra_dc_is_t21x() ? \
+				T_HSEXIT_HW_INC_t210 : T_HSEXIT_HW_INC_t186)
+#define T_HSTRAIL_HW_INC	(tegra_dc_is_t21x() ? \
+				T_HSTRAIL_HW_INC_t210 : T_HSTRAIL_HW_INC_t186)
+#define T_DATZERO_HW_INC	(tegra_dc_is_t21x() ? \
+				T_DATZERO_HW_INC_t210 : T_DATZERO_HW_INC_t186)
+#define T_HSPREPARE_HW_INC	(tegra_dc_is_t21x() ? \
+				T_HSPREPARE_HW_INC_t210 : \
+				T_HSPREPARE_HW_INC_t186)
+#define T_CLKTRAIL_HW_INC	(tegra_dc_is_t21x() ? \
+				T_CLKTRAIL_HW_INC_t210 : T_CLKTRAIL_HW_INC_t186)
+#define T_CLKPOST_HW_INC	(tegra_dc_is_t21x() ? \
+				T_CLKPOST_HW_INC_t210 : T_CLKPOST_HW_INC_t186)
+#define T_CLKZERO_HW_INC	(tegra_dc_is_t21x() ? \
+				T_CLKZERO_HW_INC_t210 : T_CLKZERO_HW_INC_t186)
+#define T_TLPX_HW_INC		(tegra_dc_is_t21x() ? \
+				T_TLPX_HW_INC_t210 : T_TLPX_HW_INC_t186)
+#define T_CLKPREPARE_HW_INC	(tegra_dc_is_t21x() ? \
+				T_CLKPREPARE_HW_INC_t210 : \
+				T_CLKPREPARE_HW_INC_t186)
+#define T_TAGO_HW_INC		(tegra_dc_is_t21x() ? \
+				T_TAGO_HW_INC_t210 :  T_TAGO_HW_INC_t186)
+#define T_TASURE_HW_INC		(tegra_dc_is_t21x() \
+				? T_TASURE_HW_INC_t210 : T_TASURE_HW_INC_t186)
+#define T_TAGET_HW_INC		(tegra_dc_is_t21x() ? \
+				T_TAGET_HW_INC_t210 : T_TAGET_HW_INC_t186)
+#define T_CLKPRE_HW_INC		(tegra_dc_is_t21x() ? \
+				T_CLKPRE_HW_INC_t210 : T_CLKPRE_HW_INC_t186)
+#define T_WAKEUP_HW_INC		(tegra_dc_is_t21x() ? \
+				T_WAKEUP_HW_INC_t210 : T_WAKEUP_HW_INC_t186)
 
 /* Default phy timing reg values */
 #define T_HSEXIT_DEFAULT(clk_ps) \

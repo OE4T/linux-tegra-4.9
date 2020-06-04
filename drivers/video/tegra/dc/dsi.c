@@ -1,7 +1,7 @@
 /*
  * dsi.c: Functions implementing tegra dsi interface.
  *
- * Copyright (c) 2011-2019, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2011-2021, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -1147,7 +1147,7 @@ static int tegra_dsi_mipi_phy_timing_range(struct tegra_dc_dsi_data *dsi,
 			MIPI_T_TLPX_PS_MIN, MIPI_T_TLPX_PS_MAX);
 
 	if (err < 0) {
-		dev_warn(&dsi->dc->ndev->dev,
+		dev_info(&dsi->dc->ndev->dev,
 			"dsi: Tlpx mipi range violated\n");
 		if (!tegra_dsi_ignore_phy_timing_range_violation())
 			goto fail;
@@ -1160,7 +1160,7 @@ static int tegra_dsi_mipi_phy_timing_range(struct tegra_dc_dsi_data *dsi,
 			MIPI_T_HSEXIT_PS_MIN, MIPI_T_HSEXIT_PS_MAX);
 
 		if (err < 0) {
-			dev_warn(&dsi->dc->ndev->dev,
+			dev_info(&dsi->dc->ndev->dev,
 				"dsi: HsExit mipi range violated\n");
 			if (!tegra_dsi_ignore_phy_timing_range_violation())
 				goto fail;
@@ -1171,7 +1171,7 @@ static int tegra_dsi_mipi_phy_timing_range(struct tegra_dc_dsi_data *dsi,
 			phy_timing->t_hstrail, clk_ps, T_HSTRAIL_HW_INC),
 			MIPI_T_HSTRAIL_PS_MIN(clk_ps), MIPI_T_HSTRAIL_PS_MAX);
 		if (err < 0) {
-			dev_warn(&dsi->dc->ndev->dev,
+			dev_info(&dsi->dc->ndev->dev,
 				"dsi: HsTrail mipi range violated\n");
 			if (!tegra_dsi_ignore_phy_timing_range_violation())
 				goto fail;
@@ -1180,9 +1180,9 @@ static int tegra_dsi_mipi_phy_timing_range(struct tegra_dc_dsi_data *dsi,
 		err = CHECK_RANGE(
 		DSI_CONVERT_T_PHY_TO_T_PHY_PS(
 			phy_timing->t_datzero, clk_ps, T_DATZERO_HW_INC),
-			MIPI_T_HSZERO_PS_MIN, MIPI_T_HSZERO_PS_MAX);
+			MIPI_T_HSZERO_PS_MIN(clk_ps), MIPI_T_HSZERO_PS_MAX);
 		if (err < 0) {
-			dev_warn(&dsi->dc->ndev->dev,
+			dev_info(&dsi->dc->ndev->dev,
 				"dsi: HsZero mipi range violated\n");
 			if (!tegra_dsi_ignore_phy_timing_range_violation())
 				goto fail;
@@ -1194,7 +1194,7 @@ static int tegra_dsi_mipi_phy_timing_range(struct tegra_dc_dsi_data *dsi,
 			MIPI_T_HSPREPARE_PS_MIN(clk_ps),
 			MIPI_T_HSPREPARE_PS_MAX(clk_ps));
 		if (err < 0) {
-			dev_warn(&dsi->dc->ndev->dev,
+			dev_info(&dsi->dc->ndev->dev,
 				"dsi: HsPrepare mipi range violated\n");
 			if (!tegra_dsi_ignore_phy_timing_range_violation())
 				goto fail;
@@ -1208,7 +1208,7 @@ static int tegra_dsi_mipi_phy_timing_range(struct tegra_dc_dsi_data *dsi,
 			MIPI_T_HSPREPARE_ADD_HSZERO_PS_MIN(clk_ps),
 			MIPI_T_HSPREPARE_ADD_HSZERO_PS_MAX);
 		if (err < 0) {
-			dev_warn(&dsi->dc->ndev->dev,
+			dev_info(&dsi->dc->ndev->dev,
 			"dsi: HsPrepare + HsZero mipi range violated\n");
 			if (!tegra_dsi_ignore_phy_timing_range_violation())
 				goto fail;
@@ -1220,7 +1220,7 @@ static int tegra_dsi_mipi_phy_timing_range(struct tegra_dc_dsi_data *dsi,
 			phy_timing->t_wakeup, clk_ps, T_WAKEUP_HW_INC),
 			MIPI_T_WAKEUP_PS_MIN, MIPI_T_WAKEUP_PS_MAX);
 		if (err < 0) {
-			dev_warn(&dsi->dc->ndev->dev,
+			dev_info(&dsi->dc->ndev->dev,
 				"dsi: WakeUp mipi range violated\n");
 			if (!tegra_dsi_ignore_phy_timing_range_violation())
 				goto fail;
@@ -1248,7 +1248,7 @@ static int tegra_dsi_mipi_phy_timing_range(struct tegra_dc_dsi_data *dsi,
 			phy_timing->t_clktrail, clk_ps, T_CLKTRAIL_HW_INC),
 			MIPI_T_CLKTRAIL_PS_MIN, MIPI_T_CLKTRAIL_PS_MAX);
 		if (err < 0) {
-			dev_warn(&dsi->dc->ndev->dev,
+			dev_info(&dsi->dc->ndev->dev,
 				"dsi: ClkTrail mipi range violated\n");
 			if (!tegra_dsi_ignore_phy_timing_range_violation())
 				goto fail;
@@ -1259,7 +1259,7 @@ static int tegra_dsi_mipi_phy_timing_range(struct tegra_dc_dsi_data *dsi,
 			phy_timing->t_clkpost, clk_ps, T_CLKPOST_HW_INC),
 			MIPI_T_CLKPOST_PS_MIN(clk_ps), MIPI_T_CLKPOST_PS_MAX);
 		if (err < 0) {
-			dev_warn(&dsi->dc->ndev->dev,
+			dev_info(&dsi->dc->ndev->dev,
 				"dsi: ClkPost mipi range violated\n");
 			if (!tegra_dsi_ignore_phy_timing_range_violation())
 				goto fail;
@@ -1270,7 +1270,7 @@ static int tegra_dsi_mipi_phy_timing_range(struct tegra_dc_dsi_data *dsi,
 			phy_timing->t_clkzero, clk_ps, T_CLKZERO_HW_INC),
 			MIPI_T_CLKZERO_PS_MIN, MIPI_T_CLKZERO_PS_MAX);
 		if (err < 0) {
-			dev_warn(&dsi->dc->ndev->dev,
+			dev_info(&dsi->dc->ndev->dev,
 				"dsi: ClkZero mipi range violated\n");
 			if (!tegra_dsi_ignore_phy_timing_range_violation())
 				goto fail;
@@ -1281,7 +1281,7 @@ static int tegra_dsi_mipi_phy_timing_range(struct tegra_dc_dsi_data *dsi,
 			phy_timing->t_clkprepare, clk_ps, T_CLKPREPARE_HW_INC),
 			MIPI_T_CLKPREPARE_PS_MIN, MIPI_T_CLKPREPARE_PS_MAX);
 		if (err < 0) {
-			dev_warn(&dsi->dc->ndev->dev,
+			dev_info(&dsi->dc->ndev->dev,
 				"dsi: ClkPrepare mipi range violated\n");
 			if (!tegra_dsi_ignore_phy_timing_range_violation())
 				goto fail;
@@ -1292,7 +1292,7 @@ static int tegra_dsi_mipi_phy_timing_range(struct tegra_dc_dsi_data *dsi,
 			phy_timing->t_clkpre, clk_ps, T_CLKPRE_HW_INC),
 			MIPI_T_CLKPRE_PS_MIN, MIPI_T_CLKPRE_PS_MAX);
 		if (err < 0) {
-			dev_warn(&dsi->dc->ndev->dev,
+			dev_info(&dsi->dc->ndev->dev,
 				"dsi: ClkPre mipi range violated\n");
 			if (!tegra_dsi_ignore_phy_timing_range_violation())
 				goto fail;
@@ -1306,7 +1306,7 @@ static int tegra_dsi_mipi_phy_timing_range(struct tegra_dc_dsi_data *dsi,
 			MIPI_T_CLKPREPARE_ADD_CLKZERO_PS_MIN,
 			MIPI_T_CLKPREPARE_ADD_CLKZERO_PS_MAX);
 		if (err < 0) {
-			dev_warn(&dsi->dc->ndev->dev,
+			dev_info(&dsi->dc->ndev->dev,
 			"dsi: ClkPrepare + ClkZero mipi range violated\n");
 			if (!tegra_dsi_ignore_phy_timing_range_violation())
 				goto fail;

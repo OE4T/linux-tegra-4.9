@@ -651,7 +651,7 @@ static struct irq_chip gic_chip = {
 };
 
 #ifdef CONFIG_FIQ
-static void __init gic_init_fiq(struct gic_chip_data *gic)
+static void gic_init_fiq(struct gic_chip_data *gic)
 {
 	void __iomem *dist_base = gic_data_dist_base(gic);
 

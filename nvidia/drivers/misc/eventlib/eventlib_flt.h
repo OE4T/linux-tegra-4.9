@@ -90,9 +90,9 @@ struct eventlib_flt_slot {
 
 /* r2w shared memory block */
 struct eventlib_flt_r2w {
-	uint32_t notify;
+	unsigned long notify;
+	unsigned long busy;
 	uint32_t ack;
-	uint32_t busy;
 	struct eventlib_flt_slot slots[0];
 	/* slots here:
 	 * - count of all slots is defined by NUM_SLOTS
@@ -152,6 +152,7 @@ struct eventlib_flt_ctx {
 	};
 };
 
+#ifdef OLD_NVIDIA_HACKY_VERSION
 /* Below synchronization wrappers are based on GCC atomic builtins.
  * These functions are only used in the reader path.
  */
@@ -170,6 +171,11 @@ static inline void sync_clear_bit(unsigned int n, uint32_t *p)
 {
 	tracebuf_sync_fetch_and_and_u32(p, ~(1u << n));
 }
+#else
+#include <linux/bitops.h>
+#include <linux/atomic.h>
+#include <asm/sync_bitops.h>
+#endif /* OLD_NVIDIA_HACKY_VERSION */
 
 /* Below functions are implemented by the filter subsystem interface.
  * Linkage is optional to support writer environments w/out filtering.

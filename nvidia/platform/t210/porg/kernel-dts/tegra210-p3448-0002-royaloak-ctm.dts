@@ -432,7 +432,7 @@
             status = "okay";
             gpio-hog;
             output-high;
-            gpios = <TEGRA_GPIO(J, 7) GPIO_ACTIVE_LOW>;
+            gpios = <TEGRA_GPIO(J, 7) GPIO_ACTIVE_HIGH>;
             line-name = "UART-BRIDGE-RESETn";
         };
 

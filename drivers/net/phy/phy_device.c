@@ -569,10 +569,123 @@ phy_has_fixups_show(struct device *dev, struct device_attribute *attr,
 }
 static DEVICE_ATTR_RO(phy_has_fixups);
 
+#ifdef CONFIG_NET_DSA_MIOVISION_MV88E6390
+
+static ssize_t
+mdio_reg_show(struct device *dev, struct device_attribute *attr, char *buf)
+{
+	struct phy_device *phydev = to_phy_device(dev);
+	struct mii_bus* bus = phydev->mdio.bus;
+	int regnum;
+	int val;
+
+	if (sscanf(attr->attr.name, "%d", &regnum) != 1)
+		return -EINVAL;
+
+	val = mdiobus_read(bus, phydev->mdio.addr, regnum);
+	if (val < 0)
+		return -EIO;
+
+	return sprintf(buf, "0x%.4x\n", val);
+}
+
+static ssize_t
+mdio_reg_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t size)
+{
+	struct phy_device *phydev = to_phy_device(dev);
+	struct mii_bus* bus = phydev->mdio.bus;
+	int regnum;
+	int val;
+	int err;
+
+	if (sscanf(attr->attr.name, "%d", &regnum) != 1)
+		return -EINVAL;
+
+	if (sscanf(buf, "%x", &val) != 1)
+		return -EINVAL;
+
+	if (val < 0 || val > 0xffff)
+		return -EINVAL;
+
+	err = mdiobus_write(bus, phydev->mdio.addr, regnum, val);
+	if (err < 0)
+		return -EIO;
+
+	return size;
+}
+static DEVICE_ATTR(0, (S_IWUSR | S_IRUGO), mdio_reg_show, mdio_reg_store);
+static DEVICE_ATTR(1, (S_IWUSR | S_IRUGO), mdio_reg_show, mdio_reg_store);
+static DEVICE_ATTR(2, (S_IWUSR | S_IRUGO), mdio_reg_show, mdio_reg_store);
+static DEVICE_ATTR(3, (S_IWUSR | S_IRUGO), mdio_reg_show, mdio_reg_store);
+static DEVICE_ATTR(4, (S_IWUSR | S_IRUGO), mdio_reg_show, mdio_reg_store);
+static DEVICE_ATTR(5, (S_IWUSR | S_IRUGO), mdio_reg_show, mdio_reg_store);
+static DEVICE_ATTR(6, (S_IWUSR | S_IRUGO), mdio_reg_show, mdio_reg_store);
+static DEVICE_ATTR(7, (S_IWUSR | S_IRUGO), mdio_reg_show, mdio_reg_store);
+static DEVICE_ATTR(8, (S_IWUSR | S_IRUGO), mdio_reg_show, mdio_reg_store);
+static DEVICE_ATTR(9, (S_IWUSR | S_IRUGO), mdio_reg_show, mdio_reg_store);
+static DEVICE_ATTR(10, (S_IWUSR | S_IRUGO), mdio_reg_show, mdio_reg_store);
+static DEVICE_ATTR(11, (S_IWUSR | S_IRUGO), mdio_reg_show, mdio_reg_store);
+static DEVICE_ATTR(12, (S_IWUSR | S_IRUGO), mdio_reg_show, mdio_reg_store);
+static DEVICE_ATTR(13, (S_IWUSR | S_IRUGO), mdio_reg_show, mdio_reg_store);
+static DEVICE_ATTR(14, (S_IWUSR | S_IRUGO), mdio_reg_show, mdio_reg_store);
+static DEVICE_ATTR(15, (S_IWUSR | S_IRUGO), mdio_reg_show, mdio_reg_store);
+static DEVICE_ATTR(16, (S_IWUSR | S_IRUGO), mdio_reg_show, mdio_reg_store);
+static DEVICE_ATTR(17, (S_IWUSR | S_IRUGO), mdio_reg_show, mdio_reg_store);
+static DEVICE_ATTR(18, (S_IWUSR | S_IRUGO), mdio_reg_show, mdio_reg_store);
+static DEVICE_ATTR(19, (S_IWUSR | S_IRUGO), mdio_reg_show, mdio_reg_store);
+static DEVICE_ATTR(20, (S_IWUSR | S_IRUGO), mdio_reg_show, mdio_reg_store);
+static DEVICE_ATTR(21, (S_IWUSR | S_IRUGO), mdio_reg_show, mdio_reg_store);
+static DEVICE_ATTR(22, (S_IWUSR | S_IRUGO), mdio_reg_show, mdio_reg_store);
+static DEVICE_ATTR(23, (S_IWUSR | S_IRUGO), mdio_reg_show, mdio_reg_store);
+static DEVICE_ATTR(24, (S_IWUSR | S_IRUGO), mdio_reg_show, mdio_reg_store);
+static DEVICE_ATTR(25, (S_IWUSR | S_IRUGO), mdio_reg_show, mdio_reg_store);
+static DEVICE_ATTR(26, (S_IWUSR | S_IRUGO), mdio_reg_show, mdio_reg_store);
+static DEVICE_ATTR(27, (S_IWUSR | S_IRUGO), mdio_reg_show, mdio_reg_store);
+static DEVICE_ATTR(28, (S_IWUSR | S_IRUGO), mdio_reg_show, mdio_reg_store);
+static DEVICE_ATTR(29, (S_IWUSR | S_IRUGO), mdio_reg_show, mdio_reg_store);
+static DEVICE_ATTR(30, (S_IWUSR | S_IRUGO), mdio_reg_show, mdio_reg_store);
+static DEVICE_ATTR(31, (S_IWUSR | S_IRUGO), mdio_reg_show, mdio_reg_store);
+
+#endif
+
 static struct attribute *phy_dev_attrs[] = {
 	&dev_attr_phy_id.attr,
 	&dev_attr_phy_interface.attr,
 	&dev_attr_phy_has_fixups.attr,
+#ifdef CONFIG_NET_DSA_MIOVISION_MV88E6390
+	&dev_attr_0.attr,
+	&dev_attr_1.attr,
+	&dev_attr_2.attr,
+	&dev_attr_3.attr,
+	&dev_attr_4.attr,
+	&dev_attr_5.attr,
+	&dev_attr_6.attr,
+	&dev_attr_7.attr,
+	&dev_attr_8.attr,
+	&dev_attr_9.attr,
+	&dev_attr_10.attr,
+	&dev_attr_11.attr,
+	&dev_attr_12.attr,
+	&dev_attr_13.attr,
+	&dev_attr_14.attr,
+	&dev_attr_15.attr,
+	&dev_attr_16.attr,
+	&dev_attr_17.attr,
+	&dev_attr_18.attr,
+	&dev_attr_19.attr,
+	&dev_attr_20.attr,
+	&dev_attr_21.attr,
+	&dev_attr_22.attr,
+	&dev_attr_23.attr,
+	&dev_attr_24.attr,
+	&dev_attr_25.attr,
+	&dev_attr_26.attr,
+	&dev_attr_27.attr,
+	&dev_attr_28.attr,
+	&dev_attr_29.attr,
+	&dev_attr_30.attr,
+	&dev_attr_31.attr,
+#endif
 	NULL,
 };
 ATTRIBUTE_GROUPS(phy_dev);

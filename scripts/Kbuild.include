@@ -461,8 +461,9 @@ endef
 # It's a common trick to declare makefile variable that contains space
 # we'll need it to convert the path string to list (string delimited by spaces)
 # and vice versa
-the-space :=
-the-space += 
+_dummy_variable_for_the_space :=
+the-space := $(_dummy_variable_for_the_space) $(_dummy_variable_for_the_space)
+
 # TEGRA_ROOT_PATH is the relative path to the directory one level upper than $srctree
 _TEGRA_ROOT_PATH = $(subst ^$(realpath $(srctree))/,,^$(realpath $(kbuild-dir)))
 # _TEGRA_REL_PATH is path like "../../../" that points to $(srctree)

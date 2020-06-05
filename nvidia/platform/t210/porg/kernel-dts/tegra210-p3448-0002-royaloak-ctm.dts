@@ -362,7 +362,7 @@
         tpm-irq {
             status = "okay";
             gpio-hog;
-	    input;
+            input;
             gpios = <TEGRA_GPIO(I, 0) GPIO_ACTIVE_HIGH>;
             line-name = "TPM-IRQ";
         };

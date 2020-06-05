@@ -1026,7 +1026,7 @@ static int actmon_reset_deinit(struct platform_device *pdev)
 	return ret;
 }
 
-int tegra_actmon_register(struct actmon_drv_data *actmon_data)
+int __init tegra_actmon_register(struct actmon_drv_data *actmon_data)
 {
 	struct device_node *dn = NULL;
 	struct platform_device *pdev;

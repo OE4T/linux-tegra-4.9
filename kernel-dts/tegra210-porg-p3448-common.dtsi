@@ -59,7 +59,7 @@
 		stdout-path = "/serial@70006000";
 		nvidia,tegra-always-on-personality;
 		no-tnid-sn;
-		bootargs = "kmemleak=on earlycon=uart8250,mmio32,0x70006000";
+		bootargs = "earlycon=uart8250,mmio32,0x70006000";
 	};
 
 	cpus {

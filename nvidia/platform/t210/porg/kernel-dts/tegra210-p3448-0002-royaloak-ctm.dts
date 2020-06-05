@@ -81,12 +81,12 @@
 
         // The PINMUX needed to be adjusted to put the CS line as a GPIO pin which is software controlled,
         // the hardware control was dropping the CS line between transactions resetting the TPM.
-        cs-gpios = <&gpio TEGRA_GPIO(C, 3) 0>;
+        cs-gpios = <&gpio TEGRA_GPIO(C, 3) GPIO_ACTIVE_HIGH>;
 
         spi@0 {
             reg = <0x0>;
             compatible = "tcg,tpm_tis-spi";
-            spi-max-frequency = <33000000>;
+            spi-max-frequency = <10000000>;
             controller-data {
                 // This setting along with the cs-gpios keeps the CS active during the full transaction.
                 nvidia,clk-delay-between-packets = <0x1>;
@@ -306,7 +306,7 @@
         usb2-overcurrent {
             status = "okay";
             input;
-            gpios = <TEGRA_GPIO(C, 1) GPIO_ACTIVE_LOW>;
+            gpios = <TEGRA_GPIO(CC, 1) GPIO_ACTIVE_LOW>;
             line-name = "USB2-OVERCURRENTn";
         };
 
@@ -361,7 +361,8 @@
 
         tpm-irq {
             status = "okay";
-            input;
+            gpio-hog;
+	    input;
             gpios = <TEGRA_GPIO(I, 0) GPIO_ACTIVE_HIGH>;
             line-name = "TPM-IRQ";
         };
@@ -382,7 +383,7 @@
             status = "okay";
             gpio-hog;
             output-high;
-            gpios = <TEGRA_GPIO(C, 6) GPIO_ACTIVE_HIGH>;
+            gpios = <TEGRA_GPIO(CC, 6) GPIO_ACTIVE_HIGH>;
             line-name = "USB2-VBUS-EN";
         };
 
@@ -390,7 +391,7 @@
             status = "okay";
             gpio-hog;
             output-low;
-            gpios = <TEGRA_GPIO(C, 0) GPIO_ACTIVE_HIGH>;
+            gpios = <TEGRA_GPIO(CC, 0) GPIO_ACTIVE_HIGH>;
             line-name = "TESTPOINT-50";
         };
 
@@ -438,7 +439,7 @@
             status = "okay";
             gpio-hog;
             output-high;
-            gpios = <TEGRA_GPIO(H, 7) GPIO_ACTIVE_LOW>;
+            gpios = <TEGRA_GPIO(H, 7) GPIO_ACTIVE_HIGH>;
             line-name = "TPM-RESETn";
         };
 

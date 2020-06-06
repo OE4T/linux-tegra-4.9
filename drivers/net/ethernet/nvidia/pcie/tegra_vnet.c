@@ -811,7 +811,8 @@ static int tvnet_host_probe(struct pci_dev *pdev,
 	mutex_init(&tvnet->link_state_lock);
 	init_waitqueue_head(&tvnet->link_state_wq);
 
-	ret = pci_alloc_irq_vectors(pdev, 2, 2, PCI_IRQ_MSIX);
+	ret = pci_alloc_irq_vectors(pdev, 2, 2, PCI_IRQ_MSIX |
+				    PCI_IRQ_AFFINITY);
 	if (ret <= 0) {
 		dev_err(&pdev->dev, "pci_alloc_irq_vectors() fail: %d\n", ret);
 		ret = -EIO;

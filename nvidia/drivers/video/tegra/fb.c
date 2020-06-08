@@ -56,11 +56,8 @@
 #define user_ptr(p) (p)
 #endif
 
-#ifdef CONFIG_TEGRA_ANDROID
 #define FB_BUFFERING_FACTOR 2
-#else /* L4T and other OSes */
-#define FB_BUFFERING_FACTOR 1
-#endif
+
 /* support up to 4K (3840x2150) with double buffering */
 #define DEFAULT_FBMEM_SIZE	(SZ_32M * FB_BUFFERING_FACTOR) + SZ_8M
 

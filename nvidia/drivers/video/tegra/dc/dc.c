@@ -4494,15 +4494,19 @@ int tegra_dc_wait_for_vsync(struct tegra_dc *dc)
 	/* time out if waiting took more than 2 frames */
 	timeout_ms = DIV_ROUND_UP(2 * 1000000, refresh);
 	_tegra_dc_user_vsync_enable(dc, true);
-	mutex_unlock(&dc->lock);
-	ret = wait_for_completion_interruptible_timeout(
-		&dc->out->user_vblank_comp, msecs_to_jiffies(timeout_ms));
-	mutex_lock(&dc->lock);
+	do {
+		mutex_unlock(&dc->lock);
+		ret = wait_for_completion_interruptible_timeout(
+			&dc->out->user_vblank_comp, msecs_to_jiffies(timeout_ms));
+		mutex_lock(&dc->lock);
+	} while (ret == -ERESTARTSYS);
+	if (ret == 0)
+		ret = -ETIME;
 	_tegra_dc_user_vsync_enable(dc, false);
 out:
 	mutex_unlock(&dc->lock);
 	mutex_unlock(&dc->lp_lock);
-	return ret;
+	return (ret >= 0 ? 0 : ret);
 }
 
 int _tegra_dc_wait_for_frame_end(struct tegra_dc *dc,

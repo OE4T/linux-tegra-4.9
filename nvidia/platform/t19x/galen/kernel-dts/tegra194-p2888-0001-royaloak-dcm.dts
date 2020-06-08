@@ -98,12 +98,12 @@
 
         // The PINMUX needed to be adjusted to put the CS line as a GPIO pin which is software controlled,
         // the hardware control was dropping the CS line between transactions resetting the TPM.
-       	cs-gpios = <&tegra_main_gpio TEGRA_GPIO(Z,6) 0>;
+       	cs-gpios = <&tegra_main_gpio TEGRA_GPIO(Z,6) GPIO_ACTIVE_HIGH>;
 
         spi@0 {
             reg = <0x0>;
             compatible = "tcg,tpm_tis-spi";
-            spi-max-frequency = <33000000>;
+            spi-max-frequency = <10000000>;
             controller-data {
                 // This setting along with the cs-gpios keeps the CS active during the full transaction.
                 nvidia,clk-delay-between-packets = <0x1>;
@@ -252,9 +252,19 @@
             status = "okay";
             gpio-hog;
             output-low;
-            gpios = <TEGRA_GPIO(M, 3) GPIO_ACTIVE_LOW>;
+            gpios = <TEGRA_GPIO(M, 3) GPIO_ACTIVE_HIGH>;
             line-name = "TPM_RST";
         };
+
+        // TPM_IRQn => GPIO34 => SOC_GPIO06 => GPIO3 P(P,6) *
+        tpm_irq {
+            status = "okay";
+            gpio-hog;
+            output-low;
+            gpios = <TEGRA_GPIO(P, 6) GPIO_ACTIVE_HIGH>;
+            line-name = "TPM_IRQ";
+        };
+
 
         /////////////////////////////////////
         // LCD

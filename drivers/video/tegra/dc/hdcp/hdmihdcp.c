@@ -2198,16 +2198,16 @@ static void nvhdcp_downstream_worker(struct work_struct *work)
 			HDCP22_EESS_END;
 		tegra_sor_writel_ext(nvhdcp->hdmi->sor,
 			HDMI_VSYNC_WINDOW, val);
-		nvhdcp2_downstream_worker(work);
 		nvhdcp->hdcp22 = HDCP22_PROTOCOL;
+		nvhdcp2_downstream_worker(work);
 	} else {
 		val = HDCP_EESS_ENABLE<<31|
 			HDCP1X_EESS_START<<16|
 			HDCP1X_EESS_END;
 		tegra_sor_writel_ext(nvhdcp->hdmi->sor, HDMI_VSYNC_WINDOW,
 					val);
-		nvhdcp1_downstream_worker(work);
 		nvhdcp->hdcp22 = HDCP1X_PROTOCOL;
+		nvhdcp1_downstream_worker(work);
 	}
 }
 

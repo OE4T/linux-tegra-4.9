@@ -217,11 +217,11 @@
 
     clocks {
         // Define the clock parameters the UART is configured for
-        sc16is752_clk: sc16is752_clk {
+        sc16is762_clk: sc16is762_clk {
             status = "okay";
             compatible = "fixed-clock";
             #clock-cells = <0>;
-            clock-output-name = "sc16is752_clk";
+            clock-output-name = "sc16is762_clk";
             clock-frequency = <1843200>;
         };
     };
@@ -236,14 +236,13 @@
     i2c@7000c000 {
          status = "okay";
 
-        sc16is750@4D {
+        sc16is762@4D {
                 compatible = "nxp,sc16is762";
                 reg = <0x4D>;
-                clocks = <&sc16is752_clk>;
+                clocks = <&sc16is762_clk>;
                 interrupt-parent = <&gpio>;
                 interrupts = <TEGRA_GPIO(J, 6) IRQ_TYPE_EDGE_FALLING>;
-                 gpio-controller;
-                #gpio-cells = <2>;
+                modem-pins;
         };
 
     };

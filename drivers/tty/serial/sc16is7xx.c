@@ -239,9 +239,10 @@
 #define SC16IS7XX_TLR_RX_TRIGGER(words)	((((words) / 4) & 0x0f) << 4)
 
 /* IOControl register bits (Only 750/760) */
-#define SC16IS7XX_IOCONTROL_LATCH_BIT	(1 << 0) /* Enable input latching */
-#define SC16IS7XX_IOCONTROL_MODEM_BIT	(1 << 1) /* Enable GPIO[7:4] as modem pins */
-#define SC16IS7XX_IOCONTROL_SRESET_BIT	(1 << 3) /* Software Reset */
+#define SC16IS7XX_IOCONTROL_LATCH_BIT   (1 << 0) /* Enable input latching */
+#define SC16IS7XX_IOCONTROL_MODEM_A_BIT (1 << 1) /* Enable GPIO[7:4] as modem pins */
+#define SC16IS7XX_IOCONTROL_MODEM_B_BIT (1 << 2) /* Enable GPIO[3:0] as modem pins */
+#define SC16IS7XX_IOCONTROL_SRESET_BIT  (1 << 3) /* Software Reset */
 
 /* EFCR register bits */
 #define SC16IS7XX_EFCR_9BIT_MODE_BIT	(1 << 0) /* Enable 9-bit or Multidrop
@@ -307,6 +308,7 @@ struct sc16is7xx_devtype {
 #define SC16IS7XX_RECONF_MD		(1 << 0)
 #define SC16IS7XX_RECONF_IER		(1 << 1)
 #define SC16IS7XX_RECONF_RS485		(1 << 2)
+#define SC16IS7XX_MSR_REFRESH		(1 << 3)
 
 struct sc16is7xx_one_config {
 	unsigned int			flags;
@@ -316,6 +318,7 @@ struct sc16is7xx_one_config {
 struct sc16is7xx_one {
 	struct uart_port		port;
 	u8				line;
+	u8				msr;
 	struct kthread_work		tx_work;
 	struct kthread_work		reg_work;
 	struct sc16is7xx_one_config	config;
@@ -325,6 +328,7 @@ struct sc16is7xx_port {
 	const struct sc16is7xx_devtype	*devtype;
 	struct regmap			*regmap;
 	struct clk			*clk;
+	u8				modempins;
 #ifdef CONFIG_GPIOLIB
 	struct gpio_chip		gpio;
 #endif
@@ -664,6 +668,7 @@ static void sc16is7xx_handle_tx(struct uart_port *port)
 static bool sc16is7xx_port_irq(struct sc16is7xx_port *s, int portno)
 {
 	struct uart_port *port = &s->p[portno].port;
+	struct sc16is7xx_one *one = to_sc16is7xx_one(port, port);
 
 	do {
 		unsigned int iir, rxlen;
@@ -685,6 +690,12 @@ static bool sc16is7xx_port_irq(struct sc16is7xx_port *s, int portno)
 			break;
 		case SC16IS7XX_IIR_THRI_SRC:
 			sc16is7xx_handle_tx(port);
+			break;
+		case SC16IS7XX_IIR_MSI_SRC:
+		case SC16IS7XX_IIR_CTSRTS_SRC:
+			// Read the msr register regardless if the modempin flag is set. This clears the
+			// interrupt flag.
+			one->msr = sc16is7xx_port_read(port, SC16IS7XX_MSR_REG);
 			break;
 		default:
 			dev_err_ratelimited(port->dev,
@@ -754,6 +765,7 @@ static void sc16is7xx_reconf_rs485(struct uart_port *port)
 static void sc16is7xx_reg_proc(struct kthread_work *ws)
 {
 	struct sc16is7xx_one *one = to_sc16is7xx_one(ws, reg_work);
+	struct sc16is7xx_port *s = dev_get_drvdata(one->port.dev);
 	struct sc16is7xx_one_config config;
 	unsigned long irqflags;
 
@@ -782,6 +794,13 @@ static void sc16is7xx_reg_proc(struct kthread_work *ws)
 
 	if (config.flags & SC16IS7XX_RECONF_RS485)
 		sc16is7xx_reconf_rs485(&one->port);
+
+	if (config.flags & SC16IS7XX_MSR_REFRESH || config.flags & SC16IS7XX_RECONF_MD) {
+		if (s->modempins) {
+			one->msr = sc16is7xx_port_read(&one->port, SC16IS7XX_MSR_REG);
+		}
+	}
+
 }
 
 static void sc16is7xx_ier_clear(struct uart_port *port, u8 bit)
@@ -823,10 +842,34 @@ static unsigned int sc16is7xx_tx_empty(struct uart_port *port)
 
 static unsigned int sc16is7xx_get_mctrl(struct uart_port *port)
 {
-	/* DCD and DSR are not wired and CTS/RTS is handled automatically
-	 * so just indicate DSR and CAR asserted
-	 */
-	return TIOCM_DSR | TIOCM_CAR;
+	unsigned int ret = 0;
+
+	// Trigger a worker queue to go off and request the MSR value for the next time through.
+	struct sc16is7xx_port *s = dev_get_drvdata(port->dev);
+	struct sc16is7xx_one *one = to_sc16is7xx_one(port, port);
+
+	if (s->modempins)
+	{
+		one->config.flags |= SC16IS7XX_MSR_REFRESH;
+		kthread_queue_work(&s->kworker, &one->reg_work);
+
+		// These status items may be a little out of date as we can't read them at the time of asking.
+		// The interrupt should keep these up to date most times.
+		if (one->msr & SC16IS7XX_MSR_CD_BIT)
+			ret |= TIOCM_CAR;
+		if (one->msr & SC16IS7XX_MSR_RI_BIT)
+			ret |= TIOCM_RNG;
+		if (one->msr & SC16IS7XX_MSR_DSR_BIT)
+			ret |= TIOCM_DSR;
+		if (one->msr & SC16IS7XX_MSR_CTS_BIT)
+			ret |= TIOCM_CTS;
+	}
+	else {
+		// When modem pins are disabled indicate DSR and CAR are asserted so things keep working.
+		ret = TIOCM_DSR | TIOCM_CAR;
+	}
+
+	return ret;
 }
 
 static void sc16is7xx_set_mctrl(struct uart_port *port, unsigned int mctrl)
@@ -1017,6 +1060,12 @@ static int sc16is7xx_startup(struct uart_port *port)
 
 	/* Enable RX, TX interrupts */
 	val = SC16IS7XX_IER_RDI_BIT | SC16IS7XX_IER_THRI_BIT;
+
+	if (s->modempins) {
+		/* If modem pins are enabled turn on the Modem Status, CTS interrupts */
+		val |= SC16IS7XX_IER_MSI_BIT | SC16IS7XX_IER_CTSI_BIT;
+	}
+
 	sc16is7xx_port_write(port, SC16IS7XX_IER_REG, val);
 
 	return 0;
@@ -1157,8 +1206,15 @@ static int sc16is7xx_probe(struct device *dev,
 {
 	struct sched_param sched_param = { .sched_priority = MAX_RT_PRIO / 2 };
 	unsigned long freq, *pfreq = dev_get_platdata(dev);
+	struct device_node *devnode;
 	int i, ret;
 	struct sc16is7xx_port *s;
+
+	devnode = dev->of_node;
+	if (!devnode) {
+		dev_err(dev, "device node not found\n");
+		return -ENODEV;
+	}
 
 	if (IS_ERR(regmap))
 		return PTR_ERR(regmap);
@@ -1222,6 +1278,7 @@ static int sc16is7xx_probe(struct device *dev,
 
 	for (i = 0; i < devtype->nr_uart; ++i) {
 		s->p[i].line		= i;
+		s->p[i].msr		= 0;
 		/* Initialize port data */
 		s->p[i].port.dev	= dev;
 		s->p[i].port.irq	= irq;
@@ -1240,6 +1297,14 @@ static int sc16is7xx_probe(struct device *dev,
 
 		/* Disable all interrupts */
 		sc16is7xx_port_write(&s->p[i].port, SC16IS7XX_IER_REG, 0);
+
+		/* Configure the chip for modem pins or gpios */
+		if (of_property_read_bool(devnode, "modem-pins")) {
+			pr_info("Configuring GPIO[7:4] for Modem Pins");
+			sc16is7xx_port_write(&s->p[i].port, SC16IS7XX_IOCONTROL_REG, SC16IS7XX_IOCONTROL_MODEM_A_BIT | SC16IS7XX_IOCONTROL_MODEM_B_BIT);
+			s->modempins = 1;
+		}
+
 		/* Disable TX/RX */
 		sc16is7xx_port_write(&s->p[i].port, SC16IS7XX_EFCR_REG,
 				     SC16IS7XX_EFCR_RXDISABLE_BIT |

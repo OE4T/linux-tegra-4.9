@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2019-2020, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -512,16 +512,6 @@
 				target = <&i2c_1>;
 				_overlay_ {
 					status = "okay";
-				};
-			};
-		};
-
-		fragement@11 {
-			ids = ">=3448-0000-300", ">=3448-0002-300", ">=3448-0003-400";
-			override@0 {
-				target = <&{/pcie@1003000/pci@2,0/ethernet@0,0}>;
-				_overlay_ {
-					enable-aspm;
 				};
 			};
 		};

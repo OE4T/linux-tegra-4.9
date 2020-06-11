@@ -545,7 +545,7 @@
                     reg = <0x0>;
                     label = "mcu";
                     fixed-link {
-                        speed = <10>;
+                        speed = <100>;
                         full-duplex;
                     };
                 };

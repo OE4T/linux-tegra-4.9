@@ -26,10 +26,17 @@
 #include <uapi/linux/nvdev_fence.h>
 #include <uapi/linux/nvhost_nvdla_ioctl.h>
 
-
 #include "nvdla_buffer.h"
 #include "dla_os_interface.h"
-#include "dla_fw_version.h"
+#include "dla_t19x_fw_version.h"
+
+/*
+ * macro to encode firmware version
+ */
+#define FIRMWARE_ENCODE_VERSION(chip) \
+		(((FIRMWARE_##chip##_VERSION_MAJOR & 0xffU) << 16) | \
+		((FIRMWARE_##chip##_VERSION_MINOR & 0xffU) << 8) | \
+		((FIRMWARE_##chip##_VERSION_SUBMINOR & 0xffU)))
 
 #define ALIGNED_DMA(x) ((x >> 8) & 0xffffffff)
 

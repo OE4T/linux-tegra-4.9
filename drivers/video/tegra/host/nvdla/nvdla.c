@@ -44,7 +44,6 @@
 #include "nvdla/nvdla_buffer.h"
 #include "nvdla/nvdla_debug.h"
 #include <uapi/linux/nvhost_nvdla_ioctl.h>
-#include "dla_fw_version.h"
 #include "dla_os_interface.h"
 
 #include "class_ids_t194.h"
@@ -620,7 +619,8 @@ int nvhost_nvdla_finalize_poweron(struct platform_device *pdev)
 	}
 
 	fw_ver_read_bin = host1x_readl(pdev, NV_DLA_OS_VERSION);
-	firmware_version = dla_version();
+
+	firmware_version = pdata->version;
 
 	if ((firmware_version & 0xffff00) != (fw_ver_read_bin & 0xffff00)) {
 		nvdla_dbg_err(pdev,

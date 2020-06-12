@@ -386,6 +386,9 @@
 #define PMC_WRITE		0xbb
 #define TEGRA_SIP_PMC_COMMAND_FID 0xC2FFFE00
 
+/* PMIC watchdog reset bit */
+#define PMIC_WATCHDOG_RESET		0x02
+
 struct pmc_smc_regs {
 	u64 args[NR_SMC_REGS];
 };
@@ -463,6 +466,7 @@ enum pmc_regs {
 	TEGRA_PMC_SCRATCH43,
 	TEGRA_PMC_SCRATCH54,
 	TEGRA_PMC_SCRATCH55,
+	TEGRA_PMC_SCRATCH203,
 	TEGRA_PMC_RST_STATUS,
 	TEGRA_PMC_IMPL_RAMDUMP_CTL_STATUS,
 	TEGRA_PMC_SATA_PWRGT_0,
@@ -931,7 +935,15 @@ enum tegra_system_reset_reason tegra_pmc_get_system_reset_reason(void)
 		rst_src = reset_reg & T210_PMC_RST_LEVEL_MASK;
 		switch (rst_src) {
 		case 0:
-			tegra_rst_rsn_sts = TEGRA_POWER_ON_RESET;
+			/* In case of PMIC watchdog, Reset is Power On Reset.
+			 * PMIC status register is saved in SRATCH203 register.
+			 * PMC driver checks watchdog status bit to identify
+			 * POR is because of watchdog timer reset */
+			if (tegra_pmc_reg_readl(TEGRA_PMC_SCRATCH203) &
+			    PMIC_WATCHDOG_RESET)
+				tegra_rst_rsn_sts = PMIC_WATCHDOG_POR;
+			else
+				tegra_rst_rsn_sts = TEGRA_POWER_ON_RESET;
 			break;
 
 		case 1:
@@ -3670,7 +3682,8 @@ char *pmc_reset_reason_string[] = {
 	"TEGRA_CSITE",
 	"TEGRA_WATCHDOG",
 	"TEGRA_LP0",
-	"TEGRA_RESET_REASON_MAX"
+	"PMIC_WATCHDOG_POR",
+	"TEGRA_RESET_REASON_MAX",
 };
 
 static char *pmc_reset_level_string[] = {
@@ -4141,6 +4154,7 @@ static const unsigned long tegra210_register_map[TEGRA_PMC_MAX_REG] = {
 	[TEGRA_PMC_SCRATCH43]		=  0x22c,
 	[TEGRA_PMC_SCRATCH54]		=  0x258,
 	[TEGRA_PMC_SCRATCH55]		=  0x25c,
+	[TEGRA_PMC_SCRATCH203]		=  0x84c,
 	[TEGRA_PMC_LED_BREATHING_CTRL]	= 0xb48,
 	[TEGRA_PMC_LED_BREATHING_COUNTER0]	= 0xb4c,
 	[TEGRA_PMC_LED_BREATHING_COUNTER1]	= 0xb50,

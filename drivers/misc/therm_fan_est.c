@@ -52,7 +52,8 @@ static void therm_fan_est_work_func(struct work_struct *work)
 {
 	int i, j, group, index, trip_index = 0;
 	int sum[MAX_SUBDEVICE_GROUP] = {0, };
-	int sum_max = 0;
+	int sum_max = INT_MIN;
+	int sum_min = INT_MAX;
 	int temp = 0;
 	struct delayed_work *dwork = container_of(work,
 					struct delayed_work, work);
@@ -77,11 +78,21 @@ static void therm_fan_est_work_func(struct work_struct *work)
 		}
 	}
 
-#if !DEBUG
-	for (i = 0; i < MAX_SUBDEVICE_GROUP; i++)
-		sum_max = max(sum_max, sum[i]);
+	if (est->use_tmargin) {
+		for (i = 0; i < MAX_SUBDEVICE_GROUP; i++)
+			sum[i] = (est->crit_temp[i] * 100) - sum[i];
+	}
 
-	est->cur_temp = sum_max / 100 + est->toffset;
+#if !DEBUG
+	for (i = 0; i < MAX_SUBDEVICE_GROUP; i++) {
+		sum_min = min(sum_min, sum[i]);
+		sum_max = max(sum_max, sum[i]);
+	}
+
+	if (est->use_tmargin)
+		est->cur_temp = sum_min / 100 + est->toffset;
+	else
+		est->cur_temp = sum_max / 100 + est->toffset;
 #else
 	est->cur_temp = est->cur_temp_debug;
 #endif
@@ -95,7 +106,9 @@ static void therm_fan_est_work_func(struct work_struct *work)
 	}
 
 	if (est->cur_temp != est->pre_temp) {
-		if (est->cur_temp > est->pre_temp) {
+		if (est->use_tmargin ?
+			(est->cur_temp < est->pre_temp) :
+			(est->cur_temp > est->pre_temp)) {
 			/* temperature is rising */
 			read_lock(&est->state_lock);
 			for (trip_index = 0;
@@ -105,10 +118,16 @@ static void therm_fan_est_work_func(struct work_struct *work)
 			}
 			read_unlock(&est->state_lock);
 
-			if (est->current_trip_level < trip_index
-				&& est->current_trip_level != (trip_index - 1))
-				update_flag = true;
-		} else if (est->cur_temp < est->pre_temp) {
+			if (est->use_tmargin) {
+				if (est->current_trip_level >= trip_index
+					&& est->current_trip_level != (trip_index - 1))
+					update_flag = true;
+			} else {
+				if (est->current_trip_level < trip_index
+					&& est->current_trip_level != (trip_index - 1))
+					update_flag = true;
+			}
+		} else {
 			/* temperature is cooling */
 			read_lock(&est->state_lock);
 			for (trip_index = 1;
@@ -119,10 +138,16 @@ static void therm_fan_est_work_func(struct work_struct *work)
 			}
 			read_unlock(&est->state_lock);
 
-			if (est->current_trip_level >= trip_index
-				&& est->current_trip_level != (trip_index - 1)
-				&& trip_index != (MAX_ACTIVE_STATES + 1))
-				update_flag = true;
+			if (est->use_tmargin) {
+				if (est->current_trip_level < trip_index
+					&& est->current_trip_level != (trip_index - 1))
+					update_flag = true;
+			} else {
+				if (est->current_trip_level >= trip_index
+					&& est->current_trip_level != (trip_index - 1)
+					&& trip_index != (MAX_ACTIVE_STATES + 1))
+					update_flag = true;
+			}
 		}
 
 		if (update_flag) {
@@ -317,6 +342,51 @@ static struct thermal_zone_device_ops therm_fan_est_ops = {
 	.set_trip_hyst = therm_fan_est_set_trip_hyst,
 };
 
+static int fan_est_match(struct thermal_zone_device *thz, void *data)
+{
+	return (strcmp((char *)data, thz->type) == 0);
+}
+
+static int fan_est_get_crit_temp(struct therm_fan_estimator *est)
+{
+	struct thermal_zone_device *thz;
+	int crit_temp;
+	int i;
+
+	for (i = 0; i < est->ndevs; i++) {
+		thz = thermal_zone_device_find((void *)est->devs[i].dev_data,
+			fan_est_match);
+
+		if (thz && thz->ops && thz->ops->get_crit_temp) {
+			thz->ops->get_crit_temp(thz, &crit_temp);
+			if (crit_temp <= 0) {
+				pr_err("THERMAL EST: Failed to get crit temp of %s\n",
+					est->devs[i].dev_data);
+				return -EINVAL;
+			}
+		} else {
+			pr_err("THERMAL EST: Invalid ops for %s\n",
+				est->devs[i].dev_data);
+			return -EINVAL;
+		}
+
+		if (crit_temp > est->crit_temp[est->devs[i].group])
+			est->crit_temp[est->devs[i].group] = crit_temp;
+	}
+
+	for (i = 0; i < MAX_SUBDEVICE_GROUP; i++) {
+		if (est->crit_temp[i] == 0) {
+			pr_err("THERMAL EST: Group %d has no crit temp\n", i);
+			return -EINVAL;
+		} else {
+			pr_info("THERMAL EST: Group %d crit temp - %ld", i,
+				est->crit_temp[i]);
+		}
+	}
+
+	return 0;
+}
+
 static ssize_t show_coeff(struct device *dev,
 				struct device_attribute *da,
 				char *buf)
@@ -506,6 +576,44 @@ static ssize_t set_sleep_mode(struct device *dev,
 	return count;
 }
 
+static ssize_t show_crit_temps(struct device *dev,
+	struct device_attribute *da,
+	char *buf)
+{
+	struct therm_fan_estimator *est = dev_get_drvdata(dev);
+	ssize_t len, total_len = 0;
+	int i;
+
+	for (i = 0; i < MAX_SUBDEVICE_GROUP; i++) {
+		len = snprintf(buf + total_len, PAGE_SIZE,
+			"group[%d] - %ld", i, est->crit_temp[i]);
+		total_len += len;
+		len = snprintf(buf + total_len, PAGE_SIZE, "\n");
+		total_len += len;
+	}
+	return strlen(buf);
+}
+
+static ssize_t show_zone_map(struct device *dev,
+	struct device_attribute *da,
+	char *buf)
+{
+	struct therm_fan_estimator *est = dev_get_drvdata(dev);
+	ssize_t len, total_len = 0;
+	int i;
+
+	for (i = 0; i < est->ndevs; i++) {
+	len = snprintf(buf + total_len, PAGE_SIZE,
+		"%s - ndev[%d], group[%d]",
+		est->devs[i].dev_data, i, est->devs[i].group);
+	total_len += len;
+	len = snprintf(buf + total_len, PAGE_SIZE, "\n");
+	total_len += len;
+	}
+	return strlen(buf);
+}
+
+
 static ssize_t show_temps(struct device *dev,
 				struct device_attribute *da,
 				char *buf)
@@ -554,6 +662,8 @@ static struct sensor_device_attribute therm_fan_est_nodes[] = {
 				show_fan_profile, set_fan_profile, 0),
 	SENSOR_ATTR(sleep_mode, S_IRUGO | S_IWUSR,
 				show_sleep_mode, set_sleep_mode, 0),
+	SENSOR_ATTR(zone_map, S_IRUGO, show_zone_map, 0, 0),
+	SENSOR_ATTR(crit_temps, S_IRUGO, show_crit_temps, 0, 0),
 #if DEBUG
 	SENSOR_ATTR(temps, S_IRUGO | S_IWUSR, show_temps, set_temps, 0),
 #else
@@ -561,11 +671,6 @@ static struct sensor_device_attribute therm_fan_est_nodes[] = {
 #endif
 };
 
-
-static int fan_est_match(struct thermal_zone_device *thz, void *data)
-{
-	return (strcmp((char *)data, thz->type) == 0);
-}
 
 static int fan_est_get_temp_func(const char *data, int *temp)
 {
@@ -578,7 +683,6 @@ static int fan_est_get_temp_func(const char *data, int *temp)
 
 	return 0;
 }
-
 
 static int therm_fan_est_probe(struct platform_device *pdev)
 {
@@ -651,6 +755,8 @@ static int therm_fan_est_probe(struct platform_device *pdev)
 	}
 	est_data->num_resources = value;
 	pr_info("THERMAL EST num_resources: %d\n", est_data->num_resources);
+
+	est_data->use_tmargin = of_property_read_bool(node, "use_tmargin");
 
 	of_err |= of_property_read_u32(node, "trip_length", &value);
 	if (of_err) {
@@ -855,6 +961,14 @@ static int therm_fan_est_probe(struct platform_device *pdev)
 			i, temp);
 	}
 
+	if (est_data->use_tmargin) {
+		err = fan_est_get_crit_temp(est_data);
+		if (err) {
+			err = -EINVAL;
+			goto free_subdevs;
+		}
+	}
+
 	of_err |= of_property_read_string(data_node, "cdev_type",
 						&est_data->cdev_type);
 	if (of_err) {
@@ -919,7 +1033,7 @@ static int therm_fan_est_probe(struct platform_device *pdev)
 
 	/* workqueue related */
 	est_data->workqueue = alloc_workqueue(dev_name(&pdev->dev),
-				    WQ_HIGHPRI | WQ_UNBOUND, 1);
+					WQ_HIGHPRI | WQ_UNBOUND, 1);
 	if (!est_data->workqueue) {
 		err = -ENOMEM;
 		goto free_tzp;

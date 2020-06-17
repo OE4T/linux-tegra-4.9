@@ -235,6 +235,8 @@ struct therm_fan_estimator {
 	/* allow cooling device to turn off at higher temperature if sleep */
 	bool sleep_mode;
 	int nonsleep_hyst;
+	bool use_tmargin;
+	long crit_temp[MAX_SUBDEVICE_GROUP];
 
 	bool is_continuous_gov;
 };

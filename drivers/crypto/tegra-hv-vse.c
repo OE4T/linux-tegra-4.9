@@ -358,6 +358,7 @@ struct tegra_virtual_se_req_context {
 	unsigned int digest_size;
 	u8 mode;			/* SHA operation mode */
 	u8 *sha_buf;			/* Buffer to store residual data */
+	u32 sha_buflen;			/* buffer length of residual data */
 	dma_addr_t sha_buf_addr;	/* DMA address to residual data */
 	u8 *hash_result;		/* Intermediate hash result */
 	dma_addr_t hash_result_addr;	/* Intermediate hash result dma addr */
@@ -702,7 +703,7 @@ static int tegra_hv_vse_send_sha_data(struct tegra_virtual_se_dev *se_dev,
 			psha->op_hash1.msg_total_length1 = msg_len >> 32;
 		}
 	}
-
+	req_ctx->is_first = false;
 	ivc_req_msg->hdr.num_reqs = 1;
 	priv_data_ptr = (struct tegra_vse_tag *)ivc_req_msg->hdr.tag;
 	priv_data_ptr->priv_data = (unsigned int *)priv;
@@ -901,7 +902,6 @@ unmap:
 		}
 	}
 
-	req_ctx->is_first = false;
 	if (is_last) {
 		/* handle the last data in finup() , digest() */
 		if (req_ctx->residual_bytes > 0) {
@@ -932,9 +932,11 @@ static int tegra_hv_vse_sha_slow_path(struct ahash_request *req,
 {
 	struct tegra_virtual_se_dev *se_dev = g_virtual_se_dev[VIRTUAL_SE_SHA];
 	struct tegra_virtual_se_req_context *req_ctx = ahash_request_ctx(req);
-	u32 nblk_bytes = 0, num_blks, buflen = SZ_4M;
+	u32 nblk_bytes = 0, num_blks;
 	u32 length = 0, skip = 0, offset = 0;
 	u64 total_bytes = 0, left_bytes = 0;
+	u8 *new_sha_buf;
+	dma_addr_t new_sha_buf_addr;
 	int err = 0;
 
 	if ((process_cur_req == false && is_last == false) ||
@@ -949,13 +951,34 @@ static int tegra_hv_vse_sha_slow_path(struct ahash_request *req,
 		if ((total_bytes - nblk_bytes) == 0)
 			total_bytes -= req_ctx->blk_size;
 
+		if (nblk_bytes > req_ctx->sha_buflen &&
+			req_ctx->sha_buflen < SZ_4M) {
+			/* try reallocate a bigger buffer for better perf */
+			new_sha_buf = dma_alloc_coherent(se_dev->dev, SZ_4M,
+					&new_sha_buf_addr, GFP_KERNEL);
+			if (new_sha_buf) {
+				/* copy data and replace the old buffer */
+				if (req_ctx->residual_bytes)
+					memcpy(new_sha_buf, req_ctx->sha_buf,
+						req_ctx->residual_bytes);
+
+				dma_free_coherent(se_dev->dev,
+					req_ctx->sha_buflen, req_ctx->sha_buf,
+					req_ctx->sha_buf_addr);
+
+				req_ctx->sha_buflen = SZ_4M;
+				req_ctx->sha_buf = new_sha_buf;
+				req_ctx->sha_buf_addr = new_sha_buf_addr;
+			}
+		}
+
 		left_bytes = req->nbytes;
 
 		while (total_bytes >= req_ctx->blk_size) {
 			/* Copy to linear buffer */
 			num_blks = total_bytes / req_ctx->blk_size;
 			nblk_bytes = num_blks * req_ctx->blk_size;
-			length = min(buflen, nblk_bytes) - offset;
+			length = min(req_ctx->sha_buflen, nblk_bytes) - offset;
 
 			sg_pcopy_to_buffer(req->src, sg_nents(req->src),
 				req_ctx->sha_buf + offset, length, skip);
@@ -976,33 +999,21 @@ static int tegra_hv_vse_sha_slow_path(struct ahash_request *req,
 			offset = 0;
 		}
 
-		/* left_bytes <= req_ctx->blk_size */
-		if ((req_ctx->residual_bytes + req->nbytes) >=
-						req_ctx->blk_size) {
-			/* Processed in while() loop */
-			sg_pcopy_to_buffer(req->src, sg_nents(req->src),
-					req_ctx->sha_buf, left_bytes, skip);
-			req_ctx->total_count += left_bytes;
-			req_ctx->residual_bytes = left_bytes;
-		} else {
-			/* Accumulate the request */
-			sg_pcopy_to_buffer(req->src, sg_nents(req->src),
-				req_ctx->sha_buf + req_ctx->residual_bytes,
-				req->nbytes, skip);
-			req_ctx->total_count += req->nbytes;
-			req_ctx->residual_bytes += req->nbytes;
-		}
+		sg_pcopy_to_buffer(req->src, sg_nents(req->src),
+				req_ctx->sha_buf + offset, left_bytes, skip);
+		req_ctx->total_count += left_bytes;
+		req_ctx->residual_bytes = offset + left_bytes;
 
-		if (req_ctx->force_align == true &&
-			req_ctx->residual_bytes == req_ctx->blk_size) {
+		if (req_ctx->residual_bytes == req_ctx->blk_size) {
 			/* At this point, the buffer is aligned with blk_size.
 			 * Thus, the next call can use fast path.
 			 */
 			req_ctx->force_align = false;
+		} else {
+			req_ctx->force_align = true;
 		}
 	}
 
-	req_ctx->is_first = false;
 	if (is_last) {
 		/* handle the last data in finup() , digest() */
 		if (req_ctx->residual_bytes > 0) {
@@ -1185,7 +1196,8 @@ static int tegra_hv_vse_sha_init(struct ahash_request *req)
 	default:
 		return -EINVAL;
 	}
-	req_ctx->sha_buf = dma_alloc_coherent(se_dev->dev, SZ_4M,
+	req_ctx->sha_buflen = SZ_4K;
+	req_ctx->sha_buf = dma_alloc_coherent(se_dev->dev, req_ctx->sha_buflen,
 					&req_ctx->sha_buf_addr, GFP_KERNEL);
 	if (!req_ctx->sha_buf) {
 		dev_err(se_dev->dev, "Cannot allocate memory to sha_buf\n");
@@ -1196,7 +1208,7 @@ static int tegra_hv_vse_sha_init(struct ahash_request *req)
 			se_dev->dev, (TEGRA_HV_VSE_SHA_MAX_BLOCK_SIZE * 2),
 			&req_ctx->hash_result_addr, GFP_KERNEL);
 	if (!req_ctx->hash_result) {
-		dma_free_coherent(se_dev->dev, SZ_4M,
+		dma_free_coherent(se_dev->dev, req_ctx->sha_buflen,
 				req_ctx->sha_buf, req_ctx->sha_buf_addr);
 		req_ctx->sha_buf = NULL;
 		dev_err(se_dev->dev, "Cannot allocate memory to hash_result\n");
@@ -1217,7 +1229,7 @@ static void tegra_hv_vse_sha_req_deinit(struct ahash_request *req)
 	struct tegra_virtual_se_req_context *req_ctx = ahash_request_ctx(req);
 
 	/* dma_free_coherent does not panic if addr is NULL */
-	dma_free_coherent(se_dev->dev, SZ_4M,
+	dma_free_coherent(se_dev->dev, req_ctx->sha_buflen,
 			req_ctx->sha_buf, req_ctx->sha_buf_addr);
 	req_ctx->sha_buf = NULL;
 

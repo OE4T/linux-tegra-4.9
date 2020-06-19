@@ -23,6 +23,7 @@
 #include <galen/kernel-dts/common/tegra194-thermal-p2888.dtsi>
 #include "galen/kernel-dts/common/tegra194-fixed-regulator-p2822-1000.dtsi"
 #include "tegra194-thermal-fan-e3900.dtsi"
+#include "tegra194-thermal-minisas-e3900.dtsi"
 #include <galen/kernel-dts/common/tegra194-plugin-manager-p2888-0000.dtsi>
 #include "tegra194-audio-e3900-0000.dtsi"
 #include "tegra194-super-module-e2614-e3900-0000.dtsi"

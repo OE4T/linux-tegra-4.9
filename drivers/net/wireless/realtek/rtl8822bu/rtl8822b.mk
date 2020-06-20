@@ -47,7 +47,7 @@ _HAL_INTFS_FILES +=	hal/rtl8822b/$(HCI_NAME)/rtl8822bs_halinit.o \
 _HAL_INTFS_FILES +=hal/efuse/rtl8822b/HalEfuseMask8822B_SDIO.o
 endif
 
-include $(src)/halmac.mk
+include $(SOURCETREE)/halmac.mk
 
 _BTC_FILES += hal/btc/halbtc8822bwifionly.o
 ifeq ($(CONFIG_BT_COEXIST), y)

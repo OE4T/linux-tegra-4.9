@@ -83,7 +83,7 @@
 			vertical-flip = "true";
 
 			/* Enable EEPROM support */
-			has-eeprom = <1>;
+			has-eeprom = "1";
 
 			/**
 			* A modeX node is required to support v4l2 driver

@@ -77,6 +77,12 @@
 		};
 	};
 
+	external-memory-controller@7001b000 {
+		emc-table@0 {
+			nvidia,ram-code = <1>;
+		};
+	};
+
 	host1x {
 		dc@54240000 {
 			status = "disabled";

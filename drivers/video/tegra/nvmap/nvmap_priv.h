@@ -184,6 +184,7 @@ struct nvmap_handle {
 	struct list_head dmabuf_priv;
 	u64 ivm_id;
 	int peer;		/* Peer VM number */
+	bool is_ro;		/* Is handle read-only? */
 };
 
 struct nvmap_handle_info {
@@ -683,7 +684,10 @@ static inline int nvmap_get_user_pages(ulong vaddr,
 		                int nr_page, struct page **pages)
 {
 	int ret = 0;
-	int user_pages;
+	int user_pages = 0;
+	struct vm_area_struct *vma;
+	vm_flags_t vm_flags;
+
 	down_read(&current->mm->mmap_sem);
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
         user_pages = get_user_pages(current, current->mm,
@@ -691,9 +695,21 @@ static inline int nvmap_get_user_pages(ulong vaddr,
 			      1/*write*/, 1, /* force */
 			      pages, NULL);
 #else
-	user_pages = get_user_pages(vaddr & PAGE_MASK, nr_page,
-			      FOLL_WRITE | FOLL_FORCE,
-			      pages, NULL);
+	vma = find_vma(current->mm, vaddr);
+	if (vma) {
+		vm_flags = vma->vm_flags;
+		/* If the vaddr points to writable page then only pass FOLL_WRITE flag */
+		if (vm_flags & VM_WRITE) {
+			user_pages = get_user_pages(vaddr & PAGE_MASK, nr_page,
+					FOLL_WRITE | FOLL_FORCE,
+					pages, NULL);
+		}
+		else {
+			user_pages = get_user_pages(vaddr & PAGE_MASK, nr_page,
+					FOLL_FORCE,
+					pages, NULL);
+		}
+	}
 #endif
 	up_read(&current->mm->mmap_sem);
 	if (user_pages != nr_page) {

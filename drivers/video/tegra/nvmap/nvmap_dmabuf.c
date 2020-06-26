@@ -464,6 +464,14 @@ int __nvmap_map(struct nvmap_handle *h, struct vm_area_struct *vma)
 	}
 
 	/*
+	 * If the handle is RO and RW mapping is requested, then
+	 * return error.
+	 */
+	if (h->from_va && h->is_ro && (vma->vm_flags & VM_WRITE)) {
+		nvmap_handle_put(h);
+		return -EPERM;
+	}
+	/*
 	 * Don't allow mmap on VPR memory as it would be mapped
 	 * as device memory. User space shouldn't be accessing
 	 * device memory.

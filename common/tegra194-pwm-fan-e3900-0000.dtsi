@@ -35,21 +35,23 @@
 		pwm_gpio = <&tegra_main_gpio TEGRA194_MAIN_GPIO(R, 0) GPIO_ACTIVE_LOW>;
 	};
 
-	pwm-fan-fpga {
+	pwm_fan_fpga: pwm-fan-fpga {
 		compatible = "pwm-fan";
 		status = "okay";
 		#pwm-cells = <1>;
 		pwms = <&tegra_pwm8 0 45334>;
 		shared_data = <&pwm_fan_shared_data_fpga>;
+		#cooling-cells = <2>;
+		cdev-type = "pwm-fan-fpga";
 		profiles {
 			default = "quiet";
 			quiet {
-				state_cap = <4>;
-				active_pwm = <0 77 120 160 255 255 255 255 255 255>;
+				state_cap = <2>;
+				active_pwm = <77 153 255 255 255 255 255 255 255 255>;
 			};
 			cool {
-				state_cap = <4>;
-				active_pwm = <0 77 120 160 255 255 255 255 255 255>;
+				state_cap = <2>;
+				active_pwm = <77 153 255 255 255 255 255 255 255 255>;
 			};
 		};
 	};

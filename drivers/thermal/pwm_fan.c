@@ -964,6 +964,7 @@ static int pwm_fan_probe(struct platform_device *pdev)
 	struct device_node *base_profile_node = NULL;
 	struct device_node *profile_node = NULL;
 	const char *default_profile = NULL;
+	const char *type = NULL;
 	u32 value;
 	int pwm_fan_gpio;
 	int tach_gpio;
@@ -1238,8 +1239,12 @@ static int pwm_fan_probe(struct platform_device *pdev)
 	INIT_DELAYED_WORK(&(fan_data->fan_ramp_work), fan_ramping_work_func);
 	INIT_DELAYED_WORK(&(fan_data->fan_hyst_work), fan_hyst_work_func);
 
+	type = of_get_property(node, "cdev-type", NULL);
+	if (type == NULL)
+		type = "pwm-fan";
+
 	fan_data->cdev =
-		thermal_cooling_device_register("pwm-fan",
+		thermal_of_cooling_device_register(node, (char *) type,
 					fan_data, &pwm_fan_cooling_ops);
 
 	if (IS_ERR_OR_NULL(fan_data->cdev)) {

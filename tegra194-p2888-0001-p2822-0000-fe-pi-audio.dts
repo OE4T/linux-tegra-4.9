@@ -20,7 +20,9 @@
 			nvidia,audio-routing =
 				"y Headphone",		"y HP_OUT",
 				"y MIC_IN",		"y Mic",
-				"y ADC",		"y Mic Bias";
+				"y ADC",		"y Mic Bias",
+				"y Line Out",		"y LINE_OUT",
+				"y LINE_IN",		"y Line In";
 		};
 	};
 };

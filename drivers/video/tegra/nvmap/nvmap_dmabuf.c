@@ -689,6 +689,13 @@ int nvmap_get_dmabuf_fd(struct nvmap_client *client, struct nvmap_handle *h)
 	dmabuf = __nvmap_dmabuf_export(client, h);
 	if (IS_ERR(dmabuf))
 		return PTR_ERR(dmabuf);
+	/*
+	 * If the user allocated buffer is ReadOnly, make
+	 * dma_buf ReadOnly.
+	 */
+	if (h->is_ro)
+		dmabuf->file->f_mode &= ~(FMODE_WRITE | FMODE_PWRITE);
+
 	fd = __nvmap_dmabuf_fd(client, dmabuf, O_CLOEXEC);
 	if (IS_ERR_VALUE((uintptr_t)fd))
 		dma_buf_put(dmabuf);

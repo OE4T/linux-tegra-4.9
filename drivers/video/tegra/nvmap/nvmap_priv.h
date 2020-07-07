@@ -385,7 +385,8 @@ struct nvmap_handle_ref *nvmap_create_handle(struct nvmap_client *client,
 					     size_t size);
 
 struct nvmap_handle_ref *nvmap_create_handle_from_va(struct nvmap_client *client,
-						     ulong addr, size_t size);
+						     ulong addr, size_t size,
+						     unsigned int access_flags);
 
 struct nvmap_handle_ref *nvmap_duplicate_handle(struct nvmap_client *client,
 					struct nvmap_handle *h, bool skip_val);
@@ -681,12 +682,14 @@ static inline pid_t nvmap_client_pid(struct nvmap_client *client)
 }
 
 static inline int nvmap_get_user_pages(ulong vaddr,
-		                int nr_page, struct page **pages)
+				int nr_page, struct page **pages,
+				bool is_user_flags, u32 user_foll_flags)
 {
-	int ret = 0;
-	int user_pages = 0;
+	u32 foll_flags = FOLL_FORCE;
 	struct vm_area_struct *vma;
 	vm_flags_t vm_flags;
+	int user_pages = 0;
+	int ret = 0;
 
 	down_read(&current->mm->mmap_sem);
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
@@ -697,18 +700,21 @@ static inline int nvmap_get_user_pages(ulong vaddr,
 #else
 	vma = find_vma(current->mm, vaddr);
 	if (vma) {
-		vm_flags = vma->vm_flags;
-		/* If the vaddr points to writable page then only pass FOLL_WRITE flag */
-		if (vm_flags & VM_WRITE) {
-			user_pages = get_user_pages(vaddr & PAGE_MASK, nr_page,
-					FOLL_WRITE | FOLL_FORCE,
-					pages, NULL);
+		if (is_user_flags) {
+			foll_flags |= user_foll_flags;
+		} else {
+			vm_flags = vma->vm_flags;
+			/*
+			 * If the vaddr points to writable page then only
+			 * pass FOLL_WRITE flag
+			 */
+			if (vm_flags & VM_WRITE)
+				foll_flags |= FOLL_WRITE;
 		}
-		else {
-			user_pages = get_user_pages(vaddr & PAGE_MASK, nr_page,
-					FOLL_FORCE,
-					pages, NULL);
-		}
+		pr_debug("vaddr %lu is_user_flags %d user_foll_flags %x foll_flags %x.\n",
+			vaddr, is_user_flags?1:0, user_foll_flags, foll_flags);
+		user_pages = get_user_pages(vaddr & PAGE_MASK, nr_page,
+					    foll_flags, pages, NULL);
 	}
 #endif
 	up_read(&current->mm->mmap_sem);

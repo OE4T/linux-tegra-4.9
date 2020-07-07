@@ -273,7 +273,8 @@ int nvmap_ioctl_create_from_va(struct file *filp, void __user *arg)
 		return -ENODEV;
 
 	ref = nvmap_create_handle_from_va(client, op.va,
-			op.size ? op.size : op.size64);
+			op.size ? op.size : op.size64,
+			op.flags);
 	if (IS_ERR(ref))
 		return PTR_ERR(ref);
 
@@ -834,7 +835,7 @@ int nvmap_ioctl_gup_test(struct file *filp, void __user *arg)
 		goto put_handle;
 	}
 
-	err = nvmap_get_user_pages(op.va & PAGE_MASK, nr_page, pages);
+	err = nvmap_get_user_pages(op.va & PAGE_MASK, nr_page, pages, false, 0);
 	if (err)
 		goto put_user_pages;
 

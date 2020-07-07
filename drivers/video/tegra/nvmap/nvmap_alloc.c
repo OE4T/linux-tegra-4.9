@@ -687,7 +687,8 @@ static void alloc_handle(struct nvmap_client *client,
 
 static int alloc_handle_from_va(struct nvmap_client *client,
 				 struct nvmap_handle *h,
-				 ulong vaddr)
+				 ulong vaddr,
+				 u32 flags)
 {
 	int nr_page = h->size >> PAGE_SHIFT;
 	struct page **pages;
@@ -697,11 +698,15 @@ static int alloc_handle_from_va(struct nvmap_client *client,
 	if (IS_ERR_OR_NULL(pages))
 		return PTR_ERR(pages);
 
-	ret = nvmap_get_user_pages(vaddr & PAGE_MASK, nr_page, pages);
+	ret = nvmap_get_user_pages(vaddr & PAGE_MASK, nr_page, pages, true,
+				(flags & NVMAP_HANDLE_RO) ? 0 : FOLL_WRITE);
 	if (ret) {
 		nvmap_altfree(pages, nr_page * sizeof(*pages));
 		return ret;
 	}
+
+	if (flags & NVMAP_HANDLE_RO)
+		h->is_ro = true;
 
 	nvmap_clean_cache(&pages[0], nr_page);
 	h->pgalloc.pages = pages;
@@ -890,7 +895,12 @@ int nvmap_alloc_handle_from_va(struct nvmap_client *client,
 			client->task->pid, task_comm);
 	}
 
-	(void)alloc_handle_from_va(client, h, addr);
+	err = alloc_handle_from_va(client, h, addr, flags);
+	if (err) {
+		pr_err("alloc_handle_from_va failed %d", err);
+		nvmap_handle_put(h);
+		return -EINVAL;
+	}
 
 	if (h->alloc) {
 		NVMAP_TAG_TRACE(trace_nvmap_alloc_handle_done,

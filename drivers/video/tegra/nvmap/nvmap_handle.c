@@ -159,7 +159,8 @@ static void add_handle_ref(struct nvmap_client *client,
 }
 
 struct nvmap_handle_ref *nvmap_create_handle_from_va(struct nvmap_client *client,
-						     ulong vaddr, size_t size)
+						     ulong vaddr, size_t size,
+						     u32 flags)
 {
 	struct vm_area_struct *vma;
 	struct nvmap_handle_ref *ref;
@@ -171,22 +172,24 @@ struct nvmap_handle_ref *nvmap_create_handle_from_va(struct nvmap_client *client
 
 	vma = find_vma(current->mm, vaddr);
 
-	if (unlikely(!vma) || (unlikely(vaddr < vma->vm_start )) ||
-	    unlikely(vaddr >= vma->vm_end) ||
-	    unlikely(size > vma->vm_end - vma->vm_start)) {
+	if (unlikely(!vma))
 		return ERR_PTR(-EINVAL);
-	}
 
 	if (!size)
 		size = vma->vm_end - vaddr;
+
+	vm_flags = vma->vm_flags;
+	/*
+	 * If buffer is malloc/mprotect as RO but alloc flag is not passed
+	 * as RO, don't create handle.
+	 */
+	if (!(vm_flags & VM_WRITE) && !(flags & NVMAP_HANDLE_RO))
+		return ERR_PTR(-EINVAL);
+
 	ref = nvmap_create_handle(client, size);
-	if (!IS_ERR(ref)) {
+	if (!IS_ERR(ref))
 		ref->handle->orig_size = size;
-		vm_flags = vma->vm_flags;
-		/*If the buffer is read only, then set is_ro flag. */
-		if (!(vm_flags & VM_WRITE))
-			ref->handle->is_ro = true;
-	}
+
 	return ref;
 }
 

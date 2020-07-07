@@ -452,6 +452,7 @@ static const struct gpu_ops gv11b_ops = {
 		.get_offset_in_gpccs_segment =
 			gr_gk20a_get_offset_in_gpccs_segment,
 		.set_debug_mode = gm20b_gr_set_debug_mode,
+		.set_fecs_watchdog_timeout = gr_gv11b_set_fecs_watchdog_timeout,
 	},
 	.fb = {
 		.init_hw = gv11b_fb_init_hw,

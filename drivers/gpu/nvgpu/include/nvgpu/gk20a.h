@@ -531,6 +531,7 @@ struct gpu_ops {
 		void (*set_debug_mode)(struct gk20a *g, bool enable);
 		int (*set_mmu_debug_mode)(struct gk20a *g,
 			struct channel_gk20a *ch, bool enable);
+		int (*set_fecs_watchdog_timeout)(struct gk20a *g);
 	} gr;
 	struct {
 		void (*init_hw)(struct gk20a *g);

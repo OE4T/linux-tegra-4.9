@@ -3167,6 +3167,7 @@ static void binder_transaction(struct binder_proc *proc,
 		t->buffer = NULL;
 		goto err_binder_alloc_buf_failed;
 	}
+//<<<<<<< HEAD
 	if (secctx) {
 		size_t buf_offset = ALIGN(tr->data_size, sizeof(void *)) +
 			  	    ALIGN(tr->offsets_size, sizeof(void *)) +
@@ -3181,6 +3182,8 @@ static void binder_transaction(struct binder_proc *proc,
 		secctx = NULL;
 	}
 
+//=======
+//>>>>>>> android-160
 	t->buffer->debug_id = t->debug_id;
 	t->buffer->transaction = t;
 	t->buffer->target_node = target_node;

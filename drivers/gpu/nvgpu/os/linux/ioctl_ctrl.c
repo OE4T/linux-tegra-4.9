@@ -239,6 +239,10 @@ static u64 nvgpu_ctrl_ioctl_gpu_characteristics_flags(struct gk20a *g)
 			ioctl_flags |= flags_mapping[i].ioctl_flag;
 	}
 
+	if (!capable(CAP_SYS_NICE)) {
+		ioctl_flags &= ~NVGPU_GPU_FLAGS_SUPPORT_RESCHEDULE_RUNLIST;
+	}
+
 	return ioctl_flags;
 }
 

@@ -1,6 +1,7 @@
 /******************************************************************************
  *
  * Copyright(c) 2007 - 2017 Realtek Corporation.
+ * Copyright (c) 2020, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of version 2 of the GNU General Public License as
@@ -10203,9 +10204,9 @@ int rtw_cfg80211_ndev_res_alloc(_adapter *adapter)
 		rtw_wiphy_free(wiphy);
 		adapter->wiphy = NULL;
 	}
+exit:
 #endif
 
-exit:
 	return ret;
 }
 
@@ -10236,7 +10237,9 @@ int rtw_cfg80211_ndev_res_register(_adapter *adapter)
 
 	ret = _SUCCESS;
 
+#if !defined(RTW_SINGLE_WIPHY)
 exit:
+#endif
 	return ret;
 }
 

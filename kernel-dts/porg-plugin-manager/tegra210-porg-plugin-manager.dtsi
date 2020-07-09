@@ -31,7 +31,7 @@
 		};
 
 		fragment@1 {
-			ids = ">=3448-0000-101", ">=3448-0002-101";
+			ids = ">=3448-0000-101", ">=3448-0002-101", ">=3448-0003-400";
 			override@0 {
 				target = <&max77620_sd0>;
 				_overlay_ {
@@ -304,7 +304,7 @@
 		};
 
 		fragement@10 {
-			ids = ">=3448-0000-300", ">=3448-0002-300";
+			ids = ">=3448-0000-300", ">=3448-0002-300", ">=3448-0003-400";
 			override@0 {
 				target = <&{/pcie@1003000/pci@2,0}>;
 				_overlay_ {
@@ -553,11 +553,28 @@
 		};
 
 		fragement@11 {
-			ids = ">=3448-0000-300", ">=3448-0002-300";
+			ids = ">=3448-0000-300", ">=3448-0002-300", ">=3448-0003-400";
 			override@0 {
 				target = <&{/pcie@1003000/pci@2,0/ethernet@0,0}>;
 				_overlay_ {
 					enable-aspm;
+				};
+			};
+		};
+
+		fragment@12 {
+			ids = ">=3448-0003-400";
+			override@0 {
+				target = <&sdhci3>;
+				_overlay_ {
+					status = "disabled";
+				};
+			};
+
+			override@1 {
+				target = <&sdhci0>;
+				_overlay_ {
+					status = "okay";
 				};
 			};
 		};

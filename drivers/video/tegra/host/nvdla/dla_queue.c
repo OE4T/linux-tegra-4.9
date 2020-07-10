@@ -99,7 +99,7 @@ static int nvdla_queue_task_pool_alloc(struct platform_device *pdev,
 	return err;
 
 err_alloc_task_pool:
-	kfree(task_pool->kmem_addr);
+	vfree(task_pool->kmem_addr);
 err_alloc_task_kmem:
 	return err;
 }

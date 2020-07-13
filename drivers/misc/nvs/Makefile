@@ -6,6 +6,10 @@ obj-$(CONFIG_NVS) += nvs.o
 nvs-objs :=	nvs_vreg.o nvs_of_dt.o nvs_timestamp.o nvs_dsm.o \
 		nvs_auto.o
 
+ifneq (,$(filter $(CONFIG_NVS_ON_CHANGE),y m))
+nvs-objs += nvs_on_change.o
+endif
+
 ifneq (,$(filter $(CONFIG_NVS_LIGHT),y m))
 nvs-objs += nvs_light.o
 endif

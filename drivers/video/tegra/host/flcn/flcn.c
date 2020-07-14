@@ -351,7 +351,7 @@ static int flcn_read_ucode(struct platform_device *dev,
 	v->dma_addr = 0;
 	v->mapped = NULL;
 
-	ucode_fw = nvhost_client_request_firmware(dev, fw_name);
+	ucode_fw = nvhost_client_request_firmware(dev, fw_name, true);
 	if (!ucode_fw) {
 		nvhost_dbg_fn("request firmware failed");
 		dev_err(&dev->dev, "failed to get firmware\n");

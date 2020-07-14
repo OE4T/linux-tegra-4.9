@@ -650,7 +650,7 @@ static int tsec_read_ucode(struct platform_device *dev, const char *fw_name)
 
 	m->dma_addr = 0;
 	m->mapped = NULL;
-	ucode_fw = nvhost_client_request_firmware(dev, fw_name);
+	ucode_fw = nvhost_client_request_firmware(dev, fw_name, true);
 	if (!ucode_fw) {
 		dev_err(&dev->dev, "failed to get tsec firmware\n");
 		err = -ENOENT;

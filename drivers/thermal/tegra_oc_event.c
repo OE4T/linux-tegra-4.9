@@ -29,19 +29,6 @@
 #include <dt-bindings/thermal/tegra194-soctherm.h>
 #include <soc/tegra/chip-id.h>
 
-#define REG_BANK_SIZE				0x30
-#define CPU_REG_OFFSET				0x30
-#define GPU_REG_OFFSET				0x38
-#define PRIORITY_REG_OFFSET			0x44
-#define THROTTLE_CTRL_BASE			0x500
-
-#define CPU_OFFSET(i)				(THROTTLE_CTRL_BASE + ((i) * REG_BANK_SIZE) + \
-										CPU_REG_OFFSET)
-#define GPU_OFFSET(i)				(THROTTLE_CTRL_BASE + ((i) * REG_BANK_SIZE) + \
-										GPU_REG_OFFSET)
-#define PRIORITY_OFFSET(i)			(THROTTLE_CTRL_BASE + ((i) * REG_BANK_SIZE) + \
-										PRIORITY_REG_OFFSET)
-
 #define EDP_OC_OC1_STATS_0			0x4a8
 #define EDP_OC_STATS(i)				(EDP_OC_OC1_STATS_0 + ((i) * 4))
 
@@ -49,6 +36,21 @@
 #define EDP_OC_THRESH_CNT(i)		(EDP_OC_OC1_THRESH_CNT_0 + ((i) * 0x14))
 
 #define EDP_OC_THROT_VEC_CNT		SOCTHERM_THROT_VEC_INVALID
+
+struct oc_soc_data {
+	unsigned int n_ocs;
+	unsigned int n_throt_vecs;
+	unsigned int cpu_offset;
+	unsigned int gpu_offset;
+	unsigned int priority_offset;
+	unsigned int throttle_bank_size;
+	unsigned int throttle_ctrl_base;
+	unsigned int oc1_stats_offset;
+	unsigned int stats_bank_size;
+	unsigned int oc1_thresh_cnt_offset;
+	unsigned int thresh_cnt_bank_size;
+	const struct attribute_group **attr_groups;
+};
 
 struct throttlectrl_info {
 	unsigned int priority;
@@ -63,11 +65,12 @@ struct edp_oc_info {
 
 struct tegra_oc_event {
 	struct device *hwmon;
-	void __iomem *hsp_base;
 	int32_t irq;
+	void __iomem *hsp_base;
 	void __iomem *soctherm_base;
 	struct throttlectrl_info throttle_ctrl[EDP_OC_THROT_VEC_CNT];
 	struct edp_oc_info edp_oc[EDP_OC_THROT_VEC_CNT];
+	struct oc_soc_data soc_data;
 };
 
 static struct tegra_oc_event tegra_oc;
@@ -82,10 +85,17 @@ static unsigned int tegra_oc_read_status_regs(void)
 	unsigned int oc_status = 0;
 	int irq_cnt;
 	int i;
+	unsigned int status;
+	unsigned int thresh_cnt;
 
 	for (i = 0; i < SOCTHERM_EDP_OC_INVALID; i++) {
-		irq_cnt = tegra_oc_readl(EDP_OC_STATS(i)) /
-							(tegra_oc_readl(EDP_OC_THRESH_CNT(i)) + 1);
+		status = tegra_oc_readl(tegra_oc.soc_data.oc1_stats_offset +
+				(tegra_oc.soc_data.stats_bank_size * i));
+		thresh_cnt = tegra_oc_readl(
+				tegra_oc.soc_data.oc1_thresh_cnt_offset +
+				(tegra_oc.soc_data.thresh_cnt_bank_size *
+				 i)) + 1;
+		irq_cnt = status / thresh_cnt;
 		if (irq_cnt > tegra_oc.edp_oc[i].irq_cnt) {
 			oc_status |= BIT(i);
 			tegra_oc.edp_oc[i].irq_cnt = irq_cnt;
@@ -122,11 +132,26 @@ static irqreturn_t tegra_oc_event_raised(int irq, void *arg)
 static void tegra_get_throtctrl_vectors(void)
 {
 	int i;
+	const struct oc_soc_data *soc_data = &tegra_oc.soc_data;
+	unsigned int priority_off;
+	unsigned int cpu_off;
+	unsigned int gpu_off;
 
-	for (i = 0; i < SOCTHERM_THROT_VEC_INVALID; i++) {
-		tegra_oc.throttle_ctrl[i].priority = tegra_oc_readl(PRIORITY_OFFSET(i));
-		tegra_oc.throttle_ctrl[i].cpu_depth = tegra_oc_readl(CPU_OFFSET(i));
-		tegra_oc.throttle_ctrl[i].gpu_depth = tegra_oc_readl(GPU_OFFSET(i));
+	for (i = 0; i < soc_data->n_throt_vecs; i++) {
+		priority_off = soc_data->throttle_ctrl_base +
+					(i * soc_data->throttle_bank_size) +
+						soc_data->priority_offset;
+		cpu_off = soc_data->throttle_ctrl_base +
+					(i * soc_data->throttle_bank_size) +
+					soc_data->cpu_offset;
+		gpu_off = soc_data->throttle_ctrl_base +
+					(i * soc_data->throttle_bank_size) +
+					soc_data->gpu_offset;
+
+		tegra_oc.throttle_ctrl[i].priority =
+		    tegra_oc_readl(priority_off);
+		tegra_oc.throttle_ctrl[i].cpu_depth = tegra_oc_readl(cpu_off);
+		tegra_oc.throttle_ctrl[i].gpu_depth = tegra_oc_readl(gpu_off);
 	}
 }
 
@@ -184,7 +209,7 @@ static struct attribute *t194_oc1_attrs[] = {
 	NULL,
 };
 
-static const struct attribute_group t194_oc1_data = {
+static const struct attribute_group oc1_data = {
 	.attrs = t194_oc1_attrs,
 	NULL,
 };
@@ -204,7 +229,7 @@ static struct attribute *t194_oc2_attrs[] = {
 	NULL,
 };
 
-static const struct attribute_group t194_oc2_data = {
+static const struct attribute_group oc2_data = {
 	.attrs = t194_oc2_attrs,
 	NULL,
 };
@@ -224,7 +249,7 @@ static struct attribute *t194_oc3_attrs[] = {
 	NULL,
 };
 
-static const struct attribute_group t194_oc3_data = {
+static const struct attribute_group oc3_data = {
 	.attrs = t194_oc3_attrs,
 	NULL,
 };
@@ -244,7 +269,7 @@ static struct attribute *t194_oc4_attrs[] = {
 	NULL,
 };
 
-static const struct attribute_group t194_oc4_data = {
+static const struct attribute_group oc4_data = {
 	.attrs = t194_oc4_attrs,
 	NULL,
 };
@@ -264,7 +289,7 @@ static struct attribute *t194_oc5_attrs[] = {
 	NULL,
 };
 
-static const struct attribute_group t194_oc5_data = {
+static const struct attribute_group oc5_data = {
 	.attrs = t194_oc5_attrs,
 	NULL,
 };
@@ -284,24 +309,67 @@ static struct attribute *t194_oc6_attrs[] = {
 	NULL,
 };
 
-static const struct attribute_group t194_oc6_data = {
+static const struct attribute_group oc6_data = {
 	.attrs = t194_oc6_attrs,
 	NULL,
 };
 
-static const struct attribute_group *t194_oc_groups[] = {
-	&t194_oc1_data,
-	&t194_oc2_data,
-	&t194_oc3_data,
-	&t194_oc4_data,
-	&t194_oc5_data,
-	&t194_oc6_data,
+static const struct attribute_group *t186_oc_groups[] = {
+	&oc1_data,
+	&oc2_data,
+	&oc3_data,
+	&oc4_data,
+	&oc5_data,
+	&oc6_data,
 	NULL,
+};
+
+static const struct oc_soc_data t186_oc_soc_data = {
+	.n_ocs = 6,
+	.n_throt_vecs = 8,
+	.cpu_offset = 0x30,
+	.gpu_offset = 0x38,
+	.priority_offset = 0x44,
+	.throttle_bank_size = 0x30,
+	.throttle_ctrl_base = 0x400,
+	.oc1_stats_offset = 0x3a8,
+	.stats_bank_size = 0x4,
+	.oc1_thresh_cnt_offset = 0x314,
+	.thresh_cnt_bank_size = 0x14,
+	.attr_groups = t186_oc_groups,
+};
+
+static const struct attribute_group *t194_oc_groups[] = {
+	&oc1_data,
+	&oc2_data,
+	&oc3_data,
+	&oc4_data,
+	&oc5_data,
+	&oc6_data,
+	NULL,
+};
+
+static const struct oc_soc_data t194_oc_soc_data = {
+	.n_ocs = 6,
+	.n_throt_vecs = 8,
+	.cpu_offset = 0x30,
+	.gpu_offset = 0x38,
+	.priority_offset = 0x44,
+	.throttle_bank_size = 0x30,
+	.throttle_ctrl_base = 0x500,
+	.oc1_stats_offset = 0x4a8,
+	.stats_bank_size = 0x4,
+	.oc1_thresh_cnt_offset = 0x414,
+	.thresh_cnt_bank_size = 0x14,
+	.attr_groups = t194_oc_groups,
 };
 
 static const struct of_device_id tegra_oc_event_of_match[] = {
 	{ .compatible = "nvidia,tegra194-oc-event",
-		.data = (void *)&t194_oc_groups
+		.data = (void *)&t194_oc_soc_data
+	},
+	{ .compatible = "nvidia,tegra186-oc-event",
+		.data = (void *)&t186_oc_soc_data
 	},
 	{}
 };
@@ -331,6 +399,7 @@ static int tegra_oc_event_probe(struct platform_device *pdev)
 	if (!match)
 		return -ENODEV;
 
+	memcpy(&tegra_oc.soc_data, match->data, sizeof(struct oc_soc_data));
 	if (tegra_platform_is_silicon()) {
 		tegra_oc.soctherm_base = of_iomap(pdev->dev.of_node, 0);
 		if (!tegra_oc.soctherm_base) {
@@ -348,8 +417,8 @@ static int tegra_oc_event_probe(struct platform_device *pdev)
 		tegra_get_throtctrl_vectors();
 
 		tegra_oc.hwmon = devm_hwmon_device_register_with_groups(&pdev->dev,
-				"soctherm_oc", &tegra_oc,
-				(const struct attribute_group **)match->data);
+					"soctherm_oc", &tegra_oc,
+					tegra_oc.soc_data.attr_groups);
 		if (IS_ERR(tegra_oc.hwmon)) {
 			dev_err(&pdev->dev, "Failed to register hwmon device\n");
 			iounmap(tegra_oc.soctherm_base);

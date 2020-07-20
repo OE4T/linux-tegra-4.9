@@ -1,7 +1,7 @@
-From ddfafa321910855b297c422e67c3d395e30a573c Mon Sep 17 00:00:00 2001
+From 3ef00d17c2cc0a384c00a29d246a6eb604197d1a Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Wed, 22 Mar 2017 11:35:55 +0100
-Subject: [PATCH 012/371] futex: Pull rt_mutex_futex_unlock() out from under
+Subject: [PATCH 012/368] futex: Pull rt_mutex_futex_unlock() out from under
  hb->lock
 
 Upstream commit 16ffa12d742534d4ff73e8b3a4e81c1de39196f0
@@ -45,7 +45,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  1 file changed, 100 insertions(+), 54 deletions(-)
 
 diff --git a/kernel/futex.c b/kernel/futex.c
-index 6c0eb8a..802a2a0 100644
+index 50e145c..e464e03 100644
 --- a/kernel/futex.c
 +++ b/kernel/futex.c
 @@ -920,10 +920,12 @@ void exit_pi_state_list(struct task_struct *curr)
@@ -336,7 +336,7 @@ index 6c0eb8a..802a2a0 100644
  			/*
  			 * Drop the reference to the pi state which
  			 * the requeue_pi() code acquired for us.
-@@ -3066,13 +3105,20 @@ static int futex_wait_requeue_pi(u32 __user *uaddr, unsigned int flags,
+@@ -3069,13 +3108,20 @@ static int futex_wait_requeue_pi(u32 __user *uaddr, unsigned int flags,
  		 * the fault, unlock the rt_mutex and return the fault to
  		 * userspace.
  		 */

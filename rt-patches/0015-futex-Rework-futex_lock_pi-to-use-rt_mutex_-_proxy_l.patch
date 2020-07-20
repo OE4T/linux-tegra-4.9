@@ -1,7 +1,7 @@
-From 1124d73ced0028c5a4242a98e59be11a57ab08f9 Mon Sep 17 00:00:00 2001
+From 1ea2d838fa0a2730e3dcaed240411810ae97cc32 Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Wed, 22 Mar 2017 11:35:58 +0100
-Subject: [PATCH 015/371] futex: Rework futex_lock_pi() to use
+Subject: [PATCH 015/368] futex: Rework futex_lock_pi() to use
  rt_mutex_*_proxy_lock()
 
 Upstream commit cfafcd117da0216520568c195cb2f6cd1980c4bb
@@ -39,6 +39,7 @@ futex_lock_pi()			futex_unlock_pi()
 
   lock hb->lock
 
+
 After:
 
 futex_lock_pi()			futex_unlock_pi()
@@ -62,6 +63,7 @@ futex_lock_pi()			futex_unlock_pi()
 				    -EAGAIN
 
   unlock hb->lock
+
 
 It does however solve the earlier starvation/live-lock scenario which got
 introduced with the -EAGAIN since unlike the before scenario; where the
@@ -88,7 +90,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  3 files changed, 62 insertions(+), 42 deletions(-)
 
 diff --git a/kernel/futex.c b/kernel/futex.c
-index 469ecb8..60221e5 100644
+index a1934f8..2e00874 100644
 --- a/kernel/futex.c
 +++ b/kernel/futex.c
 @@ -2148,20 +2148,7 @@ queue_unlock(struct futex_hash_bucket *hb)

@@ -1,7 +1,7 @@
-From 81f0f4bfcaf5efb0bdc82f9344714ef4e9fe588b Mon Sep 17 00:00:00 2001
+From 2c5633fabf2ad25416f548e354cd05951dc0ee90 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Mon, 16 Feb 2015 18:49:10 +0100
-Subject: [PATCH 196/371] fs/aio: simple simple work
+Subject: [PATCH 196/368] fs/aio: simple simple work
 
 |BUG: sleeping function called from invalid context at kernel/locking/rtmutex.c:768
 |in_atomic(): 1, irqs_disabled(): 0, pid: 26, name: rcuos/2
@@ -21,7 +21,6 @@ Subject: [PATCH 196/371] fs/aio: simple simple work
 
 replace this preempt_disable() friendly swork.
 
-Change-Id: Ic023ab1b62f021c1d29f07594e98614754570512
 Reported-By: Mike Galbraith <umgwanakikbuti@gmail.com>
 Suggested-by: Benjamin LaHaise <bcrl@kvack.org>
 Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>

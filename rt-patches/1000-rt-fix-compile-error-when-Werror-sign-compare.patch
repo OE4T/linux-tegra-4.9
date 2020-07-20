@@ -1,7 +1,7 @@
-From bd04b865017b2b2cf824fb0096158ab973a7604e Mon Sep 17 00:00:00 2001
+From 102739f94a60c48c8a3b7f42e3ff42f70e45851f Mon Sep 17 00:00:00 2001
 From: Vincent Zhang <xunz@nvidia.com>
 Date: Tue, 26 Mar 2019 00:02:31 +0800
-Subject: [PATCH 371/371] rt: fix compile error when -Werror=sign-compare
+Subject: [PATCH 368/368] rt: fix compile error when -Werror=sign-compare
 
 Change-Id: I77f3b04362c849d334c56d4f6018e3d49a81b1fa
 ---

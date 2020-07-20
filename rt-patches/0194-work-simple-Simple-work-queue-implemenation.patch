@@ -1,14 +1,14 @@
-From ed9faa571998f308711d500551ec665f4ab217a7 Mon Sep 17 00:00:00 2001
+From e497eb36a3585084f26345e76503ae5e05d1c1a0 Mon Sep 17 00:00:00 2001
 From: Daniel Wagner <daniel.wagner@bmw-carit.de>
 Date: Fri, 11 Jul 2014 15:26:11 +0200
-Subject: [PATCH 194/371] work-simple: Simple work queue implemenation
+Subject: [PATCH 194/368] work-simple: Simple work queue implemenation
 
 Provides a framework for enqueuing callbacks from irq context
 PREEMPT_RT_FULL safe. The callbacks are executed in kthread context.
 
 Bases on wait-simple.
 
-Change-Id: I584dcad4ca7e8ffce2e3375427831ef5b47359c1
+Change-Id: I9b6f4a3080116f90b9d68aa1541a1af33599a1f6
 Cc: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Signed-off-by: Daniel Wagner <daniel.wagner@bmw-carit.de>
 ---
@@ -21,7 +21,7 @@ Signed-off-by: Daniel Wagner <daniel.wagner@bmw-carit.de>
 
 diff --git a/include/linux/swork.h b/include/linux/swork.h
 new file mode 100644
-index 0000000..f175fa9
+index 00000000..f175fa9
 --- /dev/null
 +++ b/include/linux/swork.h
 @@ -0,0 +1,24 @@
@@ -50,21 +50,23 @@ index 0000000..f175fa9
 +
 +#endif /* _LINUX_SWORK_H */
 diff --git a/kernel/sched/Makefile b/kernel/sched/Makefile
-index fb49951..9708dd3 100644
+index fb49951..a871a26 100644
 --- a/kernel/sched/Makefile
 +++ b/kernel/sched/Makefile
-@@ -19,7 +19,7 @@ endif
+@@ -19,9 +19,9 @@ endif
  
  obj-y += core.o loadavg.o clock.o cputime.o
  obj-y += idle_task.o fair.o rt.o deadline.o stop_task.o
 -obj-y += wait.o swait.o completion.o idle.o
-+obj-y += wait.o swait.o swork.o completion.o idle.o
  obj-$(CONFIG_SMP) += cpupri.o cpudeadline.o energy.o
  obj-$(CONFIG_SCHED_WALT) += walt.o
++obj-y += wait.o swait.o swork.o completion.o idle.o
  obj-$(CONFIG_SCHED_AUTOGROUP) += auto_group.o
+ obj-$(CONFIG_SCHEDSTATS) += stats.o
+ obj-$(CONFIG_SCHED_DEBUG) += debug.o
 diff --git a/kernel/sched/swork.c b/kernel/sched/swork.c
 new file mode 100644
-index 0000000..1950f40
+index 00000000..1950f40
 --- /dev/null
 +++ b/kernel/sched/swork.c
 @@ -0,0 +1,173 @@

@@ -1,7 +1,7 @@
-From cf72ad05f28248035d49295e8e76f92eecc2f912 Mon Sep 17 00:00:00 2001
+From c5d6562821a88608999ec1ed8b593b1f3e959292 Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Wed, 22 Mar 2017 11:35:49 +0100
-Subject: [PATCH 006/371] futex: Use smp_store_release() in mark_wake_futex()
+Subject: [PATCH 006/368] futex: Use smp_store_release() in mark_wake_futex()
 
 Upstream commit  1b367ece0d7e696cab1c8501bab282cc6a538b3f
 
@@ -26,7 +26,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  1 file changed, 1 insertion(+), 2 deletions(-)
 
 diff --git a/kernel/futex.c b/kernel/futex.c
-index 7f058e1..55bd7e3 100644
+index 797d601..2bcd1d2 100644
 --- a/kernel/futex.c
 +++ b/kernel/futex.c
 @@ -1289,8 +1289,7 @@ static void mark_wake_futex(struct wake_q_head *wake_q, struct futex_q *q)

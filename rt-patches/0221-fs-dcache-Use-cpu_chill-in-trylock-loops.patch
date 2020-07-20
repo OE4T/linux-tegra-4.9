@@ -1,7 +1,7 @@
-From d189c93847c5f810f3935ffd761b92b2083c00ac Mon Sep 17 00:00:00 2001
+From 47680fbbeb5d1ba4e2663252aa78dcabdb23d32b Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Wed, 7 Mar 2012 21:00:34 +0100
-Subject: [PATCH 221/371] fs: dcache: Use cpu_chill() in trylock loops
+Subject: [PATCH 221/368] fs: dcache: Use cpu_chill() in trylock loops
 
 Retry loops on RT might loop forever when the modifying side was
 preempted. Use cpu_chill() instead of cpu_relax() to let the system
@@ -28,7 +28,7 @@ index 42f8633..e4deae2 100644
  #include <linux/uaccess.h>
  
 diff --git a/fs/autofs4/expire.c b/fs/autofs4/expire.c
-index d8e6d42..2e689ab 100644
+index 2e1f50e..a54cb5d 100644
 --- a/fs/autofs4/expire.c
 +++ b/fs/autofs4/expire.c
 @@ -148,7 +148,7 @@ static struct dentry *get_next_positive_dentry(struct dentry *prev,
@@ -41,7 +41,7 @@ index d8e6d42..2e689ab 100644
  			}
  			spin_unlock(&p->d_lock);
 diff --git a/fs/dcache.c b/fs/dcache.c
-index 80a3e1e..9e8b2cb 100644
+index ed0a023..f757c63 100644
 --- a/fs/dcache.c
 +++ b/fs/dcache.c
 @@ -19,6 +19,7 @@
@@ -83,7 +83,7 @@ index 80a3e1e..9e8b2cb 100644
  		goto repeat;
  	}
  }
-@@ -2382,7 +2394,7 @@ void d_delete(struct dentry * dentry)
+@@ -2380,7 +2392,7 @@ void d_delete(struct dentry * dentry)
  	if (dentry->d_lockref.count == 1) {
  		if (!spin_trylock(&inode->i_lock)) {
  			spin_unlock(&dentry->d_lock);

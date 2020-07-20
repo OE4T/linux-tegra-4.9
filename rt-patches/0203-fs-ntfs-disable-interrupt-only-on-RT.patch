@@ -1,7 +1,7 @@
-From a2f9d40ff0e41455a7b751db4218d93d76f65e91 Mon Sep 17 00:00:00 2001
+From 04065cc3b9b591786ee522757448d4e13451f489 Mon Sep 17 00:00:00 2001
 From: Mike Galbraith <efault@gmx.de>
 Date: Fri, 3 Jul 2009 08:44:12 -0500
-Subject: [PATCH 203/371] fs: ntfs: disable interrupt only on !RT
+Subject: [PATCH 203/368] fs: ntfs: disable interrupt only on !RT
 
 On Sat, 2007-10-27 at 11:44 +0200, Ingo Molnar wrote:
 > * Nick Piggin <nickpiggin@yahoo.com.au> wrote:

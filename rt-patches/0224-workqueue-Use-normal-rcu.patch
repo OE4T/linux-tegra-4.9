@@ -1,7 +1,7 @@
-From ac1edec84582cb0e2d2c51a9adee72a91470a4a4 Mon Sep 17 00:00:00 2001
+From 5ca461210ddf99066ec1705275d52af3e6a46899 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Wed, 24 Jul 2013 15:26:54 +0200
-Subject: [PATCH 224/371] workqueue: Use normal rcu
+Subject: [PATCH 224/368] workqueue: Use normal rcu
 
 There is no need for sched_rcu. The undocumented reason why sched_rcu
 is used is to avoid a few explicit rcu_read_lock()/unlock() pairs by

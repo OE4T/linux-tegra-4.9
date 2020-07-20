@@ -1,7 +1,7 @@
-From 86a6a42694b06cb6a5b197ee465ff8bd80e76129 Mon Sep 17 00:00:00 2001
+From 48fc3f0ae9c9af68d7752afd451c2c23ce3e0fe5 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Tue, 14 Jul 2015 14:26:34 +0200
-Subject: [PATCH 228/371] idr: Use local lock instead of preempt enable/disable
+Subject: [PATCH 228/368] idr: Use local lock instead of preempt enable/disable
 
 We need to protect the per cpu variable and prevent migration.
 

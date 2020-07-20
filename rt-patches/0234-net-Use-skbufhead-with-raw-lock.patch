@@ -1,7 +1,7 @@
-From 48daa64952b1f6357fe623c663b5c08f9459c897 Mon Sep 17 00:00:00 2001
+From 5e20ac00453b5691244f40c0709c0e97f89ad1ed Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Tue, 12 Jul 2011 15:38:34 +0200
-Subject: [PATCH 234/371] net: Use skbufhead with raw lock
+Subject: [PATCH 234/368] net: Use skbufhead with raw lock
 
 Use the rps lock as rawlock so we can keep irq-off regions. It looks low
 latency. However we can't kfree() from this context therefore we defer this

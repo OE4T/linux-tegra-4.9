@@ -1,7 +1,7 @@
-From a3a183fd165e21b89d86b3de83c2371b23e1fb09 Mon Sep 17 00:00:00 2001
+From f545a7caef65f81467975e9cf1c4826f8a4ec079 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Wed, 14 Sep 2016 11:52:17 +0200
-Subject: [PATCH 035/371] rbtree: include rcu.h because we use it
+Subject: [PATCH 035/368] rbtree: include rcu.h because we use it
 
 Since commit c1adf20052d8 ("Introduce rb_replace_node_rcu()")
 rbtree_augmented.h uses RCU related data structures but does not include

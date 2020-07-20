@@ -1,7 +1,7 @@
-From 212ad0ac44db1d4aa861c871689dc4b02a1bc77f Mon Sep 17 00:00:00 2001
+From 14ca6e07a3c43c0e8b65a5f60662c93fa6e36ca5 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Tue, 14 Jul 2015 14:26:34 +0200
-Subject: [PATCH 250/371] powerpc: Use generic rwsem on RT
+Subject: [PATCH 250/368] powerpc: Use generic rwsem on RT
 
 Use generic code which uses rtmutex
 
@@ -11,7 +11,7 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  1 file changed, 2 insertions(+), 1 deletion(-)
 
 diff --git a/arch/powerpc/Kconfig b/arch/powerpc/Kconfig
-index 0a6bb48..582e2f5 100644
+index fa8f2aa..cd44e522 100644
 --- a/arch/powerpc/Kconfig
 +++ b/arch/powerpc/Kconfig
 @@ -52,10 +52,11 @@ config LOCKDEP_SUPPORT

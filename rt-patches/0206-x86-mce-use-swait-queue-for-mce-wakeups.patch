@@ -1,7 +1,7 @@
-From ca53c7d999b8d343c499b63103decf24c4720232 Mon Sep 17 00:00:00 2001
+From ee6ae7bc74c9a6f10309059dd250414d7530797c Mon Sep 17 00:00:00 2001
 From: Steven Rostedt <rostedt@goodmis.org>
 Date: Fri, 27 Feb 2015 15:20:37 +0100
-Subject: [PATCH 206/371] x86/mce: use swait queue for mce wakeups
+Subject: [PATCH 206/368] x86/mce: use swait queue for mce wakeups
 
 We had a customer report a lockup on a 3.0-rt kernel that had the
 following backtrace:
@@ -60,7 +60,7 @@ Signed-off-by: Daniel Wagner <daniel.wagner@bmw-carit.de>
  1 file changed, 56 insertions(+), 12 deletions(-)
 
 diff --git a/arch/x86/kernel/cpu/mcheck/mce.c b/arch/x86/kernel/cpu/mcheck/mce.c
-index 3565b5d..ac2d706 100644
+index ff60728..bdd560b 100644
 --- a/arch/x86/kernel/cpu/mcheck/mce.c
 +++ b/arch/x86/kernel/cpu/mcheck/mce.c
 @@ -42,6 +42,7 @@
@@ -71,7 +71,7 @@ index 3565b5d..ac2d706 100644
  #include <linux/jump_label.h>
  
  #include <asm/processor.h>
-@@ -1413,6 +1414,56 @@ static void mce_do_trigger(struct work_struct *work)
+@@ -1415,6 +1416,56 @@ static void mce_do_trigger(struct work_struct *work)
  
  static DECLARE_WORK(mce_trigger_work, mce_do_trigger);
  
@@ -128,7 +128,7 @@ index 3565b5d..ac2d706 100644
  /*
   * Notify the user(s) about new machine check events.
   * Can be called from interrupt context, but not from machine check/NMI
-@@ -1420,19 +1471,8 @@ static DECLARE_WORK(mce_trigger_work, mce_do_trigger);
+@@ -1422,19 +1473,8 @@ static DECLARE_WORK(mce_trigger_work, mce_do_trigger);
   */
  int mce_notify_irq(void)
  {
@@ -149,7 +149,7 @@ index 3565b5d..ac2d706 100644
  		return 1;
  	}
  	return 0;
-@@ -2599,6 +2639,10 @@ static __init int mcheck_init_device(void)
+@@ -2601,6 +2641,10 @@ static __init int mcheck_init_device(void)
  		goto err_out;
  	}
  

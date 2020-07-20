@@ -1,7 +1,7 @@
-From 77b9d9d728a3d8a556ae9f68829d693c00b6d801 Mon Sep 17 00:00:00 2001
+From 05c0f8eac9b1802ce65eafbac439550a22af3759 Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Wed, 22 Mar 2017 11:35:51 +0100
-Subject: [PATCH 008/371] futex,rt_mutex: Provide futex specific rt_mutex API
+Subject: [PATCH 008/368] futex,rt_mutex: Provide futex specific rt_mutex API
 
 Upstream commit 5293c2efda37775346885c7e924d4ef7018ea60b
 
@@ -33,11 +33,11 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 ---
  kernel/futex.c                  | 30 +++++++++++-----------
  kernel/locking/rtmutex.c        | 55 ++++++++++++++++++++++++++++++-----------
- kernel/locking/rtmutex_common.h |  9 +++++--
- 3 files changed, 62 insertions(+), 32 deletions(-)
+ kernel/locking/rtmutex_common.h |  8 ++++--
+ 3 files changed, 61 insertions(+), 32 deletions(-)
 
 diff --git a/kernel/futex.c b/kernel/futex.c
-index 55bd7e3..cba509f 100644
+index 2bcd1d2..c74e9b3 100644
 --- a/kernel/futex.c
 +++ b/kernel/futex.c
 @@ -915,7 +915,7 @@ void exit_pi_state_list(struct task_struct *curr)
@@ -114,7 +114,7 @@ index 55bd7e3..cba509f 100644
  			/*
  			 * Drop the reference to the pi state which
  			 * the requeue_pi() code acquired for us.
-@@ -2987,7 +2985,7 @@ static int futex_wait_requeue_pi(u32 __user *uaddr, unsigned int flags,
+@@ -2990,7 +2988,7 @@ static int futex_wait_requeue_pi(u32 __user *uaddr, unsigned int flags,
  		 * userspace.
  		 */
  		if (ret && rt_mutex_owner(pi_mutex) == current)
@@ -124,7 +124,7 @@ index 55bd7e3..cba509f 100644
  		/* Unqueue and drop the lock. */
  		unqueue_me_pi(&q);
 diff --git a/kernel/locking/rtmutex.c b/kernel/locking/rtmutex.c
-index 385715b..c0639b5 100644
+index 57d99e4..de302c5 100644
 --- a/kernel/locking/rtmutex.c
 +++ b/kernel/locking/rtmutex.c
 @@ -1511,15 +1511,23 @@ EXPORT_SYMBOL_GPL(rt_mutex_lock_interruptible);
@@ -205,14 +205,12 @@ index 385715b..c0639b5 100644
  
  /**
 diff --git a/kernel/locking/rtmutex_common.h b/kernel/locking/rtmutex_common.h
-index 50848b4..d4d98c9 100644
+index 14cbafe..882d84e 100644
 --- a/kernel/locking/rtmutex_common.h
 +++ b/kernel/locking/rtmutex_common.h
-@@ -110,9 +110,14 @@ extern int rt_mutex_start_proxy_lock(struct rt_mutex *lock,
- extern int rt_mutex_finish_proxy_lock(struct rt_mutex *lock,
- 				      struct hrtimer_sleeper *to,
- 				      struct rt_mutex_waiter *waiter);
-+
+@@ -113,8 +113,12 @@ extern int rt_mutex_wait_proxy_lock(struct rt_mutex *lock,
+ extern bool rt_mutex_cleanup_proxy_lock(struct rt_mutex *lock,
+ 				 struct rt_mutex_waiter *waiter);
  extern int rt_mutex_timed_futex_lock(struct rt_mutex *l, struct hrtimer_sleeper *to);
 -extern bool rt_mutex_futex_unlock(struct rt_mutex *lock,
 -				  struct wake_q_head *wqh);

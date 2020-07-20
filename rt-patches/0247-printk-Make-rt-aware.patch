@@ -1,22 +1,22 @@
-From baa5a4a9d6c437d0436717b84bccdc2455488a4f Mon Sep 17 00:00:00 2001
+From 473fade733d3083c649b0d6862d2db3e0d9dc852 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Wed, 19 Sep 2012 14:50:37 +0200
-Subject: [PATCH 247/371] printk: Make rt aware
+Subject: [PATCH 247/368] printk: Make rt aware
 
 Drop the lock before calling the console driver and do not disable
 interrupts while printing to a serial console.
 
-Change-Id: I96118ee9b53b11f4210bbae5780efb1ef7f5a690
+Change-Id: I3dfbaa9942673362a141f30690f7f0e1cc8dcc2e
 Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
 ---
  kernel/printk/printk.c | 26 ++++++++++++++++++++++++--
  1 file changed, 24 insertions(+), 2 deletions(-)
 
 diff --git a/kernel/printk/printk.c b/kernel/printk/printk.c
-index 7693563..cb3f7ea 100644
+index 2654257..b8792ab 100644
 --- a/kernel/printk/printk.c
 +++ b/kernel/printk/printk.c
-@@ -1715,6 +1715,7 @@ static void call_console_drivers(int level,
+@@ -1714,6 +1714,7 @@ static void call_console_drivers(int level,
  	if (!console_drivers)
  		return;
  
@@ -24,7 +24,7 @@ index 7693563..cb3f7ea 100644
  	for_each_console(con) {
  		if (exclusive_console && con != exclusive_console)
  			continue;
-@@ -1734,6 +1735,7 @@ static void call_console_drivers(int level,
+@@ -1733,6 +1734,7 @@ static void call_console_drivers(int level,
  		else
  			con->write(con, text, len);
  	}
@@ -32,7 +32,7 @@ index 7693563..cb3f7ea 100644
  }
  
  int printk_delay_msec __read_mostly;
-@@ -1971,12 +1973,23 @@ asmlinkage int vprintk_emit(int facility, int level,
+@@ -1970,12 +1972,23 @@ asmlinkage int vprintk_emit(int facility, int level,
  
  	/* If called from the scheduler, we can not call up(). */
  	if (!in_sched) {
@@ -57,7 +57,7 @@ index 7693563..cb3f7ea 100644
  			console_unlock();
  	}
  
-@@ -2369,6 +2382,10 @@ static void console_cont_flush(char *text, size_t size)
+@@ -2368,6 +2381,10 @@ static void console_cont_flush(char *text, size_t size)
  
  	cons = cont.cons;
  	len = cont_print_text(text, size);
@@ -68,7 +68,7 @@ index 7693563..cb3f7ea 100644
  	raw_spin_unlock(&logbuf_lock);
  	stop_critical_timings();
  	call_console_drivers(cont.level, NULL, 0, text, len);
-@@ -2390,6 +2407,7 @@ static void console_cont_flush(char *text, size_t size)
+@@ -2389,6 +2406,7 @@ static void console_cont_flush(char *text, size_t size)
  
  	start_critical_timings();
  	local_irq_restore(flags);
@@ -76,7 +76,7 @@ index 7693563..cb3f7ea 100644
  	return;
  out:
  	raw_spin_unlock_irqrestore(&logbuf_lock, flags);
-@@ -2523,6 +2541,10 @@ void console_unlock(void)
+@@ -2522,6 +2540,10 @@ void console_unlock(void)
  		console_idx = log_next(console_idx);
  		console_seq++;
  		console_prev = msg->flags;
@@ -87,7 +87,7 @@ index 7693563..cb3f7ea 100644
  		raw_spin_unlock(&logbuf_lock);
  
  		stop_critical_timings();	/* don't trace print latency */
-@@ -2530,7 +2552,7 @@ void console_unlock(void)
+@@ -2529,7 +2551,7 @@ void console_unlock(void)
  		call_force_console_drivers(force_text, force_len);
  		start_critical_timings();
  		printk_safe_exit_irqrestore(flags);

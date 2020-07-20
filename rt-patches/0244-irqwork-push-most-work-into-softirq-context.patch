@@ -1,7 +1,7 @@
-From 6d0eaab5c76d9deca3182adebda171562de58c28 Mon Sep 17 00:00:00 2001
+From 3dab2d86d03ab70739e283673ab17ff05bb6220d Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Tue, 23 Jun 2015 15:32:51 +0200
-Subject: [PATCH 244/371] irqwork: push most work into softirq context
+Subject: [PATCH 244/368] irqwork: push most work into softirq context
 
 Initially we defered all irqwork into softirq because we didn't want the
 latency spikes if perf or another user was busy and delayed the RT task.
@@ -147,7 +147,7 @@ index bcf107c..0ddaf1e 100644
  EXPORT_SYMBOL_GPL(irq_work_run);
  
 diff --git a/kernel/sched/core.c b/kernel/sched/core.c
-index 2c4f4df..6522f8b 100644
+index a21be95..a60f8c4 100644
 --- a/kernel/sched/core.c
 +++ b/kernel/sched/core.c
 @@ -6172,6 +6172,7 @@ static int init_rootdomain(struct root_domain *rd)

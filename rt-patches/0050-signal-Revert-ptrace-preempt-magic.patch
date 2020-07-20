@@ -1,7 +1,7 @@
-From 599af633359178c17370d1e736e8b22e303db587 Mon Sep 17 00:00:00 2001
+From 1696495de5894bdd84c6cb94da01787c62fc8029 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Wed, 21 Sep 2011 19:57:12 +0200
-Subject: [PATCH 050/371] signal: Revert ptrace preempt magic
+Subject: [PATCH 050/368] signal: Revert ptrace preempt magic
 
 Upstream commit '53da1d9456fe7f8 fix ptrace slowness' is nothing more
 than a bandaid around the ptrace design trainwreck. It's not a

@@ -1,7 +1,7 @@
-From aa1ead80ca8ac4b962cac4c3fe044635d2b2ea17 Mon Sep 17 00:00:00 2001
+From 22405cf573e0162d6a2c15dfb308d5646ed833d6 Mon Sep 17 00:00:00 2001
 From: Yong Zhang <yong.zhang0@gmail.com>
 Date: Tue, 15 May 2012 13:53:56 +0800
-Subject: [PATCH 201/371] mm: Protect activate_mm() by
+Subject: [PATCH 201/368] mm: Protect activate_mm() by
  preempt_[disable&enable]_rt()
 
 User preempt_*_rt instead of local_irq_*_rt or otherwise there will be
@@ -37,7 +37,7 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  2 files changed, 4 insertions(+)
 
 diff --git a/fs/exec.c b/fs/exec.c
-index ddaf45a..c819c06 100644
+index c948aaf..fc587b5 100644
 --- a/fs/exec.c
 +++ b/fs/exec.c
 @@ -1039,12 +1039,14 @@ static int exec_mmap(struct mm_struct *mm)

@@ -1,7 +1,7 @@
-From 3f15793003b3e9091cccf943075a2618cd7adec8 Mon Sep 17 00:00:00 2001
+From 1cf96c7fd219d4ea3aa01093498684e9813a9630 Mon Sep 17 00:00:00 2001
 From: Daniel Wagner <wagi@monom.org>
 Date: Tue, 17 Feb 2015 09:37:44 +0100
-Subject: [PATCH 210/371] thermal: Defer thermal wakups to threads
+Subject: [PATCH 210/368] thermal: Defer thermal wakups to threads
 
 On RT the spin lock in pkg_temp_thermal_platfrom_thermal_notify will
 call schedule while we run in irq context.

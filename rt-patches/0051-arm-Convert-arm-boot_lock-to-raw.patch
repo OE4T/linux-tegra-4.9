@@ -1,7 +1,7 @@
-From dbf4d76ae6837b4f9066235369037019cabc42d5 Mon Sep 17 00:00:00 2001
+From 5b10d9c0657744238a010e3fcab895d3242c8140 Mon Sep 17 00:00:00 2001
 From: Frank Rowand <frank.rowand@am.sony.com>
 Date: Mon, 19 Sep 2011 14:51:14 -0700
-Subject: [PATCH 051/371] arm: Convert arm boot_lock to raw
+Subject: [PATCH 051/368] arm: Convert arm boot_lock to raw
 
 The arm boot_lock is used by the secondary processor startup code.  The locking
 task is the idle thread, which has idle->sched_class == &idle_sched_class.
@@ -297,7 +297,7 @@ index 5494c9e..e8ce157 100644
  	return ret;
  }
 diff --git a/arch/arm/mach-spear/platsmp.c b/arch/arm/mach-spear/platsmp.c
-index 8d1e2d5..7fa56cc 100644
+index 8d1e2d5..7fa56cc7 100644
 --- a/arch/arm/mach-spear/platsmp.c
 +++ b/arch/arm/mach-spear/platsmp.c
 @@ -32,7 +32,7 @@ static void write_pen_release(int val)

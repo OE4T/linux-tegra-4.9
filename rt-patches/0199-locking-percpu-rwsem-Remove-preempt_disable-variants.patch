@@ -1,7 +1,7 @@
-From eb229f38005b9cdaafa584084e8544935f6c8a13 Mon Sep 17 00:00:00 2001
+From e93f60227ba2a075495b390daed8e1c2641dffdb Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Wed, 23 Nov 2016 16:29:32 +0100
-Subject: [PATCH 199/371] locking/percpu-rwsem: Remove preempt_disable variants
+Subject: [PATCH 199/368] locking/percpu-rwsem: Remove preempt_disable variants
 
 Effective revert commit:
 

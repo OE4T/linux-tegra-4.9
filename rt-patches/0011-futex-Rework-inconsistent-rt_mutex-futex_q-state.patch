@@ -1,7 +1,7 @@
-From 36c725eb31f63b513ef54ed1973d96d0362cc369 Mon Sep 17 00:00:00 2001
+From 5b93d6794e719964ad428cad576d674f1e7af843 Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Wed, 22 Mar 2017 11:35:54 +0100
-Subject: [PATCH 011/371] futex: Rework inconsistent rt_mutex/futex_q state
+Subject: [PATCH 011/368] futex: Rework inconsistent rt_mutex/futex_q state
 
 Upstream commit 73d786bd043ebc855f349c81ea805f6b11cbf2aa
 
@@ -58,7 +58,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  1 file changed, 14 insertions(+), 36 deletions(-)
 
 diff --git a/kernel/futex.c b/kernel/futex.c
-index d561ceb..6c0eb8a 100644
+index d3b305f..50e145c 100644
 --- a/kernel/futex.c
 +++ b/kernel/futex.c
 @@ -1403,12 +1403,19 @@ static int wake_futex_pi(u32 __user *uaddr, u32 uval, struct futex_q *top_waiter

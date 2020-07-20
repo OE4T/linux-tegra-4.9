@@ -1,7 +1,7 @@
-From 0a6828559112772100b310884f7682bb9b9a747c Mon Sep 17 00:00:00 2001
+From 62e06e8a9e79f09462937e921aa3f217611c951f Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Fri, 17 Feb 2017 19:44:39 +0100
-Subject: [PATCH 002/371] lockdep: Handle statically initialized PER_CPU locks
+Subject: [PATCH 002/368] lockdep: Handle statically initialized PER_CPU locks
  proper
 
 If a PER_CPU struct which contains a spin_lock is statically initialized
@@ -215,7 +215,7 @@ index b63d342..97b04aa 100644
  
  static inline void __percpu *mod_percpu(struct module *mod)
 diff --git a/mm/percpu.c b/mm/percpu.c
-index 3794cfc..a42fb6c 100644
+index 0462a2a..16bb5f5 100644
 --- a/mm/percpu.c
 +++ b/mm/percpu.c
 @@ -1284,18 +1284,7 @@ void free_percpu(void __percpu *ptr)

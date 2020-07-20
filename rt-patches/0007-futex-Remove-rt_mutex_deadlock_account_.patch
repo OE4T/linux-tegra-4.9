@@ -1,7 +1,7 @@
-From cd7e8489909de8ed9bbc0c9ac07ae06aebeac74a Mon Sep 17 00:00:00 2001
+From 2f535c7240c5a37b0ac1817de710ed1de07a8587 Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Wed, 22 Mar 2017 11:35:50 +0100
-Subject: [PATCH 007/371] futex: Remove rt_mutex_deadlock_account_*()
+Subject: [PATCH 007/368] futex: Remove rt_mutex_deadlock_account_*()
 
 Upstream commit fffa954fb528963c2fb7b0c0084eb77e2be7ab52
 
@@ -58,7 +58,7 @@ index d0519c3..b585af9 100644
  extern void debug_rt_mutex_free_waiter(struct rt_mutex_waiter *waiter);
  extern void debug_rt_mutex_init(struct rt_mutex *lock, const char *name);
 diff --git a/kernel/locking/rtmutex.c b/kernel/locking/rtmutex.c
-index 196cc46..385715b 100644
+index 7615e77..57d99e4 100644
 --- a/kernel/locking/rtmutex.c
 +++ b/kernel/locking/rtmutex.c
 @@ -956,8 +956,6 @@ static int try_to_take_rt_mutex(struct rt_mutex *lock, struct task_struct *task,

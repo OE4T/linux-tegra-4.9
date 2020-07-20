@@ -1,13 +1,13 @@
-From 3ae60e82eb196ab22db22745dd22bca4176c1913 Mon Sep 17 00:00:00 2001
+From acfd0d755209900bfc1f0c0891e3e0c2824785eb Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Fri, 11 Jan 2013 11:23:51 +0100
-Subject: [PATCH 195/371] completion: Use simple wait queues
+Subject: [PATCH 195/368] completion: Use simple wait queues
 
 Completions have no long lasting callbacks and therefor do not need
 the complex waitqueue variant. Use simple waitqueues which reduces the
 contention on the waitqueue lock.
 
-Change-Id: Ifc2329f558ef00439b852c0e7f8e307517e86806
+Change-Id: Ibd1a4bc5e16efba9ac2bde373aa63bb4b527637d
 Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
 ---
  .../net/wireless/intersil/orinoco/orinoco_usb.c    |  2 +-
@@ -18,11 +18,11 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  include/linux/swait.h                              |  1 +
  include/linux/uprobes.h                            |  1 +
  kernel/power/hibernate.c                           |  7 +++++
- kernel/power/suspend.c                             |  5 ++++
+ kernel/power/suspend.c                             |  4 +++
  kernel/sched/completion.c                          | 32 +++++++++++-----------
  kernel/sched/core.c                                | 10 +++++--
  kernel/sched/swait.c                               | 20 ++++++++++++++
- 12 files changed, 72 insertions(+), 27 deletions(-)
+ 12 files changed, 71 insertions(+), 27 deletions(-)
 
 diff --git a/drivers/net/wireless/intersil/orinoco/orinoco_usb.c b/drivers/net/wireless/intersil/orinoco/orinoco_usb.c
 index bca6935..d7a35ee 100644
@@ -38,10 +38,10 @@ index bca6935..d7a35ee 100644
  		}
  		break;
 diff --git a/drivers/usb/gadget/function/f_fs.c b/drivers/usb/gadget/function/f_fs.c
-index d283a2a..66d1894 100644
+index 66e7e3d..075acc2 100644
 --- a/drivers/usb/gadget/function/f_fs.c
 +++ b/drivers/usb/gadget/function/f_fs.c
-@@ -1603,7 +1603,7 @@ static void ffs_data_put(struct ffs_data *ffs)
+@@ -1604,7 +1604,7 @@ static void ffs_data_put(struct ffs_data *ffs)
  		pr_info("%s(): freeing\n", __func__);
  		ffs_data_clear(ffs);
  		BUG_ON(waitqueue_active(&ffs->ev.waitq) ||
@@ -183,19 +183,18 @@ index 72d2d26..968255f 100644
  }
  
 diff --git a/kernel/power/suspend.c b/kernel/power/suspend.c
-index 880c5a2..94f05cb 100644
+index 880c5a2..fe37a26 100644
 --- a/kernel/power/suspend.c
 +++ b/kernel/power/suspend.c
-@@ -560,6 +560,8 @@ static void pm_suspend_marker(char *annotation)
+@@ -559,6 +559,7 @@ static void pm_suspend_marker(char *annotation)
+ 		annotation, tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
  		tm.tm_hour, tm.tm_min, tm.tm_sec, ts.tv_nsec);
  }
- 
 +bool pm_in_action;
-+
+ 
  /**
   * pm_suspend - Externally visible function for suspending the system.
-  * @state: System sleep state to enter.
-@@ -575,6 +577,8 @@ int pm_suspend(suspend_state_t state)
+@@ -575,6 +576,8 @@ int pm_suspend(suspend_state_t state)
  		return -EINVAL;
  
  	pm_suspend_marker("entry");
@@ -204,7 +203,7 @@ index 880c5a2..94f05cb 100644
  	error = enter_state(state);
  	if (error) {
  		suspend_stats.fail++;
-@@ -583,6 +587,7 @@ int pm_suspend(suspend_state_t state)
+@@ -583,6 +586,7 @@ int pm_suspend(suspend_state_t state)
  		suspend_stats.success++;
  	}
  	pm_suspend_marker("exit");
@@ -307,7 +306,7 @@ index 8d0f35d..b62cf64 100644
  }
  EXPORT_SYMBOL(completion_done);
 diff --git a/kernel/sched/core.c b/kernel/sched/core.c
-index 21b1e97..c1bc682 100644
+index 89aaf67..66b47af 100644
 --- a/kernel/sched/core.c
 +++ b/kernel/sched/core.c
 @@ -3449,7 +3449,10 @@ void migrate_disable(void)

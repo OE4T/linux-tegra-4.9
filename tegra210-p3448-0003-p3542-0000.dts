@@ -68,7 +68,7 @@
 	};
 
 	xudc@700d0000 {
-		status = "disabled";
+		status = "okay";
 	};
 
 	extcon {

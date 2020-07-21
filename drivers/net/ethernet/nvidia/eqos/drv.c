@@ -2351,6 +2351,7 @@ static int process_rx_completions(struct eqos_rx_queue *rx_queue, int quota)
 			eqos_receive_skb(pdata, dev, skb, qinx);
 		} else {
 			eqos_update_rx_errors(dev, status);
+			dev_kfree_skb_any(prx_swcx_desc->skb);
 		}
 
 		received++;

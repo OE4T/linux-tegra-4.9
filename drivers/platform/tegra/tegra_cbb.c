@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2020, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -36,6 +36,8 @@
 
 static LIST_HEAD(cbb_noc_list);
 static DEFINE_RAW_SPINLOCK(cbb_noc_lock);
+
+#define get_mstr_id(userbits) get_noc_errlog_subfield(userbits, 21, 18)-1;
 
 static struct tegra_noc_errors noc_errors[] = {
 	{.errcode = "SLV",
@@ -525,7 +527,8 @@ static void print_errloggerX_info(
 				errlog->max_noc_aperture);
 
 	print_cbb_err(file, "\tErrLog5\t\t\t: 0x%x\n", errlog->errlog5);
-	print_errlog5(file, errlog);
+	if(errlog->errlog5)
+		print_errlog5(file, errlog);
 }
 
 
@@ -585,7 +588,9 @@ static struct tegra_cbb_noc_data tegra194_cbb_central_noc_data = {
 	.tegra_noc_routeid_targflow = t194_cbbcentralnoc_routeid_targflow,
 	.tegra_noc_parse_routeid = cbbcentralnoc_parse_routeid,
 	.tegra_noc_parse_userbits = cbbcentralnoc_parse_userbits,
-	.is_ax2apb_bridge_connected = 1
+	.is_ax2apb_bridge_connected = 1,
+	.erd_mask_inband_err = true,
+	.off_erd_err_config = 0x120c
 };
 
 static struct tegra_cbb_noc_data tegra194_aon_noc_data = {
@@ -601,7 +606,8 @@ static struct tegra_cbb_noc_data tegra194_aon_noc_data = {
 	.tegra_noc_routeid_targflow = t194_aonnoc_routeid_targflow,
 	.tegra_noc_parse_routeid = aonnoc_parse_routeid,
 	.tegra_noc_parse_userbits = clusternoc_parse_userbits,
-	.is_ax2apb_bridge_connected = 0
+	.is_ax2apb_bridge_connected = 0,
+	.erd_mask_inband_err = false
 };
 
 static struct tegra_cbb_noc_data tegra194_bpmp_noc_data = {
@@ -617,7 +623,8 @@ static struct tegra_cbb_noc_data tegra194_bpmp_noc_data = {
 	.tegra_noc_routeid_targflow = t194_bpmpnoc_routeid_targflow,
 	.tegra_noc_parse_routeid = bpmpnoc_parse_routeid,
 	.tegra_noc_parse_userbits = clusternoc_parse_userbits,
-	.is_ax2apb_bridge_connected = 1
+	.is_ax2apb_bridge_connected = 1,
+	.erd_mask_inband_err = false
 };
 
 static struct tegra_cbb_noc_data tegra194_rce_noc_data = {
@@ -633,7 +640,8 @@ static struct tegra_cbb_noc_data tegra194_rce_noc_data = {
 	.tegra_noc_routeid_targflow = t194_scenoc_routeid_targflow,
 	.tegra_noc_parse_routeid = scenoc_parse_routeid,
 	.tegra_noc_parse_userbits = clusternoc_parse_userbits,
-	.is_ax2apb_bridge_connected = 1
+	.is_ax2apb_bridge_connected = 1,
+	.erd_mask_inband_err = false
 };
 
 static struct tegra_cbb_noc_data tegra194_sce_noc_data = {
@@ -649,7 +657,8 @@ static struct tegra_cbb_noc_data tegra194_sce_noc_data = {
 	.tegra_noc_routeid_targflow = t194_scenoc_routeid_targflow,
 	.tegra_noc_parse_routeid = scenoc_parse_routeid,
 	.tegra_noc_parse_userbits = clusternoc_parse_userbits,
-	.is_ax2apb_bridge_connected = 1
+	.is_ax2apb_bridge_connected = 1,
+	.erd_mask_inband_err = false
 };
 
 
@@ -668,6 +677,7 @@ static struct tegra_cbb_noc_data tegra194_cv_noc_data = {
 	.tegra_noc_parse_userbits = clusternoc_parse_userbits,
 	.is_ax2apb_bridge_connected = 1,
 	.is_clk_rst = true,
+	.erd_mask_inband_err = false,
 	.is_cluster_probed = is_nvcvnas_probed,
 	.is_clk_enabled = is_nvcvnas_clk_enabled,
 	.tegra_noc_en_clk_rpm = nvcvnas_busy,
@@ -772,6 +782,8 @@ static irqreturn_t tegra_cbb_error_isr(int irq, void *dev_id)
 	struct tegra_cbb_errlog_record *errlog;
 	unsigned int errvld_status = 0;
 	unsigned long flags;
+	bool is_inband_err = 0;
+	u8 mstr_id = 0;
 
 	raw_spin_lock_irqsave(&cbb_noc_lock, flags);
 
@@ -788,10 +800,20 @@ static irqreturn_t tegra_cbb_error_isr(int irq, void *dev_id)
 				errlog->start, irq);
 
 				print_errlog(NULL, errlog, errvld_status);
+
+				mstr_id = get_mstr_id(errlog->errlog5);
+				/* If illegal request is from CCPLEX(id:0x1)
+				 * master then call BUG() to crash system.
+				 */
+				if(mstr_id == 0x1)
+					is_inband_err = 1;
 			}
 		}
 	}
 	raw_spin_unlock_irqrestore(&cbb_noc_lock, flags);
+
+	if(is_inband_err)
+		BUG();
 
 	return IRQ_HANDLED;
 }
@@ -964,6 +986,15 @@ static int tegra_cbb_probe(struct platform_device *pdev)
 	raw_spin_lock_irqsave(&cbb_noc_lock, flags);
 	list_add(&errlog->node, &cbb_noc_list);
 	raw_spin_unlock_irqrestore(&cbb_noc_lock, flags);
+
+	if (bdata->erd_mask_inband_err) {
+		/* set Error Response Disable to mask SError/inband errors */
+		err = tegra_miscreg_set_erd(bdata->off_erd_err_config);
+		if (err) {
+			dev_err(&pdev->dev, "couldn't mask inband errors\n");
+			return err;
+		}
+	}
 
 	/* register handler for CBB errors due to CCPLEX master*/
 	register_serr_hook(callback);

@@ -209,6 +209,7 @@ struct tegra_dc_sor_data {
 	int powergate_id;
 	struct rw_semaphore reset_lock;
 	struct dentry	*debugdir;
+	u32 dev_id;
 };
 
 #define TEGRA_SOR_TIMEOUT_MS		1000

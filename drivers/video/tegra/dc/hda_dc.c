@@ -707,6 +707,7 @@ void tegra_hda_init(struct tegra_dc *dc, void *data)
 				hda_inst) {
 				mutex_lock(&hda_inst[sor_num].hda_inst_lock);
 				hda->dev_id = tegra_hda_get_dev_id(hda->sor);
+				hda->sor->dev_id = hda->dev_id;
 				hda_inst[sor_num].hda = hda;
 				hda_inst[sor_num].hda_state = HDA_INITIALIZED;
 				mutex_unlock(&hda_inst[sor_num].hda_inst_lock);

@@ -91,23 +91,7 @@
 			status = "disabled";
 		};
 		ucsi_ccg: ucsi_ccg@8 {
-			status = "okay";
-			typec-extcon {
-				typec_port0: port-0 {
-					status = "okay";
-					#extcon-cells = <1>;
-				};
-				typec_port1: port-1 {
-					status = "okay";
-					#extcon-cells = <1>;
-				};
-			};
-			typec-pd {
-				typec_pd: pd {
-					status = "okay";
-					#extcon-cells = <1>;
-				};
-			};
+			status = "disabled";
 		};
 	};
 

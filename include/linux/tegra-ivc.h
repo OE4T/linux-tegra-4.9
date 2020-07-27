@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2018, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2022, NVIDIA CORPORATION.  All rights reserved.
  *
  * This header is BSD licensed so anyone can use the definitions to implement
  * compatible drivers/servers.
@@ -63,6 +63,8 @@ struct tegra_hv_ivm_cookie {
 	uint64_t size;
 	unsigned peer_vmid;
 	void *reserved;
+	bool is_vpr;
+	bool can_alloc; /* Only valid when is_vpr == 1 */
 };
 
 int tegra_ivc_write(struct ivc *ivc, const void *buf, size_t size);
@@ -266,6 +268,13 @@ void *tegra_hv_ivc_write_get_next_frame(struct tegra_hv_ivc_cookie *ivck);
  * Returns 0, or a negative error value if failed.
  */
 int tegra_hv_ivc_write_advance(struct tegra_hv_ivc_cookie *ivck);
+
+/**
+ * tegra_hv_mempool_reserve_vpr - Reserve the IVM-VPR mempool if it exists
+ *
+ * Returns a cookie representing the mempool on success, otherwise an ERR_PTR.
+ */
+struct tegra_hv_ivm_cookie *tegra_hv_mempool_reserve_vpr(void);
 
 /**
  * tegra_hv_mempool_reserve - reserve a mempool for use

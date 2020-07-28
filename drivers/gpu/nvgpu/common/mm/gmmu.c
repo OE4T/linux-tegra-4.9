@@ -620,7 +620,7 @@ static int __nvgpu_gmmu_update_page_table(struct vm_gk20a *vm,
 		   "vm=%s "
 		   "%-5s GPU virt %#-12llx +%#-9llx    phys %#-12llx "
 		   "phys offset: %#-4llx;  pgsz: %3dkb perm=%-2s | "
-		   "kind=%#02x APT=%-6s %c%c%c%c%c%c",
+		   "kind=%#02x APT=%-6s %c%c%c%c%c",
 		   vm->name,
 		   (sgt != NULL) ? "MAP" : "UNMAP",
 		   virt_addr,
@@ -634,7 +634,6 @@ static int __nvgpu_gmmu_update_page_table(struct vm_gk20a *vm,
 		   attrs->cacheable ? 'C' : '-',
 		   attrs->sparse    ? 'S' : '-',
 		   attrs->priv      ? 'P' : '-',
-		   attrs->coherent  ? 'I' : '-',
 		   attrs->valid     ? 'V' : '-',
 		   attrs->platform_atomic ? 'A' : '-');
 
@@ -693,7 +692,6 @@ u64 gk20a_locked_gmmu_map(struct vm_gk20a *vm,
 		.rw_flag   = rw_flag,
 		.sparse    = sparse,
 		.priv      = priv,
-		.coherent  = flags & NVGPU_VM_MAP_IO_COHERENT,
 		.valid     = (flags & NVGPU_VM_MAP_UNMAPPED_PTE) == 0U,
 		.aperture  = aperture,
 		.platform_atomic = (flags & NVGPU_VM_MAP_PLATFORM_ATOMIC) != 0U
@@ -709,14 +707,6 @@ u64 gk20a_locked_gmmu_map(struct vm_gk20a *vm,
 	}
 
 	attrs.l3_alloc = (bool)(flags & NVGPU_VM_MAP_L3_ALLOC);
-
-	/*
-	 * Handle the IO coherency aperture: make sure the .aperture field is
-	 * correct based on the IO coherency flag.
-	 */
-	if (attrs.coherent && attrs.aperture == APERTURE_SYSMEM) {
-		attrs.aperture = APERTURE_SYSMEM_COH;
-	}
 
 	/*
 	 * Only allocate a new GPU VA range if we haven't already been passed a
@@ -775,7 +765,6 @@ void gk20a_locked_gmmu_unmap(struct vm_gk20a *vm,
 		.rw_flag   = rw_flag,
 		.sparse    = sparse,
 		.priv      = 0,
-		.coherent  = 0,
 		.valid     = 0,
 		.aperture  = APERTURE_INVALID,
 	};

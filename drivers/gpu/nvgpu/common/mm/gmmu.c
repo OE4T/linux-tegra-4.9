@@ -84,14 +84,6 @@ static u64 __nvgpu_gmmu_map(struct vm_gk20a *vm,
 	}
 
 	/*
-	 * If the GPU is IO coherent and the DMA API is giving us IO coherent
-	 * CPU mappings then we gotta make sure we use the IO coherent aperture.
-	 */
-	if (nvgpu_is_enabled(g, NVGPU_USE_COHERENT_SYSMEM)) {
-		flags |= NVGPU_VM_MAP_IO_COHERENT;
-	}
-
-	/*
 	 * Later on, when we free this nvgpu_mem's GPU mapping, we are going to
 	 * potentially have to free the GPU VA space. If the address passed in
 	 * is non-zero then this API is not expected to manage the VA space and

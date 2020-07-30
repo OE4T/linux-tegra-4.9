@@ -30,6 +30,7 @@
 #define CTRL_S64_MIN 0x8000000000000000LL
 #define CTRL_S64_MAX 0x7FFFFFFFFFFFFFFFLL
 #define CTRL_MAX_STR_SIZE 4096
+#define STEREO_EEPROM_SIZE 4096
 
 #define TEGRACAM_DEF_CTRLS 1
 
@@ -163,6 +164,16 @@ static struct v4l2_ctrl_config ctrl_cfg_list[] = {
 		.max = CTRL_MAX_STR_SIZE,
 		.step = 2,
 	},
+	{
+		.ops = &tegracam_ctrl_ops,
+		.id = TEGRA_CAMERA_CID_STEREO_EEPROM,
+		.name = "Stereo EEPROM",
+		.type = V4L2_CTRL_COMPOUND_TYPES,
+		.flags = V4L2_CTRL_FLAG_READ_ONLY,
+		.min = 0,
+		.max = STEREO_EEPROM_SIZE,
+		.step = 2,
+	},
 };
 
 static int tegracam_get_ctrl_index(u32 cid)
@@ -198,7 +209,20 @@ static int tegracam_get_string_ctrl_size(u32 cid,
 
 	return ops->string_ctrl_size[index];
 }
+static int tegracam_get_compound_ctrl_size(u32 cid,
+		const struct tegracam_ctrl_ops *ops)
+{
+	u32 index = 0;
 
+	switch (cid) {
+	case TEGRA_CAMERA_CID_STEREO_EEPROM:
+			index = TEGRA_CAM_COMPOUND_CTRL_EEPROM_INDEX;
+			break;
+	default:
+		return -EINVAL;
+	}
+	return ops->compound_ctrl_size[index];
+}
 static int tegracam_setup_string_ctrls(struct tegracam_device *tc_dev,
 				struct tegracam_ctrl_handler *handler)
 {
@@ -217,6 +241,33 @@ static int tegracam_setup_string_ctrls(struct tegracam_device *tc_dev,
 
 		if (ctrl->type == V4L2_CTRL_TYPE_STRING) {
 			err = ops->fill_string_ctrl(tc_dev, ctrl);
+			if (err)
+				return err;
+		}
+	}
+	speculation_barrier(); /* break_spec_#5_1 */
+
+	return 0;
+}
+
+static int tegracam_setup_compound_ctrls(struct tegracam_device *tc_dev,
+				struct tegracam_ctrl_handler *handler)
+{
+	const struct tegracam_ctrl_ops *ops = handler->ctrl_ops;
+	u32 numctrls = 0;
+	int i;
+	int err = 0;
+
+	if (ops == NULL)
+		return 0;
+
+	numctrls = ops->numctrls;
+
+	for (i = 0; i < numctrls; i++) {
+		struct v4l2_ctrl *ctrl = handler->ctrls[i];
+
+		if (ctrl->type == V4L2_CTRL_COMPOUND_TYPES) {
+			err = ops->fill_compound_ctrl(tc_dev, ctrl);
 			if (err)
 				return err;
 		}
@@ -591,6 +642,7 @@ static int tegracam_check_ctrl_ops(
 	const struct tegracam_ctrl_ops *ops = handler->ctrl_ops;
 	const u32 *cids = ops->ctrl_cid_list;
 	int sensor_ops = 0, sensor_ex_ops = 0, mode_ops = 0, string_ops = 0;
+	int compound_ops = 0;
 	int default_ops = 0, default_ex_ops = 0, total_ops = 0;
 	int i;
 
@@ -658,6 +710,15 @@ static int tegracam_check_ctrl_ops(
 			else
 				string_ops++;
 			break;
+		case TEGRA_CAMERA_CID_STEREO_EEPROM:
+			if (tegracam_get_compound_ctrl_size(
+				TEGRA_CAMERA_CID_STEREO_EEPROM, ops) == 0)
+				dev_err(dev, "Stereo EEPROM size not \
+						specified\n");
+			else
+				compound_ops++;
+			break;
+
 		/* The below controls are handled by framework */
 		case TEGRA_CAMERA_CID_SENSOR_MODE_ID:
 		case TEGRA_CAMERA_CID_HDR_EN:
@@ -673,6 +734,13 @@ static int tegracam_check_ctrl_ops(
 		if (ops->fill_string_ctrl == NULL) {
 			dev_err(dev, "Missing string control implementation\n");
 			string_ops = 0;
+		}
+	}
+
+	if (compound_ops > 0) {
+		if (ops->fill_compound_ctrl == NULL) {
+			dev_err(dev, "Missing compound control implementation\n");
+			compound_ops = 0;
 		}
 	}
 
@@ -720,7 +788,7 @@ static int tegracam_check_ctrl_ops(
 		return -EINVAL;
 	}
 
-	*numctrls = sensor_ops + sensor_ex_ops + mode_ops + string_ops;
+	*numctrls = sensor_ops + sensor_ex_ops + mode_ops + string_ops + compound_ops;
 
 	/* default controls are only needed if sensor controls are registered */
 	if (sensor_ops > 0)
@@ -824,6 +892,19 @@ static int tegracam_check_ctrl_cids(struct tegracam_ctrl_handler *handler)
 		}
 	}
 
+	if (ops->fill_compound_ctrl != NULL) {
+		if (tegracam_get_compound_ctrl_size(
+				TEGRA_CAMERA_CID_STEREO_EEPROM, ops) > 0) {
+			if (!find_matching_cid(ops->ctrl_cid_list,
+				ops->numctrls,
+				TEGRA_CAMERA_CID_STEREO_EEPROM)) {
+				dev_err(dev,
+					"Missing TEGRA_CAMERA_CID_STEREO_EEPROM registration\n");
+				errors_found++;
+			}
+		}
+	}
+
 	if (errors_found > 0) {
 		dev_err(dev, "ERROR: %d controls implemented but not registered with framework\n",
 			errors_found);
@@ -881,6 +962,17 @@ int tegracam_ctrl_handler_init(struct tegracam_ctrl_handler *handler)
 			}
 			ctrl_cfg->max = size;
 		}
+
+		if (ctrl_cfg->type == V4L2_CTRL_COMPOUND_TYPES) {
+			size = tegracam_get_compound_ctrl_size(ctrl_cfg->id,
+								ops);
+			if (size < 0) {
+				dev_err(dev, "Invalid compound ctrl size\n");
+				return -EINVAL;
+			}
+			ctrl_cfg->dims[0] = size;
+		}
+
 		ctrl = v4l2_ctrl_new_custom(&handler->ctrl_handler,
 			ctrl_cfg, NULL);
 		if (ctrl == NULL) {
@@ -894,6 +986,12 @@ int tegracam_ctrl_handler_init(struct tegracam_ctrl_handler *handler)
 			ctrl->p_new.p_char = devm_kzalloc(tc_dev->dev,
 				size + 1, GFP_KERNEL);
 		}
+
+		if ((ctrl_cfg->type == V4L2_CTRL_COMPOUND_TYPES) &&
+			ctrl_cfg->flags & V4L2_CTRL_FLAG_READ_ONLY)
+			ctrl->p_new.p = devm_kzalloc(tc_dev->dev,
+				ctrl_cfg->max, GFP_KERNEL);
+
 		handler->ctrls[i] = ctrl;
 	};
 	speculation_barrier(); /* break_spec_p#5_1 */
@@ -914,6 +1012,12 @@ int tegracam_ctrl_handler_init(struct tegracam_ctrl_handler *handler)
 	err = tegracam_setup_string_ctrls(tc_dev, handler);
 	if (err) {
 		dev_err(dev, "setup string controls failed\n");
+		goto error;
+	}
+
+	err = tegracam_setup_compound_ctrls(tc_dev, handler);
+	if (err) {
+		dev_err(dev, "setup compound controls failed\n");
 		goto error;
 	}
 

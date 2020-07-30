@@ -77,20 +77,46 @@ static unsigned int tegra_oc_readl(unsigned int offset)
 	return __raw_readl(tegra_oc.soctherm_base + offset);
 }
 
+static unsigned int tegra_oc_read_status_regs(void)
+{
+	unsigned int oc_status = 0;
+	int irq_cnt;
+	int i;
+
+	for (i = 0; i < SOCTHERM_EDP_OC_INVALID; i++) {
+		irq_cnt = tegra_oc_readl(EDP_OC_STATS(i)) /
+							(tegra_oc_readl(EDP_OC_THRESH_CNT(i)) + 1);
+		if (irq_cnt > tegra_oc.edp_oc[i].irq_cnt) {
+			oc_status |= BIT(i);
+			tegra_oc.edp_oc[i].irq_cnt = irq_cnt;
+		}
+	}
+
+	return oc_status;
+}
+
+static irqreturn_t tegra_oc_event_notify(int irq, void *arg)
+{
+	static unsigned long state;
+	unsigned int oc_status = tegra_oc_read_status_regs();
+
+	if (printk_timed_ratelimit(&state, 1000))
+		pr_err("soctherm: OC ALARM 0x%08x\n", oc_status);
+
+	return IRQ_HANDLED;
+}
+
 static irqreturn_t tegra_oc_event_raised(int irq, void *arg)
 {
-	int i;
+	struct platform_device *pdev = arg;
+
+	if (!pdev)
+		return IRQ_NONE;
 
 	/* Write 0 to TAG bit for HSP SM acknowledge */
 	__raw_writel(0, tegra_oc.hsp_base);
 
-	/* Read all oc stats registers */
-	for (i = 0; i < SOCTHERM_EDP_OC_INVALID; i++) {
-		tegra_oc.edp_oc[i].irq_cnt = tegra_oc_readl(EDP_OC_STATS(i)) /
-									(tegra_oc_readl(EDP_OC_THRESH_CNT(i)) + 1);
-	}
-
-	return IRQ_NONE;
+	return IRQ_WAKE_THREAD;
 }
 
 static void tegra_get_throtctrl_vectors(void)
@@ -299,6 +325,7 @@ static int tegra_oc_event_probe(struct platform_device *pdev)
 	unsigned long flags = IRQF_ONESHOT | IRQF_SHARED | IRQF_PROBE_SHARED;
 	const struct of_device_id *match;
 	struct device_node *np = pdev->dev.of_node;
+	unsigned int oc_status;
 
 	match = of_match_node(tegra_oc_event_of_match, np);
 	if (!match)
@@ -331,8 +358,9 @@ static int tegra_oc_event_probe(struct platform_device *pdev)
 		}
 
 		tegra_oc.irq = platform_get_irq(pdev, 0);
-		ret = request_irq(tegra_oc.irq, tegra_oc_event_raised,
-				flags, "tegra-oc-event", &tegra_oc);
+		ret = devm_request_threaded_irq(&pdev->dev, tegra_oc.irq,
+				tegra_oc_event_raised, tegra_oc_event_notify, flags,
+				"tegra-oc-event", pdev);
 		if (ret < 0) {
 			iounmap(tegra_oc.soctherm_base);
 			iounmap(tegra_oc.hsp_base);
@@ -340,6 +368,11 @@ static int tegra_oc_event_probe(struct platform_device *pdev)
 			dev_err(&pdev->dev, "Failed to request irq\n");
 			return ret;
 		}
+
+		/* Check if any OC events before probe */
+		oc_status = tegra_oc_read_status_regs();
+		if (oc_status)
+			pr_err("soctherm: OC ALARM 0x%08x\n", oc_status);
 	}
 
 	dev_info(&pdev->dev, "OC driver initialized");

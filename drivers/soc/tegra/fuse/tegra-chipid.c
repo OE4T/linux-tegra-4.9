@@ -31,6 +31,7 @@
 #define TEGRAID_PATCH_SHIFT 8
 #define TEGRA210_INT_CID 5
 #define TEGRA186_INT_CID 6
+#define TEGRA194_INT_CID 7
 
 struct tegra_id {
 	enum tegra_chipid chipid;
@@ -220,6 +221,9 @@ unsigned long long tegra_chip_uid(void)
 		break;
 	case TEGRA186:
 		cid = TEGRA186_INT_CID;
+		break;
+	case TEGRA194:
+		cid = TEGRA194_INT_CID;
 		break;
 	default:
 		cid = 0;

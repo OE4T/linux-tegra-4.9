@@ -1581,6 +1581,9 @@ struct eqos_prv_data {
 	struct tegra_prod       *prod_list;
 	/** Clocks enable check */
 	bool clks_enable;
+	/** Reserve SKB pointer and DMA */
+	struct sk_buff *resv_skb;
+	dma_addr_t resv_dma;
 };
 
 typedef enum {

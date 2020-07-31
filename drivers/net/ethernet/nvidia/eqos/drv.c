@@ -1168,6 +1168,11 @@ static int eqos_open(struct net_device *dev)
 	pdata->hw_stopped = false;
 	mutex_unlock(&pdata->hw_change_lock);
 
+	if (!pdata->resv_skb || pdata->resv_dma == 0) {
+		dev_err(&dev->dev, "failed to reserve SKB\n");
+		ret = -ENOMEM;
+		goto err_ptp;
+	}
 	phy_start(pdata->phydev);
 
 	netif_tx_start_all_queues(pdata->dev);
@@ -2271,11 +2276,13 @@ static int process_rx_completions(struct eqos_rx_queue *rx_queue, int quota)
 	struct desc_if_struct *desc_if = &pdata->desc_if;
 	struct net_device *dev = pdata->dev;
 	int received = 0;
+	int received_resv = 0;
 	int ret;
 
 	pr_debug("-->%s(): qinx = %u, quota = %d\n", __func__, qinx, quota);
 
-	while (received < quota && received < RX_DESC_CNT) {
+	while (received < quota && received < RX_DESC_CNT &&
+	       received_resv < quota) {
 		struct rx_swcx_desc *prx_swcx_desc;
 		struct s_rx_desc *prx_desc, *context_desc;
 		struct sk_buff *skb;
@@ -2291,9 +2298,18 @@ static int process_rx_completions(struct eqos_rx_queue *rx_queue, int quota)
 
 		INCR_RX_DESC_INDEX(prx_ring->cur_rx, 1);
 
-		if (WARN_ON_ONCE(!prx_swcx_desc->skb))
-			/* RX ring is in an inconsistent state */
-			break;
+		if (unlikely(prx_swcx_desc->skb == pdata->resv_skb)) {
+			pr_debug("%s(): Reserved SKB used\n", __func__);
+			prx_swcx_desc->skb = NULL;
+			prx_swcx_desc->dma = 0;
+			/* Reservered skb used */
+			received_resv++;
+			/* This is unlikely case so try to
+			 *  get memory whenever we hit this loop
+			 */
+			desc_if->realloc_skb(pdata, qinx);
+			continue;
+		}
 
 #ifdef EQOS_ENABLE_RX_DESC_DUMP
 		dump_rx_desc(qinx, prx_desc, entry);

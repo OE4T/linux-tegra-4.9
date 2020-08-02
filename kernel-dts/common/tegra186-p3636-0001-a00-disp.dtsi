@@ -1,0 +1,26 @@
+/*
+ * tegra186-p3636-0001-a00-disp.dtsi : Lanai display dtsi
+ *
+ * Copyright (c) 2020, NVIDIA CORPORATION.  All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 2 of the License.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ *
+ *
+ * p3509 have 2 display heads :
+ *      fb0: Head0->SOR1->HDMI
+ *      fb1: Head1->SOR0->DP
+ * Each display head is assigned three windows each.
+ */
+
+#include <dt-bindings/display/tegra-dc.h>
+#include <dt-bindings/display/tegra-panel.h>
+
+#include <t18x-common-platforms/tegra186-hdmi.dtsi>
+#include <t18x-common-platforms/tegra186-dp.dtsi>

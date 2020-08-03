@@ -210,9 +210,14 @@ pex9749_probe(struct i2c_client *client, const struct i2c_device_id *id)
 {
 	struct device *dev = &client->dev;
 	struct pex9749_priv *priv;
+	static bool deferred_probe;
 
-	if (!is_pex9749(client))
+	if (!is_pex9749(client)) {
+		/* The AIC may not be up yet, request to probe later once */
+		if (false == xchg(&deferred_probe, true))
+			return -EPROBE_DEFER;
 		return -ENODEV;
+	}
 
 	priv = devm_kzalloc(dev, sizeof(struct pex9749_priv), GFP_KERNEL);
 	if (!priv)

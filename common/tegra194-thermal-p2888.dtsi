@@ -12,6 +12,7 @@
  */
 
 #include <t19x-common-platforms/tegra194-thermal.dtsi>
+#include <t19x-common-platforms/tegra194-thermal-userspace-alert.dtsi>
 #include "tegra194-spmic-p2888-0001.dtsi"
 / {
 	bpmp_i2c {
@@ -21,6 +22,18 @@
 	};
 
 	soctherm-oc-event {
+		status = "okay";
+	};
+
+	cpu_alert: cpu-throttle-alert {
+		status = "okay";
+	};
+
+	gpu_alert: gpu-throttle-alert {
+		status = "okay";
+	};
+
+	aux_alert: aux-throttle-alert {
 		status = "okay";
 	};
 };

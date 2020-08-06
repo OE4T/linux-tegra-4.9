@@ -1,0 +1,19 @@
+From 8fcb8d82f9763b4fda57880eec2b220025efe55f Mon Sep 17 00:00:00 2001
+From: Julia Cartwright <julia@ni.com>
+Date: Thu, 20 Dec 2018 14:25:00 -0600
+Subject: [PATCH 367/367] Linux 4.9.201-rt134 REBASE
+
+---
+ localversion-rt | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/localversion-rt b/localversion-rt
+index 9a218ca..6067da4 100644
+--- a/localversion-rt
++++ b/localversion-rt
+@@ -1 +1 @@
+--rt23
++-rt134
+-- 
+2.7.4
+

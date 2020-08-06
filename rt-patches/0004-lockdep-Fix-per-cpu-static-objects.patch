@@ -1,7 +1,7 @@
-From 80740757259abc1a0250772dc60590d4b9fef9e2 Mon Sep 17 00:00:00 2001
+From e8b976c22a44c668e6fcbc5b773cf29b1c6c80b1 Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Mon, 20 Mar 2017 12:26:55 +0100
-Subject: [PATCH 004/368] lockdep: Fix per-cpu static objects
+Subject: [PATCH 004/367] lockdep: Fix per-cpu static objects
 
 Since commit 383776fa7527 ("locking/lockdep: Handle statically initialized
 PER_CPU locks properly") we try to collapse per-cpu locks into a single
@@ -72,7 +72,7 @@ index 8e0cb7a..68123c1 100644
  
  /*
 diff --git a/kernel/cpu.c b/kernel/cpu.c
-index 228c24b..9886268 100644
+index 1b07496..16caaf3 100644
 --- a/kernel/cpu.c
 +++ b/kernel/cpu.c
 @@ -1386,6 +1386,8 @@ core_initcall(cpu_hotplug_pm_sync_init);
@@ -96,7 +96,7 @@ index 228c24b..9886268 100644
  
  /*
 diff --git a/kernel/module.c b/kernel/module.c
-index a9a43d3..a72e654 100644
+index e170b4e..958070e 100644
 --- a/kernel/module.c
 +++ b/kernel/module.c
 @@ -677,8 +677,12 @@ bool __is_module_percpu_address(unsigned long addr, unsigned long *can_addr)

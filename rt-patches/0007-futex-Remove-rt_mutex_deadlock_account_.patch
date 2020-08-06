@@ -1,7 +1,7 @@
-From 2f535c7240c5a37b0ac1817de710ed1de07a8587 Mon Sep 17 00:00:00 2001
+From 5312f3875c8f72b414847c80bdc7bc78481c26b4 Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Wed, 22 Mar 2017 11:35:50 +0100
-Subject: [PATCH 007/368] futex: Remove rt_mutex_deadlock_account_*()
+Subject: [PATCH 007/367] futex: Remove rt_mutex_deadlock_account_*()
 
 Upstream commit fffa954fb528963c2fb7b0c0084eb77e2be7ab52
 

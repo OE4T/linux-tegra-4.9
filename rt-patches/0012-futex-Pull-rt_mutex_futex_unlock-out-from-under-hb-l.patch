@@ -1,7 +1,7 @@
-From 3ef00d17c2cc0a384c00a29d246a6eb604197d1a Mon Sep 17 00:00:00 2001
+From 9aafa746677a78f078920d1d7a9ff221f31dfc13 Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Wed, 22 Mar 2017 11:35:55 +0100
-Subject: [PATCH 012/368] futex: Pull rt_mutex_futex_unlock() out from under
+Subject: [PATCH 012/367] futex: Pull rt_mutex_futex_unlock() out from under
  hb->lock
 
 Upstream commit 16ffa12d742534d4ff73e8b3a4e81c1de39196f0

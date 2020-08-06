@@ -1,7 +1,7 @@
-From 99bee64899b7ed9a9b9ef922fc0f455ba5c75827 Mon Sep 17 00:00:00 2001
+From 0dcdd7340f995d4814c7fce24e54e485ff7fcfd7 Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Wed, 22 Mar 2017 11:35:53 +0100
-Subject: [PATCH 010/368] futex: Cleanup refcounting
+Subject: [PATCH 010/367] futex: Cleanup refcounting
 
 Upstream commit bf92cf3a5100f5a0d5f9834787b130159397cb22
 

@@ -1,7 +1,7 @@
-From 72e1e7fff6673996f96e8d8e298c3e19b9b67bc0 Mon Sep 17 00:00:00 2001
+From 16ef7b34f14c709b411c5cc39760b6e2b269c241 Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Thu, 23 Mar 2017 15:56:11 +0100
-Subject: [PATCH 022/368] sched/rtmutex: Refactor rt_mutex_setprio()
+Subject: [PATCH 022/367] sched/rtmutex: Refactor rt_mutex_setprio()
 
 Upstream commit acd58620e415aee4a43a808d7d2fd87259ee0001
 
@@ -18,7 +18,7 @@ priority didn't change, this could lead to a stale pointer.
 As for the XXX, I think its fine to use pi_task->prio, because if it
 differs from waiter->prio, a PI chain update is immenent.
 
-Change-Id: I14c1958e40588c94a03658ad9b42870416f871cc
+Change-Id: I4493562c1e8a1f1a68e41c805498c6bf6a1d34ca
 Signed-off-by: Peter Zijlstra (Intel) <peterz@infradead.org>
 Cc: juri.lelli@arm.com
 Cc: bigeasy@linutronix.de
@@ -270,7 +270,7 @@ index 9f55d7a..e275b81 100644
  
  	return true; /* call rt_mutex_postunlock() */
 diff --git a/kernel/sched/core.c b/kernel/sched/core.c
-index e3f11c7..c63b366 100644
+index 69d0e8e..91e5aea 100644
 --- a/kernel/sched/core.c
 +++ b/kernel/sched/core.c
 @@ -3751,10 +3751,25 @@ EXPORT_SYMBOL(default_wake_function);

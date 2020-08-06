@@ -1710,20 +1710,30 @@ static void tegra_channel_populate_dev_info(struct tegra_camera_dev_info *cdev,
 			struct tegra_channel *chan)
 {
 	u64 pixelclock = 0;
+	struct camera_common_data *s_data =
+			to_camera_common_data(chan->subdev_on_csi->dev);
 
-	if (chan->pg_mode)
-		cdev->sensor_type = SENSORTYPE_VIRTUAL;
-	else if (v4l2_subdev_has_op(chan->subdev_on_csi,
-				video, g_dv_timings)) {
-		cdev->sensor_type = SENSORTYPE_OTHER;
-		pixelclock = tegra_channel_get_max_source_rate();
-	} else {
+	if (s_data != NULL) {
+		/* camera sensors */
 		cdev->sensor_type = tegra_channel_get_sensor_type(chan);
 		pixelclock = tegra_channel_get_max_pixelclock(chan);
 		/* Multiply by CPHY symbols to pixels factor. */
 		if (cdev->sensor_type == SENSORTYPE_CPHY)
 			pixelclock *= 16/7;
 		cdev->lane_num = tegra_channel_get_num_lanes(chan);
+	} else {
+		if (chan->pg_mode) {
+			/* TPG mode */
+			cdev->sensor_type = SENSORTYPE_VIRTUAL;
+		} else if (v4l2_subdev_has_op(chan->subdev_on_csi,
+						video, g_dv_timings)) {
+			/* HDMI-IN */
+			cdev->sensor_type = SENSORTYPE_OTHER;
+			pixelclock = tegra_channel_get_max_source_rate();
+		} else {
+			/* Focusers, no pixel clk and ISO BW, just bail out */
+			return;
+		}
 	}
 
 	cdev->pixel_rate = pixelclock;

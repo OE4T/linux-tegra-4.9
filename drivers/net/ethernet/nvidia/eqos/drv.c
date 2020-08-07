@@ -2094,7 +2094,6 @@ cleanup:
 			pdata->xstats.q_tx_pkt_n[qinx]++;
 			pdata->xstats.tx_pkt_n++;
 			dev->stats.tx_packets++;
-			processed++;
 		}
 
 		/* CTXT descriptors set their len to -1, which is an unsigned

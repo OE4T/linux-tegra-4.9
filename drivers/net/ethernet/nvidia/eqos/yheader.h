@@ -455,8 +455,6 @@
 /* Maximum size of pkt that is copied to a new buffer on receive */
 #define EQOS_COPYBREAK_DEFAULT 256
 #define EQOS_SYSCLOCK	62500000 /* System clock is 62.5MHz */
-#define EQOS_AXI_CLOCK	125000000 /* AXI clock, use for RWIT */
-
 #define EQOS_SYSTIMEPERIOD	16 /* System time period is 16ns */
 
 #define EQOS_TX_QUEUE_CNT (pdata->num_chans)

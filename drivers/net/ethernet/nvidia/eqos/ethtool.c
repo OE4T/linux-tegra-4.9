@@ -30,7 +30,7 @@
  * =========================================================================
  */
 /*
- * Copyright (c) 2015-2020, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2019, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -616,14 +616,15 @@ u32 eqos_usec2riwt(u32 usec, struct eqos_prv_data *pdata)
 	pr_debug("-->eqos_usec2riwt\n");
 
 	/* Eg:
-	 * AXI System clock is 125 MHz, each clock cycle would then be 8ns
+	 * System clock is 62.5MHz, each clock cycle would then be 16ns
 	 * For value 0x1 in watchdog timer, device would wait for 256
 	 * clock cycles,
-	 * ie, (8ns x 256) => 2.048us (rounding off to 2us)
-	 * So below is the formula with above values
+	 * ie, (16ns x 256) => 4.096us (rounding off to 4us)
+	 * So formula with above values is,
+	 * ret = usec/4
 	 */
 
-	ret = (usec * (EQOS_AXI_CLOCK / 1000000)) / 256;
+	ret = (usec * (EQOS_SYSCLOCK / 1000000)) / 256;
 
 	pr_debug("<--eqos_usec2riwt\n");
 
@@ -637,7 +638,7 @@ static u32 eqos_riwt2usec(u32 riwt, struct eqos_prv_data *pdata)
 	pr_debug("-->eqos_riwt2usec\n");
 
 	/* using formula from 'eqos_usec2riwt' */
-	ret = (riwt * 256) / (EQOS_AXI_CLOCK / 1000000);
+	ret = (riwt * 256) / (EQOS_SYSCLOCK / 1000000);
 
 	pr_debug("<--eqos_riwt2usec\n");
 

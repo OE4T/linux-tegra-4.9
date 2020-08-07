@@ -1206,7 +1206,6 @@ static int eqos_open(struct net_device *dev)
 
 static int eqos_close(struct net_device *dev)
 {
-	int i;
 	struct eqos_prv_data *pdata = netdev_priv(dev);
 	struct desc_if_struct *desc_if = &pdata->desc_if;
 
@@ -1231,14 +1230,6 @@ static int eqos_close(struct net_device *dev)
 
 	desc_if->free_buff_and_desc(pdata);
 	free_txrx_irqs(pdata);
-
-	/* Cancel hrtimer */
-	for (i = 0; i < pdata->num_chans; i++) {
-		if (atomic_read(&pdata->tx_queue[i].tx_usecs_timer_armed)
-				== EQOS_HRTIMER_ENABLE) {
-			hrtimer_cancel(&pdata->tx_queue[i].tx_usecs_timer);
-		}
-	}
 
 	pdata->hw_stopped = true;
 	mutex_unlock(&pdata->hw_change_lock);
@@ -1649,7 +1640,6 @@ static int eqos_start_xmit(struct sk_buff *skb, struct net_device *dev)
 	INT retval = NETDEV_TX_OK;
 	int cnt = 0;
 	int tso;
-	unsigned long timer_val;
 
 	pr_debug("-->eqos_start_xmit: skb->len = %d, qinx = %u\n", skb->len, qinx);
 
@@ -1754,16 +1744,6 @@ static int eqos_start_xmit(struct sk_buff *skb, struct net_device *dev)
 	if (eqos_tx_avail(ptx_ring) <= EQOS_TX_DESC_THRESHOLD) {
 		netif_stop_subqueue(dev, qinx);
 		netdev_dbg(dev, "%s(): Stopping TX ring %d\n", __func__, qinx);
-	}
-
-	if (ptx_ring->use_tx_usecs == EQOS_COAELSCING_ENABLE &&
-	    atomic_read(&pdata->tx_queue[qinx].tx_usecs_timer_armed) ==
-	    EQOS_HRTIMER_DISABLE) {
-		atomic_set(&pdata->tx_queue[qinx].tx_usecs_timer_armed,
-			   EQOS_COAELSCING_ENABLE);
-		timer_val = ptx_ring->tx_usecs * NSEC_PER_USEC;
-		hrtimer_start(&pdata->tx_queue[qinx].tx_usecs_timer,
-			      (ktime_set(0, timer_val)), HRTIMER_MODE_REL);
 	}
 
 tx_netdev_return:
@@ -2404,34 +2384,15 @@ int eqos_napi_poll_rx(struct napi_struct *napi, int budget)
 	return received;
 }
 
-static inline int eqos_txring_empty(struct tx_ring *ptx_ring)
-{
-	return (ptx_ring->dirty_tx == ptx_ring->cur_tx);
-}
-
 int eqos_napi_poll_tx(struct napi_struct *napi, int budget)
 {
 	struct eqos_tx_queue *tx_queue =
 	    container_of(napi, struct eqos_tx_queue, napi);
 	struct eqos_prv_data *pdata = tx_queue->pdata;
 	int qinx = tx_queue->chan_num;
-	struct tx_ring *ptx_ring = GET_TX_WRAPPER_DESC(qinx);
 	int processed;
-	unsigned long timer_val;
 
 	processed = process_tx_completions(tx_queue, budget);
-	/* re-arm the timer if tx ring is not empty */
-	if ((!eqos_txring_empty(ptx_ring)) &&
-	    (ptx_ring->use_tx_usecs == EQOS_COAELSCING_ENABLE) &&
-	     (atomic_read(&tx_queue->tx_usecs_timer_armed) ==
-	     EQOS_HRTIMER_DISABLE)) {
-		timer_val = ptx_ring->tx_usecs * NSEC_PER_USEC;
-		atomic_set(&tx_queue->tx_usecs_timer_armed,
-			   EQOS_HRTIMER_ENABLE);
-		hrtimer_start(&pdata->tx_queue[qinx].tx_usecs_timer,
-			      (ktime_set(0, timer_val)), HRTIMER_MODE_REL);
-	}
-
 	if (processed < budget) {
 		napi_complete(napi);
 		eqos_enable_chan_tx_interrupt(pdata, qinx);
@@ -5134,16 +5095,13 @@ void eqos_init_rx_coalesce(struct eqos_prv_data *pdata)
 
 	pr_debug("-->eqos_init_rx_coalesce\n");
 
-	/* If RX coalescing parameters are not set in DT, set to default */
 	for (i = 0; i < EQOS_RX_QUEUE_CNT; i++) {
 		prx_ring = GET_RX_WRAPPER_DESC(i);
-		if (prx_ring->use_riwt == EQOS_COAELSCING_DISABLE) {
-			prx_ring->use_riwt = EQOS_COAELSCING_DISABLE;
-			prx_ring->rx_riwt =
-				eqos_usec2riwt(EQOS_OPTIMAL_DMA_RIWT_USEC,
-					       pdata);
-			prx_ring->rx_coal_frames = EQOS_RX_MAX_FRAMES;
-		}
+
+		prx_ring->use_riwt = 1;
+		prx_ring->rx_coal_frames = EQOS_RX_MAX_FRAMES;
+		prx_ring->rx_riwt =
+		    eqos_usec2riwt(EQOS_OPTIMAL_DMA_RIWT_USEC, pdata);
 	}
 
 	pr_debug("<--eqos_init_rx_coalesce\n");

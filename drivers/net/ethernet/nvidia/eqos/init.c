@@ -883,128 +883,6 @@ static void eqos_get_phy_delays(struct eqos_prv_data *pdata)
 		pdata->phy_reset_post_delay = 0;
 }
 
-static enum hrtimer_restart eqos_tx_usecs_hrtimer(struct hrtimer *data)
-{
-	struct eqos_tx_queue *tx_queue = container_of(data,
-			struct eqos_tx_queue,
-			tx_usecs_timer);
-	struct eqos_prv_data *pdata = tx_queue->pdata;
-
-	pdata->xstats.tx_usecs_swtimer_n[tx_queue->chan_num]++;
-
-	atomic_set(&tx_queue->tx_usecs_timer_armed,
-		   EQOS_HRTIMER_DISABLE);
-	if (likely(napi_schedule_prep(&tx_queue->napi)))
-		 __napi_schedule_irqoff(&tx_queue->napi);
-
-	return HRTIMER_NORESTART;
-}
-
-static int eqos_read_coalesc_params(struct platform_device *pdev,
-				    struct eqos_prv_data *pdata,
-				    struct device_node *np)
-{
-	int ret, i;
-	u32 tx_usecs, rx_riwt, tx_frames, rx_frames;
-	bool use_tx_usecs = EQOS_COAELSCING_DISABLE;
-	bool use_tx_frames = EQOS_COAELSCING_DISABLE;
-	bool use_riwt = EQOS_COAELSCING_DISABLE;
-	bool use_rx_frames = EQOS_COAELSCING_DISABLE;
-
-	/* tx_usecs value to be set */
-	ret = of_property_read_u32(np, "nvidia,tx_usecs", &tx_usecs);
-	if (ret < 0) {
-		use_tx_usecs = EQOS_COAELSCING_DISABLE;
-	} else {
-		if (tx_usecs > EQOS_MAX_TX_COALESCE_USEC ||
-		    tx_usecs < EQOS_MIN_TX_COALESCE_USEC) {
-			dev_err(&pdev->dev,
-				"invalid tx_riwt, must be in range %d to %d\n",
-				EQOS_MIN_TX_COALESCE_USEC,
-				EQOS_MAX_TX_COALESCE_USEC);
-			return -EINVAL;
-		}
-		use_tx_usecs = EQOS_COAELSCING_ENABLE;
-	}
-
-	/* tx_frames value to be set */
-	ret = of_property_read_u32(np, "nvidia,tx_frames", &tx_frames);
-	if (ret < 0) {
-		use_tx_frames = EQOS_COAELSCING_DISABLE;
-	} else {
-		if (tx_frames > EQOS_TX_MAX_FRAME ||
-		    tx_frames < EQOS_MIN_TX_COALESCE_FRAMES) {
-			dev_err(&pdev->dev,
-				"invalid tx-frames, must be in range %d to %ld",
-				EQOS_MIN_TX_COALESCE_FRAMES,
-				EQOS_TX_MAX_FRAME);
-			return -EINVAL;
-		}
-		use_tx_frames = EQOS_COAELSCING_ENABLE;
-	}
-
-	if (use_tx_usecs == EQOS_COAELSCING_DISABLE &&
-	    use_tx_frames == EQOS_COAELSCING_ENABLE) {
-		dev_err(&pdev->dev, "invalid settings : tx_frames must be enabled along with tx_usecs in DT\n");
-		return -EINVAL;
-	}
-
-	/* RIWT value to be set */
-	ret = of_property_read_u32(np, "nvidia,rx_riwt", &rx_riwt);
-	if (ret < 0) {
-		use_riwt = EQOS_COAELSCING_ENABLE;
-	} else {
-		if ((rx_riwt > EQOS_MAX_RX_COALESCE_USEC) ||
-		    (rx_riwt < EQOS_MIN_RX_COALESCE_USEC)) {
-			dev_err(&pdev->dev,
-				"invalid rx_riwt, must be inrange %d to %d\n",
-				EQOS_MIN_RX_COALESCE_USEC,
-				EQOS_MAX_RX_COALESCE_USEC);
-			return -EINVAL;
-		}
-		use_riwt = EQOS_COAELSCING_ENABLE;
-	}
-
-	/* rx_frames value to be set */
-	ret = of_property_read_u32(np, "nvidia,rx_frames", &rx_frames);
-	if (ret < 0) {
-		use_rx_frames = EQOS_COAELSCING_DISABLE;
-	} else {
-		if (rx_frames > RX_DESC_CNT ||
-		    rx_frames < EQOS_MIN_RX_COALESCE_FRAMES) {
-			dev_err(&pdev->dev,
-				"invalid rx-frames, must be inrange %d to %d",
-				EQOS_MIN_RX_COALESCE_FRAMES, RX_DESC_CNT);
-			return -EINVAL;
-		}
-		use_rx_frames = EQOS_COAELSCING_ENABLE;
-	}
-
-	/*  On Rx side we support Rx_usecs and Rx-frames together only  */
-	if ((use_riwt == EQOS_COAELSCING_DISABLE &&
-	     use_rx_frames == EQOS_COAELSCING_ENABLE) ||
-	    (use_riwt == EQOS_COAELSCING_ENABLE &&
-	     use_rx_frames == EQOS_COAELSCING_DISABLE)) {
-		dev_err(&pdev->dev,
-			"invalid settings : rx-frames must be enabled along with use_riwt in DT\n");
-		return -EINVAL;
-	}
-
-	for (i = 0; i < pdata->num_chans; i++) {
-		pdata->tx_queue[i].ptx_ring.tx_coal_frames = tx_frames;
-		pdata->tx_queue[i].ptx_ring.use_tx_frames = use_tx_frames;
-		pdata->tx_queue[i].ptx_ring.use_tx_usecs = use_tx_usecs;
-		pdata->tx_queue[i].ptx_ring.tx_usecs = tx_usecs;
-	}
-	for (i = 0; i < pdata->num_chans; i++) {
-		pdata->rx_queue[i].prx_ring.rx_coal_frames = rx_frames;
-		pdata->rx_queue[i].prx_ring.use_riwt = use_riwt;
-		pdata->rx_queue[i].prx_ring.rx_riwt = rx_riwt;
-	}
-
-	return 0;
-}
-
 /*!
 * \brief API to initialize the device.
 *
@@ -1036,7 +914,7 @@ int eqos_probe(struct platform_device *pdev)
 	u8 mac_addr[6];
 	struct eqos_cfg *pdt_cfg;
 	bool	use_multi_q;
-	uint	num_chans, chan;
+	uint	num_chans;
 
 	pr_debug("-->%s()\n", __func__);
 
@@ -1255,12 +1133,6 @@ int eqos_probe(struct platform_device *pdev)
 		goto err_out_q_alloc_failed;
 	}
 
-	ret = eqos_read_coalesc_params(pdev, pdata, node);
-	if (ret) {
-		pr_err("Coalescing parameters incorrect\n");
-		goto err_out_q_alloc_failed;
-	}
-
 	ndev->netdev_ops = eqos_get_netdev_ops();
 
 	pdata->dt_cfg.use_multi_q = use_multi_q;
@@ -1382,16 +1254,6 @@ int eqos_probe(struct platform_device *pdev)
 			       eqos_napi_poll_tx, pdt_cfg->chan_napi_quota[i]);
 	}
 
-	/* Setup the tx_usecs timer */
-	for (i = 0; i < pdata->num_chans; i++) {
-		chan = pdata->tx_queue[i].chan_num;
-		atomic_set(&pdata->tx_queue[chan].tx_usecs_timer_armed,
-			   EQOS_HRTIMER_DISABLE);
-		hrtimer_init(&pdata->tx_queue[chan].tx_usecs_timer,
-			     CLOCK_MONOTONIC, HRTIMER_MODE_REL);
-		pdata->tx_queue[chan].tx_usecs_timer.function =
-					eqos_tx_usecs_hrtimer;
-	}
 	ndev->ethtool_ops = (eqos_get_ethtool_ops());
 
 	if (pdata->hw_feat.tso_en) {

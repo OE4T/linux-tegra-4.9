@@ -663,8 +663,8 @@ static int eqos_get_coalesce(struct net_device *dev,
 			     struct ethtool_coalesce *ec)
 {
 	struct eqos_prv_data *pdata = netdev_priv(dev);
-	struct rx_ring *prx_ring = GET_RX_WRAPPER_DESC(0);
-	struct tx_ring *ptx_ring = GET_TX_WRAPPER_DESC(0);
+	struct rx_ring *prx_ring =
+	    GET_RX_WRAPPER_DESC(0);
 
 	pr_debug("-->eqos_get_coalesce\n");
 
@@ -672,14 +672,6 @@ static int eqos_get_coalesce(struct net_device *dev,
 
 	ec->rx_coalesce_usecs = eqos_riwt2usec(prx_ring->rx_riwt, pdata);
 	ec->rx_max_coalesced_frames = prx_ring->rx_coal_frames;
-
-	ec->rx_coalesce_usecs = eqos_riwt2usec(prx_ring->rx_riwt, pdata);
-	ec->rx_max_coalesced_frames = prx_ring->rx_coal_frames;
-
-	if (ptx_ring->use_tx_usecs)
-		ec->tx_coalesce_usecs = ptx_ring->tx_usecs;
-	if (ptx_ring->use_tx_frames)
-		ec->tx_max_coalesced_frames = ptx_ring->tx_coal_frames;
 
 	pr_debug("<--eqos_get_coalesce\n");
 
@@ -703,14 +695,10 @@ static int eqos_get_coalesce(struct net_device *dev,
 static int eqos_set_coalesce(struct net_device *dev,
 			     struct ethtool_coalesce *ec)
 {
-	unsigned int rx_riwt, rx_usec, qinx;
-	bool use_tx_usecs = EQOS_COAELSCING_DISABLE;
-	bool use_tx_frames = EQOS_COAELSCING_DISABLE;
-	bool use_rx_usecs = EQOS_COAELSCING_DISABLE;
-	bool use_rx_frames = EQOS_COAELSCING_DISABLE;
 	struct eqos_prv_data *pdata = netdev_priv(dev);
-	struct rx_ring *prx_ring = GET_RX_WRAPPER_DESC(0);
-	struct tx_ring *ptx_ring = GET_TX_WRAPPER_DESC(0);
+	struct rx_ring *prx_ring =
+	    GET_RX_WRAPPER_DESC(0);
+	unsigned int rx_riwt, rx_usec, local_use_riwt, qinx;
 
 	pr_debug("-->eqos_set_coalesce\n");
 
@@ -725,36 +713,20 @@ static int eqos_set_coalesce(struct net_device *dev,
 	    (ec->rx_max_coalesced_frames_high) ||
 	    (ec->tx_max_coalesced_frames_irq) ||
 	    (ec->stats_block_coalesce_usecs) ||
-	    (ec->tx_max_coalesced_frames_high) || (ec->rate_sample_interval))
+	    (ec->tx_max_coalesced_frames_high) || (ec->rate_sample_interval) ||
+	    (ec->tx_coalesce_usecs) || (ec->tx_max_coalesced_frames))
 		return -EOPNOTSUPP;
 
-	/* check if we are changing the parameters when interface is already up */
-	if (prx_ring->rx_coal_frames != ec->rx_max_coalesced_frames
-	    && netif_running(dev)) {
-		DBGPR_ETHTOOL("Coalesce frame parameter can be changed only if interface is down\n");
-		return -EINVAL;
-	}
-
-	if (ec->tx_coalesce_usecs !=  ptx_ring->tx_usecs &&
-	    netif_running(dev)) {
-		DBGPR_ETHTOOL("Coalesce Tx usec parameter can be changed only if interface is down\n");
-		return -EINVAL;
-	}
-
-	if (ec->tx_max_coalesced_frames !=  ptx_ring->tx_coal_frames &&
-	    netif_running(dev)) {
-		DBGPR_ETHTOOL("Coalesce Tx frame parameter can be changed only if interface is down\n");
-		return -EINVAL;
-	}
-
-	/* Enable Rx usec coalesing only if Rx-usecs is more than 3 usecs. */
-	if (ec->rx_coalesce_usecs <= EQOS_MIN_RX_COALESCE_USEC)
-		use_rx_usecs = EQOS_COAELSCING_DISABLE;
+	/* both rx_coalesce_usecs and rx_max_coalesced_frames should
+	 * be > 0 in order for coalescing to be active.
+	 */
+	if ((ec->rx_coalesce_usecs <= 3) || (ec->rx_max_coalesced_frames <= 1))
+		local_use_riwt = 0;
 	else
-		use_rx_usecs = EQOS_COAELSCING_ENABLE;
+		local_use_riwt = 1;
 
 	DBGPR_ETHTOOL("RX COALESCING is %s\n",
-		      (use_rx_usecs ? "ENABLED" : "DISABLED"));
+		      (local_use_riwt ? "ENABLED" : "DISABLED"));
 
 	rx_riwt = eqos_usec2riwt(ec->rx_coalesce_usecs, pdata);
 
@@ -763,59 +735,18 @@ static int eqos_set_coalesce(struct net_device *dev,
 		rx_usec = eqos_riwt2usec(EQOS_MAX_DMA_RIWT, pdata);
 		DBGPR_ETHTOOL("RX Coalesing is limited to %d usecs\n", rx_usec);
 		return -EINVAL;
-	} else
+	}
 	if (ec->rx_max_coalesced_frames > RX_DESC_CNT) {
 		DBGPR_ETHTOOL("RX Coalesing is limited to %d frames\n",
 			      EQOS_RX_MAX_FRAMES);
 		return -EINVAL;
 	}
-	if (ec->rx_max_coalesced_frames < EQOS_MIN_RX_COALESCE_FRAMES)
-		use_rx_frames = EQOS_COAELSCING_DISABLE;
-	else
-		use_rx_frames = EQOS_COAELSCING_ENABLE;
-
-	/*  On Rx side we support Rx_usecs and Rx-frames together only  */
-	if (use_rx_frames && use_rx_usecs) {
-		DBGPR_ETHTOOL("RX COALESCING is Enabled\n");
-	} else if (!use_rx_frames && !use_rx_usecs) {
-		DBGPR_ETHTOOL("RX COALESCING is Disabled\n");
-	} else {
-		DBGPR_ETHTOOL("Both Rx-frames and Rx-usecs need to be enabled or disabled together\n");
+	if (prx_ring->rx_coal_frames != ec->rx_max_coalesced_frames
+	    && netif_running(dev)) {
+		DBGPR_ETHTOOL("Coalesce frame parameter can be changed"
+			" only if interface is down\n");
 		return -EINVAL;
 	}
-
-	if (ec->tx_coalesce_usecs > EQOS_MAX_TX_COALESCE_USEC) {
-		DBGPR_ETHTOOL("TX Coalesing is limited to %d usecs\n",
-			      EQOS_MAX_TX_COALESCE_USEC);
-		return -EINVAL;
-	}
-
-	if (ec->tx_max_coalesced_frames > EQOS_TX_MAX_FRAME) {
-		DBGPR_ETHTOOL("TX Coalesing is limited to %d frames\n",
-			      EQOS_TX_MAX_FRAME);
-		return -EINVAL;
-	}
-
-	if (ec->tx_max_coalesced_frames < EQOS_MIN_TX_COALESCE_FRAMES) {
-		DBGPR_ETHTOOL("TX-frames COALESCING is disabled\n");
-		use_tx_frames = EQOS_COAELSCING_DISABLE;
-	} else {
-		use_tx_frames = EQOS_COAELSCING_ENABLE;
-	}
-
-	if (ec->tx_coalesce_usecs < EQOS_MIN_TX_COALESCE_USEC) {
-		DBGPR_ETHTOOL("TX-usecs COALESCING is disabled\n");
-		use_tx_usecs = EQOS_COAELSCING_DISABLE;
-	} else {
-		use_tx_usecs = EQOS_COAELSCING_ENABLE;
-	}
-
-	if (use_tx_frames && !use_tx_usecs) {
-		DBGPR_ETHTOOL("Tx-usecs coalescing needs to be enabled if Tx-frames coalescing is enabled\n",
-			      EQOS_TX_MAX_FRAME);
-		return -EINVAL;
-	}
-
 	/* The selected parameters are applied to all the
 	 * receive queues equally, so all the queue configurations
 	 * are in sync. Update software data structure here. We cannot
@@ -825,16 +756,9 @@ static int eqos_set_coalesce(struct net_device *dev,
 	 */
 	for (qinx = 0; qinx < EQOS_RX_QUEUE_CNT; qinx++) {
 		prx_ring = GET_RX_WRAPPER_DESC(qinx);
-		prx_ring->use_riwt = use_rx_usecs;
+		prx_ring->use_riwt = local_use_riwt;
 		prx_ring->rx_riwt = rx_riwt;
 		prx_ring->rx_coal_frames = ec->rx_max_coalesced_frames;
-	}
-	for (qinx = 0; qinx < EQOS_TX_QUEUE_CNT; qinx++) {
-		ptx_ring = GET_TX_WRAPPER_DESC(qinx);
-		ptx_ring->tx_usecs = ec->tx_coalesce_usecs;
-		ptx_ring->tx_coal_frames = ec->tx_max_coalesced_frames;
-		ptx_ring->use_tx_usecs = use_tx_usecs;
-		ptx_ring->use_tx_frames = use_tx_frames;
 	}
 
 	pr_debug("<--eqos_set_coalesce\n");

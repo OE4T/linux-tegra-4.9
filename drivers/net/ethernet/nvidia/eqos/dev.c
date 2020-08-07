@@ -29,7 +29,7 @@
  * DAMAGE.
  * ========================================================================= */
 /*
- * Copyright (c) 2015-2020, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2019, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -2996,34 +2996,6 @@ static void pre_transmit(struct eqos_prv_data *pdata, UINT qinx)
 
 	/* set Interrupt on Completion for last descriptor */
 	TX_NORMAL_DESC_TDES2_IC_WR(plast_desc->tdes2, 0x1);
-
-	if (ptx_ring->frame_cnt < UINT_MAX) {
-		ptx_ring->frame_cnt++;
-	} else if (ptx_ring->use_tx_frames == EQOS_COAELSCING_ENABLE &&
-		   (ptx_ring->frame_cnt %
-					ptx_ring->tx_coal_frames) < UINT_MAX) {
-		/* make sure count for tx_frame interrupt logic is retained */
-		ptx_ring->frame_cnt =
-				(ptx_ring->frame_cnt % ptx_ring->tx_coal_frames)
-					+ 1U;
-	} else {
-		ptx_ring->frame_cnt = 1U;
-	}
-
-	if (ptx_ring->use_tx_usecs == EQOS_COAELSCING_ENABLE) {
-		TX_NORMAL_DESC_TDES2_IC_WR(plast_desc->tdes2, 0x0);
-
-		/* update IOC bit if tx_frames is enabled. Tx_frames
-		 * can be enabled only along with tx_usecs.
-		 */
-		if (ptx_ring->use_tx_frames == EQOS_COAELSCING_ENABLE) {
-			if ((ptx_ring->frame_cnt %
-					ptx_ring->tx_coal_frames) == 0) {
-				TX_NORMAL_DESC_TDES2_IC_WR(
-							plast_desc->tdes2, 0x1);
-			}
-		}
-	}
 
 	/* set OWN bit of FIRST descriptor at end to avoid race condition */
 	ptx_desc = GET_TX_DESC_PTR(qinx, start_index);

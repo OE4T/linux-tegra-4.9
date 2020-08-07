@@ -125,26 +125,6 @@
 #define EQOS_CONFIG_DEBUGFS
 #endif
 
-/* Flag for enabling coalescing */
-#define EQOS_COAELSCING_ENABLE		true
-/* Flag for disabling coalescing */
-#define EQOS_COAELSCING_DISABLE		false
-/* Flag representing HR Timer is enabled */
-#define EQOS_HRTIMER_ENABLE		1u
-/* Flag representing HR Timer is disabled */
-#define EQOS_HRTIMER_DISABLE		0u
-/* Minimum number of frames for  which Tx coalescing can enabled */
-#define EQOS_MIN_TX_COALESCE_FRAMES	1u
-/* Maximum number of usecs for which Tx coalescing can be enabled */
-#define EQOS_MAX_TX_COALESCE_USEC	520U
-/* Minimum number of usecs for which Tx coalescing can be enabled */
-#define EQOS_MIN_TX_COALESCE_USEC	32U
-/* Minimum number of frames for  which Rx coalescing can enabled */
-#define EQOS_MIN_RX_COALESCE_USEC	3u
-/* Maximum number of usecs for which Rx coalescing can be enabled */
-#define EQOS_MAX_RX_COALESCE_USEC	520U
-/* Minimum number of frames for  which Rx coalescing can enabled */
-#define EQOS_MIN_RX_COALESCE_FRAMES	1U
 
 /* Enable PBLX8 setting */
 #define PBLX8
@@ -251,8 +231,6 @@
 #define MAC_MASK (0x10ULL << 0)
 #define TX_DESC_CNT 256
 #define RX_DESC_CNT 256
-#define EQOS_TX_MAX_FRAME (TX_DESC_CNT / (MAX_SKB_FRAGS + 2))
-
 
 #define EQOS_MAC_CORE_4_10 0x41
 #define EQOS_MAC_CORE_5_00 0x50
@@ -538,8 +516,7 @@
 /* Obtained by trial and error  */
 #define EQOS_OPTIMAL_DMA_RIWT_USEC  124
 /* Max delay before RX interrupt after a pkt is received Max
- * delay in usecs is 520 for 125MHz device clock
- */
+ * delay in usecs is 1020 for 62.5MHz device clock */
 #define EQOS_MAX_DMA_RIWT  0xff
 /* Max no of pkts to be received before an RX interrupt */
 #define EQOS_RX_MAX_FRAMES 16
@@ -996,17 +973,7 @@ struct tx_ring {
 
 	/* for TSO */
 	u32 default_mss;
-
-	/** Number of packets or frames transmitted */
-	unsigned int frame_cnt;
-	/** Max no of pkts to transfer before triggering Tx interrupt */
-	unsigned int tx_coal_frames;
-	/** Flag which decides tx_frames is enabled(1) or disabled(0) */
-	bool use_tx_frames;
-	/** Flag which decides Tx timer is enabled(1) or disabled(0) */
-	bool use_tx_usecs;
-	/** Transmit Interrupt Software Timer Count Units */
-	unsigned long tx_usecs;
+	bool tx_full;
 };
 
 struct eqos_tx_queue {
@@ -1017,10 +984,6 @@ struct eqos_tx_queue {
 	unsigned int chan_num;
 	int q_op_mode;
 	bool slot_num_check;
-	/** SW timer associated with transmit channel */
-	struct hrtimer tx_usecs_timer;
-	/** SW timer flag associated with transmit channel */
-	atomic_t tx_usecs_timer_armed;
 };
 
 /* wrapper buffer structure to hold received pkt details */
@@ -1047,7 +1010,7 @@ struct rx_ring {
 	unsigned int skb_realloc_threshold;
 
 	/* for rx coalesce schem */
-	bool use_riwt;		/* set to 1 if RX watchdog timer should be used
+	int use_riwt;		/* set to 1 if RX watchdog timer should be used
 				for RX interrupt mitigation */
 	u32 rx_riwt;
 	u32 rx_coal_frames;	/* Max no of pkts to be received before
@@ -1308,12 +1271,10 @@ struct eqos_extra_stats {
 	/* Tx/Rx frames per channels/queues */
 	unsigned long q_tx_pkt_n[8];
 	unsigned long q_rx_pkt_n[8];
-	unsigned long tx_usecs_swtimer_n[8];
 
 	unsigned long link_disconnect_count;
 	unsigned long link_connect_count;
 	unsigned long temp_pad_recalib_count;
-
 };
 
 

@@ -1745,9 +1745,9 @@ static int eqos_start_xmit(struct sk_buff *skb, struct net_device *dev)
 	}
 
 	/* Stop the queue if there might not be enough descriptors for another
-	 * packet.
+	 * packet (1 context desc + 1 header desc + fragment descs).
 	 */
-	if (eqos_tx_avail(ptx_ring) <= EQOS_TX_DESC_THRESHOLD) {
+	if (eqos_tx_avail(ptx_ring) < MAX_SKB_FRAGS + 2) {
 		netif_stop_subqueue(dev, qinx);
 		netdev_dbg(dev, "%s(): Stopping TX ring %d\n", __func__, qinx);
 	}
@@ -2131,7 +2131,7 @@ cleanup:
 	}
 
 	if (netif_tx_queue_stopped(txq) &&
-	    eqos_tx_avail(ptx_ring) > EQOS_TX_DESC_THRESHOLD) {
+	    eqos_tx_avail(ptx_ring) >= MAX_SKB_FRAGS + 2) {
 		netif_tx_wake_queue(txq);
 	}
 

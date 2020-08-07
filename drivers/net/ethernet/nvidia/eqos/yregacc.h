@@ -30,7 +30,7 @@
  * =========================================================================
  */
 /*
- * Copyright (c) 2020, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2018, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -44,7 +44,6 @@
 #ifndef __EQOS__REGACC__H__
 
 #define __EQOS__REGACC__H__
-
 
 #define MAKE_MASK_32(e, s) (((e)-(s)) == 31 ?\
 	0xffffffffUL : ((1UL<<((e)-(s)+1))-1))
@@ -1604,11 +1603,11 @@ extern ULONG eqos_base_addr;
 #endif
 
 #define MAC_ARPA_WR(data) do {\
-	iowritel(data, (void *)MAC_ARPA_OFFSET);\
+	iowrite32(data, (void *)MAC_ARPA_OFFSET);\
 } while (0)
 
 #define MAC_ARPA_RD(data) do {\
-	(data) = ioreadl((void *)MAC_ARPA_OFFSET);\
+	(data) = ioread32((void *)MAC_ARPA_OFFSET);\
 } while (0)
 
 #define MAC_ARPA_ARPPA_WR(data) do {\
@@ -1622,11 +1621,11 @@ extern ULONG eqos_base_addr;
 #define MAC_L3A3R7_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xa6c))
 
 #define MAC_L3A3R7_WR(data) do {\
-	iowritel(data, (void *)MAC_L3A3R7_OFFSET);\
+	iowrite32(data, (void *)MAC_L3A3R7_OFFSET);\
 } while (0)
 
 #define MAC_L3A3R7_RD(data) do {\
-	(data) = ioreadl((void *)MAC_L3A3R7_OFFSET);\
+	(data) = ioread32((void *)MAC_L3A3R7_OFFSET);\
 } while (0)
 
 #define MAC_L3A3R7_L3A30_WR(data) do {\
@@ -1640,11 +1639,11 @@ extern ULONG eqos_base_addr;
 #define MAC_L3A3R6_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xa3c))
 
 #define MAC_L3A3R6_WR(data) do {\
-	iowritel(data, (void *)MAC_L3A3R6_OFFSET);\
+	iowrite32(data, (void *)MAC_L3A3R6_OFFSET);\
 } while (0)
 
 #define MAC_L3A3R6_RD(data) do {\
-	(data) = ioreadl((void *)MAC_L3A3R6_OFFSET);\
+	(data) = ioread32((void *)MAC_L3A3R6_OFFSET);\
 } while (0)
 
 #define MAC_L3A3R6_L3A30_WR(data) do {\
@@ -1658,11 +1657,11 @@ extern ULONG eqos_base_addr;
 #define MAC_L3A3R5_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xa0c))
 
 #define MAC_L3A3R5_WR(data) do {\
-	iowritel(data, (void *)MAC_L3A3R5_OFFSET);\
+	iowrite32(data, (void *)MAC_L3A3R5_OFFSET);\
 } while (0)
 
 #define MAC_L3A3R5_RD(data) do {\
-	(data) = ioreadl((void *)MAC_L3A3R5_OFFSET);\
+	(data) = ioread32((void *)MAC_L3A3R5_OFFSET);\
 } while (0)
 
 #define MAC_L3A3R5_L3A30_WR(data) do {\
@@ -1676,11 +1675,11 @@ extern ULONG eqos_base_addr;
 #define MAC_L3A3R4_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x9dc))
 
 #define MAC_L3A3R4_WR(data) do {\
-	iowritel(data, (void *)MAC_L3A3R4_OFFSET);\
+	iowrite32(data, (void *)MAC_L3A3R4_OFFSET);\
 } while (0)
 
 #define MAC_L3A3R4_RD(data) do {\
-	(data) = ioreadl((void *)MAC_L3A3R4_OFFSET);\
+	(data) = ioread32((void *)MAC_L3A3R4_OFFSET);\
 } while (0)
 
 #define MAC_L3A3R4_L3A30_WR(data) do {\
@@ -1694,11 +1693,11 @@ extern ULONG eqos_base_addr;
 #define MAC_L3A3R3_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x9ac))
 
 #define MAC_L3A3R3_WR(data) do {\
-	iowritel(data, (void *)MAC_L3A3R3_OFFSET);\
+	iowrite32(data, (void *)MAC_L3A3R3_OFFSET);\
 } while (0)
 
 #define MAC_L3A3R3_RD(data) do {\
-	(data) = ioreadl((void *)MAC_L3A3R3_OFFSET);\
+	(data) = ioread32((void *)MAC_L3A3R3_OFFSET);\
 } while (0)
 
 #define MAC_L3A3R3_L3A30_WR(data) do {\
@@ -1712,11 +1711,11 @@ extern ULONG eqos_base_addr;
 #define MAC_L3A3R2_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x97c))
 
 #define MAC_L3A3R2_WR(data) do {\
-	iowritel(data, (void *)MAC_L3A3R2_OFFSET);\
+	iowrite32(data, (void *)MAC_L3A3R2_OFFSET);\
 } while (0)
 
 #define MAC_L3A3R2_RD(data) do {\
-	(data) = ioreadl((void *)MAC_L3A3R2_OFFSET);\
+	(data) = ioread32((void *)MAC_L3A3R2_OFFSET);\
 } while (0)
 
 #define MAC_L3A3R2_L3A30_WR(data) do {\
@@ -1730,11 +1729,11 @@ extern ULONG eqos_base_addr;
 #define MAC_L3A3R1_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x94c))
 
 #define MAC_L3A3R1_WR(data) do {\
-	iowritel(data, (void *)MAC_L3A3R1_OFFSET);\
+	iowrite32(data, (void *)MAC_L3A3R1_OFFSET);\
 } while (0)
 
 #define MAC_L3A3R1_RD(data) do {\
-	(data) = ioreadl((void *)MAC_L3A3R1_OFFSET);\
+	(data) = ioread32((void *)MAC_L3A3R1_OFFSET);\
 } while (0)
 
 #define MAC_L3A3R1_L3A30_WR(data) do {\
@@ -1748,11 +1747,11 @@ extern ULONG eqos_base_addr;
 #define MAC_L3A3R0_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x91c))
 
 #define MAC_L3A3R0_WR(data) do {\
-	iowritel(data, (void *)MAC_L3A3R0_OFFSET);\
+	iowrite32(data, (void *)MAC_L3A3R0_OFFSET);\
 } while (0)
 
 #define MAC_L3A3R0_RD(data) do {\
-	(data) = ioreadl((void *)MAC_L3A3R0_OFFSET);\
+	(data) = ioread32((void *)MAC_L3A3R0_OFFSET);\
 } while (0)
 
 #define MAC_L3A3R0_L3A30_WR(data) do {\
@@ -1766,11 +1765,11 @@ extern ULONG eqos_base_addr;
 #define MAC_L3A2R7_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xa68))
 
 #define MAC_L3A2R7_WR(data) do {\
-	iowritel(data, (void *)MAC_L3A2R7_OFFSET);\
+	iowrite32(data, (void *)MAC_L3A2R7_OFFSET);\
 } while (0)
 
 #define MAC_L3A2R7_RD(data) do {\
-	(data) = ioreadl((void *)MAC_L3A2R7_OFFSET);\
+	(data) = ioread32((void *)MAC_L3A2R7_OFFSET);\
 } while (0)
 
 #define MAC_L3A2R7_L3A20_WR(data) do {\
@@ -1784,11 +1783,11 @@ extern ULONG eqos_base_addr;
 #define MAC_L3A2R6_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xa38))
 
 #define MAC_L3A2R6_WR(data) do {\
-	iowritel(data, (void *)MAC_L3A2R6_OFFSET);\
+	iowrite32(data, (void *)MAC_L3A2R6_OFFSET);\
 } while (0)
 
 #define MAC_L3A2R6_RD(data) do {\
-	(data) = ioreadl((void *)MAC_L3A2R6_OFFSET);\
+	(data) = ioread32((void *)MAC_L3A2R6_OFFSET);\
 } while (0)
 
 #define MAC_L3A2R6_L3A20_WR(data) do {\
@@ -1802,11 +1801,11 @@ extern ULONG eqos_base_addr;
 #define MAC_L3A2R5_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xa08))
 
 #define MAC_L3A2R5_WR(data) do {\
-	iowritel(data, (void *)MAC_L3A2R5_OFFSET);\
+	iowrite32(data, (void *)MAC_L3A2R5_OFFSET);\
 } while (0)
 
 #define MAC_L3A2R5_RD(data) do {\
-	(data) = ioreadl((void *)MAC_L3A2R5_OFFSET);\
+	(data) = ioread32((void *)MAC_L3A2R5_OFFSET);\
 } while (0)
 
 #define MAC_L3A2R5_L3A20_WR(data) do {\
@@ -1820,11 +1819,11 @@ extern ULONG eqos_base_addr;
 #define MAC_L3A2R4_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x9d8))
 
 #define MAC_L3A2R4_WR(data) do {\
-	iowritel(data, (void *)MAC_L3A2R4_OFFSET);\
+	iowrite32(data, (void *)MAC_L3A2R4_OFFSET);\
 } while (0)
 
 #define MAC_L3A2R4_RD(data) do {\
-	(data) = ioreadl((void *)MAC_L3A2R4_OFFSET);\
+	(data) = ioread32((void *)MAC_L3A2R4_OFFSET);\
 } while (0)
 
 #define MAC_L3A2R4_L3A20_WR(data) do {\
@@ -1838,11 +1837,11 @@ extern ULONG eqos_base_addr;
 #define MAC_L3A2R3_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x9a8))
 
 #define MAC_L3A2R3_WR(data) do {\
-	iowritel(data, (void *)MAC_L3A2R3_OFFSET);\
+	iowrite32(data, (void *)MAC_L3A2R3_OFFSET);\
 } while (0)
 
 #define MAC_L3A2R3_RD(data) do {\
-	(data) = ioreadl((void *)MAC_L3A2R3_OFFSET);\
+	(data) = ioread32((void *)MAC_L3A2R3_OFFSET);\
 } while (0)
 
 #define MAC_L3A2R3_L3A20_WR(data) do {\
@@ -1856,11 +1855,11 @@ extern ULONG eqos_base_addr;
 #define MAC_L3A2R2_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x978))
 
 #define MAC_L3A2R2_WR(data) do {\
-	iowritel(data, (void *)MAC_L3A2R2_OFFSET);\
+	iowrite32(data, (void *)MAC_L3A2R2_OFFSET);\
 } while (0)
 
 #define MAC_L3A2R2_RD(data) do {\
-	(data) = ioreadl((void *)MAC_L3A2R2_OFFSET);\
+	(data) = ioread32((void *)MAC_L3A2R2_OFFSET);\
 } while (0)
 
 #define MAC_L3A2R2_L3A20_WR(data) do {\
@@ -1874,11 +1873,11 @@ extern ULONG eqos_base_addr;
 #define MAC_L3A2R1_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x948))
 
 #define MAC_L3A2R1_WR(data) do {\
-	iowritel(data, (void *)MAC_L3A2R1_OFFSET);\
+	iowrite32(data, (void *)MAC_L3A2R1_OFFSET);\
 } while (0)
 
 #define MAC_L3A2R1_RD(data) do {\
-	(data) = ioreadl((void *)MAC_L3A2R1_OFFSET);\
+	(data) = ioread32((void *)MAC_L3A2R1_OFFSET);\
 } while (0)
 
 #define MAC_L3A2R1_L3A20_WR(data) do {\
@@ -1892,11 +1891,11 @@ extern ULONG eqos_base_addr;
 #define MAC_L3A2R0_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x918))
 
 #define MAC_L3A2R0_WR(data) do {\
-	iowritel(data, (void *)MAC_L3A2R0_OFFSET);\
+	iowrite32(data, (void *)MAC_L3A2R0_OFFSET);\
 } while (0)
 
 #define MAC_L3A2R0_RD(data) do {\
-	(data) = ioreadl((void *)MAC_L3A2R0_OFFSET);\
+	(data) = ioread32((void *)MAC_L3A2R0_OFFSET);\
 } while (0)
 
 #define MAC_L3A2R0_L3A20_WR(data) do {\
@@ -1910,11 +1909,11 @@ extern ULONG eqos_base_addr;
 #define MAC_L3A1R7_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xa64))
 
 #define MAC_L3A1R7_WR(data) do {\
-	iowritel(data, (void *)MAC_L3A1R7_OFFSET);\
+	iowrite32(data, (void *)MAC_L3A1R7_OFFSET);\
 } while (0)
 
 #define MAC_L3A1R7_RD(data) do {\
-	(data) = ioreadl((void *)MAC_L3A1R7_OFFSET);\
+	(data) = ioread32((void *)MAC_L3A1R7_OFFSET);\
 } while (0)
 
 #define MAC_L3A1R7_L3A10_WR(data) do {\
@@ -1928,11 +1927,11 @@ extern ULONG eqos_base_addr;
 #define MAC_L3A1R6_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xa34))
 
 #define MAC_L3A1R6_WR(data) do {\
-	iowritel(data, (void *)MAC_L3A1R6_OFFSET);\
+	iowrite32(data, (void *)MAC_L3A1R6_OFFSET);\
 } while (0)
 
 #define MAC_L3A1R6_RD(data) do {\
-	(data) = ioreadl((void *)MAC_L3A1R6_OFFSET);\
+	(data) = ioread32((void *)MAC_L3A1R6_OFFSET);\
 } while (0)
 
 #define MAC_L3A1R6_L3A10_WR(data) do {\
@@ -1946,11 +1945,11 @@ extern ULONG eqos_base_addr;
 #define MAC_L3A1R5_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xa04))
 
 #define MAC_L3A1R5_WR(data) do {\
-	iowritel(data, (void *)MAC_L3A1R5_OFFSET);\
+	iowrite32(data, (void *)MAC_L3A1R5_OFFSET);\
 } while (0)
 
 #define MAC_L3A1R5_RD(data) do {\
-	(data) = ioreadl((void *)MAC_L3A1R5_OFFSET);\
+	(data) = ioread32((void *)MAC_L3A1R5_OFFSET);\
 } while (0)
 
 #define MAC_L3A1R5_L3A10_WR(data) do {\
@@ -1964,11 +1963,11 @@ extern ULONG eqos_base_addr;
 #define MAC_L3A1R4_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x9d4))
 
 #define MAC_L3A1R4_WR(data) do {\
-	iowritel(data, (void *)MAC_L3A1R4_OFFSET);\
+	iowrite32(data, (void *)MAC_L3A1R4_OFFSET);\
 } while (0)
 
 #define MAC_L3A1R4_RD(data) do {\
-	(data) = ioreadl((void *)MAC_L3A1R4_OFFSET);\
+	(data) = ioread32((void *)MAC_L3A1R4_OFFSET);\
 } while (0)
 
 #define MAC_L3A1R4_L3A10_WR(data) do {\
@@ -1982,11 +1981,11 @@ extern ULONG eqos_base_addr;
 #define MAC_L3A1R3_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x9a4))
 
 #define MAC_L3A1R3_WR(data) do {\
-	iowritel(data, (void *)MAC_L3A1R3_OFFSET);\
+	iowrite32(data, (void *)MAC_L3A1R3_OFFSET);\
 } while (0)
 
 #define MAC_L3A1R3_RD(data) do {\
-	(data) = ioreadl((void *)MAC_L3A1R3_OFFSET);\
+	(data) = ioread32((void *)MAC_L3A1R3_OFFSET);\
 } while (0)
 
 #define MAC_L3A1R3_L3A10_WR(data) do {\
@@ -2000,11 +1999,11 @@ extern ULONG eqos_base_addr;
 #define MAC_L3A1R2_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x974))
 
 #define MAC_L3A1R2_WR(data) do {\
-	iowritel(data, (void *)MAC_L3A1R2_OFFSET);\
+	iowrite32(data, (void *)MAC_L3A1R2_OFFSET);\
 } while (0)
 
 #define MAC_L3A1R2_RD(data) do {\
-	(data) = ioreadl((void *)MAC_L3A1R2_OFFSET);\
+	(data) = ioread32((void *)MAC_L3A1R2_OFFSET);\
 } while (0)
 
 #define MAC_L3A1R2_L3A10_WR(data) do {\
@@ -2018,11 +2017,11 @@ extern ULONG eqos_base_addr;
 #define MAC_L3A1R1_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x944))
 
 #define MAC_L3A1R1_WR(data) do {\
-	iowritel(data, (void *)MAC_L3A1R1_OFFSET);\
+	iowrite32(data, (void *)MAC_L3A1R1_OFFSET);\
 } while (0)
 
 #define MAC_L3A1R1_RD(data) do {\
-	(data) = ioreadl((void *)MAC_L3A1R1_OFFSET);\
+	(data) = ioread32((void *)MAC_L3A1R1_OFFSET);\
 } while (0)
 
 #define MAC_L3A1R1_L3A10_WR(data) do {\
@@ -2036,11 +2035,11 @@ extern ULONG eqos_base_addr;
 #define MAC_L3A1R0_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x914))
 
 #define MAC_L3A1R0_WR(data) do {\
-	iowritel(data, (void *)MAC_L3A1R0_OFFSET);\
+	iowrite32(data, (void *)MAC_L3A1R0_OFFSET);\
 } while (0)
 
 #define MAC_L3A1R0_RD(data) do {\
-	(data) = ioreadl((void *)MAC_L3A1R0_OFFSET);\
+	(data) = ioread32((void *)MAC_L3A1R0_OFFSET);\
 } while (0)
 
 #define MAC_L3A1R0_L3A10_WR(data) do {\
@@ -2054,11 +2053,11 @@ extern ULONG eqos_base_addr;
 #define MAC_L3A0R7_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xa60))
 
 #define MAC_L3A0R7_WR(data) do {\
-	iowritel(data, (void *)MAC_L3A0R7_OFFSET);\
+	iowrite32(data, (void *)MAC_L3A0R7_OFFSET);\
 } while (0)
 
 #define MAC_L3A0R7_RD(data) do {\
-	(data) = ioreadl((void *)MAC_L3A0R7_OFFSET);\
+	(data) = ioread32((void *)MAC_L3A0R7_OFFSET);\
 } while (0)
 
 #define MAC_L3A0R7_L3A00_WR(data) do {\
@@ -2072,11 +2071,11 @@ extern ULONG eqos_base_addr;
 #define MAC_L3A0R6_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xa30))
 
 #define MAC_L3A0R6_WR(data) do {\
-	iowritel(data, (void *)MAC_L3A0R6_OFFSET);\
+	iowrite32(data, (void *)MAC_L3A0R6_OFFSET);\
 } while (0)
 
 #define MAC_L3A0R6_RD(data) do {\
-	(data) = ioreadl((void *)MAC_L3A0R6_OFFSET);\
+	(data) = ioread32((void *)MAC_L3A0R6_OFFSET);\
 } while (0)
 
 #define MAC_L3A0R6_L3A00_WR(data) do {\
@@ -2090,11 +2089,11 @@ extern ULONG eqos_base_addr;
 #define MAC_L3A0R5_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xa00))
 
 #define MAC_L3A0R5_WR(data) do {\
-	iowritel(data, (void *)MAC_L3A0R5_OFFSET);\
+	iowrite32(data, (void *)MAC_L3A0R5_OFFSET);\
 } while (0)
 
 #define MAC_L3A0R5_RD(data) do {\
-	(data) = ioreadl((void *)MAC_L3A0R5_OFFSET);\
+	(data) = ioread32((void *)MAC_L3A0R5_OFFSET);\
 } while (0)
 
 #define MAC_L3A0R5_L3A00_WR(data) do {\
@@ -2108,11 +2107,11 @@ extern ULONG eqos_base_addr;
 #define MAC_L3A0R4_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x9d0))
 
 #define MAC_L3A0R4_WR(data) do {\
-	iowritel(data, (void *)MAC_L3A0R4_OFFSET);\
+	iowrite32(data, (void *)MAC_L3A0R4_OFFSET);\
 } while (0)
 
 #define MAC_L3A0R4_RD(data) do {\
-	(data) = ioreadl((void *)MAC_L3A0R4_OFFSET);\
+	(data) = ioread32((void *)MAC_L3A0R4_OFFSET);\
 } while (0)
 
 #define MAC_L3A0R4_L3A00_WR(data) do {\
@@ -2126,11 +2125,11 @@ extern ULONG eqos_base_addr;
 #define MAC_L3A0R3_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x9a0))
 
 #define MAC_L3A0R3_WR(data) do {\
-	iowritel(data, (void *)MAC_L3A0R3_OFFSET);\
+	iowrite32(data, (void *)MAC_L3A0R3_OFFSET);\
 } while (0)
 
 #define MAC_L3A0R3_RD(data) do {\
-	(data) = ioreadl((void *)MAC_L3A0R3_OFFSET);\
+	(data) = ioread32((void *)MAC_L3A0R3_OFFSET);\
 } while (0)
 
 #define MAC_L3A0R3_L3A00_WR(data) do {\
@@ -2144,11 +2143,11 @@ extern ULONG eqos_base_addr;
 #define MAC_L3A0R2_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x970))
 
 #define MAC_L3A0R2_WR(data) do {\
-	iowritel(data, (void *)MAC_L3A0R2_OFFSET);\
+	iowrite32(data, (void *)MAC_L3A0R2_OFFSET);\
 } while (0)
 
 #define MAC_L3A0R2_RD(data) do {\
-	(data) = ioreadl((void *)MAC_L3A0R2_OFFSET);\
+	(data) = ioread32((void *)MAC_L3A0R2_OFFSET);\
 } while (0)
 
 #define MAC_L3A0R2_L3A00_WR(data) do {\
@@ -2162,11 +2161,11 @@ extern ULONG eqos_base_addr;
 #define MAC_L3A0R1_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x940))
 
 #define MAC_L3A0R1_WR(data) do {\
-	iowritel(data, (void *)MAC_L3A0R1_OFFSET);\
+	iowrite32(data, (void *)MAC_L3A0R1_OFFSET);\
 } while (0)
 
 #define MAC_L3A0R1_RD(data) do {\
-	(data) = ioreadl((void *)MAC_L3A0R1_OFFSET);\
+	(data) = ioread32((void *)MAC_L3A0R1_OFFSET);\
 } while (0)
 
 #define MAC_L3A0R1_L3A00_WR(data) do {\
@@ -2180,11 +2179,11 @@ extern ULONG eqos_base_addr;
 #define MAC_L3A0R0_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x910))
 
 #define MAC_L3A0R0_WR(data) do {\
-	iowritel(data, (void *)MAC_L3A0R0_OFFSET);\
+	iowrite32(data, (void *)MAC_L3A0R0_OFFSET);\
 } while (0)
 
 #define MAC_L3A0R0_RD(data) do {\
-	(data) = ioreadl((void *)MAC_L3A0R0_OFFSET);\
+	(data) = ioread32((void *)MAC_L3A0R0_OFFSET);\
 } while (0)
 
 #define MAC_L3A0R0_L3A00_WR(data) do {\
@@ -2198,11 +2197,11 @@ extern ULONG eqos_base_addr;
 #define MAC_L4AR7_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xa54))
 
 #define MAC_L4AR7_WR(data) do {\
-	iowritel(data, (void *)MAC_L4AR7_OFFSET);\
+	iowrite32(data, (void *)MAC_L4AR7_OFFSET);\
 } while (0)
 
 #define MAC_L4AR7_RD(data) do {\
-	(data) = ioreadl((void *)MAC_L4AR7_OFFSET);\
+	(data) = ioread32((void *)MAC_L4AR7_OFFSET);\
 } while (0)
 
 #define MAC_L4AR7_L4SP0_MASK (ULONG)(0xffff)
@@ -2242,11 +2241,11 @@ extern ULONG eqos_base_addr;
 #define MAC_L4AR6_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xa24))
 
 #define MAC_L4AR6_WR(data) do {\
-	iowritel(data, (void *)MAC_L4AR6_OFFSET);\
+	iowrite32(data, (void *)MAC_L4AR6_OFFSET);\
 } while (0)
 
 #define MAC_L4AR6_RD(data) do {\
-	(data) = ioreadl((void *)MAC_L4AR6_OFFSET);\
+	(data) = ioread32((void *)MAC_L4AR6_OFFSET);\
 } while (0)
 
 #define MAC_L4AR6_L4SP0_MASK (ULONG)(0xffff)
@@ -2286,11 +2285,11 @@ extern ULONG eqos_base_addr;
 #define MAC_L4AR5_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x9f4))
 
 #define MAC_L4AR5_WR(data) do {\
-	iowritel(data, (void *)MAC_L4AR5_OFFSET);\
+	iowrite32(data, (void *)MAC_L4AR5_OFFSET);\
 } while (0)
 
 #define MAC_L4AR5_RD(data) do {\
-	(data) = ioreadl((void *)MAC_L4AR5_OFFSET);\
+	(data) = ioread32((void *)MAC_L4AR5_OFFSET);\
 } while (0)
 
 #define MAC_L4AR5_L4SP0_MASK (ULONG)(0xffff)
@@ -2330,11 +2329,11 @@ extern ULONG eqos_base_addr;
 #define MAC_L4AR4_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x9c4))
 
 #define MAC_L4AR4_WR(data) do {\
-	iowritel(data, (void *)MAC_L4AR4_OFFSET);\
+	iowrite32(data, (void *)MAC_L4AR4_OFFSET);\
 } while (0)
 
 #define MAC_L4AR4_RD(data) do {\
-	(data) = ioreadl((void *)MAC_L4AR4_OFFSET);\
+	(data) = ioread32((void *)MAC_L4AR4_OFFSET);\
 } while (0)
 
 #define MAC_L4AR4_L4SP0_MASK (ULONG)(0xffff)
@@ -2374,11 +2373,11 @@ extern ULONG eqos_base_addr;
 #define MAC_L4AR3_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x994))
 
 #define MAC_L4AR3_WR(data) do {\
-	iowritel(data, (void *)MAC_L4AR3_OFFSET);\
+	iowrite32(data, (void *)MAC_L4AR3_OFFSET);\
 } while (0)
 
 #define MAC_L4AR3_RD(data) do {\
-	(data) = ioreadl((void *)MAC_L4AR3_OFFSET);\
+	(data) = ioread32((void *)MAC_L4AR3_OFFSET);\
 } while (0)
 
 #define MAC_L4AR3_L4SP0_MASK (ULONG)(0xffff)
@@ -2418,11 +2417,11 @@ extern ULONG eqos_base_addr;
 #define MAC_L4AR2_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x964))
 
 #define MAC_L4AR2_WR(data) do {\
-	iowritel(data, (void *)MAC_L4AR2_OFFSET);\
+	iowrite32(data, (void *)MAC_L4AR2_OFFSET);\
 } while (0)
 
 #define MAC_L4AR2_RD(data) do {\
-	(data) = ioreadl((void *)MAC_L4AR2_OFFSET);\
+	(data) = ioread32((void *)MAC_L4AR2_OFFSET);\
 } while (0)
 
 #define MAC_L4AR2_L4SP0_MASK (ULONG)(0xffff)
@@ -2462,11 +2461,11 @@ extern ULONG eqos_base_addr;
 #define MAC_L4AR1_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x934))
 
 #define MAC_L4AR1_WR(data) do {\
-	iowritel(data, (void *)MAC_L4AR1_OFFSET);\
+	iowrite32(data, (void *)MAC_L4AR1_OFFSET);\
 } while (0)
 
 #define MAC_L4AR1_RD(data) do {\
-	(data) = ioreadl((void *)MAC_L4AR1_OFFSET);\
+	(data) = ioread32((void *)MAC_L4AR1_OFFSET);\
 } while (0)
 
 #define MAC_L4AR1_L4SP0_MASK (ULONG)(0xffff)
@@ -2506,11 +2505,11 @@ extern ULONG eqos_base_addr;
 #define MAC_L4AR0_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x904))
 
 #define MAC_L4AR0_WR(data) do {\
-	iowritel(data, (void *)MAC_L4AR0_OFFSET);\
+	iowrite32(data, (void *)MAC_L4AR0_OFFSET);\
 } while (0)
 
 #define MAC_L4AR0_RD(data) do {\
-	(data) = ioreadl((void *)MAC_L4AR0_OFFSET);\
+	(data) = ioread32((void *)MAC_L4AR0_OFFSET);\
 } while (0)
 
 #define MAC_L4AR0_L4SP0_MASK (ULONG)(0xffff)
@@ -2550,11 +2549,11 @@ extern ULONG eqos_base_addr;
 #define MAC_L3L4CR7_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xa50))
 
 #define MAC_L3L4CR7_WR(data) do {\
-	iowritel(data, (void *)MAC_L3L4CR7_OFFSET);\
+	iowrite32(data, (void *)MAC_L3L4CR7_OFFSET);\
 } while (0)
 
 #define MAC_L3L4CR7_RD(data) do {\
-	(data) = ioreadl((void *)MAC_L3L4CR7_OFFSET);\
+	(data) = ioread32((void *)MAC_L3L4CR7_OFFSET);\
 } while (0)
 
 #define  MAC_L3L4CR7_MASK_1 (ULONG)(0x1)
@@ -2848,11 +2847,11 @@ extern ULONG eqos_base_addr;
 #define MAC_L3L4CR6_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xa20))
 
 #define MAC_L3L4CR6_WR(data) do {\
-	iowritel(data, (void *)MAC_L3L4CR6_OFFSET);\
+	iowrite32(data, (void *)MAC_L3L4CR6_OFFSET);\
 } while (0)
 
 #define MAC_L3L4CR6_RD(data) do {\
-	(data) = ioreadl((void *)MAC_L3L4CR6_OFFSET);\
+	(data) = ioread32((void *)MAC_L3L4CR6_OFFSET);\
 } while (0)
 
 #define  MAC_L3L4CR6_MASK_1 (ULONG)(0x1)
@@ -3172,11 +3171,11 @@ extern ULONG eqos_base_addr;
 #define MAC_L3L4CR5_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x9f0))
 
 #define MAC_L3L4CR5_WR(data) do {\
-	iowritel(data, (void *)MAC_L3L4CR5_OFFSET);\
+	iowrite32(data, (void *)MAC_L3L4CR5_OFFSET);\
 } while (0)
 
 #define MAC_L3L4CR5_RD(data) do {\
-	(data) = ioreadl((void *)MAC_L3L4CR5_OFFSET);\
+	(data) = ioread32((void *)MAC_L3L4CR5_OFFSET);\
 } while (0)
 
 
@@ -3500,11 +3499,11 @@ extern ULONG eqos_base_addr;
 #define MAC_L3L4CR4_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x9c0))
 
 #define MAC_L3L4CR4_WR(data) do {\
-	iowritel(data, (void *)MAC_L3L4CR4_OFFSET);\
+	iowrite32(data, (void *)MAC_L3L4CR4_OFFSET);\
 } while (0)
 
 #define MAC_L3L4CR4_RD(data) do {\
-	(data) = ioreadl((void *)MAC_L3L4CR4_OFFSET);\
+	(data) = ioread32((void *)MAC_L3L4CR4_OFFSET);\
 } while (0)
 
 
@@ -3828,11 +3827,11 @@ extern ULONG eqos_base_addr;
 #define MAC_L3L4CR3_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x990))
 
 #define MAC_L3L4CR3_WR(data) do {\
-	iowritel(data, (void *)MAC_L3L4CR3_OFFSET);\
+	iowrite32(data, (void *)MAC_L3L4CR3_OFFSET);\
 } while (0)
 
 #define MAC_L3L4CR3_RD(data) do {\
-	(data) = ioreadl((void *)MAC_L3L4CR3_OFFSET);\
+	(data) = ioread32((void *)MAC_L3L4CR3_OFFSET);\
 } while (0)
 
 
@@ -4156,11 +4155,11 @@ extern ULONG eqos_base_addr;
 #define MAC_L3L4CR2_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x960))
 
 #define MAC_L3L4CR2_WR(data) do {\
-	iowritel(data, (void *)MAC_L3L4CR2_OFFSET);\
+	iowrite32(data, (void *)MAC_L3L4CR2_OFFSET);\
 } while (0)
 
 #define MAC_L3L4CR2_RD(data) do {\
-	(data) = ioreadl((void *)MAC_L3L4CR2_OFFSET);\
+	(data) = ioread32((void *)MAC_L3L4CR2_OFFSET);\
 } while (0)
 
 
@@ -4484,11 +4483,11 @@ extern ULONG eqos_base_addr;
 #define MAC_L3L4CR1_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x930))
 
 #define MAC_L3L4CR1_WR(data) do {\
-	iowritel(data, (void *)MAC_L3L4CR1_OFFSET);\
+	iowrite32(data, (void *)MAC_L3L4CR1_OFFSET);\
 } while (0)
 
 #define MAC_L3L4CR1_RD(data) do {\
-	(data) = ioreadl((void *)MAC_L3L4CR1_OFFSET);\
+	(data) = ioread32((void *)MAC_L3L4CR1_OFFSET);\
 } while (0)
 
 
@@ -4812,11 +4811,11 @@ extern ULONG eqos_base_addr;
 #define MAC_L3L4CR0_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x900))
 
 #define MAC_L3L4CR0_WR(data) do {\
-	iowritel(data, (void *)MAC_L3L4CR0_OFFSET);\
+	iowrite32(data, (void *)MAC_L3L4CR0_OFFSET);\
 } while (0)
 
 #define MAC_L3L4CR0_RD(data) do {\
-	(data) = ioreadl((void *)MAC_L3L4CR0_OFFSET);\
+	(data) = ioread32((void *)MAC_L3L4CR0_OFFSET);\
 } while (0)
 
 
@@ -5140,11 +5139,11 @@ extern ULONG eqos_base_addr;
 #define MAC_GPIOS_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x20c))
 
 #define MAC_GPIOS_WR(data) do {\
-	iowritel(data, (void *)MAC_GPIOS_OFFSET);\
+	iowrite32(data, (void *)MAC_GPIOS_OFFSET);\
 } while (0)
 
 #define MAC_GPIOS_RD(data) do {\
-	(data) = ioreadl((void *)MAC_GPIOS_OFFSET);\
+	(data) = ioread32((void *)MAC_GPIOS_OFFSET);\
 } while (0)
 
 
@@ -5177,11 +5176,11 @@ extern ULONG eqos_base_addr;
 #define MAC_PCS_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xf8))
 
 #define MAC_PCS_WR(data) do {\
-	iowritel(data, (void *)MAC_PCS_OFFSET);\
+	iowrite32(data, (void *)MAC_PCS_OFFSET);\
 } while (0)
 
 #define MAC_PCS_RD(data) do {\
-	(data) = ioreadl((void *)MAC_PCS_OFFSET);\
+	(data) = ioread32((void *)MAC_PCS_OFFSET);\
 } while (0)
 
 
@@ -5430,7 +5429,7 @@ extern ULONG eqos_base_addr;
 #define MAC_TES_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xf4))
 
 #define MAC_TES_RD(data) do {\
-	(data) = ioreadl((void *)MAC_TES_OFFSET);\
+	(data) = ioread32((void *)MAC_TES_OFFSET);\
 } while (0)
 
 
@@ -5452,7 +5451,7 @@ extern ULONG eqos_base_addr;
 #define MAC_AE_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xf0))
 
 #define MAC_AE_RD(data) do {\
-	(data) = ioreadl((void *)MAC_AE_OFFSET);\
+	(data) = ioread32((void *)MAC_AE_OFFSET);\
 } while (0)
 
 
@@ -5474,7 +5473,7 @@ extern ULONG eqos_base_addr;
 #define MAC_ALPA_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xec))
 
 #define MAC_ALPA_RD(data) do {\
-	(data) = ioreadl((void *)MAC_ALPA_OFFSET);\
+	(data) = ioread32((void *)MAC_ALPA_OFFSET);\
 } while (0)
 
 
@@ -5528,11 +5527,11 @@ extern ULONG eqos_base_addr;
 #define MAC_AAD_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xe8))
 
 #define MAC_AAD_WR(data) do {\
-	iowritel(data, (void *)MAC_AAD_OFFSET);\
+	iowrite32(data, (void *)MAC_AAD_OFFSET);\
 } while (0)
 
 #define MAC_AAD_RD(data) do {\
-	(data) = ioreadl((void *)MAC_AAD_OFFSET);\
+	(data) = ioread32((void *)MAC_AAD_OFFSET);\
 } while (0)
 
 
@@ -5697,7 +5696,7 @@ extern ULONG eqos_base_addr;
 #define MAC_ANS_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xe4))
 
 #define MAC_ANS_RD(data) do {\
-	(data) = ioreadl((void *)MAC_ANS_OFFSET);\
+	(data) = ioread32((void *)MAC_ANS_OFFSET);\
 } while (0)
 
 
@@ -5735,11 +5734,11 @@ extern ULONG eqos_base_addr;
 #define MAC_ANC_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xe0))
 
 #define MAC_ANC_WR(data) do {\
-	iowritel(data, (void *)MAC_ANC_OFFSET);\
+	iowrite32(data, (void *)MAC_ANC_OFFSET);\
 } while (0)
 
 #define MAC_ANC_RD(data) do {\
-	(data) = ioreadl((void *)MAC_ANC_OFFSET);\
+	(data) = ioread32((void *)MAC_ANC_OFFSET);\
 } while (0)
 
 
@@ -5949,21 +5948,21 @@ extern ULONG eqos_base_addr;
 #define MAC_1US_TIC_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xdc))
 
 #define MAC_1US_TIC_WR(data) do {\
-	iowritel(data, (void *)MAC_1US_TIC_OFFSET);\
+	iowrite32(data, (void *)MAC_1US_TIC_OFFSET);\
 } while (0)
 
 #define MAC_1US_TIC_RD(data) do {\
-	(data) = ioreadl((void *)MAC_1US_TIC_OFFSET);\
+	(data) = ioread32((void *)MAC_1US_TIC_OFFSET);\
 } while (0)
 
 #define MAC_LPC_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xd4))
 
 #define MAC_LPC_WR(data) do {\
-	iowritel(data, (void *)MAC_LPC_OFFSET);\
+	iowrite32(data, (void *)MAC_LPC_OFFSET);\
 } while (0)
 
 #define MAC_LPC_RD(data) do {\
-	(data) = ioreadl((void *)MAC_LPC_OFFSET);\
+	(data) = ioread32((void *)MAC_LPC_OFFSET);\
 } while (0)
 
 
@@ -6017,11 +6016,11 @@ extern ULONG eqos_base_addr;
 #define MAC_LPS_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xd0))
 
 #define MAC_LPS_WR(data) do {\
-	iowritel(data, (void *)MAC_LPS_OFFSET);\
+	iowrite32(data, (void *)MAC_LPS_OFFSET);\
 } while (0)
 
 #define MAC_LPS_RD(data) do {\
-	(data) = ioreadl((void *)MAC_LPS_OFFSET);\
+	(data) = ioread32((void *)MAC_LPS_OFFSET);\
 } while (0)
 
 
@@ -6261,11 +6260,11 @@ extern ULONG eqos_base_addr;
 #define MAC_PPS_WIDTH3_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xbbc))
 
 #define MAC_PPS_WIDTH3_WR(data) do {\
-	iowritel(data, (void *)MAC_PPS_WIDTH3_OFFSET);\
+	iowrite32(data, (void *)MAC_PPS_WIDTH3_OFFSET);\
 } while (0)
 
 #define MAC_PPS_WIDTH3_RD(data) do {\
-	(data) = ioreadl((void *)MAC_PPS_WIDTH3_OFFSET);\
+	(data) = ioread32((void *)MAC_PPS_WIDTH3_OFFSET);\
 } while (0)
 
 #define MAC_PPS_WIDTH3_PPSWIDTH0_WR(data) do {\
@@ -6279,11 +6278,11 @@ extern ULONG eqos_base_addr;
 #define MAC_PPS_WIDTH2_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xbac))
 
 #define MAC_PPS_WIDTH2_WR(data) do {\
-	iowritel(data, (void *)MAC_PPS_WIDTH2_OFFSET);\
+	iowrite32(data, (void *)MAC_PPS_WIDTH2_OFFSET);\
 } while (0)
 
 #define MAC_PPS_WIDTH2_RD(data) do {\
-	(data) = ioreadl((void *)MAC_PPS_WIDTH2_OFFSET);\
+	(data) = ioread32((void *)MAC_PPS_WIDTH2_OFFSET);\
 } while (0)
 
 #define MAC_PPS_WIDTH2_PPSWIDTH0_WR(data) do {\
@@ -6297,11 +6296,11 @@ extern ULONG eqos_base_addr;
 #define MAC_PPS_WIDTH1_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xb9c))
 
 #define MAC_PPS_WIDTH1_WR(data) do {\
-	iowritel(data, (void *)MAC_PPS_WIDTH1_OFFSET);\
+	iowrite32(data, (void *)MAC_PPS_WIDTH1_OFFSET);\
 } while (0)
 
 #define MAC_PPS_WIDTH1_RD(data) do {\
-	(data) = ioreadl((void *)MAC_PPS_WIDTH1_OFFSET);\
+	(data) = ioread32((void *)MAC_PPS_WIDTH1_OFFSET);\
 } while (0)
 
 #define MAC_PPS_WIDTH1_PPSWIDTH0_WR(data) do {\
@@ -6315,11 +6314,11 @@ extern ULONG eqos_base_addr;
 #define MAC_PPS_WIDTH0_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xb8c))
 
 #define MAC_PPS_WIDTH0_WR(data) do {\
-	iowritel(data, (void *)MAC_PPS_WIDTH0_OFFSET);\
+	iowrite32(data, (void *)MAC_PPS_WIDTH0_OFFSET);\
 } while (0)
 
 #define MAC_PPS_WIDTH0_RD(data) do {\
-	(data) = ioreadl((void *)MAC_PPS_WIDTH0_OFFSET);\
+	(data) = ioread32((void *)MAC_PPS_WIDTH0_OFFSET);\
 } while (0)
 
 #define MAC_PPS_WIDTH0_PPSWIDTH0_WR(data) do {\
@@ -6333,11 +6332,11 @@ extern ULONG eqos_base_addr;
 #define MAC_PPS_INTVAL3_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xbb8))
 
 #define MAC_PPS_INTVAL3_WR(data) do {\
-	iowritel(data, (void *)MAC_PPS_INTVAL3_OFFSET);\
+	iowrite32(data, (void *)MAC_PPS_INTVAL3_OFFSET);\
 } while (0)
 
 #define MAC_PPS_INTVAL3_RD(data) do {\
-	(data) = ioreadl((void *)MAC_PPS_INTVAL3_OFFSET);\
+	(data) = ioread32((void *)MAC_PPS_INTVAL3_OFFSET);\
 } while (0)
 
 #define MAC_PPS_INTVAL3_PPSINT0_WR(data) do {\
@@ -6351,11 +6350,11 @@ extern ULONG eqos_base_addr;
 #define MAC_PPS_INTVAL2_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xba8))
 
 #define MAC_PPS_INTVAL2_WR(data) do {\
-	iowritel(data, (void *)MAC_PPS_INTVAL2_OFFSET);\
+	iowrite32(data, (void *)MAC_PPS_INTVAL2_OFFSET);\
 } while (0)
 
 #define MAC_PPS_INTVAL2_RD(data) do {\
-	(data) = ioreadl((void *)MAC_PPS_INTVAL2_OFFSET);\
+	(data) = ioread32((void *)MAC_PPS_INTVAL2_OFFSET);\
 } while (0)
 
 #define MAC_PPS_INTVAL2_PPSINT0_WR(data) do {\
@@ -6369,11 +6368,11 @@ extern ULONG eqos_base_addr;
 #define MAC_PPS_INTVAL1_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xb98))
 
 #define MAC_PPS_INTVAL1_WR(data) do {\
-	iowritel(data, (void *)MAC_PPS_INTVAL1_OFFSET);\
+	iowrite32(data, (void *)MAC_PPS_INTVAL1_OFFSET);\
 } while (0)
 
 #define MAC_PPS_INTVAL1_RD(data) do {\
-	(data) = ioreadl((void *)MAC_PPS_INTVAL1_OFFSET);\
+	(data) = ioread32((void *)MAC_PPS_INTVAL1_OFFSET);\
 } while (0)
 
 #define MAC_PPS_INTVAL1_PPSINT0_WR(data) do {\
@@ -6387,11 +6386,11 @@ extern ULONG eqos_base_addr;
 #define MAC_PPS_INTVAL0_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xb88))
 
 #define MAC_PPS_INTVAL0_WR(data) do {\
-	iowritel(data, (void *)MAC_PPS_INTVAL0_OFFSET);\
+	iowrite32(data, (void *)MAC_PPS_INTVAL0_OFFSET);\
 } while (0)
 
 #define MAC_PPS_INTVAL0_RD(data) do {\
-	(data) = ioreadl((void *)MAC_PPS_INTVAL0_OFFSET);\
+	(data) = ioread32((void *)MAC_PPS_INTVAL0_OFFSET);\
 } while (0)
 
 #define MAC_PPS_INTVAL0_PPSINT0_WR(data) do {\
@@ -6405,11 +6404,11 @@ extern ULONG eqos_base_addr;
 #define MAC_PPS_TTNS3_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xbb4))
 
 #define MAC_PPS_TTNS3_WR(data) do {\
-	iowritel(data, (void *)MAC_PPS_TTNS3_OFFSET);\
+	iowrite32(data, (void *)MAC_PPS_TTNS3_OFFSET);\
 } while (0)
 
 #define MAC_PPS_TTNS3_RD(data) do {\
-	(data) = ioreadl((void *)MAC_PPS_TTNS3_OFFSET);\
+	(data) = ioread32((void *)MAC_PPS_TTNS3_OFFSET);\
 } while (0)
 
 
@@ -6453,11 +6452,11 @@ extern ULONG eqos_base_addr;
 #define MAC_PPS_TTNS2_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xba4))
 
 #define MAC_PPS_TTNS2_WR(data) do {\
-	iowritel(data, (void *)MAC_PPS_TTNS2_OFFSET);\
+	iowrite32(data, (void *)MAC_PPS_TTNS2_OFFSET);\
 } while (0)
 
 #define MAC_PPS_TTNS2_RD(data) do {\
-	(data) = ioreadl((void *)MAC_PPS_TTNS2_OFFSET);\
+	(data) = ioread32((void *)MAC_PPS_TTNS2_OFFSET);\
 } while (0)
 
 
@@ -6501,21 +6500,21 @@ extern ULONG eqos_base_addr;
 #define MAC_LMIR_OFFSET ((volatile unsigned int *)(BASE_ADDRESS + 0xbd0))
 
 #define MAC_LMIR_WR(data) do {\
-	iowritel(data, (void *)MAC_LMIR_OFFSET);\
+	iowrite32(data, (void *)MAC_LMIR_OFFSET);\
 } while (0)
 
 #define MAC_LMIR_RD(data) do {\
-	(data) = ioreadl((void *)MAC_LMIR_OFFSET);\
+	(data) = ioread32((void *)MAC_LMIR_OFFSET);\
 } while (0)
 
 #define MAC_SPI2R_OFFSET ((volatile unsigned int *)(BASE_ADDRESS + 0xbcc))
 
 #define MAC_SPI2R_WR(data) do {\
-	iowritel(data, (void *)MAC_SPI2R_OFFSET);\
+	iowrite32(data, (void *)MAC_SPI2R_OFFSET);\
 } while (0)
 
 #define MAC_SPI2R_RD(data) do {\
-	(data) = ioreadl((void *)MAC_SPI2R_OFFSET);\
+	(data) = ioread32((void *)MAC_SPI2R_OFFSET);\
 } while (0)
 
 
@@ -6547,11 +6546,11 @@ extern ULONG eqos_base_addr;
 #define MAC_SPI1R_OFFSET ((volatile unsigned int *)(BASE_ADDRESS + 0xbc8))
 
 #define MAC_SPI1R_WR(data) do {\
-	iowritel(data, (void *)MAC_SPI1R_OFFSET);\
+	iowrite32(data, (void *)MAC_SPI1R_OFFSET);\
 } while (0)
 
 #define MAC_SPI1R_RD(data) do {\
-	(data) = ioreadl((void *)MAC_SPI1R_OFFSET);\
+	(data) = ioread32((void *)MAC_SPI1R_OFFSET);\
 } while (0)
 
 #define MAC_SPI1R_SPIO_WR(data) do {\
@@ -6565,11 +6564,11 @@ extern ULONG eqos_base_addr;
 #define MAC_SPI0R_OFFSET ((volatile unsigned int *)(BASE_ADDRESS + 0xbc4))
 
 #define MAC_SPI0R_WR(data) do {\
-	iowritel(data, (void *)MAC_SPI0R_OFFSET);\
+	iowrite32(data, (void *)MAC_SPI0R_OFFSET);\
 } while (0)
 
 #define MAC_SPI0R_RD(data) do {\
-	(data) = ioreadl((void *)MAC_SPI0R_OFFSET);\
+	(data) = ioread32((void *)MAC_SPI0R_OFFSET);\
 } while (0)
 
 #define MAC_SPI0R_SPIO_WR(data) do {\
@@ -6583,11 +6582,11 @@ extern ULONG eqos_base_addr;
 #define MAC_PTO_CR_OFFSET ((volatile unsigned int *)(BASE_ADDRESS + 0xbc0))
 
 #define MAC_PTO_CR_WR(data) do {\
-	iowritel(data, (void *)MAC_PTO_CR_OFFSET);\
+	iowrite32(data, (void *)MAC_PTO_CR_OFFSET);\
 } while (0)
 
 #define MAC_PTO_CR_RD(data) do {\
-	(data) = ioreadl((void *)MAC_PTO_CR_OFFSET);\
+	(data) = ioread32((void *)MAC_PTO_CR_OFFSET);\
 } while (0)
 
 
@@ -6761,11 +6760,11 @@ extern ULONG eqos_base_addr;
 #define MAC_PPS_TTNS1_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xb94))
 
 #define MAC_PPS_TTNS1_WR(data) do {\
-	iowritel(data, (void *)MAC_PPS_TTNS1_OFFSET);\
+	iowrite32(data, (void *)MAC_PPS_TTNS1_OFFSET);\
 } while (0)
 
 #define MAC_PPS_TTNS1_RD(data) do {\
-	(data) = ioreadl((void *)MAC_PPS_TTNS1_OFFSET);\
+	(data) = ioread32((void *)MAC_PPS_TTNS1_OFFSET);\
 } while (0)
 
 
@@ -6809,11 +6808,11 @@ extern ULONG eqos_base_addr;
 #define MAC_PPS_TTNS0_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xb84))
 
 #define MAC_PPS_TTNS0_WR(data) do {\
-	iowritel(data, (void *)MAC_PPS_TTNS0_OFFSET);\
+	iowrite32(data, (void *)MAC_PPS_TTNS0_OFFSET);\
 } while (0)
 
 #define MAC_PPS_TTNS0_RD(data) do {\
-	(data) = ioreadl((void *)MAC_PPS_TTNS0_OFFSET);\
+	(data) = ioread32((void *)MAC_PPS_TTNS0_OFFSET);\
 } while (0)
 
 
@@ -6857,11 +6856,11 @@ extern ULONG eqos_base_addr;
 #define MAC_PPS_TTS3_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xbb0))
 
 #define MAC_PPS_TTS3_WR(data) do {\
-	iowritel(data, (void *)MAC_PPS_TTS3_OFFSET);\
+	iowrite32(data, (void *)MAC_PPS_TTS3_OFFSET);\
 } while (0)
 
 #define MAC_PPS_TTS3_RD(data) do {\
-	(data) = ioreadl((void *)MAC_PPS_TTS3_OFFSET);\
+	(data) = ioread32((void *)MAC_PPS_TTS3_OFFSET);\
 } while (0)
 
 #define MAC_PPS_TTS3_TSTRH0_WR(data) do {\
@@ -6875,11 +6874,11 @@ extern ULONG eqos_base_addr;
 #define MAC_PPS_TTS2_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xba0))
 
 #define MAC_PPS_TTS2_WR(data) do {\
-	iowritel(data, (void *)MAC_PPS_TTS2_OFFSET);\
+	iowrite32(data, (void *)MAC_PPS_TTS2_OFFSET);\
 } while (0)
 
 #define MAC_PPS_TTS2_RD(data) do {\
-	(data) = ioreadl((void *)MAC_PPS_TTS2_OFFSET);\
+	(data) = ioread32((void *)MAC_PPS_TTS2_OFFSET);\
 } while (0)
 
 #define MAC_PPS_TTS2_TSTRH0_WR(data) do {\
@@ -6893,11 +6892,11 @@ extern ULONG eqos_base_addr;
 #define MAC_PPS_TTS1_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xb90))
 
 #define MAC_PPS_TTS1_WR(data) do {\
-	iowritel(data, (void *)MAC_PPS_TTS1_OFFSET);\
+	iowrite32(data, (void *)MAC_PPS_TTS1_OFFSET);\
 } while (0)
 
 #define MAC_PPS_TTS1_RD(data) do {\
-	(data) = ioreadl((void *)MAC_PPS_TTS1_OFFSET);\
+	(data) = ioread32((void *)MAC_PPS_TTS1_OFFSET);\
 } while (0)
 
 #define MAC_PPS_TTS1_TSTRH0_WR(data) do {\
@@ -6911,11 +6910,11 @@ extern ULONG eqos_base_addr;
 #define MAC_PPS_TTS0_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xb80))
 
 #define MAC_PPS_TTS0_WR(data) do {\
-	iowritel(data, (void *)MAC_PPS_TTS0_OFFSET);\
+	iowrite32(data, (void *)MAC_PPS_TTS0_OFFSET);\
 } while (0)
 
 #define MAC_PPS_TTS0_RD(data) do {\
-	(data) = ioreadl((void *)MAC_PPS_TTS0_OFFSET);\
+	(data) = ioread32((void *)MAC_PPS_TTS0_OFFSET);\
 } while (0)
 
 #define MAC_PPS_TTS0_TSTRH0_WR(data) do {\
@@ -6929,11 +6928,11 @@ extern ULONG eqos_base_addr;
 #define MAC_PPSC_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xb70))
 
 #define MAC_PPSC_WR(data) do {\
-	iowritel(data, (void *)MAC_PPSC_OFFSET);\
+	iowrite32(data, (void *)MAC_PPSC_OFFSET);\
 } while (0)
 
 #define MAC_PPSC_RD(data) do {\
-	(data) = ioreadl((void *)MAC_PPSC_OFFSET);\
+	(data) = ioread32((void *)MAC_PPSC_OFFSET);\
 } while (0)
 
 
@@ -7278,11 +7277,11 @@ extern ULONG eqos_base_addr;
 #define MAC_TEAC_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xb54))
 
 #define MAC_TEAC_WR(data) do {\
-	iowritel(data, (void *)MAC_TEAC_OFFSET);\
+	iowrite32(data, (void *)MAC_TEAC_OFFSET);\
 } while (0)
 
 #define MAC_TEAC_RD(data) do {\
-	(data) = ioreadl((void *)MAC_TEAC_OFFSET);\
+	(data) = ioread32((void *)MAC_TEAC_OFFSET);\
 } while (0)
 
 
@@ -7314,11 +7313,11 @@ extern ULONG eqos_base_addr;
 #define MAC_TIAC_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xb50))
 
 #define MAC_TIAC_WR(data) do {\
-	iowritel(data, (void *)MAC_TIAC_OFFSET);\
+	iowrite32(data, (void *)MAC_TIAC_OFFSET);\
 } while (0)
 
 #define MAC_TIAC_RD(data) do {\
-	(data) = ioreadl((void *)MAC_TIAC_OFFSET);\
+	(data) = ioread32((void *)MAC_TIAC_OFFSET);\
 } while (0)
 
 #define MAC_TIAC_OSTIAC_WR(data) do {\
@@ -7332,7 +7331,7 @@ extern ULONG eqos_base_addr;
 #define MAC_ATS_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xb4c))
 
 #define MAC_ATS_RD(data) do {\
-	(data) = ioreadl((void *)MAC_ATS_OFFSET);\
+	(data) = ioread32((void *)MAC_ATS_OFFSET);\
 } while (0)
 
 #define MAC_ATS_AUXTSHI_RD(data) do {\
@@ -7342,7 +7341,7 @@ extern ULONG eqos_base_addr;
 #define MAC_ATN_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xb48))
 
 #define MAC_ATN_RD(data) do {\
-	(data) = ioreadl((void *)MAC_ATN_OFFSET);\
+	(data) = ioread32((void *)MAC_ATN_OFFSET);\
 } while (0)
 
 
@@ -7356,11 +7355,11 @@ extern ULONG eqos_base_addr;
 #define MAC_AC_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xb40))
 
 #define MAC_AC_WR(data) do {\
-	iowritel(data, (void *)MAC_AC_OFFSET);\
+	iowrite32(data, (void *)MAC_AC_OFFSET);\
 } while (0)
 
 #define MAC_AC_RD(data) do {\
-	(data) = ioreadl((void *)MAC_AC_OFFSET);\
+	(data) = ioread32((void *)MAC_AC_OFFSET);\
 } while (0)
 
 
@@ -7493,7 +7492,7 @@ extern ULONG eqos_base_addr;
 #define MAC_TTN_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xb34))
 
 #define MAC_TTN_RD(data) do {\
-	(data) = ioreadl((void *)MAC_TTN_OFFSET);\
+	(data) = ioread32((void *)MAC_TTN_OFFSET);\
 } while (0)
 
 #define MAC_TTN_TXTSSTSHI_RD(data) do {\
@@ -7503,7 +7502,7 @@ extern ULONG eqos_base_addr;
 #define MAC_TTSN_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xb30))
 
 #define MAC_TTSN_RD(data) do {\
-	(data) = ioreadl((void *)MAC_TTSN_OFFSET);\
+	(data) = ioread32((void *)MAC_TTSN_OFFSET);\
 } while (0)
 
 
@@ -7525,7 +7524,7 @@ extern ULONG eqos_base_addr;
 #define MAC_TSR_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xb20))
 
 #define MAC_TSR_RD(data) do {\
-	(data) = ioreadl((void *)MAC_TSR_OFFSET);\
+	(data) = ioread32((void *)MAC_TSR_OFFSET);\
 } while (0)
 
 
@@ -7635,11 +7634,11 @@ extern ULONG eqos_base_addr;
 #define MAC_STHWR_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xb1c))
 
 #define MAC_STHWR_WR(data) do {\
-	iowritel(data, (void *)MAC_STHWR_OFFSET);\
+	iowrite32(data, (void *)MAC_STHWR_OFFSET);\
 } while (0)
 
 #define MAC_STHWR_RD(data) do {\
-	(data) = ioreadl((void *)MAC_STHWR_OFFSET);\
+	(data) = ioread32((void *)MAC_STHWR_OFFSET);\
 } while (0)
 
 
@@ -7671,11 +7670,11 @@ extern ULONG eqos_base_addr;
 #define MAC_TAR_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xb18))
 
 #define MAC_TAR_WR(data) do {\
-	iowritel(data, (void *)MAC_TAR_OFFSET);\
+	iowrite32(data, (void *)MAC_TAR_OFFSET);\
 } while (0)
 
 #define MAC_TAR_RD(data) do {\
-	(data) = ioreadl((void *)MAC_TAR_OFFSET);\
+	(data) = ioread32((void *)MAC_TAR_OFFSET);\
 } while (0)
 
 #define MAC_TAR_TSAR_WR(data) do {\
@@ -7689,11 +7688,11 @@ extern ULONG eqos_base_addr;
 #define MAC_STNSUR_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xb14))
 
 #define MAC_STNSUR_WR(data) do {\
-	iowritel(data, (void *)MAC_STNSUR_OFFSET);\
+	iowrite32(data, (void *)MAC_STNSUR_OFFSET);\
 } while (0)
 
 #define MAC_STNSUR_RD(data) do {\
-	(data) = ioreadl((void *)MAC_STNSUR_OFFSET);\
+	(data) = ioread32((void *)MAC_STNSUR_OFFSET);\
 } while (0)
 
 
@@ -7737,11 +7736,11 @@ extern ULONG eqos_base_addr;
 #define MAC_STSUR_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xb10))
 
 #define MAC_STSUR_WR(data) do {\
-	iowritel(data, (void *)MAC_STSUR_OFFSET);\
+	iowrite32(data, (void *)MAC_STSUR_OFFSET);\
 } while (0)
 
 #define MAC_STSUR_RD(data) do {\
-	(data) = ioreadl((void *)MAC_STSUR_OFFSET);\
+	(data) = ioread32((void *)MAC_STSUR_OFFSET);\
 } while (0)
 
 #define MAC_STSUR_TSS_WR(data) do {\
@@ -7755,7 +7754,7 @@ extern ULONG eqos_base_addr;
 #define MAC_STNSR_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xb0c))
 
 #define MAC_STNSR_RD(data) do {\
-	(data) = ioreadl((void *)MAC_STNSR_OFFSET);\
+	(data) = ioread32((void *)MAC_STNSR_OFFSET);\
 } while (0)
 
 
@@ -7769,7 +7768,7 @@ extern ULONG eqos_base_addr;
 #define MAC_STSR_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xb08))
 
 #define MAC_STSR_RD(data) do {\
-	(data) = ioreadl((void *)MAC_STSR_OFFSET);\
+	(data) = ioread32((void *)MAC_STSR_OFFSET);\
 } while (0)
 
 #define MAC_STSR_TSS_RD(data) do {\
@@ -7779,11 +7778,11 @@ extern ULONG eqos_base_addr;
 #define MAC_SSIR_OFFSET ((volatile unsigned int *)(BASE_ADDRESS + 0xb04))
 
 #define MAC_SSIR_WR(data) do {\
-	iowritel(data, (void *)MAC_SSIR_OFFSET);\
+	iowrite32(data, (void *)MAC_SSIR_OFFSET);\
 } while (0)
 
 #define MAC_SSIR_RD(data) do {\
-	(data) = ioreadl((void *)MAC_SSIR_OFFSET);\
+	(data) = ioread32((void *)MAC_SSIR_OFFSET);\
 } while (0)
 
 
@@ -7847,11 +7846,11 @@ extern ULONG eqos_base_addr;
 #define MAC_TCR_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xb00))
 
 #define MAC_TCR_WR(data) do {\
-	iowritel(data, (void *)MAC_TCR_OFFSET);\
+	iowrite32(data, (void *)MAC_TCR_OFFSET);\
 } while (0)
 
 #define MAC_TCR_RD(data) do {\
-	(data) = ioreadl((void *)MAC_TCR_OFFSET);\
+	(data) = ioread32((void *)MAC_TCR_OFFSET);\
 } while (0)
 
 
@@ -8438,11 +8437,11 @@ extern ULONG eqos_base_addr;
 #define MTL_DSR_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xc0c))
 
 #define MTL_DSR_WR(data) do {\
-	iowritel(data, (void *)MTL_DSR_OFFSET);\
+	iowrite32(data, (void *)MTL_DSR_OFFSET);\
 } while (0)
 
 #define MTL_DSR_RD(data) do {\
-	(data) = ioreadl((void *)MTL_DSR_OFFSET);\
+	(data) = ioread32((void *)MTL_DSR_OFFSET);\
 } while (0)
 
 
@@ -8523,11 +8522,11 @@ extern ULONG eqos_base_addr;
 #define MAC_RWPFFR_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xc4))
 
 #define MAC_RWPFFR_WR(data) do {\
-	iowritel(data, (void *)MAC_RWPFFR_OFFSET);\
+	iowrite32(data, (void *)MAC_RWPFFR_OFFSET);\
 } while (0)
 
 #define MAC_RWPFFR_RD(data) do {\
-	(data) = ioreadl((void *)MAC_RWPFFR_OFFSET);\
+	(data) = ioread32((void *)MAC_RWPFFR_OFFSET);\
 } while (0)
 
 #define MAC_RWPFFR_MAC_RWPFF_WR(data) do {\
@@ -8541,7 +8540,7 @@ extern ULONG eqos_base_addr;
 #define MAC_RTSR_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xb8))
 
 #define MAC_RTSR_RD(data) do {\
-	(data) = ioreadl((void *)MAC_RTSR_OFFSET);\
+	(data) = ioread32((void *)MAC_RTSR_OFFSET);\
 } while (0)
 
 
@@ -8603,11 +8602,11 @@ extern ULONG eqos_base_addr;
 #define MTL_IER_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xc1c))
 
 #define MTL_IER_WR(data) do {\
-	iowritel(data, (void *)MTL_IER_OFFSET);\
+	iowrite32(data, (void *)MTL_IER_OFFSET);\
 } while (0)
 
 #define MTL_IER_RD(data) do {\
-	(data) = ioreadl((void *)MTL_IER_OFFSET);\
+	(data) = ioread32((void *)MTL_IER_OFFSET);\
 } while (0)
 
 
@@ -8976,11 +8975,11 @@ extern ULONG eqos_base_addr;
 #define MTL_QRCR7_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xefc))
 
 #define MTL_QRCR7_WR(data) do {\
-	iowritel(data, (void *)MTL_QRCR7_OFFSET);\
+	iowrite32(data, (void *)MTL_QRCR7_OFFSET);\
 } while (0)
 
 #define MTL_QRCR7_RD(data) do {\
-	(data) = ioreadl((void *)MTL_QRCR7_OFFSET);\
+	(data) = ioread32((void *)MTL_QRCR7_OFFSET);\
 } while (0)
 
 
@@ -9034,11 +9033,11 @@ extern ULONG eqos_base_addr;
 #define MTL_QRCR6_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xebc))
 
 #define MTL_QRCR6_WR(data) do {\
-	iowritel(data, (void *)MTL_QRCR6_OFFSET);\
+	iowrite32(data, (void *)MTL_QRCR6_OFFSET);\
 } while (0)
 
 #define MTL_QRCR6_RD(data) do {\
-	(data) = ioreadl((void *)MTL_QRCR6_OFFSET);\
+	(data) = ioread32((void *)MTL_QRCR6_OFFSET);\
 } while (0)
 
 
@@ -9092,11 +9091,11 @@ extern ULONG eqos_base_addr;
 #define MTL_QRCR5_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xe7c))
 
 #define MTL_QRCR5_WR(data) do {\
-	iowritel(data, (void *)MTL_QRCR5_OFFSET);\
+	iowrite32(data, (void *)MTL_QRCR5_OFFSET);\
 } while (0)
 
 #define MTL_QRCR5_RD(data) do {\
-	(data) = ioreadl((void *)MTL_QRCR5_OFFSET);\
+	(data) = ioread32((void *)MTL_QRCR5_OFFSET);\
 } while (0)
 
 
@@ -9150,11 +9149,11 @@ extern ULONG eqos_base_addr;
 #define MTL_QRCR4_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xe3c))
 
 #define MTL_QRCR4_WR(data) do {\
-	iowritel(data, (void *)MTL_QRCR4_OFFSET);\
+	iowrite32(data, (void *)MTL_QRCR4_OFFSET);\
 } while (0)
 
 #define MTL_QRCR4_RD(data) do {\
-	(data) = ioreadl((void *)MTL_QRCR4_OFFSET);\
+	(data) = ioread32((void *)MTL_QRCR4_OFFSET);\
 } while (0)
 
 
@@ -9208,11 +9207,11 @@ extern ULONG eqos_base_addr;
 #define MTL_QRCR3_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xdfc))
 
 #define MTL_QRCR3_WR(data) do {\
-	iowritel(data, (void *)MTL_QRCR3_OFFSET);\
+	iowrite32(data, (void *)MTL_QRCR3_OFFSET);\
 } while (0)
 
 #define MTL_QRCR3_RD(data) do {\
-	(data) = ioreadl((void *)MTL_QRCR3_OFFSET);\
+	(data) = ioread32((void *)MTL_QRCR3_OFFSET);\
 } while (0)
 
 
@@ -9266,11 +9265,11 @@ extern ULONG eqos_base_addr;
 #define MTL_QRCR2_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xdbc))
 
 #define MTL_QRCR2_WR(data) do {\
-	iowritel(data, (void *)MTL_QRCR2_OFFSET);\
+	iowrite32(data, (void *)MTL_QRCR2_OFFSET);\
 } while (0)
 
 #define MTL_QRCR2_RD(data) do {\
-	(data) = ioreadl((void *)MTL_QRCR2_OFFSET);\
+	(data) = ioread32((void *)MTL_QRCR2_OFFSET);\
 } while (0)
 
 
@@ -9324,11 +9323,11 @@ extern ULONG eqos_base_addr;
 #define MTL_QRCR1_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xd7c))
 
 #define MTL_QRCR1_WR(data) do {\
-	iowritel(data, (void *)MTL_QRCR1_OFFSET);\
+	iowrite32(data, (void *)MTL_QRCR1_OFFSET);\
 } while (0)
 
 #define MTL_QRCR1_RD(data) do {\
-	(data) = ioreadl((void *)MTL_QRCR1_OFFSET);\
+	(data) = ioread32((void *)MTL_QRCR1_OFFSET);\
 } while (0)
 
 
@@ -9382,7 +9381,7 @@ extern ULONG eqos_base_addr;
 #define MTL_QRDR7_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xef8))
 
 #define MTL_QRDR7_RD(data) do {\
-	(data) = ioreadl((void *)MTL_QRDR7_OFFSET);\
+	(data) = ioread32((void *)MTL_QRDR7_OFFSET);\
 } while (0)
 
 
@@ -9420,7 +9419,7 @@ extern ULONG eqos_base_addr;
 #define MTL_QRDR6_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xeb8))
 
 #define MTL_QRDR6_RD(data) do {\
-	(data) = ioreadl((void *)MTL_QRDR6_OFFSET);\
+	(data) = ioread32((void *)MTL_QRDR6_OFFSET);\
 } while (0)
 
 
@@ -9458,7 +9457,7 @@ extern ULONG eqos_base_addr;
 #define MTL_QRDR5_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xe78))
 
 #define MTL_QRDR5_RD(data) do {\
-	(data) = ioreadl((void *)MTL_QRDR5_OFFSET);\
+	(data) = ioread32((void *)MTL_QRDR5_OFFSET);\
 } while (0)
 
 
@@ -9496,7 +9495,7 @@ extern ULONG eqos_base_addr;
 #define MTL_QRDR4_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xe38))
 
 #define MTL_QRDR4_RD(data) do {\
-	(data) = ioreadl((void *)MTL_QRDR4_OFFSET);\
+	(data) = ioread32((void *)MTL_QRDR4_OFFSET);\
 } while (0)
 
 
@@ -9534,7 +9533,7 @@ extern ULONG eqos_base_addr;
 #define MTL_QRDR3_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xdf8))
 
 #define MTL_QRDR3_RD(data) do {\
-	(data) = ioreadl((void *)MTL_QRDR3_OFFSET);\
+	(data) = ioread32((void *)MTL_QRDR3_OFFSET);\
 } while (0)
 
 
@@ -9572,7 +9571,7 @@ extern ULONG eqos_base_addr;
 #define MTL_QRDR2_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xdb8))
 
 #define MTL_QRDR2_RD(data) do {\
-	(data) = ioreadl((void *)MTL_QRDR2_OFFSET);\
+	(data) = ioread32((void *)MTL_QRDR2_OFFSET);\
 } while (0)
 
 
@@ -9610,7 +9609,7 @@ extern ULONG eqos_base_addr;
 #define MTL_QRDR1_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xd78))
 
 #define MTL_QRDR1_RD(data) do {\
-	(data) = ioreadl((void *)MTL_QRDR1_OFFSET);\
+	(data) = ioread32((void *)MTL_QRDR1_OFFSET);\
 } while (0)
 
 
@@ -9648,11 +9647,11 @@ extern ULONG eqos_base_addr;
 #define MTL_QOCR7_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xef4))
 
 #define MTL_QOCR7_WR(data) do {\
-	iowritel(data, (void *)MTL_QOCR7_OFFSET);\
+	iowrite32(data, (void *)MTL_QOCR7_OFFSET);\
 } while (0)
 
 #define MTL_QOCR7_RD(data) do {\
-	(data) = ioreadl((void *)MTL_QOCR7_OFFSET);\
+	(data) = ioread32((void *)MTL_QOCR7_OFFSET);\
 } while (0)
 
 
@@ -9762,11 +9761,11 @@ extern ULONG eqos_base_addr;
 #define MTL_QOCR6_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xeb4))
 
 #define MTL_QOCR6_WR(data) do {\
-	iowritel(data, (void *)MTL_QOCR6_OFFSET);\
+	iowrite32(data, (void *)MTL_QOCR6_OFFSET);\
 } while (0)
 
 #define MTL_QOCR6_RD(data) do {\
-	(data) = ioreadl((void *)MTL_QOCR6_OFFSET);\
+	(data) = ioread32((void *)MTL_QOCR6_OFFSET);\
 } while (0)
 
 
@@ -9876,11 +9875,11 @@ extern ULONG eqos_base_addr;
 #define MTL_QOCR5_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xe74))
 
 #define MTL_QOCR5_WR(data) do {\
-	iowritel(data, (void *)MTL_QOCR5_OFFSET);\
+	iowrite32(data, (void *)MTL_QOCR5_OFFSET);\
 } while (0)
 
 #define MTL_QOCR5_RD(data) do {\
-	(data) = ioreadl((void *)MTL_QOCR5_OFFSET);\
+	(data) = ioread32((void *)MTL_QOCR5_OFFSET);\
 } while (0)
 
 
@@ -9990,11 +9989,11 @@ extern ULONG eqos_base_addr;
 #define MTL_QOCR4_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xe34))
 
 #define MTL_QOCR4_WR(data) do {\
-	iowritel(data, (void *)MTL_QOCR4_OFFSET);\
+	iowrite32(data, (void *)MTL_QOCR4_OFFSET);\
 } while (0)
 
 #define MTL_QOCR4_RD(data) do {\
-	(data) = ioreadl((void *)MTL_QOCR4_OFFSET);\
+	(data) = ioread32((void *)MTL_QOCR4_OFFSET);\
 } while (0)
 
 
@@ -10104,11 +10103,11 @@ extern ULONG eqos_base_addr;
 #define MTL_QOCR3_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xdf4))
 
 #define MTL_QOCR3_WR(data) do {\
-	iowritel(data, (void *)MTL_QOCR3_OFFSET);\
+	iowrite32(data, (void *)MTL_QOCR3_OFFSET);\
 } while (0)
 
 #define MTL_QOCR3_RD(data) do {\
-	(data) = ioreadl((void *)MTL_QOCR3_OFFSET);\
+	(data) = ioread32((void *)MTL_QOCR3_OFFSET);\
 } while (0)
 
 
@@ -10218,11 +10217,11 @@ extern ULONG eqos_base_addr;
 #define MTL_QOCR2_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xdb4))
 
 #define MTL_QOCR2_WR(data) do {\
-	iowritel(data, (void *)MTL_QOCR2_OFFSET);\
+	iowrite32(data, (void *)MTL_QOCR2_OFFSET);\
 } while (0)
 
 #define MTL_QOCR2_RD(data) do {\
-	(data) = ioreadl((void *)MTL_QOCR2_OFFSET);\
+	(data) = ioread32((void *)MTL_QOCR2_OFFSET);\
 } while (0)
 
 
@@ -10332,11 +10331,11 @@ extern ULONG eqos_base_addr;
 #define MTL_QOCR1_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xd74))
 
 #define MTL_QOCR1_WR(data) do {\
-	iowritel(data, (void *)MTL_QOCR1_OFFSET);\
+	iowrite32(data, (void *)MTL_QOCR1_OFFSET);\
 } while (0)
 
 #define MTL_QOCR1_RD(data) do {\
-	(data) = ioreadl((void *)MTL_QOCR1_OFFSET);\
+	(data) = ioread32((void *)MTL_QOCR1_OFFSET);\
 } while (0)
 
 
@@ -10446,11 +10445,11 @@ extern ULONG eqos_base_addr;
 #define MTL_QLCR7_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xee4))
 
 #define MTL_QLCR7_WR(data) do {\
-	iowritel(data, (void *)MTL_QLCR7_OFFSET);\
+	iowrite32(data, (void *)MTL_QLCR7_OFFSET);\
 } while (0)
 
 #define MTL_QLCR7_RD(data) do {\
-	(data) = ioreadl((void *)MTL_QLCR7_OFFSET);\
+	(data) = ioread32((void *)MTL_QLCR7_OFFSET);\
 } while (0)
 
 
@@ -10482,11 +10481,11 @@ extern ULONG eqos_base_addr;
 #define MTL_QLCR6_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xea4))
 
 #define MTL_QLCR6_WR(data) do {\
-	iowritel(data, (void *)MTL_QLCR6_OFFSET);\
+	iowrite32(data, (void *)MTL_QLCR6_OFFSET);\
 } while (0)
 
 #define MTL_QLCR6_RD(data) do {\
-	(data) = ioreadl((void *)MTL_QLCR6_OFFSET);\
+	(data) = ioread32((void *)MTL_QLCR6_OFFSET);\
 } while (0)
 
 
@@ -10518,11 +10517,11 @@ extern ULONG eqos_base_addr;
 #define MTL_QLCR5_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xe64))
 
 #define MTL_QLCR5_WR(data) do {\
-	iowritel(data, (void *)MTL_QLCR5_OFFSET);\
+	iowrite32(data, (void *)MTL_QLCR5_OFFSET);\
 } while (0)
 
 #define MTL_QLCR5_RD(data) do {\
-	(data) = ioreadl((void *)MTL_QLCR5_OFFSET);\
+	(data) = ioread32((void *)MTL_QLCR5_OFFSET);\
 } while (0)
 
 
@@ -10554,11 +10553,11 @@ extern ULONG eqos_base_addr;
 #define MTL_QLCR4_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xe24))
 
 #define MTL_QLCR4_WR(data) do {\
-	iowritel(data, (void *)MTL_QLCR4_OFFSET);\
+	iowrite32(data, (void *)MTL_QLCR4_OFFSET);\
 } while (0)
 
 #define MTL_QLCR4_RD(data) do {\
-	(data) = ioreadl((void *)MTL_QLCR4_OFFSET);\
+	(data) = ioread32((void *)MTL_QLCR4_OFFSET);\
 } while (0)
 
 
@@ -10590,11 +10589,11 @@ extern ULONG eqos_base_addr;
 #define MTL_QLCR3_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xde4))
 
 #define MTL_QLCR3_WR(data) do {\
-	iowritel(data, (void *)MTL_QLCR3_OFFSET);\
+	iowrite32(data, (void *)MTL_QLCR3_OFFSET);\
 } while (0)
 
 #define MTL_QLCR3_RD(data) do {\
-	(data) = ioreadl((void *)MTL_QLCR3_OFFSET);\
+	(data) = ioread32((void *)MTL_QLCR3_OFFSET);\
 } while (0)
 
 
@@ -10626,11 +10625,11 @@ extern ULONG eqos_base_addr;
 #define MTL_QLCR2_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xda4))
 
 #define MTL_QLCR2_WR(data) do {\
-	iowritel(data, (void *)MTL_QLCR2_OFFSET);\
+	iowrite32(data, (void *)MTL_QLCR2_OFFSET);\
 } while (0)
 
 #define MTL_QLCR2_RD(data) do {\
-	(data) = ioreadl((void *)MTL_QLCR2_OFFSET);\
+	(data) = ioread32((void *)MTL_QLCR2_OFFSET);\
 } while (0)
 
 
@@ -10662,11 +10661,11 @@ extern ULONG eqos_base_addr;
 #define MTL_QLCR1_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xd64))
 
 #define MTL_QLCR1_WR(data) do {\
-	iowritel(data, (void *)MTL_QLCR1_OFFSET);\
+	iowrite32(data, (void *)MTL_QLCR1_OFFSET);\
 } while (0)
 
 #define MTL_QLCR1_RD(data) do {\
-	(data) = ioreadl((void *)MTL_QLCR1_OFFSET);\
+	(data) = ioread32((void *)MTL_QLCR1_OFFSET);\
 } while (0)
 
 
@@ -10698,11 +10697,11 @@ extern ULONG eqos_base_addr;
 #define MTL_QHCR7_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xee0))
 
 #define MTL_QHCR7_WR(data) do {\
-	iowritel(data, (void *)MTL_QHCR7_OFFSET);\
+	iowrite32(data, (void *)MTL_QHCR7_OFFSET);\
 } while (0)
 
 #define MTL_QHCR7_RD(data) do {\
-	(data) = ioreadl((void *)MTL_QHCR7_OFFSET);\
+	(data) = ioread32((void *)MTL_QHCR7_OFFSET);\
 } while (0)
 
 
@@ -10734,11 +10733,11 @@ extern ULONG eqos_base_addr;
 #define MTL_QHCR6_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xea0))
 
 #define MTL_QHCR6_WR(data) do {\
-	iowritel(data, (void *)MTL_QHCR6_OFFSET);\
+	iowrite32(data, (void *)MTL_QHCR6_OFFSET);\
 } while (0)
 
 #define MTL_QHCR6_RD(data) do {\
-	(data) = ioreadl((void *)MTL_QHCR6_OFFSET);\
+	(data) = ioread32((void *)MTL_QHCR6_OFFSET);\
 } while (0)
 
 
@@ -10770,11 +10769,11 @@ extern ULONG eqos_base_addr;
 #define MTL_QHCR5_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xe60))
 
 #define MTL_QHCR5_WR(data) do {\
-	iowritel(data, (void *)MTL_QHCR5_OFFSET);\
+	iowrite32(data, (void *)MTL_QHCR5_OFFSET);\
 } while (0)
 
 #define MTL_QHCR5_RD(data) do {\
-	(data) = ioreadl((void *)MTL_QHCR5_OFFSET);\
+	(data) = ioread32((void *)MTL_QHCR5_OFFSET);\
 } while (0)
 
 
@@ -10806,11 +10805,11 @@ extern ULONG eqos_base_addr;
 #define MTL_QHCR4_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xe20))
 
 #define MTL_QHCR4_WR(data) do {\
-	iowritel(data, (void *)MTL_QHCR4_OFFSET);\
+	iowrite32(data, (void *)MTL_QHCR4_OFFSET);\
 } while (0)
 
 #define MTL_QHCR4_RD(data) do {\
-	(data) = ioreadl((void *)MTL_QHCR4_OFFSET);\
+	(data) = ioread32((void *)MTL_QHCR4_OFFSET);\
 } while (0)
 
 
@@ -10842,11 +10841,11 @@ extern ULONG eqos_base_addr;
 #define MTL_QHCR3_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xde0))
 
 #define MTL_QHCR3_WR(data) do {\
-	iowritel(data, (void *)MTL_QHCR3_OFFSET);\
+	iowrite32(data, (void *)MTL_QHCR3_OFFSET);\
 } while (0)
 
 #define MTL_QHCR3_RD(data) do {\
-	(data) = ioreadl((void *)MTL_QHCR3_OFFSET);\
+	(data) = ioread32((void *)MTL_QHCR3_OFFSET);\
 } while (0)
 
 
@@ -10878,11 +10877,11 @@ extern ULONG eqos_base_addr;
 #define MTL_QHCR2_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xda0))
 
 #define MTL_QHCR2_WR(data) do {\
-	iowritel(data, (void *)MTL_QHCR2_OFFSET);\
+	iowrite32(data, (void *)MTL_QHCR2_OFFSET);\
 } while (0)
 
 #define MTL_QHCR2_RD(data) do {\
-	(data) = ioreadl((void *)MTL_QHCR2_OFFSET);\
+	(data) = ioread32((void *)MTL_QHCR2_OFFSET);\
 } while (0)
 
 
@@ -10914,11 +10913,11 @@ extern ULONG eqos_base_addr;
 #define MTL_QHCR1_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xd60))
 
 #define MTL_QHCR1_WR(data) do {\
-	iowritel(data, (void *)MTL_QHCR1_OFFSET);\
+	iowrite32(data, (void *)MTL_QHCR1_OFFSET);\
 } while (0)
 
 #define MTL_QHCR1_RD(data) do {\
-	(data) = ioreadl((void *)MTL_QHCR1_OFFSET);\
+	(data) = ioread32((void *)MTL_QHCR1_OFFSET);\
 } while (0)
 
 
@@ -10950,11 +10949,11 @@ extern ULONG eqos_base_addr;
 #define MTL_QSSCR7_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xedc))
 
 #define MTL_QSSCR7_WR(data) do {\
-	iowritel(data, (void *)MTL_QSSCR7_OFFSET);\
+	iowrite32(data, (void *)MTL_QSSCR7_OFFSET);\
 } while (0)
 
 #define MTL_QSSCR7_RD(data) do {\
-	(data) = ioreadl((void *)MTL_QSSCR7_OFFSET);\
+	(data) = ioread32((void *)MTL_QSSCR7_OFFSET);\
 } while (0)
 
 
@@ -10986,11 +10985,11 @@ extern ULONG eqos_base_addr;
 #define MTL_QSSCR6_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xe9c))
 
 #define MTL_QSSCR6_WR(data) do {\
-	iowritel(data, (void *)MTL_QSSCR6_OFFSET);\
+	iowrite32(data, (void *)MTL_QSSCR6_OFFSET);\
 } while (0)
 
 #define MTL_QSSCR6_RD(data) do {\
-	(data) = ioreadl((void *)MTL_QSSCR6_OFFSET);\
+	(data) = ioread32((void *)MTL_QSSCR6_OFFSET);\
 } while (0)
 
 
@@ -11022,11 +11021,11 @@ extern ULONG eqos_base_addr;
 #define MTL_QSSCR5_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xe5c))
 
 #define MTL_QSSCR5_WR(data) do {\
-	iowritel(data, (void *)MTL_QSSCR5_OFFSET);\
+	iowrite32(data, (void *)MTL_QSSCR5_OFFSET);\
 } while (0)
 
 #define MTL_QSSCR5_RD(data) do {\
-	(data) = ioreadl((void *)MTL_QSSCR5_OFFSET);\
+	(data) = ioread32((void *)MTL_QSSCR5_OFFSET);\
 } while (0)
 
 
@@ -11058,11 +11057,11 @@ extern ULONG eqos_base_addr;
 #define MTL_QSSCR4_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xe1c))
 
 #define MTL_QSSCR4_WR(data) do {\
-	iowritel(data, (void *)MTL_QSSCR4_OFFSET);\
+	iowrite32(data, (void *)MTL_QSSCR4_OFFSET);\
 } while (0)
 
 #define MTL_QSSCR4_RD(data) do {\
-	(data) = ioreadl((void *)MTL_QSSCR4_OFFSET);\
+	(data) = ioread32((void *)MTL_QSSCR4_OFFSET);\
 } while (0)
 
 
@@ -11094,11 +11093,11 @@ extern ULONG eqos_base_addr;
 #define MTL_QSSCR3_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xddc))
 
 #define MTL_QSSCR3_WR(data) do {\
-	iowritel(data, (void *)MTL_QSSCR3_OFFSET);\
+	iowrite32(data, (void *)MTL_QSSCR3_OFFSET);\
 } while (0)
 
 #define MTL_QSSCR3_RD(data) do {\
-	(data) = ioreadl((void *)MTL_QSSCR3_OFFSET);\
+	(data) = ioread32((void *)MTL_QSSCR3_OFFSET);\
 } while (0)
 
 
@@ -11130,11 +11129,11 @@ extern ULONG eqos_base_addr;
 #define MTL_QSSCR2_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xd9c))
 
 #define MTL_QSSCR2_WR(data) do {\
-	iowritel(data, (void *)MTL_QSSCR2_OFFSET);\
+	iowrite32(data, (void *)MTL_QSSCR2_OFFSET);\
 } while (0)
 
 #define MTL_QSSCR2_RD(data) do {\
-	(data) = ioreadl((void *)MTL_QSSCR2_OFFSET);\
+	(data) = ioread32((void *)MTL_QSSCR2_OFFSET);\
 } while (0)
 
 
@@ -11166,11 +11165,11 @@ extern ULONG eqos_base_addr;
 #define MTL_QSSCR1_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xd5c))
 
 #define MTL_QSSCR1_WR(data) do {\
-	iowritel(data, (void *)MTL_QSSCR1_OFFSET);\
+	iowrite32(data, (void *)MTL_QSSCR1_OFFSET);\
 } while (0)
 
 #define MTL_QSSCR1_RD(data) do {\
-	(data) = ioreadl((void *)MTL_QSSCR1_OFFSET);\
+	(data) = ioread32((void *)MTL_QSSCR1_OFFSET);\
 } while (0)
 
 
@@ -11202,11 +11201,11 @@ extern ULONG eqos_base_addr;
 #define MTL_QW7_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xed8))
 
 #define MTL_QW7_WR(data) do {\
-	iowritel(data, (void *)MTL_QW7_OFFSET);\
+	iowrite32(data, (void *)MTL_QW7_OFFSET);\
 } while (0)
 
 #define MTL_QW7_RD(data) do {\
-	(data) = ioreadl((void *)MTL_QW7_OFFSET);\
+	(data) = ioread32((void *)MTL_QW7_OFFSET);\
 } while (0)
 
 
@@ -11238,11 +11237,11 @@ extern ULONG eqos_base_addr;
 #define MTL_QW6_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xe98))
 
 #define MTL_QW6_WR(data) do {\
-	iowritel(data, (void *)MTL_QW6_OFFSET);\
+	iowrite32(data, (void *)MTL_QW6_OFFSET);\
 } while (0)
 
 #define MTL_QW6_RD(data) do {\
-	(data) = ioreadl((void *)MTL_QW6_OFFSET);\
+	(data) = ioread32((void *)MTL_QW6_OFFSET);\
 } while (0)
 
 
@@ -11274,11 +11273,11 @@ extern ULONG eqos_base_addr;
 #define MTL_QW5_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xe58))
 
 #define MTL_QW5_WR(data) do {\
-	iowritel(data, (void *)MTL_QW5_OFFSET);\
+	iowrite32(data, (void *)MTL_QW5_OFFSET);\
 } while (0)
 
 #define MTL_QW5_RD(data) do {\
-	(data) = ioreadl((void *)MTL_QW5_OFFSET);\
+	(data) = ioread32((void *)MTL_QW5_OFFSET);\
 } while (0)
 
 
@@ -11310,11 +11309,11 @@ extern ULONG eqos_base_addr;
 #define MTL_QW4_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xe18))
 
 #define MTL_QW4_WR(data) do {\
-	iowritel(data, (void *)MTL_QW4_OFFSET);\
+	iowrite32(data, (void *)MTL_QW4_OFFSET);\
 } while (0)
 
 #define MTL_QW4_RD(data) do {\
-	(data) = ioreadl((void *)MTL_QW4_OFFSET);\
+	(data) = ioread32((void *)MTL_QW4_OFFSET);\
 } while (0)
 
 
@@ -11346,11 +11345,11 @@ extern ULONG eqos_base_addr;
 #define MTL_QW3_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xdd8))
 
 #define MTL_QW3_WR(data) do {\
-	iowritel(data, (void *)MTL_QW3_OFFSET);\
+	iowrite32(data, (void *)MTL_QW3_OFFSET);\
 } while (0)
 
 #define MTL_QW3_RD(data) do {\
-	(data) = ioreadl((void *)MTL_QW3_OFFSET);\
+	(data) = ioread32((void *)MTL_QW3_OFFSET);\
 } while (0)
 
 
@@ -11382,11 +11381,11 @@ extern ULONG eqos_base_addr;
 #define MTL_QW2_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xd98))
 
 #define MTL_QW2_WR(data) do {\
-	iowritel(data, (void *)MTL_QW2_OFFSET);\
+	iowrite32(data, (void *)MTL_QW2_OFFSET);\
 } while (0)
 
 #define MTL_QW2_RD(data) do {\
-	(data) = ioreadl((void *)MTL_QW2_OFFSET);\
+	(data) = ioread32((void *)MTL_QW2_OFFSET);\
 } while (0)
 
 
@@ -11418,11 +11417,11 @@ extern ULONG eqos_base_addr;
 #define MTL_QW1_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xd58))
 
 #define MTL_QW1_WR(data) do {\
-	iowritel(data, (void *)MTL_QW1_OFFSET);\
+	iowrite32(data, (void *)MTL_QW1_OFFSET);\
 } while (0)
 
 #define MTL_QW1_RD(data) do {\
-	(data) = ioreadl((void *)MTL_QW1_OFFSET);\
+	(data) = ioread32((void *)MTL_QW1_OFFSET);\
 } while (0)
 
 
@@ -11454,7 +11453,7 @@ extern ULONG eqos_base_addr;
 #define MTL_QESR7_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xed4))
 
 #define MTL_QESR7_RD(data) do {\
-	(data) = ioreadl((void *)MTL_QESR7_OFFSET);\
+	(data) = ioread32((void *)MTL_QESR7_OFFSET);\
 } while (0)
 
 
@@ -11476,7 +11475,7 @@ extern ULONG eqos_base_addr;
 #define MTL_QESR6_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xe94))
 
 #define MTL_QESR6_RD(data) do {\
-	(data) = ioreadl((void *)MTL_QESR6_OFFSET);\
+	(data) = ioread32((void *)MTL_QESR6_OFFSET);\
 } while (0)
 
 
@@ -11498,7 +11497,7 @@ extern ULONG eqos_base_addr;
 #define MTL_QESR5_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xe54))
 
 #define MTL_QESR5_RD(data) do {\
-	(data) = ioreadl((void *)MTL_QESR5_OFFSET);\
+	(data) = ioread32((void *)MTL_QESR5_OFFSET);\
 } while (0)
 
 
@@ -11520,7 +11519,7 @@ extern ULONG eqos_base_addr;
 #define MTL_QESR4_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xe14))
 
 #define MTL_QESR4_RD(data) do {\
-	(data) = ioreadl((void *)MTL_QESR4_OFFSET);\
+	(data) = ioread32((void *)MTL_QESR4_OFFSET);\
 } while (0)
 
 
@@ -11542,7 +11541,7 @@ extern ULONG eqos_base_addr;
 #define MTL_QESR3_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xdd4))
 
 #define MTL_QESR3_RD(data) do {\
-	(data) = ioreadl((void *)MTL_QESR3_OFFSET);\
+	(data) = ioread32((void *)MTL_QESR3_OFFSET);\
 } while (0)
 
 
@@ -11564,7 +11563,7 @@ extern ULONG eqos_base_addr;
 #define MTL_QESR2_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xd94))
 
 #define MTL_QESR2_RD(data) do {\
-	(data) = ioreadl((void *)MTL_QESR2_OFFSET);\
+	(data) = ioread32((void *)MTL_QESR2_OFFSET);\
 } while (0)
 
 
@@ -11586,7 +11585,7 @@ extern ULONG eqos_base_addr;
 #define MTL_QESR1_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xd54))
 
 #define MTL_QESR1_RD(data) do {\
-	(data) = ioreadl((void *)MTL_QESR1_OFFSET);\
+	(data) = ioread32((void *)MTL_QESR1_OFFSET);\
 } while (0)
 
 
@@ -11608,11 +11607,11 @@ extern ULONG eqos_base_addr;
 #define MTL_QECR7_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xed0))
 
 #define MTL_QECR7_WR(data) do {\
-	iowritel(data, (void *)MTL_QECR7_OFFSET);\
+	iowrite32(data, (void *)MTL_QECR7_OFFSET);\
 } while (0)
 
 #define MTL_QECR7_RD(data) do {\
-	(data) = ioreadl((void *)MTL_QECR7_OFFSET);\
+	(data) = ioread32((void *)MTL_QECR7_OFFSET);\
 } while (0)
 
 
@@ -11736,11 +11735,11 @@ extern ULONG eqos_base_addr;
 #define MTL_QECR6_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xe90))
 
 #define MTL_QECR6_WR(data) do {\
-	iowritel(data, (void *)MTL_QECR6_OFFSET);\
+	iowrite32(data, (void *)MTL_QECR6_OFFSET);\
 } while (0)
 
 #define MTL_QECR6_RD(data) do {\
-	(data) = ioreadl((void *)MTL_QECR6_OFFSET);\
+	(data) = ioread32((void *)MTL_QECR6_OFFSET);\
 } while (0)
 
 
@@ -11864,11 +11863,11 @@ extern ULONG eqos_base_addr;
 #define MTL_QECR5_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xe50))
 
 #define MTL_QECR5_WR(data) do {\
-	iowritel(data, (void *)MTL_QECR5_OFFSET);\
+	iowrite32(data, (void *)MTL_QECR5_OFFSET);\
 } while (0)
 
 #define MTL_QECR5_RD(data) do {\
-	(data) = ioreadl((void *)MTL_QECR5_OFFSET);\
+	(data) = ioread32((void *)MTL_QECR5_OFFSET);\
 } while (0)
 
 
@@ -11992,11 +11991,11 @@ extern ULONG eqos_base_addr;
 #define MTL_QECR4_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xe10))
 
 #define MTL_QECR4_WR(data) do {\
-	iowritel(data, (void *)MTL_QECR4_OFFSET);\
+	iowrite32(data, (void *)MTL_QECR4_OFFSET);\
 } while (0)
 
 #define MTL_QECR4_RD(data) do {\
-	(data) = ioreadl((void *)MTL_QECR4_OFFSET);\
+	(data) = ioread32((void *)MTL_QECR4_OFFSET);\
 } while (0)
 
 
@@ -12120,11 +12119,11 @@ extern ULONG eqos_base_addr;
 #define MTL_QECR3_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xdd0))
 
 #define MTL_QECR3_WR(data) do {\
-	iowritel(data, (void *)MTL_QECR3_OFFSET);\
+	iowrite32(data, (void *)MTL_QECR3_OFFSET);\
 } while (0)
 
 #define MTL_QECR3_RD(data) do {\
-	(data) = ioreadl((void *)MTL_QECR3_OFFSET);\
+	(data) = ioread32((void *)MTL_QECR3_OFFSET);\
 } while (0)
 
 
@@ -12248,11 +12247,11 @@ extern ULONG eqos_base_addr;
 #define MTL_QECR2_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xd90))
 
 #define MTL_QECR2_WR(data) do {\
-	iowritel(data, (void *)MTL_QECR2_OFFSET);\
+	iowrite32(data, (void *)MTL_QECR2_OFFSET);\
 } while (0)
 
 #define MTL_QECR2_RD(data) do {\
-	(data) = ioreadl((void *)MTL_QECR2_OFFSET);\
+	(data) = ioread32((void *)MTL_QECR2_OFFSET);\
 } while (0)
 
 
@@ -12376,11 +12375,11 @@ extern ULONG eqos_base_addr;
 #define MTL_QECR1_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xd50))
 
 #define MTL_QECR1_WR(data) do {\
-	iowritel(data, (void *)MTL_QECR1_OFFSET);\
+	iowrite32(data, (void *)MTL_QECR1_OFFSET);\
 } while (0)
 
 #define MTL_QECR1_RD(data) do {\
-	(data) = ioreadl((void *)MTL_QECR1_OFFSET);\
+	(data) = ioread32((void *)MTL_QECR1_OFFSET);\
 } while (0)
 
 
@@ -12504,7 +12503,7 @@ extern ULONG eqos_base_addr;
 #define MTL_QTDR7_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xec8))
 
 #define MTL_QTDR7_RD(data) do {\
-	(data) = ioreadl((void *)MTL_QTDR7_OFFSET);\
+	(data) = ioread32((void *)MTL_QTDR7_OFFSET);\
 } while (0)
 
 
@@ -12566,7 +12565,7 @@ extern ULONG eqos_base_addr;
 #define MTL_QTDR6_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xe88))
 
 #define MTL_QTDR6_RD(data) do {\
-	(data) = ioreadl((void *)MTL_QTDR6_OFFSET);\
+	(data) = ioread32((void *)MTL_QTDR6_OFFSET);\
 } while (0)
 
 
@@ -12628,7 +12627,7 @@ extern ULONG eqos_base_addr;
 #define MTL_QTDR5_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xe48))
 
 #define MTL_QTDR5_RD(data) do {\
-	(data) = ioreadl((void *)MTL_QTDR5_OFFSET);\
+	(data) = ioread32((void *)MTL_QTDR5_OFFSET);\
 } while (0)
 
 
@@ -12690,7 +12689,7 @@ extern ULONG eqos_base_addr;
 #define MTL_QTDR4_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xe08))
 
 #define MTL_QTDR4_RD(data) do {\
-	(data) = ioreadl((void *)MTL_QTDR4_OFFSET);\
+	(data) = ioread32((void *)MTL_QTDR4_OFFSET);\
 } while (0)
 
 
@@ -12752,7 +12751,7 @@ extern ULONG eqos_base_addr;
 #define MTL_QTDR3_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xdc8))
 
 #define MTL_QTDR3_RD(data) do {\
-	(data) = ioreadl((void *)MTL_QTDR3_OFFSET);\
+	(data) = ioread32((void *)MTL_QTDR3_OFFSET);\
 } while (0)
 
 
@@ -12814,7 +12813,7 @@ extern ULONG eqos_base_addr;
 #define MTL_QTDR2_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xd88))
 
 #define MTL_QTDR2_RD(data) do {\
-	(data) = ioreadl((void *)MTL_QTDR2_OFFSET);\
+	(data) = ioread32((void *)MTL_QTDR2_OFFSET);\
 } while (0)
 
 
@@ -12876,7 +12875,7 @@ extern ULONG eqos_base_addr;
 #define MTL_QTDR1_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xd48))
 
 #define MTL_QTDR1_RD(data) do {\
-	(data) = ioreadl((void *)MTL_QTDR1_OFFSET);\
+	(data) = ioread32((void *)MTL_QTDR1_OFFSET);\
 } while (0)
 
 
@@ -12938,11 +12937,11 @@ extern ULONG eqos_base_addr;
 #define MTL_QUCR7_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xec4))
 
 #define MTL_QUCR7_WR(data) do {\
-	iowritel(data, (void *)MTL_QUCR7_OFFSET);\
+	iowrite32(data, (void *)MTL_QUCR7_OFFSET);\
 } while (0)
 
 #define MTL_QUCR7_RD(data) do {\
-	(data) = ioreadl((void *)MTL_QUCR7_OFFSET);\
+	(data) = ioread32((void *)MTL_QUCR7_OFFSET);\
 } while (0)
 
 
@@ -12983,11 +12982,11 @@ extern ULONG eqos_base_addr;
 #define MTL_QUCR6_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xe84))
 
 #define MTL_QUCR6_WR(data) do {\
-	iowritel(data, (void *)MTL_QUCR6_OFFSET);\
+	iowrite32(data, (void *)MTL_QUCR6_OFFSET);\
 } while (0)
 
 #define MTL_QUCR6_RD(data) do {\
-	(data) = ioreadl((void *)MTL_QUCR6_OFFSET);\
+	(data) = ioread32((void *)MTL_QUCR6_OFFSET);\
 } while (0)
 
 
@@ -13028,11 +13027,11 @@ extern ULONG eqos_base_addr;
 #define MTL_QUCR5_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xe44))
 
 #define MTL_QUCR5_WR(data) do {\
-	iowritel(data, (void *)MTL_QUCR5_OFFSET);\
+	iowrite32(data, (void *)MTL_QUCR5_OFFSET);\
 } while (0)
 
 #define MTL_QUCR5_RD(data) do {\
-	(data) = ioreadl((void *)MTL_QUCR5_OFFSET);\
+	(data) = ioread32((void *)MTL_QUCR5_OFFSET);\
 } while (0)
 
 
@@ -13073,11 +13072,11 @@ extern ULONG eqos_base_addr;
 #define MTL_QUCR4_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xe04))
 
 #define MTL_QUCR4_WR(data) do {\
-	iowritel(data, (void *)MTL_QUCR4_OFFSET);\
+	iowrite32(data, (void *)MTL_QUCR4_OFFSET);\
 } while (0)
 
 #define MTL_QUCR4_RD(data) do {\
-	(data) = ioreadl((void *)MTL_QUCR4_OFFSET);\
+	(data) = ioread32((void *)MTL_QUCR4_OFFSET);\
 } while (0)
 
 
@@ -13118,11 +13117,11 @@ extern ULONG eqos_base_addr;
 #define MTL_QUCR3_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xdc4))
 
 #define MTL_QUCR3_WR(data) do {\
-	iowritel(data, (void *)MTL_QUCR3_OFFSET);\
+	iowrite32(data, (void *)MTL_QUCR3_OFFSET);\
 } while (0)
 
 #define MTL_QUCR3_RD(data) do {\
-	(data) = ioreadl((void *)MTL_QUCR3_OFFSET);\
+	(data) = ioread32((void *)MTL_QUCR3_OFFSET);\
 } while (0)
 
 
@@ -13163,11 +13162,11 @@ extern ULONG eqos_base_addr;
 #define MTL_QUCR2_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xd84))
 
 #define MTL_QUCR2_WR(data) do {\
-	iowritel(data, (void *)MTL_QUCR2_OFFSET);\
+	iowrite32(data, (void *)MTL_QUCR2_OFFSET);\
 } while (0)
 
 #define MTL_QUCR2_RD(data) do {\
-	(data) = ioreadl((void *)MTL_QUCR2_OFFSET);\
+	(data) = ioread32((void *)MTL_QUCR2_OFFSET);\
 } while (0)
 
 
@@ -13208,11 +13207,11 @@ extern ULONG eqos_base_addr;
 #define MTL_QUCR1_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xd44))
 
 #define MTL_QUCR1_WR(data) do {\
-	iowritel(data, (void *)MTL_QUCR1_OFFSET);\
+	iowrite32(data, (void *)MTL_QUCR1_OFFSET);\
 } while (0)
 
 #define MTL_QUCR1_RD(data) do {\
-	(data) = ioreadl((void *)MTL_QUCR1_OFFSET);\
+	(data) = ioread32((void *)MTL_QUCR1_OFFSET);\
 } while (0)
 
 
@@ -13253,11 +13252,11 @@ extern ULONG eqos_base_addr;
 #define MTL_QTOMR7_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xec0))
 
 #define MTL_QTOMR7_WR(data) do {\
-	iowritel(data, (void *)MTL_QTOMR7_OFFSET);\
+	iowrite32(data, (void *)MTL_QTOMR7_OFFSET);\
 } while (0)
 
 #define MTL_QTOMR7_RD(data) do {\
-	(data) = ioreadl((void *)MTL_QTOMR7_OFFSET);\
+	(data) = ioread32((void *)MTL_QTOMR7_OFFSET);\
 } while (0)
 
 
@@ -13390,11 +13389,11 @@ extern ULONG eqos_base_addr;
 #define MTL_QTOMR6_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xe80))
 
 #define MTL_QTOMR6_WR(data) do {\
-	iowritel(data, (void *)MTL_QTOMR6_OFFSET);\
+	iowrite32(data, (void *)MTL_QTOMR6_OFFSET);\
 } while (0)
 
 #define MTL_QTOMR6_RD(data) do {\
-	(data) = ioreadl((void *)MTL_QTOMR6_OFFSET);\
+	(data) = ioread32((void *)MTL_QTOMR6_OFFSET);\
 } while (0)
 
 
@@ -13527,11 +13526,11 @@ extern ULONG eqos_base_addr;
 #define MTL_QTOMR5_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xe40))
 
 #define MTL_QTOMR5_WR(data) do {\
-	iowritel(data, (void *)MTL_QTOMR5_OFFSET);\
+	iowrite32(data, (void *)MTL_QTOMR5_OFFSET);\
 } while (0)
 
 #define MTL_QTOMR5_RD(data) do {\
-	(data) = ioreadl((void *)MTL_QTOMR5_OFFSET);\
+	(data) = ioread32((void *)MTL_QTOMR5_OFFSET);\
 } while (0)
 
 
@@ -13664,11 +13663,11 @@ extern ULONG eqos_base_addr;
 #define MTL_QTOMR4_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xe00))
 
 #define MTL_QTOMR4_WR(data) do {\
-	iowritel(data, (void *)MTL_QTOMR4_OFFSET);\
+	iowrite32(data, (void *)MTL_QTOMR4_OFFSET);\
 } while (0)
 
 #define MTL_QTOMR4_RD(data) do {\
-	(data) = ioreadl((void *)MTL_QTOMR4_OFFSET);\
+	(data) = ioread32((void *)MTL_QTOMR4_OFFSET);\
 } while (0)
 
 
@@ -13801,11 +13800,11 @@ extern ULONG eqos_base_addr;
 #define MTL_QTOMR3_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xdc0))
 
 #define MTL_QTOMR3_WR(data) do {\
-	iowritel(data, (void *)MTL_QTOMR3_OFFSET);\
+	iowrite32(data, (void *)MTL_QTOMR3_OFFSET);\
 } while (0)
 
 #define MTL_QTOMR3_RD(data) do {\
-	(data) = ioreadl((void *)MTL_QTOMR3_OFFSET);\
+	(data) = ioread32((void *)MTL_QTOMR3_OFFSET);\
 } while (0)
 
 
@@ -13938,11 +13937,11 @@ extern ULONG eqos_base_addr;
 #define MTL_QTOMR2_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xd80))
 
 #define MTL_QTOMR2_WR(data) do {\
-	iowritel(data, (void *)MTL_QTOMR2_OFFSET);\
+	iowrite32(data, (void *)MTL_QTOMR2_OFFSET);\
 } while (0)
 
 #define MTL_QTOMR2_RD(data) do {\
-	(data) = ioreadl((void *)MTL_QTOMR2_OFFSET);\
+	(data) = ioread32((void *)MTL_QTOMR2_OFFSET);\
 } while (0)
 
 
@@ -14075,11 +14074,11 @@ extern ULONG eqos_base_addr;
 #define MTL_QTOMR1_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xd40))
 
 #define MTL_QTOMR1_WR(data) do {\
-	iowritel(data, (void *)MTL_QTOMR1_OFFSET);\
+	iowrite32(data, (void *)MTL_QTOMR1_OFFSET);\
 } while (0)
 
 #define MTL_QTOMR1_RD(data) do {\
-	(data) = ioreadl((void *)MTL_QTOMR1_OFFSET);\
+	(data) = ioread32((void *)MTL_QTOMR1_OFFSET);\
 } while (0)
 
 
@@ -14212,11 +14211,11 @@ extern ULONG eqos_base_addr;
 #define MAC_PMTCSR_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xc0))
 
 #define MAC_PMTCSR_WR(data) do {\
-	iowritel(data, (void *)MAC_PMTCSR_OFFSET);\
+	iowrite32(data, (void *)MAC_PMTCSR_OFFSET);\
 } while (0)
 
 #define MAC_PMTCSR_RD(data) do {\
-	(data) = ioreadl((void *)MAC_PMTCSR_OFFSET);\
+	(data) = ioread32((void *)MAC_PMTCSR_OFFSET);\
 } while (0)
 
 
@@ -14443,7 +14442,7 @@ extern ULONG eqos_base_addr;
 #define MMC_RXICMP_ERR_OCTETS_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x884))
 
 #define MMC_RXICMP_ERR_OCTETS_RD(data) do {\
-	(data) = ioreadl((void *)MMC_RXICMP_ERR_OCTETS_OFFSET);\
+	(data) = ioread32((void *)MMC_RXICMP_ERR_OCTETS_OFFSET);\
 } while (0)
 
 #define MMC_RXICMP_ERR_OCTETS_RXICMP_ERR_OCTETS_RD(data) do {\
@@ -14453,7 +14452,7 @@ extern ULONG eqos_base_addr;
 #define MMC_RXICMP_GD_OCTETS_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x880))
 
 #define MMC_RXICMP_GD_OCTETS_RD(data) do {\
-	(data) = ioreadl((void *)MMC_RXICMP_GD_OCTETS_OFFSET);\
+	(data) = ioread32((void *)MMC_RXICMP_GD_OCTETS_OFFSET);\
 } while (0)
 
 #define MMC_RXICMP_GD_OCTETS_RXICMP_GD_OCTETS_RD(data) do {\
@@ -14463,7 +14462,7 @@ extern ULONG eqos_base_addr;
 #define MMC_RXTCP_ERR_OCTETS_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x87c))
 
 #define MMC_RXTCP_ERR_OCTETS_RD(data) do {\
-	(data) = ioreadl((void *)MMC_RXTCP_ERR_OCTETS_OFFSET);\
+	(data) = ioread32((void *)MMC_RXTCP_ERR_OCTETS_OFFSET);\
 } while (0)
 
 #define MMC_RXTCP_ERR_OCTETS_RXTCP_ERR_OCTETS_RD(data) do {\
@@ -14473,7 +14472,7 @@ extern ULONG eqos_base_addr;
 #define MMC_RXTCP_GD_OCTETS_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x878))
 
 #define MMC_RXTCP_GD_OCTETS_RD(data) do {\
-	(data) = ioreadl((void *)MMC_RXTCP_GD_OCTETS_OFFSET);\
+	(data) = ioread32((void *)MMC_RXTCP_GD_OCTETS_OFFSET);\
 } while (0)
 
 #define MMC_RXTCP_GD_OCTETS_RXTCP_GD_OCTETS_RD(data) do {\
@@ -14483,7 +14482,7 @@ extern ULONG eqos_base_addr;
 #define MMC_RXUDP_ERR_OCTETS_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x874))
 
 #define MMC_RXUDP_ERR_OCTETS_RD(data) do {\
-	(data) = ioreadl((void *)MMC_RXUDP_ERR_OCTETS_OFFSET);\
+	(data) = ioread32((void *)MMC_RXUDP_ERR_OCTETS_OFFSET);\
 } while (0)
 
 #define MMC_RXUDP_ERR_OCTETS_RXUDP_ERR_OCTETS_RD(data) do {\
@@ -14493,7 +14492,7 @@ extern ULONG eqos_base_addr;
 #define MMC_RXUDP_GD_OCTETS_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x870))
 
 #define MMC_RXUDP_GD_OCTETS_RD(data) do {\
-	(data) = ioreadl((void *)MMC_RXUDP_GD_OCTETS_OFFSET);\
+	(data) = ioread32((void *)MMC_RXUDP_GD_OCTETS_OFFSET);\
 } while (0)
 
 #define MMC_RXUDP_GD_OCTETS_RXUDP_GD_OCTETS_RD(data) do {\
@@ -14503,7 +14502,7 @@ extern ULONG eqos_base_addr;
 #define MMC_RXIPV6_NOPAY_OCTETS_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x86c))
 
 #define MMC_RXIPV6_NOPAY_OCTETS_RD(data) do {\
-	(data) = ioreadl((void *)MMC_RXIPV6_NOPAY_OCTETS_OFFSET);\
+	(data) = ioread32((void *)MMC_RXIPV6_NOPAY_OCTETS_OFFSET);\
 } while (0)
 
 #define MMC_RXIPV6_NOPAY_OCTETS_RXIPV6_NOPAY_OCTETS_RD(data) do {\
@@ -14513,7 +14512,7 @@ extern ULONG eqos_base_addr;
 #define MMC_RXIPV6_HDRERR_OCTETS_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x868))
 
 #define MMC_RXIPV6_HDRERR_OCTETS_RD(data) do {\
-	(data) = ioreadl((void *)MMC_RXIPV6_HDRERR_OCTETS_OFFSET);\
+	(data) = ioread32((void *)MMC_RXIPV6_HDRERR_OCTETS_OFFSET);\
 } while (0)
 
 #define MMC_RXIPV6_HDRERR_OCTETS_RXIPV6_HDRERR_OCTETS_RD(data) do {\
@@ -14523,7 +14522,7 @@ extern ULONG eqos_base_addr;
 #define MMC_RXIPV6_GD_OCTETS_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x864))
 
 #define MMC_RXIPV6_GD_OCTETS_RD(data) do {\
-	(data) = ioreadl((void *)MMC_RXIPV6_GD_OCTETS_OFFSET);\
+	(data) = ioread32((void *)MMC_RXIPV6_GD_OCTETS_OFFSET);\
 } while (0)
 
 #define MMC_RXIPV6_GD_OCTETS_RXIPV6_GD_OCTETS_RD(data) do {\
@@ -14533,7 +14532,7 @@ extern ULONG eqos_base_addr;
 #define MMC_RXIPV4_UDSBL_OCTETS_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x860))
 
 #define MMC_RXIPV4_UDSBL_OCTETS_RD(data) do {\
-	(data) = ioreadl((void *)MMC_RXIPV4_UDSBL_OCTETS_OFFSET);\
+	(data) = ioread32((void *)MMC_RXIPV4_UDSBL_OCTETS_OFFSET);\
 } while (0)
 
 #define MMC_RXIPV4_UDSBL_OCTETS_RXIPV4_UDSBL_OCTETS_RD(data) do {\
@@ -14543,7 +14542,7 @@ extern ULONG eqos_base_addr;
 #define MMC_RXIPV4_FRAG_OCTETS_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x85c))
 
 #define MMC_RXIPV4_FRAG_OCTETS_RD(data) do {\
-	(data) = ioreadl((void *)MMC_RXIPV4_FRAG_OCTETS_OFFSET);\
+	(data) = ioread32((void *)MMC_RXIPV4_FRAG_OCTETS_OFFSET);\
 } while (0)
 
 #define MMC_RXIPV4_FRAG_OCTETS_RXIPV4_FRAG_OCTETS_RD(data) do {\
@@ -14553,7 +14552,7 @@ extern ULONG eqos_base_addr;
 #define MMC_RXIPV4_NOPAY_OCTETS_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x858))
 
 #define MMC_RXIPV4_NOPAY_OCTETS_RD(data) do {\
-	(data) = ioreadl((void *)MMC_RXIPV4_NOPAY_OCTETS_OFFSET);\
+	(data) = ioread32((void *)MMC_RXIPV4_NOPAY_OCTETS_OFFSET);\
 } while (0)
 
 #define MMC_RXIPV4_NOPAY_OCTETS_RXIPV4_NOPAY_OCTETS_RD(data) do {\
@@ -14563,7 +14562,7 @@ extern ULONG eqos_base_addr;
 #define MMC_RXIPV4_HDRERR_OCTETS_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x854))
 
 #define MMC_RXIPV4_HDRERR_OCTETS_RD(data) do {\
-	(data) = ioreadl((void *)MMC_RXIPV4_HDRERR_OCTETS_OFFSET);\
+	(data) = ioread32((void *)MMC_RXIPV4_HDRERR_OCTETS_OFFSET);\
 } while (0)
 
 #define MMC_RXIPV4_HDRERR_OCTETS_RXIPV4_HDRERR_OCTETS_RD(data) do {\
@@ -14573,7 +14572,7 @@ extern ULONG eqos_base_addr;
 #define MMC_RXIPV4_GD_OCTETS_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x850))
 
 #define MMC_RXIPV4_GD_OCTETS_RD(data) do {\
-	(data) = ioreadl((void *)MMC_RXIPV4_GD_OCTETS_OFFSET);\
+	(data) = ioread32((void *)MMC_RXIPV4_GD_OCTETS_OFFSET);\
 } while (0)
 
 #define MMC_RXIPV4_GD_OCTETS_RXIPV4_GD_OCTETS_RD(data) do {\
@@ -14583,7 +14582,7 @@ extern ULONG eqos_base_addr;
 #define MMC_RXICMP_ERR_PKTS_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x844))
 
 #define MMC_RXICMP_ERR_PKTS_RD(data) do {\
-	(data) = ioreadl((void *)MMC_RXICMP_ERR_PKTS_OFFSET);\
+	(data) = ioread32((void *)MMC_RXICMP_ERR_PKTS_OFFSET);\
 } while (0)
 
 #define MMC_RXICMP_ERR_PKTS_RXICMP_ERR_PKTS_RD(data) do {\
@@ -14593,7 +14592,7 @@ extern ULONG eqos_base_addr;
 #define MMC_RXICMP_GD_PKTS_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x840))
 
 #define MMC_RXICMP_GD_PKTS_RD(data) do {\
-	(data) = ioreadl((void *)MMC_RXICMP_GD_PKTS_OFFSET);\
+	(data) = ioread32((void *)MMC_RXICMP_GD_PKTS_OFFSET);\
 } while (0)
 
 #define MMC_RXICMP_GD_PKTS_RXICMP_GD_PKTS_RD(data) do {\
@@ -14603,7 +14602,7 @@ extern ULONG eqos_base_addr;
 #define MMC_RXTCP_ERR_PKTS_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x83c))
 
 #define MMC_RXTCP_ERR_PKTS_RD(data) do {\
-	(data) = ioreadl((void *)MMC_RXTCP_ERR_PKTS_OFFSET);\
+	(data) = ioread32((void *)MMC_RXTCP_ERR_PKTS_OFFSET);\
 } while (0)
 
 #define MMC_RXTCP_ERR_PKTS_RXTCP_ERR_PKTS_RD(data) do {\
@@ -14613,7 +14612,7 @@ extern ULONG eqos_base_addr;
 #define MMC_RXTCP_GD_PKTS_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x838))
 
 #define MMC_RXTCP_GD_PKTS_RD(data) do {\
-	(data) = ioreadl((void *)MMC_RXTCP_GD_PKTS_OFFSET);\
+	(data) = ioread32((void *)MMC_RXTCP_GD_PKTS_OFFSET);\
 } while (0)
 
 #define MMC_RXTCP_GD_PKTS_RXTCP_GD_PKTS_RD(data) do {\
@@ -14623,7 +14622,7 @@ extern ULONG eqos_base_addr;
 #define MMC_RXUDP_ERR_PKTS_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x834))
 
 #define MMC_RXUDP_ERR_PKTS_RD(data) do {\
-	(data) = ioreadl((void *)MMC_RXUDP_ERR_PKTS_OFFSET);\
+	(data) = ioread32((void *)MMC_RXUDP_ERR_PKTS_OFFSET);\
 } while (0)
 
 #define MMC_RXUDP_ERR_PKTS_RXUDP_ERR_PKTS_RD(data) do {\
@@ -14633,7 +14632,7 @@ extern ULONG eqos_base_addr;
 #define MMC_RXUDP_GD_PKTS_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x830))
 
 #define MMC_RXUDP_GD_PKTS_RD(data) do {\
-	(data) = ioreadl((void *)MMC_RXUDP_GD_PKTS_OFFSET);\
+	(data) = ioread32((void *)MMC_RXUDP_GD_PKTS_OFFSET);\
 } while (0)
 
 #define MMC_RXUDP_GD_PKTS_RXUDP_GD_PKTS_RD(data) do {\
@@ -14643,7 +14642,7 @@ extern ULONG eqos_base_addr;
 #define MMC_RXIPV6_NOPAY_PKTS_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x82c))
 
 #define MMC_RXIPV6_NOPAY_PKTS_RD(data) do {\
-	(data) = ioreadl((void *)MMC_RXIPV6_NOPAY_PKTS_OFFSET);\
+	(data) = ioread32((void *)MMC_RXIPV6_NOPAY_PKTS_OFFSET);\
 } while (0)
 
 #define MMC_RXIPV6_NOPAY_PKTS_RXIPV6_NOPAY_PKTS_RD(data) do {\
@@ -14653,7 +14652,7 @@ extern ULONG eqos_base_addr;
 #define MMC_RXIPV6_HDRERR_PKTS_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x828))
 
 #define MMC_RXIPV6_HDRERR_PKTS_RD(data) do {\
-	(data) = ioreadl((void *)MMC_RXIPV6_HDRERR_PKTS_OFFSET);\
+	(data) = ioread32((void *)MMC_RXIPV6_HDRERR_PKTS_OFFSET);\
 } while (0)
 
 #define MMC_RXIPV6_HDRERR_PKTS_RXIPV6_HDRERR_PKTS_RD(data) do {\
@@ -14663,7 +14662,7 @@ extern ULONG eqos_base_addr;
 #define MMC_RXIPV6_GD_PKTS_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x824))
 
 #define MMC_RXIPV6_GD_PKTS_RD(data) do {\
-	(data) = ioreadl((void *)MMC_RXIPV6_GD_PKTS_OFFSET);\
+	(data) = ioread32((void *)MMC_RXIPV6_GD_PKTS_OFFSET);\
 } while (0)
 
 #define MMC_RXIPV6_GD_PKTS_RXIPV6_GD_PKTS_RD(data) do {\
@@ -14673,7 +14672,7 @@ extern ULONG eqos_base_addr;
 #define MMC_RXIPV4_UBSBL_PKTS_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x820))
 
 #define MMC_RXIPV4_UBSBL_PKTS_RD(data) do {\
-	(data) = ioreadl((void *)MMC_RXIPV4_UBSBL_PKTS_OFFSET);\
+	(data) = ioread32((void *)MMC_RXIPV4_UBSBL_PKTS_OFFSET);\
 } while (0)
 
 #define MMC_RXIPV4_UBSBL_PKTS_RXIPV4_UBSBL_PKTS_RD(data) do {\
@@ -14683,7 +14682,7 @@ extern ULONG eqos_base_addr;
 #define MMC_RXIPV4_FRAG_PKTS_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x81c))
 
 #define MMC_RXIPV4_FRAG_PKTS_RD(data) do {\
-	(data) = ioreadl((void *)MMC_RXIPV4_FRAG_PKTS_OFFSET);\
+	(data) = ioread32((void *)MMC_RXIPV4_FRAG_PKTS_OFFSET);\
 } while (0)
 
 #define MMC_RXIPV4_FRAG_PKTS_RXIPV4_FRAG_PKTS_RD(data) do {\
@@ -14693,7 +14692,7 @@ extern ULONG eqos_base_addr;
 #define MMC_RXIPV4_NOPAY_PKTS_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x818))
 
 #define MMC_RXIPV4_NOPAY_PKTS_RD(data) do {\
-	(data) = ioreadl((void *)MMC_RXIPV4_NOPAY_PKTS_OFFSET);\
+	(data) = ioread32((void *)MMC_RXIPV4_NOPAY_PKTS_OFFSET);\
 } while (0)
 
 #define MMC_RXIPV4_NOPAY_PKTS_RXIPV4_NOPAY_PKTS_RD(data) do {\
@@ -14703,7 +14702,7 @@ extern ULONG eqos_base_addr;
 #define MMC_RXIPV4_HDRERR_PKTS_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x814))
 
 #define MMC_RXIPV4_HDRERR_PKTS_RD(data) do {\
-	(data) = ioreadl((void *)MMC_RXIPV4_HDRERR_PKTS_OFFSET);\
+	(data) = ioread32((void *)MMC_RXIPV4_HDRERR_PKTS_OFFSET);\
 } while (0)
 
 #define MMC_RXIPV4_HDRERR_PKTS_RXIPV4_HDRERR_PKTS_RD(data) do {\
@@ -14713,7 +14712,7 @@ extern ULONG eqos_base_addr;
 #define MMC_RXIPV4_GD_PKTS_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x810))
 
 #define MMC_RXIPV4_GD_PKTS_RD(data) do {\
-	(data) = ioreadl((void *)MMC_RXIPV4_GD_PKTS_OFFSET);\
+	(data) = ioread32((void *)MMC_RXIPV4_GD_PKTS_OFFSET);\
 } while (0)
 
 #define MMC_RXIPV4_GD_PKTS_RXIPV4_GD_PKTS_RD(data) do {\
@@ -14723,7 +14722,7 @@ extern ULONG eqos_base_addr;
 #define MMC_RXCTRLPACKETS_G_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x7e4))
 
 #define MMC_RXCTRLPACKETS_G_RD(data) do {\
-	(data) = ioreadl((void *)MMC_RXCTRLPACKETS_G_OFFSET);\
+	(data) = ioread32((void *)MMC_RXCTRLPACKETS_G_OFFSET);\
 } while (0)
 
 #define MMC_RXCTRLPACKETS_G_RXCTRLPACKETS_G_RD(data) do {\
@@ -14733,7 +14732,7 @@ extern ULONG eqos_base_addr;
 #define MMC_RXRCVERROR_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x7e0))
 
 #define MMC_RXRCVERROR_RD(data) do {\
-	(data) = ioreadl((void *)MMC_RXRCVERROR_OFFSET);\
+	(data) = ioread32((void *)MMC_RXRCVERROR_OFFSET);\
 } while (0)
 
 #define MMC_RXRCVERROR_RXRCVERROR_RD(data) do {\
@@ -14743,7 +14742,7 @@ extern ULONG eqos_base_addr;
 #define MMC_RXWATCHDOGERROR_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x7dc))
 
 #define MMC_RXWATCHDOGERROR_RD(data) do {\
-	(data) = ioreadl((void *)MMC_RXWATCHDOGERROR_OFFSET);\
+	(data) = ioread32((void *)MMC_RXWATCHDOGERROR_OFFSET);\
 } while (0)
 
 #define MMC_RXWATCHDOGERROR_RXWATCHDOGERROR_RD(data) do {\
@@ -14753,7 +14752,7 @@ extern ULONG eqos_base_addr;
 #define MMC_RXVLANPACKETS_GB_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x7d8))
 
 #define MMC_RXVLANPACKETS_GB_RD(data) do {\
-	(data) = ioreadl((void *)MMC_RXVLANPACKETS_GB_OFFSET);\
+	(data) = ioread32((void *)MMC_RXVLANPACKETS_GB_OFFSET);\
 } while (0)
 
 #define MMC_RXVLANPACKETS_GB_RXVLANPACKETS_GB_RD(data) do {\
@@ -14763,7 +14762,7 @@ extern ULONG eqos_base_addr;
 #define MMC_RXFIFOOVERFLOW_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x7d4))
 
 #define MMC_RXFIFOOVERFLOW_RD(data) do {\
-	(data) = ioreadl((void *)MMC_RXFIFOOVERFLOW_OFFSET);\
+	(data) = ioread32((void *)MMC_RXFIFOOVERFLOW_OFFSET);\
 } while (0)
 
 #define MMC_RXFIFOOVERFLOW_RXFIFOOVERFLOW_RD(data) do {\
@@ -14773,7 +14772,7 @@ extern ULONG eqos_base_addr;
 #define MMC_RXPAUSEPACKETS_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x7d0))
 
 #define MMC_RXPAUSEPACKETS_RD(data) do {\
-	(data) = ioreadl((void *)MMC_RXPAUSEPACKETS_OFFSET);\
+	(data) = ioread32((void *)MMC_RXPAUSEPACKETS_OFFSET);\
 } while (0)
 
 #define MMC_RXPAUSEPACKETS_RXPAUSEPACKETS_RD(data) do {\
@@ -14783,7 +14782,7 @@ extern ULONG eqos_base_addr;
 #define MMC_RXOUTOFRANGETYPE_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x7cc))
 
 #define MMC_RXOUTOFRANGETYPE_RD(data) do {\
-	(data) = ioreadl((void *)MMC_RXOUTOFRANGETYPE_OFFSET);\
+	(data) = ioread32((void *)MMC_RXOUTOFRANGETYPE_OFFSET);\
 } while (0)
 
 #define MMC_RXOUTOFRANGETYPE_RXOUTOFRANGETYPE_RD(data) do {\
@@ -14793,7 +14792,7 @@ extern ULONG eqos_base_addr;
 #define MMC_RXLENGTHERROR_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x7c8))
 
 #define MMC_RXLENGTHERROR_RD(data) do {\
-	(data) = ioreadl((void *)MMC_RXLENGTHERROR_OFFSET);\
+	(data) = ioread32((void *)MMC_RXLENGTHERROR_OFFSET);\
 } while (0)
 
 #define MMC_RXLENGTHERROR_RXLENGTHERROR_RD(data) do {\
@@ -14803,7 +14802,7 @@ extern ULONG eqos_base_addr;
 #define MMC_RXUNICASTPACKETS_G_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x7c4))
 
 #define MMC_RXUNICASTPACKETS_G_RD(data) do {\
-	(data) = ioreadl((void *)MMC_RXUNICASTPACKETS_G_OFFSET);\
+	(data) = ioread32((void *)MMC_RXUNICASTPACKETS_G_OFFSET);\
 } while (0)
 
 #define MMC_RXUNICASTPACKETS_G_RXUNICASTPACKETS_G_RD(data) do {\
@@ -14813,7 +14812,7 @@ extern ULONG eqos_base_addr;
 #define MMC_RX1024TOMAXOCTETS_GB_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x7c0))
 
 #define MMC_RX1024TOMAXOCTETS_GB_RD(data) do {\
-	(data) = ioreadl((void *)MMC_RX1024TOMAXOCTETS_GB_OFFSET);\
+	(data) = ioread32((void *)MMC_RX1024TOMAXOCTETS_GB_OFFSET);\
 } while (0)
 
 #define MMC_RX1024TOMAXOCTETS_GB_RX1024TOMAXOCTETS_GB_RD(data) do {\
@@ -14823,7 +14822,7 @@ extern ULONG eqos_base_addr;
 #define MMC_RX512TO1023OCTETS_GB_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x7bc))
 
 #define MMC_RX512TO1023OCTETS_GB_RD(data) do {\
-	(data) = ioreadl((void *)MMC_RX512TO1023OCTETS_GB_OFFSET);\
+	(data) = ioread32((void *)MMC_RX512TO1023OCTETS_GB_OFFSET);\
 } while (0)
 
 #define MMC_RX512TO1023OCTETS_GB_RX512TO1023OCTETS_GB_RD(data) do {\
@@ -14833,7 +14832,7 @@ extern ULONG eqos_base_addr;
 #define MMC_RX256TO511OCTETS_GB_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x7b8))
 
 #define MMC_RX256TO511OCTETS_GB_RD(data) do {\
-	(data) = ioreadl((void *)MMC_RX256TO511OCTETS_GB_OFFSET);\
+	(data) = ioread32((void *)MMC_RX256TO511OCTETS_GB_OFFSET);\
 } while (0)
 
 #define MMC_RX256TO511OCTETS_GB_RX256TO511OCTETS_GB_RD(data) do {\
@@ -14843,7 +14842,7 @@ extern ULONG eqos_base_addr;
 #define MMC_RX128TO255OCTETS_GB_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x7b4))
 
 #define MMC_RX128TO255OCTETS_GB_RD(data) do {\
-	(data) = ioreadl((void *)MMC_RX128TO255OCTETS_GB_OFFSET);\
+	(data) = ioread32((void *)MMC_RX128TO255OCTETS_GB_OFFSET);\
 } while (0)
 
 #define MMC_RX128TO255OCTETS_GB_RX128TO255OCTETS_GB_RD(data) do {\
@@ -14853,7 +14852,7 @@ extern ULONG eqos_base_addr;
 #define MMC_RX65TO127OCTETS_GB_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x7b0))
 
 #define MMC_RX65TO127OCTETS_GB_RD(data) do {\
-	(data) = ioreadl((void *)MMC_RX65TO127OCTETS_GB_OFFSET);\
+	(data) = ioread32((void *)MMC_RX65TO127OCTETS_GB_OFFSET);\
 } while (0)
 
 #define MMC_RX65TO127OCTETS_GB_RX65TO127OCTETS_GB_RD(data) do {\
@@ -14863,7 +14862,7 @@ extern ULONG eqos_base_addr;
 #define MMC_RX64OCTETS_GB_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x7ac))
 
 #define MMC_RX64OCTETS_GB_RD(data) do {\
-	(data) = ioreadl((void *)MMC_RX64OCTETS_GB_OFFSET);\
+	(data) = ioread32((void *)MMC_RX64OCTETS_GB_OFFSET);\
 } while (0)
 
 #define MMC_RX64OCTETS_GB_RX64OCTETS_GB_RD(data) do {\
@@ -14873,7 +14872,7 @@ extern ULONG eqos_base_addr;
 #define MMC_RXOVERSIZE_G_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x7a8))
 
 #define MMC_RXOVERSIZE_G_RD(data) do {\
-	(data) = ioreadl((void *)MMC_RXOVERSIZE_G_OFFSET);\
+	(data) = ioread32((void *)MMC_RXOVERSIZE_G_OFFSET);\
 } while (0)
 
 #define MMC_RXOVERSIZE_G_RXOVERSIZE_G_RD(data) do {\
@@ -14883,7 +14882,7 @@ extern ULONG eqos_base_addr;
 #define MMC_RXUNDERSIZE_G_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x7a4))
 
 #define MMC_RXUNDERSIZE_G_RD(data) do {\
-	(data) = ioreadl((void *)MMC_RXUNDERSIZE_G_OFFSET);\
+	(data) = ioread32((void *)MMC_RXUNDERSIZE_G_OFFSET);\
 } while (0)
 
 #define MMC_RXUNDERSIZE_G_RXUNDERSIZE_G_RD(data) do {\
@@ -14893,7 +14892,7 @@ extern ULONG eqos_base_addr;
 #define MMC_RXJABBERERROR_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x7a0))
 
 #define MMC_RXJABBERERROR_RD(data) do {\
-	(data) = ioreadl((void *)MMC_RXJABBERERROR_OFFSET);\
+	(data) = ioread32((void *)MMC_RXJABBERERROR_OFFSET);\
 } while (0)
 
 #define MMC_RXJABBERERROR_RXJABBERERROR_RD(data) do {\
@@ -14903,7 +14902,7 @@ extern ULONG eqos_base_addr;
 #define MMC_RXRUNTERROR_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x79c))
 
 #define MMC_RXRUNTERROR_RD(data) do {\
-	(data) = ioreadl((void *)MMC_RXRUNTERROR_OFFSET);\
+	(data) = ioread32((void *)MMC_RXRUNTERROR_OFFSET);\
 } while (0)
 
 #define MMC_RXRUNTERROR_RXRUNTERROR_RD(data) do {\
@@ -14913,7 +14912,7 @@ extern ULONG eqos_base_addr;
 #define MMC_RXALIGNMENTERROR_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x798))
 
 #define MMC_RXALIGNMENTERROR_RD(data) do {\
-	(data) = ioreadl((void *)MMC_RXALIGNMENTERROR_OFFSET);\
+	(data) = ioread32((void *)MMC_RXALIGNMENTERROR_OFFSET);\
 } while (0)
 
 #define MMC_RXALIGNMENTERROR_RXALIGNMENTERROR_RD(data) do {\
@@ -14923,7 +14922,7 @@ extern ULONG eqos_base_addr;
 #define MMC_RXCRCERROR_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x794))
 
 #define MMC_RXCRCERROR_RD(data) do {\
-	(data) = ioreadl((void *)MMC_RXCRCERROR_OFFSET);\
+	(data) = ioread32((void *)MMC_RXCRCERROR_OFFSET);\
 } while (0)
 
 #define MMC_RXCRCERROR_RXCRCERROR_RD(data) do {\
@@ -14933,7 +14932,7 @@ extern ULONG eqos_base_addr;
 #define MMC_RXMULTICASTPACKETS_G_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x790))
 
 #define MMC_RXMULTICASTPACKETS_G_RD(data) do {\
-	(data) = ioreadl((void *)MMC_RXMULTICASTPACKETS_G_OFFSET);\
+	(data) = ioread32((void *)MMC_RXMULTICASTPACKETS_G_OFFSET);\
 } while (0)
 
 #define MMC_RXMULTICASTPACKETS_G_RXMULTICASTPACKETS_G_RD(data) do {\
@@ -14943,7 +14942,7 @@ extern ULONG eqos_base_addr;
 #define MMC_RXBROADCASTPACKETS_G_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x78c))
 
 #define MMC_RXBROADCASTPACKETS_G_RD(data) do {\
-	(data) = ioreadl((void *)MMC_RXBROADCASTPACKETS_G_OFFSET);\
+	(data) = ioread32((void *)MMC_RXBROADCASTPACKETS_G_OFFSET);\
 } while (0)
 
 #define MMC_RXBROADCASTPACKETS_G_RXBROADCASTPACKETS_G_RD(data) do {\
@@ -14953,7 +14952,7 @@ extern ULONG eqos_base_addr;
 #define MMC_RXOCTETCOUNT_G_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x788))
 
 #define MMC_RXOCTETCOUNT_G_RD(data) do {\
-	(data) = ioreadl((void *)MMC_RXOCTETCOUNT_G_OFFSET);\
+	(data) = ioread32((void *)MMC_RXOCTETCOUNT_G_OFFSET);\
 } while (0)
 
 #define MMC_RXOCTETCOUNT_G_RXOCTETCOUNT_G_RD(data) do {\
@@ -14963,7 +14962,7 @@ extern ULONG eqos_base_addr;
 #define MMC_RXOCTETCOUNT_GB_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x784))
 
 #define MMC_RXOCTETCOUNT_GB_RD(data) do {\
-	(data) = ioreadl((void *)MMC_RXOCTETCOUNT_GB_OFFSET);\
+	(data) = ioread32((void *)MMC_RXOCTETCOUNT_GB_OFFSET);\
 } while (0)
 
 #define MMC_RXOCTETCOUNT_GB_RXOCTETCOUNT_GB_RD(data) do {\
@@ -14973,7 +14972,7 @@ extern ULONG eqos_base_addr;
 #define MMC_RXPACKETCOUNT_GB_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x780))
 
 #define MMC_RXPACKETCOUNT_GB_RD(data) do {\
-	(data) = ioreadl((void *)MMC_RXPACKETCOUNT_GB_OFFSET);\
+	(data) = ioread32((void *)MMC_RXPACKETCOUNT_GB_OFFSET);\
 } while (0)
 
 #define MMC_RXPACKETCOUNT_GB_RXPACKETCOUNT_GB_RD(data) do {\
@@ -14983,7 +14982,7 @@ extern ULONG eqos_base_addr;
 #define MMC_TXOVERSIZE_G_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x778))
 
 #define MMC_TXOVERSIZE_G_RD(data) do {\
-	(data) = ioreadl((void *)MMC_TXOVERSIZE_G_OFFSET);\
+	(data) = ioread32((void *)MMC_TXOVERSIZE_G_OFFSET);\
 } while (0)
 
 #define MMC_TXOVERSIZE_G_TXOVERSIZE_G_RD(data) do {\
@@ -14993,7 +14992,7 @@ extern ULONG eqos_base_addr;
 #define MMC_TXVLANPACKETS_G_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x774))
 
 #define MMC_TXVLANPACKETS_G_RD(data) do {\
-	(data) = ioreadl((void *)MMC_TXVLANPACKETS_G_OFFSET);\
+	(data) = ioread32((void *)MMC_TXVLANPACKETS_G_OFFSET);\
 } while (0)
 
 #define MMC_TXVLANPACKETS_G_TXVLANPACKETS_G_RD(data) do {\
@@ -15003,7 +15002,7 @@ extern ULONG eqos_base_addr;
 #define MMC_TXPAUSEPACKETS_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x770))
 
 #define MMC_TXPAUSEPACKETS_RD(data) do {\
-	(data) = ioreadl((void *)MMC_TXPAUSEPACKETS_OFFSET);\
+	(data) = ioread32((void *)MMC_TXPAUSEPACKETS_OFFSET);\
 } while (0)
 
 #define MMC_TXPAUSEPACKETS_TXPAUSEPACKETS_RD(data) do {\
@@ -15013,7 +15012,7 @@ extern ULONG eqos_base_addr;
 #define MMC_TXEXCESSDEF_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x76c))
 
 #define MMC_TXEXCESSDEF_RD(data) do {\
-	(data) = ioreadl((void *)MMC_TXEXCESSDEF_OFFSET);\
+	(data) = ioread32((void *)MMC_TXEXCESSDEF_OFFSET);\
 } while (0)
 
 #define MMC_TXEXCESSDEF_TXEXCESSDEF_RD(data) do {\
@@ -15023,7 +15022,7 @@ extern ULONG eqos_base_addr;
 #define MMC_TXPACKETSCOUNT_G_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x768))
 
 #define MMC_TXPACKETSCOUNT_G_RD(data) do {\
-	(data) = ioreadl((void *)MMC_TXPACKETSCOUNT_G_OFFSET);\
+	(data) = ioread32((void *)MMC_TXPACKETSCOUNT_G_OFFSET);\
 } while (0)
 
 #define MMC_TXPACKETSCOUNT_G_TXPACKETSCOUNT_G_RD(data) do {\
@@ -15033,7 +15032,7 @@ extern ULONG eqos_base_addr;
 #define MMC_TXOCTETCOUNT_G_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x764))
 
 #define MMC_TXOCTETCOUNT_G_RD(data) do {\
-	(data) = ioreadl((void *)MMC_TXOCTETCOUNT_G_OFFSET);\
+	(data) = ioread32((void *)MMC_TXOCTETCOUNT_G_OFFSET);\
 } while (0)
 
 #define MMC_TXOCTETCOUNT_G_TXOCTETCOUNT_G_RD(data) do {\
@@ -15043,7 +15042,7 @@ extern ULONG eqos_base_addr;
 #define MMC_TXCARRIERERROR_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x760))
 
 #define MMC_TXCARRIERERROR_RD(data) do {\
-	(data) = ioreadl((void *)MMC_TXCARRIERERROR_OFFSET);\
+	(data) = ioread32((void *)MMC_TXCARRIERERROR_OFFSET);\
 } while (0)
 
 #define MMC_TXCARRIERERROR_TXCARRIERERROR_RD(data) do {\
@@ -15053,7 +15052,7 @@ extern ULONG eqos_base_addr;
 #define MMC_TXEXESSCOL_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x75c))
 
 #define MMC_TXEXESSCOL_RD(data) do {\
-	(data) = ioreadl((void *)MMC_TXEXESSCOL_OFFSET);\
+	(data) = ioread32((void *)MMC_TXEXESSCOL_OFFSET);\
 } while (0)
 
 #define MMC_TXEXESSCOL_TXEXESSCOL_RD(data) do {\
@@ -15063,7 +15062,7 @@ extern ULONG eqos_base_addr;
 #define MMC_TXLATECOL_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x758))
 
 #define MMC_TXLATECOL_RD(data) do {\
-	(data) = ioreadl((void *)MMC_TXLATECOL_OFFSET);\
+	(data) = ioread32((void *)MMC_TXLATECOL_OFFSET);\
 } while (0)
 
 #define MMC_TXLATECOL_TXLATECOL_RD(data) do {\
@@ -15073,7 +15072,7 @@ extern ULONG eqos_base_addr;
 #define MMC_TXDEFERRED_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x754))
 
 #define MMC_TXDEFERRED_RD(data) do {\
-	(data) = ioreadl((void *)MMC_TXDEFERRED_OFFSET);\
+	(data) = ioread32((void *)MMC_TXDEFERRED_OFFSET);\
 } while (0)
 
 #define MMC_TXDEFERRED_TXDEFERRED_RD(data) do {\
@@ -15083,7 +15082,7 @@ extern ULONG eqos_base_addr;
 #define MMC_TXMULTICOL_G_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x750))
 
 #define MMC_TXMULTICOL_G_RD(data) do {\
-	(data) = ioreadl((void *)MMC_TXMULTICOL_G_OFFSET);\
+	(data) = ioread32((void *)MMC_TXMULTICOL_G_OFFSET);\
 } while (0)
 
 #define MMC_TXMULTICOL_G_TXMULTICOL_G_RD(data) do {\
@@ -15093,7 +15092,7 @@ extern ULONG eqos_base_addr;
 #define MMC_TXSINGLECOL_G_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x74c))
 
 #define MMC_TXSINGLECOL_G_RD(data) do {\
-	(data) = ioreadl((void *)MMC_TXSINGLECOL_G_OFFSET);\
+	(data) = ioread32((void *)MMC_TXSINGLECOL_G_OFFSET);\
 } while (0)
 
 #define MMC_TXSINGLECOL_G_TXSINGLECOL_G_RD(data) do {\
@@ -15103,7 +15102,7 @@ extern ULONG eqos_base_addr;
 #define MMC_TXUNDERFLOWERROR_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x748))
 
 #define MMC_TXUNDERFLOWERROR_RD(data) do {\
-	(data) = ioreadl((void *)MMC_TXUNDERFLOWERROR_OFFSET);\
+	(data) = ioread32((void *)MMC_TXUNDERFLOWERROR_OFFSET);\
 } while (0)
 
 #define MMC_TXUNDERFLOWERROR_TXUNDERFLOWERROR_RD(data) do {\
@@ -15113,7 +15112,7 @@ extern ULONG eqos_base_addr;
 #define MMC_TXBROADCASTPACKETS_GB_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x744))
 
 #define MMC_TXBROADCASTPACKETS_GB_RD(data) do {\
-	(data) = ioreadl((void *)MMC_TXBROADCASTPACKETS_GB_OFFSET);\
+	(data) = ioread32((void *)MMC_TXBROADCASTPACKETS_GB_OFFSET);\
 } while (0)
 
 #define MMC_TXBROADCASTPACKETS_GB_TXBROADCASTPACKETS_GB_RD(data) do {\
@@ -15123,7 +15122,7 @@ extern ULONG eqos_base_addr;
 #define MMC_TXMULTICASTPACKETS_GB_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x740))
 
 #define MMC_TXMULTICASTPACKETS_GB_RD(data) do {\
-	(data) = ioreadl((void *)MMC_TXMULTICASTPACKETS_GB_OFFSET);\
+	(data) = ioread32((void *)MMC_TXMULTICASTPACKETS_GB_OFFSET);\
 } while (0)
 
 #define MMC_TXMULTICASTPACKETS_GB_TXMULTICASTPACKETS_GB_RD(data) do {\
@@ -15133,7 +15132,7 @@ extern ULONG eqos_base_addr;
 #define MMC_TXUNICASTPACKETS_GB_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x73c))
 
 #define MMC_TXUNICASTPACKETS_GB_RD(data) do {\
-	(data) = ioreadl((void *)MMC_TXUNICASTPACKETS_GB_OFFSET);\
+	(data) = ioread32((void *)MMC_TXUNICASTPACKETS_GB_OFFSET);\
 } while (0)
 
 #define MMC_TXUNICASTPACKETS_GB_TXUNICASTPACKETS_GB_RD(data) do {\
@@ -15143,7 +15142,7 @@ extern ULONG eqos_base_addr;
 #define MMC_TX1024TOMAXOCTETS_GB_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x738))
 
 #define MMC_TX1024TOMAXOCTETS_GB_RD(data) do {\
-	(data) = ioreadl((void *)MMC_TX1024TOMAXOCTETS_GB_OFFSET);\
+	(data) = ioread32((void *)MMC_TX1024TOMAXOCTETS_GB_OFFSET);\
 } while (0)
 
 #define MMC_TX1024TOMAXOCTETS_GB_TX1024TOMAXOCTETS_GB_RD(data) do {\
@@ -15153,7 +15152,7 @@ extern ULONG eqos_base_addr;
 #define MMC_TX512TO1023OCTETS_GB_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x734))
 
 #define MMC_TX512TO1023OCTETS_GB_RD(data) do {\
-	(data) = ioreadl((void *)MMC_TX512TO1023OCTETS_GB_OFFSET);\
+	(data) = ioread32((void *)MMC_TX512TO1023OCTETS_GB_OFFSET);\
 } while (0)
 
 #define MMC_TX512TO1023OCTETS_GB_TX512TO1023OCTETS_GB_RD(data) do {\
@@ -15163,7 +15162,7 @@ extern ULONG eqos_base_addr;
 #define MMC_TX256TO511OCTETS_GB_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x730))
 
 #define MMC_TX256TO511OCTETS_GB_RD(data) do {\
-	(data) = ioreadl((void *)MMC_TX256TO511OCTETS_GB_OFFSET);\
+	(data) = ioread32((void *)MMC_TX256TO511OCTETS_GB_OFFSET);\
 } while (0)
 
 #define MMC_TX256TO511OCTETS_GB_TX256TO511OCTETS_GB_RD(data) do {\
@@ -15173,7 +15172,7 @@ extern ULONG eqos_base_addr;
 #define MMC_TX128TO255OCTETS_GB_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x72c))
 
 #define MMC_TX128TO255OCTETS_GB_RD(data) do {\
-	(data) = ioreadl((void *)MMC_TX128TO255OCTETS_GB_OFFSET);\
+	(data) = ioread32((void *)MMC_TX128TO255OCTETS_GB_OFFSET);\
 } while (0)
 
 #define MMC_TX128TO255OCTETS_GB_TX128TO255OCTETS_GB_RD(data) do {\
@@ -15183,7 +15182,7 @@ extern ULONG eqos_base_addr;
 #define MMC_TX65TO127OCTETS_GB_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x728))
 
 #define MMC_TX65TO127OCTETS_GB_RD(data) do {\
-	(data) = ioreadl((void *)MMC_TX65TO127OCTETS_GB_OFFSET);\
+	(data) = ioread32((void *)MMC_TX65TO127OCTETS_GB_OFFSET);\
 } while (0)
 
 #define MMC_TX65TO127OCTETS_GB_TX65TO127OCTETS_GB_RD(data) do {\
@@ -15193,7 +15192,7 @@ extern ULONG eqos_base_addr;
 #define MMC_TX64OCTETS_GB_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x724))
 
 #define MMC_TX64OCTETS_GB_RD(data) do {\
-	(data) = ioreadl((void *)MMC_TX64OCTETS_GB_OFFSET);\
+	(data) = ioread32((void *)MMC_TX64OCTETS_GB_OFFSET);\
 } while (0)
 
 #define MMC_TX64OCTETS_GB_TX64OCTETS_GB_RD(data) do {\
@@ -15203,7 +15202,7 @@ extern ULONG eqos_base_addr;
 #define MMC_TXMULTICASTPACKETS_G_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x720))
 
 #define MMC_TXMULTICASTPACKETS_G_RD(data) do {\
-	(data) = ioreadl((void *)MMC_TXMULTICASTPACKETS_G_OFFSET);\
+	(data) = ioread32((void *)MMC_TXMULTICASTPACKETS_G_OFFSET);\
 } while (0)
 
 #define MMC_TXMULTICASTPACKETS_G_TXMULTICASTPACKETS_G_RD(data) do {\
@@ -15213,7 +15212,7 @@ extern ULONG eqos_base_addr;
 #define MMC_TXBROADCASTPACKETS_G_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x71c))
 
 #define MMC_TXBROADCASTPACKETS_G_RD(data) do {\
-	(data) = ioreadl((void *)MMC_TXBROADCASTPACKETS_G_OFFSET);\
+	(data) = ioread32((void *)MMC_TXBROADCASTPACKETS_G_OFFSET);\
 } while (0)
 
 #define MMC_TXBROADCASTPACKETS_G_TXBROADCASTPACKETS_G_RD(data) do {\
@@ -15223,7 +15222,7 @@ extern ULONG eqos_base_addr;
 #define MMC_TXPACKETCOUNT_GB_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x718))
 
 #define MMC_TXPACKETCOUNT_GB_RD(data) do {\
-	(data) = ioreadl((void *)MMC_TXPACKETCOUNT_GB_OFFSET);\
+	(data) = ioread32((void *)MMC_TXPACKETCOUNT_GB_OFFSET);\
 } while (0)
 
 #define MMC_TXPACKETCOUNT_GB_TXPACKETCOUNT_GB_RD(data) do {\
@@ -15233,7 +15232,7 @@ extern ULONG eqos_base_addr;
 #define MMC_TXOCTETCOUNT_GB_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x714))
 
 #define MMC_TXOCTETCOUNT_GB_RD(data) do {\
-	(data) = ioreadl((void *)MMC_TXOCTETCOUNT_GB_OFFSET);\
+	(data) = ioread32((void *)MMC_TXOCTETCOUNT_GB_OFFSET);\
 } while (0)
 
 #define MMC_TXOCTETCOUNT_GB_TXOCTETCOUNT_GB_RD(data) do {\
@@ -15243,7 +15242,7 @@ extern ULONG eqos_base_addr;
 #define MMC_IPC_INTR_RX_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x808))
 
 #define MMC_IPC_INTR_RX_RD(data) do {\
-	(data) = ioreadl((void *)MMC_IPC_INTR_RX_OFFSET);\
+	(data) = ioread32((void *)MMC_IPC_INTR_RX_OFFSET);\
 } while (0)
 
 
@@ -15473,11 +15472,11 @@ extern ULONG eqos_base_addr;
 #define MMC_IPC_INTR_MASK_RX_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x800))
 
 #define MMC_IPC_INTR_MASK_RX_WR(data) do {\
-	iowritel(data, (void *)MMC_IPC_INTR_MASK_RX_OFFSET);\
+	iowrite32(data, (void *)MMC_IPC_INTR_MASK_RX_OFFSET);\
 } while (0)
 
 #define MMC_IPC_INTR_MASK_RX_RD(data) do {\
-	(data) = ioreadl((void *)MMC_IPC_INTR_MASK_RX_OFFSET);\
+	(data) = ioread32((void *)MMC_IPC_INTR_MASK_RX_OFFSET);\
 } while (0)
 
 
@@ -16139,11 +16138,11 @@ extern ULONG eqos_base_addr;
 #define MMC_INTR_MASK_TX_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x710))
 
 #define MMC_INTR_MASK_TX_WR(data) do {\
-	iowritel(data, (void *)MMC_INTR_MASK_TX_OFFSET);\
+	iowrite32(data, (void *)MMC_INTR_MASK_TX_OFFSET);\
 } while (0)
 
 #define MMC_INTR_MASK_TX_RD(data) do {\
-	(data) = ioreadl((void *)MMC_INTR_MASK_TX_OFFSET);\
+	(data) = ioread32((void *)MMC_INTR_MASK_TX_OFFSET);\
 } while (0)
 
 
@@ -16680,11 +16679,11 @@ extern ULONG eqos_base_addr;
 #define MMC_INTR_MASK_RX_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x70c))
 
 #define MMC_INTR_MASK_RX_WR(data) do {\
-	iowritel(data, (void *)MMC_INTR_MASK_RX_OFFSET);\
+	iowrite32(data, (void *)MMC_INTR_MASK_RX_OFFSET);\
 } while (0)
 
 #define MMC_INTR_MASK_RX_RD(data) do {\
-	(data) = ioreadl((void *)MMC_INTR_MASK_RX_OFFSET);\
+	(data) = ioread32((void *)MMC_INTR_MASK_RX_OFFSET);\
 } while (0)
 
 
@@ -17200,11 +17199,11 @@ extern ULONG eqos_base_addr;
 #define MMC_INTR_TX_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x708))
 
 #define MMC_INTR_TX_WR(data) do {\
-	iowritel(data, (void *)MMC_INTR_TX_OFFSET);\
+	iowrite32(data, (void *)MMC_INTR_TX_OFFSET);\
 } while (0)
 
 #define MMC_INTR_TX_RD(data) do {\
-	(data) = ioreadl((void *)MMC_INTR_TX_OFFSET);\
+	(data) = ioread32((void *)MMC_INTR_TX_OFFSET);\
 } while (0)
 
 
@@ -17762,11 +17761,11 @@ extern ULONG eqos_base_addr;
 #define MMC_INTR_RX_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x704))
 
 #define MMC_INTR_RX_WR(data) do {\
-	iowritel(data, (void *)MMC_INTR_RX_OFFSET);\
+	iowrite32(data, (void *)MMC_INTR_RX_OFFSET);\
 } while (0)
 
 #define MMC_INTR_RX_RD(data) do {\
-	(data) = ioreadl((void *)MMC_INTR_RX_OFFSET);\
+	(data) = ioread32((void *)MMC_INTR_RX_OFFSET);\
 } while (0)
 
 
@@ -18324,11 +18323,11 @@ extern ULONG eqos_base_addr;
 #define MMC_CNTRL_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x700))
 
 #define MMC_CNTRL_WR(data) do {\
-	iowritel(data, (void *)MMC_CNTRL_OFFSET);\
+	iowrite32(data, (void *)MMC_CNTRL_OFFSET);\
 } while (0)
 
 #define MMC_CNTRL_RD(data) do {\
-	(data) = ioreadl((void *)MMC_CNTRL_OFFSET);\
+	(data) = ioread32((void *)MMC_CNTRL_OFFSET);\
 } while (0)
 
 
@@ -18507,11 +18506,11 @@ extern ULONG eqos_base_addr;
 #define MAC_MA1LR_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x30c))
 
 #define MAC_MA1LR_WR(data) do {\
-	iowritel(data, (void *)MAC_MA1LR_OFFSET);\
+	iowrite32(data, (void *)MAC_MA1LR_OFFSET);\
 } while (0)
 
 #define MAC_MA1LR_RD(data) do {\
-	(data) = ioreadl((void *)MAC_MA1LR_OFFSET);\
+	(data) = ioread32((void *)MAC_MA1LR_OFFSET);\
 } while (0)
 
 #define MAC_MA1LR_ADDRLO_WR(data) do {\
@@ -18525,11 +18524,11 @@ extern ULONG eqos_base_addr;
 #define MAC_MA1HR_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x308))
 
 #define MAC_MA1HR_WR(data) do {\
-	iowritel(data, (void *)MAC_MA1HR_OFFSET);\
+	iowrite32(data, (void *)MAC_MA1HR_OFFSET);\
 } while (0)
 
 #define MAC_MA1HR_RD(data) do {\
-	(data) = ioreadl((void *)MAC_MA1HR_OFFSET);\
+	(data) = ioread32((void *)MAC_MA1HR_OFFSET);\
 } while (0)
 
 
@@ -18646,11 +18645,11 @@ extern ULONG eqos_base_addr;
 #define MAC_MA0LR_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x304))
 
 #define MAC_MA0LR_WR(data) do {\
-	iowritel(data, (void *)MAC_MA0LR_OFFSET);\
+	iowrite32(data, (void *)MAC_MA0LR_OFFSET);\
 } while (0)
 
 #define MAC_MA0LR_RD(data) do {\
-	(data) = ioreadl((void *)MAC_MA0LR_OFFSET);\
+	(data) = ioread32((void *)MAC_MA0LR_OFFSET);\
 } while (0)
 
 #define MAC_MA0LR_ADDRLO_WR(data) do {\
@@ -18664,11 +18663,11 @@ extern ULONG eqos_base_addr;
 #define MAC_MA0HR_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x300))
 
 #define MAC_MA0HR_WR(data) do {\
-	iowritel(data, (void *)MAC_MA0HR_OFFSET);\
+	iowrite32(data, (void *)MAC_MA0HR_OFFSET);\
 } while (0)
 
 #define MAC_MA0HR_RD(data) do {\
-	(data) = ioreadl((void *)MAC_MA0HR_OFFSET);\
+	(data) = ioread32((void *)MAC_MA0HR_OFFSET);\
 } while (0)
 
 
@@ -18743,11 +18742,11 @@ extern ULONG eqos_base_addr;
 #define MAC_GPIOR_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x208))
 
 #define MAC_GPIOR_WR(data) do {\
-	iowritel(data, (void *)MAC_GPIOR_OFFSET);\
+	iowrite32(data, (void *)MAC_GPIOR_OFFSET);\
 } while (0)
 
 #define MAC_GPIOR_RD(data) do {\
-	(data) = ioreadl((void *)MAC_GPIOR_OFFSET);\
+	(data) = ioread32((void *)MAC_GPIOR_OFFSET);\
 } while (0)
 
 
@@ -18885,11 +18884,11 @@ extern ULONG eqos_base_addr;
 #define MAC_GMIIDR_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x204))
 
 #define MAC_GMIIDR_WR(data) do {\
-	iowritel(data, (void *)MAC_GMIIDR_OFFSET);\
+	iowrite32(data, (void *)MAC_GMIIDR_OFFSET);\
 } while (0)
 
 #define MAC_GMIIDR_RD(data) do {\
-	(data) = ioreadl((void *)MAC_GMIIDR_OFFSET);\
+	(data) = ioread32((void *)MAC_GMIIDR_OFFSET);\
 } while (0)
 
 
@@ -18933,11 +18932,11 @@ extern ULONG eqos_base_addr;
 #define MAC_GMIIAR_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x200))
 
 #define MAC_GMIIAR_WR(data) do {\
-	iowritel(data, (void *)MAC_GMIIAR_OFFSET);\
+	iowrite32(data, (void *)MAC_GMIIAR_OFFSET);\
 } while (0)
 
 #define MAC_GMIIAR_RD(data) do {\
-	(data) = ioreadl((void *)MAC_GMIIAR_OFFSET);\
+	(data) = ioread32((void *)MAC_GMIIAR_OFFSET);\
 } while (0)
 
 
@@ -19136,7 +19135,7 @@ extern ULONG eqos_base_addr;
 #define MAC_HFR2_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x124))
 
 #define MAC_HFR2_RD(data) do {\
-	(data) = ioreadl((void *)MAC_HFR2_OFFSET);\
+	(data) = ioread32((void *)MAC_HFR2_OFFSET);\
 } while (0)
 
 
@@ -19190,7 +19189,7 @@ extern ULONG eqos_base_addr;
 #define MAC_HFR1_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x120))
 
 #define MAC_HFR1_RD(data) do {\
-	(data) = ioreadl((void *)MAC_HFR1_OFFSET);\
+	(data) = ioread32((void *)MAC_HFR1_OFFSET);\
 } while (0)
 
 
@@ -19284,7 +19283,7 @@ extern ULONG eqos_base_addr;
 #define MAC_HFR0_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x11c))
 
 #define MAC_HFR0_RD(data) do {\
-	(data) = ioreadl((void *)MAC_HFR0_OFFSET);\
+	(data) = ioread32((void *)MAC_HFR0_OFFSET);\
 } while (0)
 
 
@@ -19450,7 +19449,7 @@ extern ULONG eqos_base_addr;
 #define MAC_MDR_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x114))
 
 #define MAC_MDR_RD(data) do {\
-	(data) = ioreadl((void *)MAC_MDR_OFFSET);\
+	(data) = ioread32((void *)MAC_MDR_OFFSET);\
 } while (0)
 
 
@@ -19488,7 +19487,7 @@ extern ULONG eqos_base_addr;
 #define MAC_VR_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x110))
 
 #define MAC_VR_RD(data) do {\
-	(data) = ioreadl((void *)MAC_VR_OFFSET);\
+	(data) = ioread32((void *)MAC_VR_OFFSET);\
 } while (0)
 
 
@@ -19510,11 +19509,11 @@ extern ULONG eqos_base_addr;
 #define MAC_HTR7_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x2c))
 
 #define MAC_HTR7_WR(data) do {\
-	iowritel(data, (void *)MAC_HTR7_OFFSET);\
+	iowrite32(data, (void *)MAC_HTR7_OFFSET);\
 } while (0)
 
 #define MAC_HTR7_RD(data) do {\
-	(data) = ioreadl((void *)MAC_HTR7_OFFSET);\
+	(data) = ioread32((void *)MAC_HTR7_OFFSET);\
 } while (0)
 
 #define MAC_HTR7_HT_WR(data) do {\
@@ -19528,11 +19527,11 @@ extern ULONG eqos_base_addr;
 #define MAC_HTR6_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x28))
 
 #define MAC_HTR6_WR(data) do {\
-	iowritel(data, (void *)MAC_HTR6_OFFSET);\
+	iowrite32(data, (void *)MAC_HTR6_OFFSET);\
 } while (0)
 
 #define MAC_HTR6_RD(data) do {\
-	(data) = ioreadl((void *)MAC_HTR6_OFFSET);\
+	(data) = ioread32((void *)MAC_HTR6_OFFSET);\
 } while (0)
 
 #define MAC_HTR6_HT_WR(data) do {\
@@ -19546,11 +19545,11 @@ extern ULONG eqos_base_addr;
 #define MAC_HTR5_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x24))
 
 #define MAC_HTR5_WR(data) do {\
-	iowritel(data, (void *)MAC_HTR5_OFFSET);\
+	iowrite32(data, (void *)MAC_HTR5_OFFSET);\
 } while (0)
 
 #define MAC_HTR5_RD(data) do {\
-	(data) = ioreadl((void *)MAC_HTR5_OFFSET);\
+	(data) = ioread32((void *)MAC_HTR5_OFFSET);\
 } while (0)
 
 #define MAC_HTR5_HT_WR(data) do {\
@@ -19564,11 +19563,11 @@ extern ULONG eqos_base_addr;
 #define MAC_HTR4_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x20))
 
 #define MAC_HTR4_WR(data) do {\
-	iowritel(data, (void *)MAC_HTR4_OFFSET);\
+	iowrite32(data, (void *)MAC_HTR4_OFFSET);\
 } while (0)
 
 #define MAC_HTR4_RD(data) do {\
-	(data) = ioreadl((void *)MAC_HTR4_OFFSET);\
+	(data) = ioread32((void *)MAC_HTR4_OFFSET);\
 } while (0)
 
 #define MAC_HTR4_HT_WR(data) do {\
@@ -19582,11 +19581,11 @@ extern ULONG eqos_base_addr;
 #define MAC_HTR3_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x1c))
 
 #define MAC_HTR3_WR(data) do {\
-	iowritel(data, (void *)MAC_HTR3_OFFSET);\
+	iowrite32(data, (void *)MAC_HTR3_OFFSET);\
 } while (0)
 
 #define MAC_HTR3_RD(data) do {\
-	(data) = ioreadl((void *)MAC_HTR3_OFFSET);\
+	(data) = ioread32((void *)MAC_HTR3_OFFSET);\
 } while (0)
 
 #define MAC_HTR3_HT_WR(data) do {\
@@ -19600,11 +19599,11 @@ extern ULONG eqos_base_addr;
 #define MAC_HTR2_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x18))
 
 #define MAC_HTR2_WR(data) do {\
-	iowritel(data, (void *)MAC_HTR2_OFFSET);\
+	iowrite32(data, (void *)MAC_HTR2_OFFSET);\
 } while (0)
 
 #define MAC_HTR2_RD(data) do {\
-	(data) = ioreadl((void *)MAC_HTR2_OFFSET);\
+	(data) = ioread32((void *)MAC_HTR2_OFFSET);\
 } while (0)
 
 #define MAC_HTR2_HT_WR(data) do {\
@@ -19618,11 +19617,11 @@ extern ULONG eqos_base_addr;
 #define MAC_HTR1_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x14))
 
 #define MAC_HTR1_WR(data) do {\
-	iowritel(data, (void *)MAC_HTR1_OFFSET);\
+	iowrite32(data, (void *)MAC_HTR1_OFFSET);\
 } while (0)
 
 #define MAC_HTR1_RD(data) do {\
-	(data) = ioreadl((void *)MAC_HTR1_OFFSET);\
+	(data) = ioread32((void *)MAC_HTR1_OFFSET);\
 } while (0)
 
 #define MAC_HTR1_HT_WR(data) do {\
@@ -19636,11 +19635,11 @@ extern ULONG eqos_base_addr;
 #define MAC_HTR0_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x10))
 
 #define MAC_HTR0_WR(data) do {\
-	iowritel(data, (void *)MAC_HTR0_OFFSET);\
+	iowrite32(data, (void *)MAC_HTR0_OFFSET);\
 } while (0)
 
 #define MAC_HTR0_RD(data) do {\
-	(data) = ioreadl((void *)MAC_HTR0_OFFSET);\
+	(data) = ioread32((void *)MAC_HTR0_OFFSET);\
 } while (0)
 
 #define MAC_HTR0_HT_WR(data) do {\
@@ -19654,11 +19653,11 @@ extern ULONG eqos_base_addr;
 #define DMA_RIWTR7_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x14b8))
 
 #define DMA_RIWTR7_WR(data) do {\
-	iowritel(data, (void *)DMA_RIWTR7_OFFSET);\
+	iowrite32(data, (void *)DMA_RIWTR7_OFFSET);\
 } while (0)
 
 #define DMA_RIWTR7_RD(data) do {\
-	(data) = ioreadl((void *)DMA_RIWTR7_OFFSET);\
+	(data) = ioread32((void *)DMA_RIWTR7_OFFSET);\
 } while (0)
 
 
@@ -19690,11 +19689,11 @@ extern ULONG eqos_base_addr;
 #define DMA_RIWTR6_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x1438))
 
 #define DMA_RIWTR6_WR(data) do {\
-	iowritel(data, (void *)DMA_RIWTR6_OFFSET);\
+	iowrite32(data, (void *)DMA_RIWTR6_OFFSET);\
 } while (0)
 
 #define DMA_RIWTR6_RD(data) do {\
-	(data) = ioreadl((void *)DMA_RIWTR6_OFFSET);\
+	(data) = ioread32((void *)DMA_RIWTR6_OFFSET);\
 } while (0)
 
 
@@ -19726,11 +19725,11 @@ extern ULONG eqos_base_addr;
 #define DMA_RIWTR5_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x13b8))
 
 #define DMA_RIWTR5_WR(data) do {\
-	iowritel(data, (void *)DMA_RIWTR5_OFFSET);\
+	iowrite32(data, (void *)DMA_RIWTR5_OFFSET);\
 } while (0)
 
 #define DMA_RIWTR5_RD(data) do {\
-	(data) = ioreadl((void *)DMA_RIWTR5_OFFSET);\
+	(data) = ioread32((void *)DMA_RIWTR5_OFFSET);\
 } while (0)
 
 
@@ -19762,11 +19761,11 @@ extern ULONG eqos_base_addr;
 #define DMA_RIWTR4_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x1338))
 
 #define DMA_RIWTR4_WR(data) do {\
-	iowritel(data, (void *)DMA_RIWTR4_OFFSET);\
+	iowrite32(data, (void *)DMA_RIWTR4_OFFSET);\
 } while (0)
 
 #define DMA_RIWTR4_RD(data) do {\
-	(data) = ioreadl((void *)DMA_RIWTR4_OFFSET);\
+	(data) = ioread32((void *)DMA_RIWTR4_OFFSET);\
 } while (0)
 
 
@@ -19798,11 +19797,11 @@ extern ULONG eqos_base_addr;
 #define DMA_RIWTR3_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x12b8))
 
 #define DMA_RIWTR3_WR(data) do {\
-	iowritel(data, (void *)DMA_RIWTR3_OFFSET);\
+	iowrite32(data, (void *)DMA_RIWTR3_OFFSET);\
 } while (0)
 
 #define DMA_RIWTR3_RD(data) do {\
-	(data) = ioreadl((void *)DMA_RIWTR3_OFFSET);\
+	(data) = ioread32((void *)DMA_RIWTR3_OFFSET);\
 } while (0)
 
 
@@ -19834,11 +19833,11 @@ extern ULONG eqos_base_addr;
 #define DMA_RIWTR2_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x1238))
 
 #define DMA_RIWTR2_WR(data) do {\
-	iowritel(data, (void *)DMA_RIWTR2_OFFSET);\
+	iowrite32(data, (void *)DMA_RIWTR2_OFFSET);\
 } while (0)
 
 #define DMA_RIWTR2_RD(data) do {\
-	(data) = ioreadl((void *)DMA_RIWTR2_OFFSET);\
+	(data) = ioread32((void *)DMA_RIWTR2_OFFSET);\
 } while (0)
 
 
@@ -19870,11 +19869,11 @@ extern ULONG eqos_base_addr;
 #define DMA_RIWTR1_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x11b8))
 
 #define DMA_RIWTR1_WR(data) do {\
-	iowritel(data, (void *)DMA_RIWTR1_OFFSET);\
+	iowrite32(data, (void *)DMA_RIWTR1_OFFSET);\
 } while (0)
 
 #define DMA_RIWTR1_RD(data) do {\
-	(data) = ioreadl((void *)DMA_RIWTR1_OFFSET);\
+	(data) = ioread32((void *)DMA_RIWTR1_OFFSET);\
 } while (0)
 
 
@@ -19906,11 +19905,11 @@ extern ULONG eqos_base_addr;
 #define DMA_RIWTR0_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x1138))
 
 #define DMA_RIWTR0_WR(data) do {\
-	iowritel(data, (void *)DMA_RIWTR0_OFFSET);\
+	iowrite32(data, (void *)DMA_RIWTR0_OFFSET);\
 } while (0)
 
 #define DMA_RIWTR0_RD(data) do {\
-	(data) = ioreadl((void *)DMA_RIWTR0_OFFSET);\
+	(data) = ioread32((void *)DMA_RIWTR0_OFFSET);\
 } while (0)
 
 
@@ -19942,11 +19941,11 @@ extern ULONG eqos_base_addr;
 #define DMA_RDRLR7_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x14b0))
 
 #define DMA_RDRLR7_WR(data) do {\
-	iowritel(data, (void *)DMA_RDRLR7_OFFSET);\
+	iowrite32(data, (void *)DMA_RDRLR7_OFFSET);\
 } while (0)
 
 #define DMA_RDRLR7_RD(data) do {\
-	(data) = ioreadl((void *)DMA_RDRLR7_OFFSET);\
+	(data) = ioread32((void *)DMA_RDRLR7_OFFSET);\
 } while (0)
 
 
@@ -19978,11 +19977,11 @@ extern ULONG eqos_base_addr;
 #define DMA_RDRLR6_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x1430))
 
 #define DMA_RDRLR6_WR(data) do {\
-	iowritel(data, (void *)DMA_RDRLR6_OFFSET);\
+	iowrite32(data, (void *)DMA_RDRLR6_OFFSET);\
 } while (0)
 
 #define DMA_RDRLR6_RD(data) do {\
-	(data) = ioreadl((void *)DMA_RDRLR6_OFFSET);\
+	(data) = ioread32((void *)DMA_RDRLR6_OFFSET);\
 } while (0)
 
 
@@ -20014,11 +20013,11 @@ extern ULONG eqos_base_addr;
 #define DMA_RDRLR5_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x13b0))
 
 #define DMA_RDRLR5_WR(data) do {\
-	iowritel(data, (void *)DMA_RDRLR5_OFFSET);\
+	iowrite32(data, (void *)DMA_RDRLR5_OFFSET);\
 } while (0)
 
 #define DMA_RDRLR5_RD(data) do {\
-	(data) = ioreadl((void *)DMA_RDRLR5_OFFSET);\
+	(data) = ioread32((void *)DMA_RDRLR5_OFFSET);\
 } while (0)
 
 
@@ -20050,11 +20049,11 @@ extern ULONG eqos_base_addr;
 #define DMA_RDRLR4_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x1330))
 
 #define DMA_RDRLR4_WR(data) do {\
-	iowritel(data, (void *)DMA_RDRLR4_OFFSET);\
+	iowrite32(data, (void *)DMA_RDRLR4_OFFSET);\
 } while (0)
 
 #define DMA_RDRLR4_RD(data) do {\
-	(data) = ioreadl((void *)DMA_RDRLR4_OFFSET);\
+	(data) = ioread32((void *)DMA_RDRLR4_OFFSET);\
 } while (0)
 
 
@@ -20086,11 +20085,11 @@ extern ULONG eqos_base_addr;
 #define DMA_RDRLR3_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x12b0))
 
 #define DMA_RDRLR3_WR(data) do {\
-	iowritel(data, (void *)DMA_RDRLR3_OFFSET);\
+	iowrite32(data, (void *)DMA_RDRLR3_OFFSET);\
 } while (0)
 
 #define DMA_RDRLR3_RD(data) do {\
-	(data) = ioreadl((void *)DMA_RDRLR3_OFFSET);\
+	(data) = ioread32((void *)DMA_RDRLR3_OFFSET);\
 } while (0)
 
 
@@ -20122,11 +20121,11 @@ extern ULONG eqos_base_addr;
 #define DMA_RDRLR2_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x1230))
 
 #define DMA_RDRLR2_WR(data) do {\
-	iowritel(data, (void *)DMA_RDRLR2_OFFSET);\
+	iowrite32(data, (void *)DMA_RDRLR2_OFFSET);\
 } while (0)
 
 #define DMA_RDRLR2_RD(data) do {\
-	(data) = ioreadl((void *)DMA_RDRLR2_OFFSET);\
+	(data) = ioread32((void *)DMA_RDRLR2_OFFSET);\
 } while (0)
 
 
@@ -20158,11 +20157,11 @@ extern ULONG eqos_base_addr;
 #define DMA_RDRLR1_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x11b0))
 
 #define DMA_RDRLR1_WR(data) do {\
-	iowritel(data, (void *)DMA_RDRLR1_OFFSET);\
+	iowrite32(data, (void *)DMA_RDRLR1_OFFSET);\
 } while (0)
 
 #define DMA_RDRLR1_RD(data) do {\
-	(data) = ioreadl((void *)DMA_RDRLR1_OFFSET);\
+	(data) = ioread32((void *)DMA_RDRLR1_OFFSET);\
 } while (0)
 
 
@@ -20194,11 +20193,11 @@ extern ULONG eqos_base_addr;
 #define DMA_RDRLR0_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x1130))
 
 #define DMA_RDRLR0_WR(data) do {\
-	iowritel(data, (void *)DMA_RDRLR0_OFFSET);\
+	iowrite32(data, (void *)DMA_RDRLR0_OFFSET);\
 } while (0)
 
 #define DMA_RDRLR0_RD(data) do {\
-	(data) = ioreadl((void *)DMA_RDRLR0_OFFSET);\
+	(data) = ioread32((void *)DMA_RDRLR0_OFFSET);\
 } while (0)
 
 
@@ -20230,11 +20229,11 @@ extern ULONG eqos_base_addr;
 #define DMA_TDRLR7_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x14ac))
 
 #define DMA_TDRLR7_WR(data) do {\
-	iowritel(data, (void *)DMA_TDRLR7_OFFSET);\
+	iowrite32(data, (void *)DMA_TDRLR7_OFFSET);\
 } while (0)
 
 #define DMA_TDRLR7_RD(data) do {\
-	(data) = ioreadl((void *)DMA_TDRLR7_OFFSET);\
+	(data) = ioread32((void *)DMA_TDRLR7_OFFSET);\
 } while (0)
 
 
@@ -20266,11 +20265,11 @@ extern ULONG eqos_base_addr;
 #define DMA_TDRLR6_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x142c))
 
 #define DMA_TDRLR6_WR(data) do {\
-	iowritel(data, (void *)DMA_TDRLR6_OFFSET);\
+	iowrite32(data, (void *)DMA_TDRLR6_OFFSET);\
 } while (0)
 
 #define DMA_TDRLR6_RD(data) do {\
-	(data) = ioreadl((void *)DMA_TDRLR6_OFFSET);\
+	(data) = ioread32((void *)DMA_TDRLR6_OFFSET);\
 } while (0)
 
 
@@ -20302,11 +20301,11 @@ extern ULONG eqos_base_addr;
 #define DMA_TDRLR5_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x13ac))
 
 #define DMA_TDRLR5_WR(data) do {\
-	iowritel(data, (void *)DMA_TDRLR5_OFFSET);\
+	iowrite32(data, (void *)DMA_TDRLR5_OFFSET);\
 } while (0)
 
 #define DMA_TDRLR5_RD(data) do {\
-	(data) = ioreadl((void *)DMA_TDRLR5_OFFSET);\
+	(data) = ioread32((void *)DMA_TDRLR5_OFFSET);\
 } while (0)
 
 
@@ -20338,11 +20337,11 @@ extern ULONG eqos_base_addr;
 #define DMA_TDRLR4_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x132c))
 
 #define DMA_TDRLR4_WR(data) do {\
-	iowritel(data, (void *)DMA_TDRLR4_OFFSET);\
+	iowrite32(data, (void *)DMA_TDRLR4_OFFSET);\
 } while (0)
 
 #define DMA_TDRLR4_RD(data) do {\
-	(data) = ioreadl((void *)DMA_TDRLR4_OFFSET);\
+	(data) = ioread32((void *)DMA_TDRLR4_OFFSET);\
 } while (0)
 
 
@@ -20374,11 +20373,11 @@ extern ULONG eqos_base_addr;
 #define DMA_TDRLR3_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x12ac))
 
 #define DMA_TDRLR3_WR(data) do {\
-	iowritel(data, (void *)DMA_TDRLR3_OFFSET);\
+	iowrite32(data, (void *)DMA_TDRLR3_OFFSET);\
 } while (0)
 
 #define DMA_TDRLR3_RD(data) do {\
-	(data) = ioreadl((void *)DMA_TDRLR3_OFFSET);\
+	(data) = ioread32((void *)DMA_TDRLR3_OFFSET);\
 } while (0)
 
 
@@ -20410,11 +20409,11 @@ extern ULONG eqos_base_addr;
 #define DMA_TDRLR2_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x122c))
 
 #define DMA_TDRLR2_WR(data) do {\
-	iowritel(data, (void *)DMA_TDRLR2_OFFSET);\
+	iowrite32(data, (void *)DMA_TDRLR2_OFFSET);\
 } while (0)
 
 #define DMA_TDRLR2_RD(data) do {\
-	(data) = ioreadl((void *)DMA_TDRLR2_OFFSET);\
+	(data) = ioread32((void *)DMA_TDRLR2_OFFSET);\
 } while (0)
 
 
@@ -20446,11 +20445,11 @@ extern ULONG eqos_base_addr;
 #define DMA_TDRLR1_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x11ac))
 
 #define DMA_TDRLR1_WR(data) do {\
-	iowritel(data, (void *)DMA_TDRLR1_OFFSET);\
+	iowrite32(data, (void *)DMA_TDRLR1_OFFSET);\
 } while (0)
 
 #define DMA_TDRLR1_RD(data) do {\
-	(data) = ioreadl((void *)DMA_TDRLR1_OFFSET);\
+	(data) = ioread32((void *)DMA_TDRLR1_OFFSET);\
 } while (0)
 
 
@@ -20482,11 +20481,11 @@ extern ULONG eqos_base_addr;
 #define DMA_TDRLR0_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x112c))
 
 #define DMA_TDRLR0_WR(data) do {\
-	iowritel(data, (void *)DMA_TDRLR0_OFFSET);\
+	iowrite32(data, (void *)DMA_TDRLR0_OFFSET);\
 } while (0)
 
 #define DMA_TDRLR0_RD(data) do {\
-	(data) = ioreadl((void *)DMA_TDRLR0_OFFSET);\
+	(data) = ioread32((void *)DMA_TDRLR0_OFFSET);\
 } while (0)
 
 
@@ -20518,11 +20517,11 @@ extern ULONG eqos_base_addr;
 #define DMA_RDTP_RPDR7_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x14a8))
 
 #define DMA_RDTP_RPDR7_WR(data) do {\
-	iowritel(data, (void *)DMA_RDTP_RPDR7_OFFSET);\
+	iowrite32(data, (void *)DMA_RDTP_RPDR7_OFFSET);\
 } while (0)
 
 #define DMA_RDTP_RPDR7_RD(data) do {\
-	(data) = ioreadl((void *)DMA_RDTP_RPDR7_OFFSET);\
+	(data) = ioread32((void *)DMA_RDTP_RPDR7_OFFSET);\
 } while (0)
 
 #define DMA_RDTP_RPDR7_RDT_WR(data) do {\
@@ -20536,11 +20535,11 @@ extern ULONG eqos_base_addr;
 #define DMA_RDTP_RPDR6_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x1428))
 
 #define DMA_RDTP_RPDR6_WR(data) do {\
-	iowritel(data, (void *)DMA_RDTP_RPDR6_OFFSET);\
+	iowrite32(data, (void *)DMA_RDTP_RPDR6_OFFSET);\
 } while (0)
 
 #define DMA_RDTP_RPDR6_RD(data) do {\
-	(data) = ioreadl((void *)DMA_RDTP_RPDR6_OFFSET);\
+	(data) = ioread32((void *)DMA_RDTP_RPDR6_OFFSET);\
 } while (0)
 
 #define DMA_RDTP_RPDR6_RDT_WR(data) do {\
@@ -20554,11 +20553,11 @@ extern ULONG eqos_base_addr;
 #define DMA_RDTP_RPDR5_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x13a8))
 
 #define DMA_RDTP_RPDR5_WR(data) do {\
-	iowritel(data, (void *)DMA_RDTP_RPDR5_OFFSET);\
+	iowrite32(data, (void *)DMA_RDTP_RPDR5_OFFSET);\
 } while (0)
 
 #define DMA_RDTP_RPDR5_RD(data) do {\
-	(data) = ioreadl((void *)DMA_RDTP_RPDR5_OFFSET);\
+	(data) = ioread32((void *)DMA_RDTP_RPDR5_OFFSET);\
 } while (0)
 
 #define DMA_RDTP_RPDR5_RDT_WR(data) do {\
@@ -20572,11 +20571,11 @@ extern ULONG eqos_base_addr;
 #define DMA_RDTP_RPDR4_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x1328))
 
 #define DMA_RDTP_RPDR4_WR(data) do {\
-	iowritel(data, (void *)DMA_RDTP_RPDR4_OFFSET);\
+	iowrite32(data, (void *)DMA_RDTP_RPDR4_OFFSET);\
 } while (0)
 
 #define DMA_RDTP_RPDR4_RD(data) do {\
-	(data) = ioreadl((void *)DMA_RDTP_RPDR4_OFFSET);\
+	(data) = ioread32((void *)DMA_RDTP_RPDR4_OFFSET);\
 } while (0)
 
 #define DMA_RDTP_RPDR4_RDT_WR(data) do {\
@@ -20590,11 +20589,11 @@ extern ULONG eqos_base_addr;
 #define DMA_RDTP_RPDR3_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x12a8))
 
 #define DMA_RDTP_RPDR3_WR(data) do {\
-	iowritel(data, (void *)DMA_RDTP_RPDR3_OFFSET);\
+	iowrite32(data, (void *)DMA_RDTP_RPDR3_OFFSET);\
 } while (0)
 
 #define DMA_RDTP_RPDR3_RD(data) do {\
-	(data) = ioreadl((void *)DMA_RDTP_RPDR3_OFFSET);\
+	(data) = ioread32((void *)DMA_RDTP_RPDR3_OFFSET);\
 } while (0)
 
 #define DMA_RDTP_RPDR3_RDT_WR(data) do {\
@@ -20608,11 +20607,11 @@ extern ULONG eqos_base_addr;
 #define DMA_RDTP_RPDR2_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x1228))
 
 #define DMA_RDTP_RPDR2_WR(data) do {\
-	iowritel(data, (void *)DMA_RDTP_RPDR2_OFFSET);\
+	iowrite32(data, (void *)DMA_RDTP_RPDR2_OFFSET);\
 } while (0)
 
 #define DMA_RDTP_RPDR2_RD(data) do {\
-	(data) = ioreadl((void *)DMA_RDTP_RPDR2_OFFSET);\
+	(data) = ioread32((void *)DMA_RDTP_RPDR2_OFFSET);\
 } while (0)
 
 #define DMA_RDTP_RPDR2_RDT_WR(data) do {\
@@ -20626,11 +20625,11 @@ extern ULONG eqos_base_addr;
 #define DMA_RDTP_RPDR1_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x11a8))
 
 #define DMA_RDTP_RPDR1_WR(data) do {\
-	iowritel(data, (void *)DMA_RDTP_RPDR1_OFFSET);\
+	iowrite32(data, (void *)DMA_RDTP_RPDR1_OFFSET);\
 } while (0)
 
 #define DMA_RDTP_RPDR1_RD(data) do {\
-	(data) = ioreadl((void *)DMA_RDTP_RPDR1_OFFSET);\
+	(data) = ioread32((void *)DMA_RDTP_RPDR1_OFFSET);\
 } while (0)
 
 #define DMA_RDTP_RPDR1_RDT_WR(data) do {\
@@ -20644,11 +20643,11 @@ extern ULONG eqos_base_addr;
 #define DMA_RDTP_RPDR0_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x1128))
 
 #define DMA_RDTP_RPDR0_WR(data) do {\
-	iowritel(data, (void *)DMA_RDTP_RPDR0_OFFSET);\
+	iowrite32(data, (void *)DMA_RDTP_RPDR0_OFFSET);\
 } while (0)
 
 #define DMA_RDTP_RPDR0_RD(data) do {\
-	(data) = ioreadl((void *)DMA_RDTP_RPDR0_OFFSET);\
+	(data) = ioread32((void *)DMA_RDTP_RPDR0_OFFSET);\
 } while (0)
 
 #define DMA_RDTP_RPDR0_RDT_WR(data) do {\
@@ -20662,11 +20661,11 @@ extern ULONG eqos_base_addr;
 #define DMA_TDTP_TPDR7_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x14a0))
 
 #define DMA_TDTP_TPDR7_WR(data) do {\
-	iowritel(data, (void *)DMA_TDTP_TPDR7_OFFSET);\
+	iowrite32(data, (void *)DMA_TDTP_TPDR7_OFFSET);\
 } while (0)
 
 #define DMA_TDTP_TPDR7_RD(data) do {\
-	(data) = ioreadl((void *)DMA_TDTP_TPDR7_OFFSET);\
+	(data) = ioread32((void *)DMA_TDTP_TPDR7_OFFSET);\
 } while (0)
 
 #define DMA_TDTP_TPDR7_TDT_WR(data) do {\
@@ -20680,11 +20679,11 @@ extern ULONG eqos_base_addr;
 #define DMA_TDTP_TPDR6_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x1420))
 
 #define DMA_TDTP_TPDR6_WR(data) do {\
-	iowritel(data, (void *)DMA_TDTP_TPDR6_OFFSET);\
+	iowrite32(data, (void *)DMA_TDTP_TPDR6_OFFSET);\
 } while (0)
 
 #define DMA_TDTP_TPDR6_RD(data) do {\
-	(data) = ioreadl((void *)DMA_TDTP_TPDR6_OFFSET);\
+	(data) = ioread32((void *)DMA_TDTP_TPDR6_OFFSET);\
 } while (0)
 
 #define DMA_TDTP_TPDR6_TDT_WR(data) do {\
@@ -20698,11 +20697,11 @@ extern ULONG eqos_base_addr;
 #define DMA_TDTP_TPDR5_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x13a0))
 
 #define DMA_TDTP_TPDR5_WR(data) do {\
-	iowritel(data, (void *)DMA_TDTP_TPDR5_OFFSET);\
+	iowrite32(data, (void *)DMA_TDTP_TPDR5_OFFSET);\
 } while (0)
 
 #define DMA_TDTP_TPDR5_RD(data) do {\
-	(data) = ioreadl((void *)DMA_TDTP_TPDR5_OFFSET);\
+	(data) = ioread32((void *)DMA_TDTP_TPDR5_OFFSET);\
 } while (0)
 
 #define DMA_TDTP_TPDR5_TDT_WR(data) do {\
@@ -20716,11 +20715,11 @@ extern ULONG eqos_base_addr;
 #define DMA_TDTP_TPDR4_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x1320))
 
 #define DMA_TDTP_TPDR4_WR(data) do {\
-	iowritel(data, (void *)DMA_TDTP_TPDR4_OFFSET);\
+	iowrite32(data, (void *)DMA_TDTP_TPDR4_OFFSET);\
 } while (0)
 
 #define DMA_TDTP_TPDR4_RD(data) do {\
-	(data) = ioreadl((void *)DMA_TDTP_TPDR4_OFFSET);\
+	(data) = ioread32((void *)DMA_TDTP_TPDR4_OFFSET);\
 } while (0)
 
 #define DMA_TDTP_TPDR4_TDT_WR(data) do {\
@@ -20734,11 +20733,11 @@ extern ULONG eqos_base_addr;
 #define DMA_TDTP_TPDR3_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x12a0))
 
 #define DMA_TDTP_TPDR3_WR(data) do {\
-	iowritel(data, (void *)DMA_TDTP_TPDR3_OFFSET);\
+	iowrite32(data, (void *)DMA_TDTP_TPDR3_OFFSET);\
 } while (0)
 
 #define DMA_TDTP_TPDR3_RD(data) do {\
-	(data) = ioreadl((void *)DMA_TDTP_TPDR3_OFFSET);\
+	(data) = ioread32((void *)DMA_TDTP_TPDR3_OFFSET);\
 } while (0)
 
 #define DMA_TDTP_TPDR3_TDT_WR(data) do {\
@@ -20752,11 +20751,11 @@ extern ULONG eqos_base_addr;
 #define DMA_TDTP_TPDR2_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x1220))
 
 #define DMA_TDTP_TPDR2_WR(data) do {\
-	iowritel(data, (void *)DMA_TDTP_TPDR2_OFFSET);\
+	iowrite32(data, (void *)DMA_TDTP_TPDR2_OFFSET);\
 } while (0)
 
 #define DMA_TDTP_TPDR2_RD(data) do {\
-	(data) = ioreadl((void *)DMA_TDTP_TPDR2_OFFSET);\
+	(data) = ioread32((void *)DMA_TDTP_TPDR2_OFFSET);\
 } while (0)
 
 #define DMA_TDTP_TPDR2_TDT_WR(data) do {\
@@ -20770,11 +20769,11 @@ extern ULONG eqos_base_addr;
 #define DMA_TDTP_TPDR1_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x11a0))
 
 #define DMA_TDTP_TPDR1_WR(data) do {\
-	iowritel(data, (void *)DMA_TDTP_TPDR1_OFFSET);\
+	iowrite32(data, (void *)DMA_TDTP_TPDR1_OFFSET);\
 } while (0)
 
 #define DMA_TDTP_TPDR1_RD(data) do {\
-	(data) = ioreadl((void *)DMA_TDTP_TPDR1_OFFSET);\
+	(data) = ioread32((void *)DMA_TDTP_TPDR1_OFFSET);\
 } while (0)
 
 #define DMA_TDTP_TPDR1_TDT_WR(data) do {\
@@ -20788,11 +20787,11 @@ extern ULONG eqos_base_addr;
 #define DMA_TDTP_TPDR0_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x1120))
 
 #define DMA_TDTP_TPDR0_WR(data) do {\
-	iowritel(data, (void *)DMA_TDTP_TPDR0_OFFSET);\
+	iowrite32(data, (void *)DMA_TDTP_TPDR0_OFFSET);\
 } while (0)
 
 #define DMA_TDTP_TPDR0_RD(data) do {\
-	(data) = ioreadl((void *)DMA_TDTP_TPDR0_OFFSET);\
+	(data) = ioread32((void *)DMA_TDTP_TPDR0_OFFSET);\
 } while (0)
 
 #define DMA_TDTP_TPDR0_TDT_WR(data) do {\
@@ -20806,11 +20805,11 @@ extern ULONG eqos_base_addr;
 #define DMA_RDLAR7_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x149c))
 
 #define DMA_RDLAR7_WR(data) do {\
-	iowritel(data, (void *)DMA_RDLAR7_OFFSET);\
+	iowrite32(data, (void *)DMA_RDLAR7_OFFSET);\
 } while (0)
 
 #define DMA_RDLAR7_RD(data) do {\
-	(data) = ioreadl((void *)DMA_RDLAR7_OFFSET);\
+	(data) = ioread32((void *)DMA_RDLAR7_OFFSET);\
 } while (0)
 
 #define DMA_RDLAR7_RDESLA_WR(data) do {\
@@ -20824,11 +20823,11 @@ extern ULONG eqos_base_addr;
 #define DMA_RDLAR6_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x141c))
 
 #define DMA_RDLAR6_WR(data) do {\
-	iowritel(data, (void *)DMA_RDLAR6_OFFSET);\
+	iowrite32(data, (void *)DMA_RDLAR6_OFFSET);\
 } while (0)
 
 #define DMA_RDLAR6_RD(data) do {\
-	(data) = ioreadl((void *)DMA_RDLAR6_OFFSET);\
+	(data) = ioread32((void *)DMA_RDLAR6_OFFSET);\
 } while (0)
 
 #define DMA_RDLAR6_RDESLA_WR(data) do {\
@@ -20842,11 +20841,11 @@ extern ULONG eqos_base_addr;
 #define DMA_RDLAR5_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x139c))
 
 #define DMA_RDLAR5_WR(data) do {\
-	iowritel(data, (void *)DMA_RDLAR5_OFFSET);\
+	iowrite32(data, (void *)DMA_RDLAR5_OFFSET);\
 } while (0)
 
 #define DMA_RDLAR5_RD(data) do {\
-	(data) = ioreadl((void *)DMA_RDLAR5_OFFSET);\
+	(data) = ioread32((void *)DMA_RDLAR5_OFFSET);\
 } while (0)
 
 #define DMA_RDLAR5_RDESLA_WR(data) do {\
@@ -20860,11 +20859,11 @@ extern ULONG eqos_base_addr;
 #define DMA_RDLAR4_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x131c))
 
 #define DMA_RDLAR4_WR(data) do {\
-	iowritel(data, (void *)DMA_RDLAR4_OFFSET);\
+	iowrite32(data, (void *)DMA_RDLAR4_OFFSET);\
 } while (0)
 
 #define DMA_RDLAR4_RD(data) do {\
-	(data) = ioreadl((void *)DMA_RDLAR4_OFFSET);\
+	(data) = ioread32((void *)DMA_RDLAR4_OFFSET);\
 } while (0)
 
 #define DMA_RDLAR4_RDESLA_WR(data) do {\
@@ -20878,11 +20877,11 @@ extern ULONG eqos_base_addr;
 #define DMA_RDLAR3_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x129c))
 
 #define DMA_RDLAR3_WR(data) do {\
-	iowritel(data, (void *)DMA_RDLAR3_OFFSET);\
+	iowrite32(data, (void *)DMA_RDLAR3_OFFSET);\
 } while (0)
 
 #define DMA_RDLAR3_RD(data) do {\
-	(data) = ioreadl((void *)DMA_RDLAR3_OFFSET);\
+	(data) = ioread32((void *)DMA_RDLAR3_OFFSET);\
 } while (0)
 
 #define DMA_RDLAR3_RDESLA_WR(data) do {\
@@ -20896,11 +20895,11 @@ extern ULONG eqos_base_addr;
 #define DMA_RDLAR2_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x121c))
 
 #define DMA_RDLAR2_WR(data) do {\
-	iowritel(data, (void *)DMA_RDLAR2_OFFSET);\
+	iowrite32(data, (void *)DMA_RDLAR2_OFFSET);\
 } while (0)
 
 #define DMA_RDLAR2_RD(data) do {\
-	(data) = ioreadl((void *)DMA_RDLAR2_OFFSET);\
+	(data) = ioread32((void *)DMA_RDLAR2_OFFSET);\
 } while (0)
 
 #define DMA_RDLAR2_RDESLA_WR(data) do {\
@@ -20914,11 +20913,11 @@ extern ULONG eqos_base_addr;
 #define DMA_RDLAR1_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x119c))
 
 #define DMA_RDLAR1_WR(data) do {\
-	iowritel(data, (void *)DMA_RDLAR1_OFFSET);\
+	iowrite32(data, (void *)DMA_RDLAR1_OFFSET);\
 } while (0)
 
 #define DMA_RDLAR1_RD(data) do {\
-	(data) = ioreadl((void *)DMA_RDLAR1_OFFSET);\
+	(data) = ioread32((void *)DMA_RDLAR1_OFFSET);\
 } while (0)
 
 #define DMA_RDLAR1_RDESLA_WR(data) do {\
@@ -20934,16 +20933,16 @@ extern ULONG eqos_base_addr;
 #define DMA_RDLAR0_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x111c))
 
 #define DMA_RDLAR0_WR(data) do {\
-	iowritel((((data) >> 32) & 0xFF), (void *)DMA_RDLARH0_OFFSET);\
-	iowritel(data, (void *)DMA_RDLAR0_OFFSET);\
+	iowrite32((((data) >> 32) & 0xFF), (void *)DMA_RDLARH0_OFFSET);\
+	iowrite32(data, (void *)DMA_RDLAR0_OFFSET);\
 } while (0)
 
 #define DMA_RDLARH0_RD(data) do {\
-	data = ioreadl((void *)DMA_RDLARH0_OFFSET);\
+	data = ioread32((void *)DMA_RDLARH0_OFFSET);\
 } while (0)
 
 #define DMA_RDLARL0_RD(data) do {\
-	data = ioreadl((void *)DMA_RDLAR0_OFFSET);\
+	data = ioread32((void *)DMA_RDLAR0_OFFSET);\
 } while (0)
 
 #define DMA_RDLAR0_RD(data) do {\
@@ -20965,11 +20964,11 @@ extern ULONG eqos_base_addr;
 #define DMA_TDLAR7_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x1494))
 
 #define DMA_TDLAR7_WR(data) do {\
-	iowritel(data, (void *)DMA_TDLAR7_OFFSET);\
+	iowrite32(data, (void *)DMA_TDLAR7_OFFSET);\
 } while (0)
 
 #define DMA_TDLAR7_RD(data) do {\
-	(data) = ioreadl((void *)DMA_TDLAR7_OFFSET);\
+	(data) = ioread32((void *)DMA_TDLAR7_OFFSET);\
 } while (0)
 
 #define DMA_TDLAR7_TDESLA_WR(data) do {\
@@ -20983,11 +20982,11 @@ extern ULONG eqos_base_addr;
 #define DMA_TDLAR6_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x1414))
 
 #define DMA_TDLAR6_WR(data) do {\
-	iowritel(data, (void *)DMA_TDLAR6_OFFSET);\
+	iowrite32(data, (void *)DMA_TDLAR6_OFFSET);\
 } while (0)
 
 #define DMA_TDLAR6_RD(data) do {\
-	(data) = ioreadl((void *)DMA_TDLAR6_OFFSET);\
+	(data) = ioread32((void *)DMA_TDLAR6_OFFSET);\
 } while (0)
 
 #define DMA_TDLAR6_TDESLA_WR(data) do {\
@@ -21001,11 +21000,11 @@ extern ULONG eqos_base_addr;
 #define DMA_TDLAR5_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x1394))
 
 #define DMA_TDLAR5_WR(data) do {\
-	iowritel(data, (void *)DMA_TDLAR5_OFFSET);\
+	iowrite32(data, (void *)DMA_TDLAR5_OFFSET);\
 } while (0)
 
 #define DMA_TDLAR5_RD(data) do {\
-	(data) = ioreadl((void *)DMA_TDLAR5_OFFSET);\
+	(data) = ioread32((void *)DMA_TDLAR5_OFFSET);\
 } while (0)
 
 #define DMA_TDLAR5_TDESLA_WR(data) do {\
@@ -21019,11 +21018,11 @@ extern ULONG eqos_base_addr;
 #define DMA_TDLAR4_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x1314))
 
 #define DMA_TDLAR4_WR(data) do {\
-	iowritel(data, (void *)DMA_TDLAR4_OFFSET);\
+	iowrite32(data, (void *)DMA_TDLAR4_OFFSET);\
 } while (0)
 
 #define DMA_TDLAR4_RD(data) do {\
-	(data) = ioreadl((void *)DMA_TDLAR4_OFFSET);\
+	(data) = ioread32((void *)DMA_TDLAR4_OFFSET);\
 } while (0)
 
 #define DMA_TDLAR4_TDESLA_WR(data) do {\
@@ -21037,11 +21036,11 @@ extern ULONG eqos_base_addr;
 #define DMA_TDLAR3_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x1294))
 
 #define DMA_TDLAR3_WR(data) do {\
-	iowritel(data, (void *)DMA_TDLAR3_OFFSET);\
+	iowrite32(data, (void *)DMA_TDLAR3_OFFSET);\
 } while (0)
 
 #define DMA_TDLAR3_RD(data) do {\
-	(data) = ioreadl((void *)DMA_TDLAR3_OFFSET);\
+	(data) = ioread32((void *)DMA_TDLAR3_OFFSET);\
 } while (0)
 
 #define DMA_TDLAR3_TDESLA_WR(data) do {\
@@ -21055,11 +21054,11 @@ extern ULONG eqos_base_addr;
 #define DMA_TDLAR2_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x1214))
 
 #define DMA_TDLAR2_WR(data) do {\
-	iowritel(data, (void *)DMA_TDLAR2_OFFSET);\
+	iowrite32(data, (void *)DMA_TDLAR2_OFFSET);\
 } while (0)
 
 #define DMA_TDLAR2_RD(data) do {\
-	(data) = ioreadl((void *)DMA_TDLAR2_OFFSET);\
+	(data) = ioread32((void *)DMA_TDLAR2_OFFSET);\
 } while (0)
 
 #define DMA_TDLAR2_TDESLA_WR(data) do {\
@@ -21073,11 +21072,11 @@ extern ULONG eqos_base_addr;
 #define DMA_TDLAR1_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x1194))
 
 #define DMA_TDLAR1_WR(data) do {\
-	iowritel(data, (void *)DMA_TDLAR1_OFFSET);\
+	iowrite32(data, (void *)DMA_TDLAR1_OFFSET);\
 } while (0)
 
 #define DMA_TDLAR1_RD(data) do {\
-	(data) = ioreadl((void *)DMA_TDLAR1_OFFSET);\
+	(data) = ioread32((void *)DMA_TDLAR1_OFFSET);\
 } while (0)
 
 #define DMA_TDLAR1_TDESLA_WR(data) do {\
@@ -21093,13 +21092,13 @@ extern ULONG eqos_base_addr;
 #define DMA_TDLAR0_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x1114))
 
 #define DMA_TDLAR0_WR(data) do {\
-	iowritel((((data)>>32)&0xFF), (void *) DMA_TDLARH0_OFFSET);\
-	iowritel(data, (void *)DMA_TDLAR0_OFFSET);\
+	iowrite32((((data)>>32)&0xFF), (void *) DMA_TDLARH0_OFFSET);\
+	iowrite32(data, (void *)DMA_TDLAR0_OFFSET);\
 } while (0)
 
 #define DMA_TDLAR0_RD(data) do {\
-	uint64_t rd_hi = ioreadl((void *)DMA_TDLARH0_OFFSET);\
-	uint64_t rd_low = ioreadl((void *)DMA_TDLAR0_OFFSET);\
+	uint64_t rd_hi = ioread32((void *)DMA_TDLARH0_OFFSET);\
+	uint64_t rd_low = ioread32((void *)DMA_TDLAR0_OFFSET);\
 	data = (rd_hi << 32) | rd_low;\
 } while (0)
 
@@ -21114,11 +21113,11 @@ extern ULONG eqos_base_addr;
 #define MAC_IMR_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xb4))
 
 #define MAC_IMR_WR(data) do {\
-	iowritel(data, (void *)MAC_IMR_OFFSET);\
+	iowrite32(data, (void *)MAC_IMR_OFFSET);\
 } while (0)
 
 #define MAC_IMR_RD(data) do {\
-	(data) = ioreadl((void *)MAC_IMR_OFFSET);\
+	(data) = ioread32((void *)MAC_IMR_OFFSET);\
 } while (0)
 
 
@@ -21297,7 +21296,7 @@ extern ULONG eqos_base_addr;
 #define MAC_ISR_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xb0))
 
 #define MAC_ISR_RD(data) do {\
-	(data) = ioreadl((void *)MAC_ISR_OFFSET);\
+	(data) = ioread32((void *)MAC_ISR_OFFSET);\
 } while (0)
 
 
@@ -21407,7 +21406,7 @@ extern ULONG eqos_base_addr;
 #define MTL_ISR_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xc20))
 
 #define MTL_ISR_RD(data) do {\
-	(data) = ioreadl((void *)MTL_ISR_OFFSET);\
+	(data) = ioread32((void *)MTL_ISR_OFFSET);\
 } while (0)
 
 
@@ -21549,7 +21548,7 @@ extern ULONG eqos_base_addr;
 #define DMA_ISR_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x1008))
 
 #define DMA_ISR_RD(data) do {\
-	(data) = ioreadl((void *)DMA_ISR_OFFSET);\
+	(data) = ioread32((void *)DMA_ISR_OFFSET);\
 } while (0)
 
 
@@ -21635,7 +21634,7 @@ extern ULONG eqos_base_addr;
 #define DMA_DSR2_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x1014))
 
 #define DMA_DSR2_RD(data) do {\
-	(data) = ioreadl((void *)DMA_DSR2_OFFSET);\
+	(data) = ioread32((void *)DMA_DSR2_OFFSET);\
 } while (0)
 
 
@@ -21657,7 +21656,7 @@ extern ULONG eqos_base_addr;
 #define DMA_DSR1_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x1010))
 
 #define DMA_DSR1_RD(data) do {\
-	(data) = ioreadl((void *)DMA_DSR1_OFFSET);\
+	(data) = ioread32((void *)DMA_DSR1_OFFSET);\
 } while (0)
 
 
@@ -21727,7 +21726,7 @@ extern ULONG eqos_base_addr;
 #define DMA_DSR0_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x100c))
 
 #define DMA_DSR0_RD(data) do {\
-	(data) = ioreadl((void *)DMA_DSR0_OFFSET);\
+	(data) = ioread32((void *)DMA_DSR0_OFFSET);\
 } while (0)
 
 
@@ -21797,7 +21796,7 @@ extern ULONG eqos_base_addr;
 #define MTL_Q0RDR_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xd38))
 
 #define MTL_Q0RDR_RD(data) do {\
-	(data) = ioreadl((void *)MTL_Q0RDR_OFFSET);\
+	(data) = ioread32((void *)MTL_Q0RDR_OFFSET);\
 } while (0)
 
 
@@ -21835,7 +21834,7 @@ extern ULONG eqos_base_addr;
 #define MTL_Q0ESR_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xd14))
 
 #define MTL_Q0ESR_RD(data) do {\
-	(data) = ioreadl((void *)MTL_Q0ESR_OFFSET);\
+	(data) = ioread32((void *)MTL_Q0ESR_OFFSET);\
 } while (0)
 
 
@@ -21857,7 +21856,7 @@ extern ULONG eqos_base_addr;
 #define MTL_Q0TDR_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xd08))
 
 #define MTL_Q0TDR_RD(data) do {\
-	(data) = ioreadl((void *)MTL_Q0TDR_OFFSET);\
+	(data) = ioread32((void *)MTL_Q0TDR_OFFSET);\
 } while (0)
 
 
@@ -21919,7 +21918,7 @@ extern ULONG eqos_base_addr;
 #define DMA_CHRBAR7_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x14dc))
 
 #define DMA_CHRBAR7_RD(data) do {\
-	(data) = ioreadl((void *)DMA_CHRBAR7_OFFSET);\
+	(data) = ioread32((void *)DMA_CHRBAR7_OFFSET);\
 } while (0)
 
 #define DMA_CHRBAR7_CURRBUFAPTR_RD(data) do {\
@@ -21929,7 +21928,7 @@ extern ULONG eqos_base_addr;
 #define DMA_CHRBAR6_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x145c))
 
 #define DMA_CHRBAR6_RD(data) do {\
-	(data) = ioreadl((void *)DMA_CHRBAR6_OFFSET);\
+	(data) = ioread32((void *)DMA_CHRBAR6_OFFSET);\
 } while (0)
 
 #define DMA_CHRBAR6_CURRBUFAPTR_RD(data) do {\
@@ -21939,7 +21938,7 @@ extern ULONG eqos_base_addr;
 #define DMA_CHRBAR5_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x13dc))
 
 #define DMA_CHRBAR5_RD(data) do {\
-	(data) = ioreadl((void *)DMA_CHRBAR5_OFFSET);\
+	(data) = ioread32((void *)DMA_CHRBAR5_OFFSET);\
 } while (0)
 
 #define DMA_CHRBAR5_CURRBUFAPTR_RD(data) do {\
@@ -21949,7 +21948,7 @@ extern ULONG eqos_base_addr;
 #define DMA_CHRBAR4_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x135c))
 
 #define DMA_CHRBAR4_RD(data) do {\
-	(data) = ioreadl((void *)DMA_CHRBAR4_OFFSET);\
+	(data) = ioread32((void *)DMA_CHRBAR4_OFFSET);\
 } while (0)
 
 #define DMA_CHRBAR4_CURRBUFAPTR_RD(data) do {\
@@ -21959,7 +21958,7 @@ extern ULONG eqos_base_addr;
 #define DMA_CHRBAR3_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x12dc))
 
 #define DMA_CHRBAR3_RD(data) do {\
-	(data) = ioreadl((void *)DMA_CHRBAR3_OFFSET);\
+	(data) = ioread32((void *)DMA_CHRBAR3_OFFSET);\
 } while (0)
 
 #define DMA_CHRBAR3_CURRBUFAPTR_RD(data) do {\
@@ -21969,7 +21968,7 @@ extern ULONG eqos_base_addr;
 #define DMA_CHRBAR2_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x125c))
 
 #define DMA_CHRBAR2_RD(data) do {\
-	(data) = ioreadl((void *)DMA_CHRBAR2_OFFSET);\
+	(data) = ioread32((void *)DMA_CHRBAR2_OFFSET);\
 } while (0)
 
 #define DMA_CHRBAR2_CURRBUFAPTR_RD(data) do {\
@@ -21979,7 +21978,7 @@ extern ULONG eqos_base_addr;
 #define DMA_CHRBAR1_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x11dc))
 
 #define DMA_CHRBAR1_RD(data) do {\
-	(data) = ioreadl((void *)DMA_CHRBAR1_OFFSET);\
+	(data) = ioread32((void *)DMA_CHRBAR1_OFFSET);\
 } while (0)
 
 #define DMA_CHRBAR1_CURRBUFAPTR_RD(data) do {\
@@ -21989,7 +21988,7 @@ extern ULONG eqos_base_addr;
 #define DMA_CHRBAR0_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x115c))
 
 #define DMA_CHRBAR0_RD(data) do {\
-	(data) = ioreadl((void *)DMA_CHRBAR0_OFFSET);\
+	(data) = ioread32((void *)DMA_CHRBAR0_OFFSET);\
 } while (0)
 
 #define DMA_CHRBAR0_CURRBUFAPTR_RD(data) do {\
@@ -21999,7 +21998,7 @@ extern ULONG eqos_base_addr;
 #define DMA_CHTBAR7_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x14d4))
 
 #define DMA_CHTBAR7_RD(data) do {\
-	(data) = ioreadl((void *)DMA_CHTBAR7_OFFSET);\
+	(data) = ioread32((void *)DMA_CHTBAR7_OFFSET);\
 } while (0)
 
 #define DMA_CHTBAR7_CURTBUFAPTR_RD(data) do {\
@@ -22009,7 +22008,7 @@ extern ULONG eqos_base_addr;
 #define DMA_CHTBAR6_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x1454))
 
 #define DMA_CHTBAR6_RD(data) do {\
-	(data) = ioreadl((void *)DMA_CHTBAR6_OFFSET);\
+	(data) = ioread32((void *)DMA_CHTBAR6_OFFSET);\
 } while (0)
 
 #define DMA_CHTBAR6_CURTBUFAPTR_RD(data) do {\
@@ -22019,7 +22018,7 @@ extern ULONG eqos_base_addr;
 #define DMA_CHTBAR5_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x13d4))
 
 #define DMA_CHTBAR5_RD(data) do {\
-	(data) = ioreadl((void *)DMA_CHTBAR5_OFFSET);\
+	(data) = ioread32((void *)DMA_CHTBAR5_OFFSET);\
 } while (0)
 
 #define DMA_CHTBAR5_CURTBUFAPTR_RD(data) do {\
@@ -22029,7 +22028,7 @@ extern ULONG eqos_base_addr;
 #define DMA_CHTBAR4_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x1354))
 
 #define DMA_CHTBAR4_RD(data) do {\
-	(data) = ioreadl((void *)DMA_CHTBAR4_OFFSET);\
+	(data) = ioread32((void *)DMA_CHTBAR4_OFFSET);\
 } while (0)
 
 #define DMA_CHTBAR4_CURTBUFAPTR_RD(data) do {\
@@ -22039,7 +22038,7 @@ extern ULONG eqos_base_addr;
 #define DMA_CHTBAR3_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x12d4))
 
 #define DMA_CHTBAR3_RD(data) do {\
-	(data) = ioreadl((void *)DMA_CHTBAR3_OFFSET);\
+	(data) = ioread32((void *)DMA_CHTBAR3_OFFSET);\
 } while (0)
 
 #define DMA_CHTBAR3_CURTBUFAPTR_RD(data) do {\
@@ -22049,7 +22048,7 @@ extern ULONG eqos_base_addr;
 #define DMA_CHTBAR2_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x1254))
 
 #define DMA_CHTBAR2_RD(data) do {\
-	(data) = ioreadl((void *)DMA_CHTBAR2_OFFSET);\
+	(data) = ioread32((void *)DMA_CHTBAR2_OFFSET);\
 } while (0)
 
 #define DMA_CHTBAR2_CURTBUFAPTR_RD(data) do {\
@@ -22059,7 +22058,7 @@ extern ULONG eqos_base_addr;
 #define DMA_CHTBAR1_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x11d4))
 
 #define DMA_CHTBAR1_RD(data) do {\
-	(data) = ioreadl((void *)DMA_CHTBAR1_OFFSET);\
+	(data) = ioread32((void *)DMA_CHTBAR1_OFFSET);\
 } while (0)
 
 #define DMA_CHTBAR1_CURTBUFAPTR_RD(data) do {\
@@ -22069,7 +22068,7 @@ extern ULONG eqos_base_addr;
 #define DMA_CHTBAR0_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x1154))
 
 #define DMA_CHTBAR0_RD(data) do {\
-	(data) = ioreadl((void *)DMA_CHTBAR0_OFFSET);\
+	(data) = ioread32((void *)DMA_CHTBAR0_OFFSET);\
 } while (0)
 
 #define DMA_CHTBAR0_CURTBUFAPTR_RD(data) do {\
@@ -22079,7 +22078,7 @@ extern ULONG eqos_base_addr;
 #define DMA_CHRDR7_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x14cc))
 
 #define DMA_CHRDR7_RD(data) do {\
-	(data) = ioreadl((void *)DMA_CHRDR7_OFFSET);\
+	(data) = ioread32((void *)DMA_CHRDR7_OFFSET);\
 } while (0)
 
 #define DMA_CHRDR7_CURRDESAPTR_RD(data) do {\
@@ -22089,7 +22088,7 @@ extern ULONG eqos_base_addr;
 #define DMA_CHRDR6_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x144c))
 
 #define DMA_CHRDR6_RD(data) do {\
-	(data) = ioreadl((void *)DMA_CHRDR6_OFFSET);\
+	(data) = ioread32((void *)DMA_CHRDR6_OFFSET);\
 } while (0)
 
 #define DMA_CHRDR6_CURRDESAPTR_RD(data) do {\
@@ -22099,7 +22098,7 @@ extern ULONG eqos_base_addr;
 #define DMA_CHRDR5_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x13cc))
 
 #define DMA_CHRDR5_RD(data) do {\
-	(data) = ioreadl((void *)DMA_CHRDR5_OFFSET);\
+	(data) = ioread32((void *)DMA_CHRDR5_OFFSET);\
 } while (0)
 
 #define DMA_CHRDR5_CURRDESAPTR_RD(data) do {\
@@ -22109,7 +22108,7 @@ extern ULONG eqos_base_addr;
 #define DMA_CHRDR4_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x134c))
 
 #define DMA_CHRDR4_RD(data) do {\
-	(data) = ioreadl((void *)DMA_CHRDR4_OFFSET);\
+	(data) = ioread32((void *)DMA_CHRDR4_OFFSET);\
 } while (0)
 
 #define DMA_CHRDR4_CURRDESAPTR_RD(data) do {\
@@ -22119,7 +22118,7 @@ extern ULONG eqos_base_addr;
 #define DMA_CHRDR3_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x12cc))
 
 #define DMA_CHRDR3_RD(data) do {\
-	(data) = ioreadl((void *)DMA_CHRDR3_OFFSET);\
+	(data) = ioread32((void *)DMA_CHRDR3_OFFSET);\
 } while (0)
 
 #define DMA_CHRDR3_CURRDESAPTR_RD(data) do {\
@@ -22129,7 +22128,7 @@ extern ULONG eqos_base_addr;
 #define DMA_CHRDR2_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x124c))
 
 #define DMA_CHRDR2_RD(data) do {\
-	(data) = ioreadl((void *)DMA_CHRDR2_OFFSET);\
+	(data) = ioread32((void *)DMA_CHRDR2_OFFSET);\
 } while (0)
 
 #define DMA_CHRDR2_CURRDESAPTR_RD(data) do {\
@@ -22139,7 +22138,7 @@ extern ULONG eqos_base_addr;
 #define DMA_CHRDR1_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x11cc))
 
 #define DMA_CHRDR1_RD(data) do {\
-	(data) = ioreadl((void *)DMA_CHRDR1_OFFSET);\
+	(data) = ioread32((void *)DMA_CHRDR1_OFFSET);\
 } while (0)
 
 #define DMA_CHRDR1_CURRDESAPTR_RD(data) do {\
@@ -22149,7 +22148,7 @@ extern ULONG eqos_base_addr;
 #define DMA_CHRDR0_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x114c))
 
 #define DMA_CHRDR0_RD(data) do {\
-	(data) = ioreadl((void *)DMA_CHRDR0_OFFSET);\
+	(data) = ioread32((void *)DMA_CHRDR0_OFFSET);\
 } while (0)
 
 #define DMA_CHRDR0_CURRDESAPTR_RD(data) do {\
@@ -22159,7 +22158,7 @@ extern ULONG eqos_base_addr;
 #define DMA_CHTDR7_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x14c4))
 
 #define DMA_CHTDR7_RD(data) do {\
-	(data) = ioreadl((void *)DMA_CHTDR7_OFFSET);\
+	(data) = ioread32((void *)DMA_CHTDR7_OFFSET);\
 } while (0)
 
 #define DMA_CHTDR7_CURTDESAPTR_RD(data) do {\
@@ -22169,7 +22168,7 @@ extern ULONG eqos_base_addr;
 #define DMA_CHTDR6_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x1444))
 
 #define DMA_CHTDR6_RD(data) do {\
-	(data) = ioreadl((void *)DMA_CHTDR6_OFFSET);\
+	(data) = ioread32((void *)DMA_CHTDR6_OFFSET);\
 } while (0)
 
 #define DMA_CHTDR6_CURTDESAPTR_RD(data) do {\
@@ -22179,7 +22178,7 @@ extern ULONG eqos_base_addr;
 #define DMA_CHTDR5_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x13c4))
 
 #define DMA_CHTDR5_RD(data) do {\
-	(data) = ioreadl((void *)DMA_CHTDR5_OFFSET);\
+	(data) = ioread32((void *)DMA_CHTDR5_OFFSET);\
 } while (0)
 
 #define DMA_CHTDR5_CURTDESAPTR_RD(data) do {\
@@ -22189,7 +22188,7 @@ extern ULONG eqos_base_addr;
 #define DMA_CHTDR4_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x1344))
 
 #define DMA_CHTDR4_RD(data) do {\
-	(data) = ioreadl((void *)DMA_CHTDR4_OFFSET);\
+	(data) = ioread32((void *)DMA_CHTDR4_OFFSET);\
 } while (0)
 
 #define DMA_CHTDR4_CURTDESAPTR_RD(data) do {\
@@ -22199,7 +22198,7 @@ extern ULONG eqos_base_addr;
 #define DMA_CHTDR3_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x12c4))
 
 #define DMA_CHTDR3_RD(data) do {\
-	(data) = ioreadl((void *)DMA_CHTDR3_OFFSET);\
+	(data) = ioread32((void *)DMA_CHTDR3_OFFSET);\
 } while (0)
 
 #define DMA_CHTDR3_CURTDESAPTR_RD(data) do {\
@@ -22209,7 +22208,7 @@ extern ULONG eqos_base_addr;
 #define DMA_CHTDR2_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x1244))
 
 #define DMA_CHTDR2_RD(data) do {\
-	(data) = ioreadl((void *)DMA_CHTDR2_OFFSET);\
+	(data) = ioread32((void *)DMA_CHTDR2_OFFSET);\
 } while (0)
 
 #define DMA_CHTDR2_CURTDESAPTR_RD(data) do {\
@@ -22219,7 +22218,7 @@ extern ULONG eqos_base_addr;
 #define DMA_CHTDR1_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x11c4))
 
 #define DMA_CHTDR1_RD(data) do {\
-	(data) = ioreadl((void *)DMA_CHTDR1_OFFSET);\
+	(data) = ioread32((void *)DMA_CHTDR1_OFFSET);\
 } while (0)
 
 #define DMA_CHTDR1_CURTDESAPTR_RD(data) do {\
@@ -22229,7 +22228,7 @@ extern ULONG eqos_base_addr;
 #define DMA_CHTDR0_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x1144))
 
 #define DMA_CHTDR0_RD(data) do {\
-	(data) = ioreadl((void *)DMA_CHTDR0_OFFSET);\
+	(data) = ioread32((void *)DMA_CHTDR0_OFFSET);\
 } while (0)
 
 #define DMA_CHTDR0_CURTDESAPTR_RD(data) do {\
@@ -22239,11 +22238,11 @@ extern ULONG eqos_base_addr;
 #define DMA_SFCSR7_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x14bc))
 
 #define DMA_SFCSR7_WR(data) do {\
-	iowritel(data, (void *)DMA_SFCSR7_OFFSET);\
+	iowrite32(data, (void *)DMA_SFCSR7_OFFSET);\
 } while (0)
 
 #define DMA_SFCSR7_RD(data) do {\
-	(data) = ioreadl((void *)DMA_SFCSR7_OFFSET);\
+	(data) = ioread32((void *)DMA_SFCSR7_OFFSET);\
 } while (0)
 
 
@@ -22315,11 +22314,11 @@ extern ULONG eqos_base_addr;
 #define DMA_SFCSR6_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x143c))
 
 #define DMA_SFCSR6_WR(data) do {\
-	iowritel(data, (void *)DMA_SFCSR6_OFFSET);\
+	iowrite32(data, (void *)DMA_SFCSR6_OFFSET);\
 } while (0)
 
 #define DMA_SFCSR6_RD(data) do {\
-	(data) = ioreadl((void *)DMA_SFCSR6_OFFSET);\
+	(data) = ioread32((void *)DMA_SFCSR6_OFFSET);\
 } while (0)
 
 
@@ -22391,11 +22390,11 @@ extern ULONG eqos_base_addr;
 #define DMA_SFCSR5_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x13bc))
 
 #define DMA_SFCSR5_WR(data) do {\
-	iowritel(data, (void *)DMA_SFCSR5_OFFSET);\
+	iowrite32(data, (void *)DMA_SFCSR5_OFFSET);\
 } while (0)
 
 #define DMA_SFCSR5_RD(data) do {\
-	(data) = ioreadl((void *)DMA_SFCSR5_OFFSET);\
+	(data) = ioread32((void *)DMA_SFCSR5_OFFSET);\
 } while (0)
 
 
@@ -22467,11 +22466,11 @@ extern ULONG eqos_base_addr;
 #define DMA_SFCSR4_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x133c))
 
 #define DMA_SFCSR4_WR(data) do {\
-	iowritel(data, (void *)DMA_SFCSR4_OFFSET);\
+	iowrite32(data, (void *)DMA_SFCSR4_OFFSET);\
 } while (0)
 
 #define DMA_SFCSR4_RD(data) do {\
-	(data) = ioreadl((void *)DMA_SFCSR4_OFFSET);\
+	(data) = ioread32((void *)DMA_SFCSR4_OFFSET);\
 } while (0)
 
 
@@ -22543,11 +22542,11 @@ extern ULONG eqos_base_addr;
 #define DMA_SFCSR3_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x12bc))
 
 #define DMA_SFCSR3_WR(data) do {\
-	iowritel(data, (void *)DMA_SFCSR3_OFFSET);\
+	iowrite32(data, (void *)DMA_SFCSR3_OFFSET);\
 } while (0)
 
 #define DMA_SFCSR3_RD(data) do {\
-	(data) = ioreadl((void *)DMA_SFCSR3_OFFSET);\
+	(data) = ioread32((void *)DMA_SFCSR3_OFFSET);\
 } while (0)
 
 
@@ -22619,11 +22618,11 @@ extern ULONG eqos_base_addr;
 #define DMA_SFCSR2_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x123c))
 
 #define DMA_SFCSR2_WR(data) do {\
-	iowritel(data, (void *)DMA_SFCSR2_OFFSET);\
+	iowrite32(data, (void *)DMA_SFCSR2_OFFSET);\
 } while (0)
 
 #define DMA_SFCSR2_RD(data) do {\
-	(data) = ioreadl((void *)DMA_SFCSR2_OFFSET);\
+	(data) = ioread32((void *)DMA_SFCSR2_OFFSET);\
 } while (0)
 
 
@@ -22695,11 +22694,11 @@ extern ULONG eqos_base_addr;
 #define DMA_SFCSR1_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x11bc))
 
 #define DMA_SFCSR1_WR(data) do {\
-	iowritel(data, (void *)DMA_SFCSR1_OFFSET);\
+	iowrite32(data, (void *)DMA_SFCSR1_OFFSET);\
 } while (0)
 
 #define DMA_SFCSR1_RD(data) do {\
-	(data) = ioreadl((void *)DMA_SFCSR1_OFFSET);\
+	(data) = ioread32((void *)DMA_SFCSR1_OFFSET);\
 } while (0)
 
 
@@ -22771,11 +22770,11 @@ extern ULONG eqos_base_addr;
 #define DMA_SFCSR0_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x113c))
 
 #define DMA_SFCSR0_WR(data) do {\
-	iowritel(data, (void *)DMA_SFCSR0_OFFSET);\
+	iowrite32(data, (void *)DMA_SFCSR0_OFFSET);\
 } while (0)
 
 #define DMA_SFCSR0_RD(data) do {\
-	(data) = ioreadl((void *)DMA_SFCSR0_OFFSET);\
+	(data) = ioread32((void *)DMA_SFCSR0_OFFSET);\
 } while (0)
 
 
@@ -22847,11 +22846,11 @@ extern ULONG eqos_base_addr;
 #define MAC_IVLANTIRR_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x64))
 
 #define MAC_IVLANTIRR_WR(data) do {\
-	iowritel(data, (void *)MAC_IVLANTIRR_OFFSET);\
+	iowrite32(data, (void *)MAC_IVLANTIRR_OFFSET);\
 } while (0)
 
 #define MAC_IVLANTIRR_RD(data) do {\
-	(data) = ioreadl((void *)MAC_IVLANTIRR_OFFSET);\
+	(data) = ioread32((void *)MAC_IVLANTIRR_OFFSET);\
 } while (0)
 
 
@@ -22968,11 +22967,11 @@ extern ULONG eqos_base_addr;
 #define MAC_VLANTIRR_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x60))
 
 #define MAC_VLANTIRR_WR(data) do {\
-	iowritel(data, (void *)MAC_VLANTIRR_OFFSET);\
+	iowrite32(data, (void *)MAC_VLANTIRR_OFFSET);\
 } while (0)
 
 #define MAC_VLANTIRR_RD(data) do {\
-	(data) = ioreadl((void *)MAC_VLANTIRR_OFFSET);\
+	(data) = ioread32((void *)MAC_VLANTIRR_OFFSET);\
 } while (0)
 
 
@@ -23089,11 +23088,11 @@ extern ULONG eqos_base_addr;
 #define MAC_VLANHTR_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x58))
 
 #define MAC_VLANHTR_WR(data) do {\
-	iowritel(data, (void *)MAC_VLANHTR_OFFSET);\
+	iowrite32(data, (void *)MAC_VLANHTR_OFFSET);\
 } while (0)
 
 #define MAC_VLANHTR_RD(data) do {\
-	(data) = ioreadl((void *)MAC_VLANHTR_OFFSET);\
+	(data) = ioread32((void *)MAC_VLANHTR_OFFSET);\
 } while (0)
 
 
@@ -23125,11 +23124,11 @@ extern ULONG eqos_base_addr;
 #define MAC_VLANTR_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x50))
 
 #define MAC_VLANTR_WR(data) do {\
-	iowritel(data, (void *)MAC_VLANTR_OFFSET);\
+	iowrite32(data, (void *)MAC_VLANTR_OFFSET);\
 } while (0)
 
 #define MAC_VLANTR_RD(data) do {\
-	(data) = ioreadl((void *)MAC_VLANTR_OFFSET);\
+	(data) = ioread32((void *)MAC_VLANTR_OFFSET);\
 } while (0)
 
 
@@ -23446,11 +23445,11 @@ extern ULONG eqos_base_addr;
 #define DMA_SBUS_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x1004))
 
 #define DMA_SBUS_WR(data) do {\
-	iowritel(data, (void *)DMA_SBUS_OFFSET);\
+	iowrite32(data, (void *)DMA_SBUS_OFFSET);\
 } while (0)
 
 #define DMA_SBUS_RD(data) do {\
-	(data) = ioreadl((void *)DMA_SBUS_OFFSET);\
+	(data) = ioread32((void *)DMA_SBUS_OFFSET);\
 } while (0)
 
 
@@ -23924,11 +23923,11 @@ extern ULONG eqos_base_addr;
 #define DMA_BMR_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x1000))
 
 #define DMA_BMR_WR(data) do {\
-	iowritel(data, (void *)DMA_BMR_OFFSET);\
+	iowrite32(data, (void *)DMA_BMR_OFFSET);\
 } while (0)
 
 #define DMA_BMR_RD(data) do {\
-	(data) = ioreadl((void *)DMA_BMR_OFFSET);\
+	(data) = ioread32((void *)DMA_BMR_OFFSET);\
 } while (0)
 
 
@@ -24123,11 +24122,11 @@ extern ULONG eqos_base_addr;
 #define MAC_CSR_SW_CTRL_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x230))
 
 #define MAC_CSR_SW_CTRL_RD(data) do {\
-	(data) = ioreadl((void *)MAC_CSR_SW_CTRL_OFFSET);\
+	(data) = ioread32((void *)MAC_CSR_SW_CTRL_OFFSET);\
 } while (0)
 
 #define MAC_CSR_SW_CTRL_WR(data) do {\
-	iowritel(data, (void *)MAC_CSR_SW_CTRL_OFFSET);\
+	iowrite32(data, (void *)MAC_CSR_SW_CTRL_OFFSET);\
 } while (0)
 
 #define MAC_CSR_SEEN_WR_MASK (ULONG)(0xfffffeff)
@@ -24144,11 +24143,11 @@ extern ULONG eqos_base_addr;
 #define MTL_Q0RCR_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xd3c))
 
 #define MTL_Q0RCR_WR(data) do {\
-	iowritel(data, (void *)MTL_Q0RCR_OFFSET);\
+	iowrite32(data, (void *)MTL_Q0RCR_OFFSET);\
 } while (0)
 
 #define MTL_Q0RCR_RD(data) do {\
-	(data) = ioreadl((void *)MTL_Q0RCR_OFFSET);\
+	(data) = ioread32((void *)MTL_Q0RCR_OFFSET);\
 } while (0)
 
 
@@ -24202,7 +24201,7 @@ extern ULONG eqos_base_addr;
 #define MTL_Q0OCR_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xd34))
 
 #define MTL_Q0OCR_RD(data) do {\
-	(data) = ioreadl((void *)MTL_Q0OCR_OFFSET);\
+	(data) = ioread32((void *)MTL_Q0OCR_OFFSET);\
 } while (0)
 
 
@@ -24240,11 +24239,11 @@ extern ULONG eqos_base_addr;
 #define MTL_Q0ROMR_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xd30))
 
 #define MTL_Q0ROMR_WR(data) do {\
-	iowritel(data, (void *)MTL_Q0ROMR_OFFSET);\
+	iowrite32(data, (void *)MTL_Q0ROMR_OFFSET);\
 } while (0)
 
 #define MTL_Q0ROMR_RD(data) do {\
-	(data) = ioreadl((void *)MTL_Q0ROMR_OFFSET);\
+	(data) = ioread32((void *)MTL_Q0ROMR_OFFSET);\
 } while (0)
 
 
@@ -24517,11 +24516,11 @@ extern ULONG eqos_base_addr;
 #define MTL_Q0QR_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xd18))
 
 #define MTL_Q0QR_WR(data) do {\
-	iowritel(data, (void *)MTL_Q0QR_OFFSET);\
+	iowrite32(data, (void *)MTL_Q0QR_OFFSET);\
 } while (0)
 
 #define MTL_Q0QR_RD(data) do {\
-	(data) = ioreadl((void *)MTL_Q0QR_OFFSET);\
+	(data) = ioread32((void *)MTL_Q0QR_OFFSET);\
 } while (0)
 
 
@@ -24553,11 +24552,11 @@ extern ULONG eqos_base_addr;
 #define MTL_Q0ECR_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xd10))
 
 #define MTL_Q0ECR_WR(data) do {\
-	iowritel(data, (void *)MTL_Q0ECR_OFFSET);\
+	iowrite32(data, (void *)MTL_Q0ECR_OFFSET);\
 } while (0)
 
 #define MTL_Q0ECR_RD(data) do {\
-	(data) = ioreadl((void *)MTL_Q0ECR_OFFSET);\
+	(data) = ioread32((void *)MTL_Q0ECR_OFFSET);\
 } while (0)
 
 
@@ -24597,11 +24596,11 @@ extern ULONG eqos_base_addr;
 #define MTL_Q0UCR_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xd04))
 
 #define MTL_Q0UCR_WR(data) do {\
-	iowritel(data, (void *)MTL_Q0UCR_OFFSET);\
+	iowrite32(data, (void *)MTL_Q0UCR_OFFSET);\
 } while (0)
 
 #define MTL_Q0UCR_RD(data) do {\
-	(data) = ioreadl((void *)MTL_Q0UCR_OFFSET);\
+	(data) = ioread32((void *)MTL_Q0UCR_OFFSET);\
 } while (0)
 
 
@@ -24642,11 +24641,11 @@ extern ULONG eqos_base_addr;
 #define MTL_Q0TOMR_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xd00))
 
 #define MTL_Q0TOMR_WR(data) do {\
-	iowritel(data, (void *)MTL_Q0TOMR_OFFSET);\
+	iowrite32(data, (void *)MTL_Q0TOMR_OFFSET);\
 } while (0)
 
 #define MTL_Q0TOMR_RD(data) do {\
-	(data) = ioreadl((void *)MTL_Q0TOMR_OFFSET);\
+	(data) = ioread32((void *)MTL_Q0TOMR_OFFSET);\
 } while (0)
 
 
@@ -24779,11 +24778,11 @@ extern ULONG eqos_base_addr;
 #define MTL_RQDCM1R_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xc34))
 
 #define MTL_RQDCM1R_WR(data) do {\
-	iowritel(data, (void *)MTL_RQDCM1R_OFFSET);\
+	iowrite32(data, (void *)MTL_RQDCM1R_OFFSET);\
 } while (0)
 
 #define MTL_RQDCM1R_RD(data) do {\
-	(data) = ioreadl((void *)MTL_RQDCM1R_OFFSET);\
+	(data) = ioread32((void *)MTL_RQDCM1R_OFFSET);\
 } while (0)
 
 
@@ -25117,11 +25116,11 @@ extern ULONG eqos_base_addr;
 #define MTL_RQDCM0R_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xc30))
 
 #define MTL_RQDCM0R_WR(data) do {\
-	iowritel(data, (void *)MTL_RQDCM0R_OFFSET);\
+	iowrite32(data, (void *)MTL_RQDCM0R_OFFSET);\
 } while (0)
 
 #define MTL_RQDCM0R_RD(data) do {\
-	(data) = ioreadl((void *)MTL_RQDCM0R_OFFSET);\
+	(data) = ioread32((void *)MTL_RQDCM0R_OFFSET);\
 } while (0)
 
 
@@ -25455,11 +25454,11 @@ extern ULONG eqos_base_addr;
 #define MTL_FDDR_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xc10))
 
 #define MTL_FDDR_WR(data) do {\
-	iowritel(data, (void *)MTL_FDDR_OFFSET);\
+	iowrite32(data, (void *)MTL_FDDR_OFFSET);\
 } while (0)
 
 #define MTL_FDDR_RD(data) do {\
-	(data) = ioreadl((void *)MTL_FDDR_OFFSET);\
+	(data) = ioread32((void *)MTL_FDDR_OFFSET);\
 } while (0)
 
 #define MTL_FDDR_FDBGDATA_WR(data) do {\
@@ -25473,11 +25472,11 @@ extern ULONG eqos_base_addr;
 #define MTL_FDACS_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xc08))
 
 #define MTL_FDACS_WR(data) do {\
-	iowritel(data, (void *)MTL_FDACS_OFFSET);\
+	iowrite32(data, (void *)MTL_FDACS_OFFSET);\
 } while (0)
 
 #define MTL_FDACS_RD(data) do {\
-	(data) = ioreadl((void *)MTL_FDACS_OFFSET);\
+	(data) = ioread32((void *)MTL_FDACS_OFFSET);\
 } while (0)
 
 
@@ -25776,11 +25775,11 @@ extern ULONG eqos_base_addr;
 #define MTL_OMR_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xc00))
 
 #define MTL_OMR_WR(data) do {\
-	iowritel(data, (void *)MTL_OMR_OFFSET);\
+	iowrite32(data, (void *)MTL_OMR_OFFSET);\
 } while (0)
 
 #define MTL_OMR_RD(data) do {\
-	(data) = ioreadl((void *)MTL_OMR_OFFSET);\
+	(data) = ioread32((void *)MTL_OMR_OFFSET);\
 } while (0)
 
 
@@ -25867,11 +25866,11 @@ extern ULONG eqos_base_addr;
 #define MAC_RQC3R_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xac))
 
 #define MAC_RQC3R_WR(data) do {\
-	iowritel(data, (void *)MAC_RQC3R_OFFSET);\
+	iowrite32(data, (void *)MAC_RQC3R_OFFSET);\
 } while (0)
 
 #define MAC_RQC3R_RD(data) do {\
-	(data) = ioreadl((void *)MAC_RQC3R_OFFSET);\
+	(data) = ioread32((void *)MAC_RQC3R_OFFSET);\
 } while (0)
 
 
@@ -25953,11 +25952,11 @@ extern ULONG eqos_base_addr;
 #define MAC_RQC2R_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xa8))
 
 #define MAC_RQC2R_WR(data) do {\
-	iowritel(data, (void *)MAC_RQC2R_OFFSET);\
+	iowrite32(data, (void *)MAC_RQC2R_OFFSET);\
 } while (0)
 
 #define MAC_RQC2R_RD(data) do {\
-	(data) = ioreadl((void *)MAC_RQC2R_OFFSET);\
+	(data) = ioread32((void *)MAC_RQC2R_OFFSET);\
 } while (0)
 
 
@@ -26039,11 +26038,11 @@ extern ULONG eqos_base_addr;
 #define MAC_RQC1R_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xa4))
 
 #define MAC_RQC1R_WR(data) do {\
-	iowritel(data, (void *)MAC_RQC1R_OFFSET);\
+	iowrite32(data, (void *)MAC_RQC1R_OFFSET);\
 } while (0)
 
 #define MAC_RQC1R_RD(data) do {\
-	(data) = ioreadl((void *)MAC_RQC1R_OFFSET);\
+	(data) = ioread32((void *)MAC_RQC1R_OFFSET);\
 } while (0)
 
 
@@ -26142,11 +26141,11 @@ extern ULONG eqos_base_addr;
 #define MAC_RQC0R_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xa0))
 
 #define MAC_RQC0R_WR(data) do {\
-	iowritel(data, (void *)MAC_RQC0R_OFFSET);\
+	iowrite32(data, (void *)MAC_RQC0R_OFFSET);\
 } while (0)
 
 #define MAC_RQC0R_RD(data) do {\
-	(data) = ioreadl((void *)MAC_RQC0R_OFFSET);\
+	(data) = ioread32((void *)MAC_RQC0R_OFFSET);\
 } while (0)
 
 
@@ -26347,11 +26346,11 @@ extern ULONG eqos_base_addr;
 #define MAC_TQPM1R_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x9c))
 
 #define MAC_TQPM1R_WR(data) do {\
-	iowritel(data, (void *)MAC_TQPM1R_OFFSET);\
+	iowrite32(data, (void *)MAC_TQPM1R_OFFSET);\
 } while (0)
 
 #define MAC_TQPM1R_RD(data) do {\
-	(data) = ioreadl((void *)MAC_TQPM1R_OFFSET);\
+	(data) = ioread32((void *)MAC_TQPM1R_OFFSET);\
 } while (0)
 
 
@@ -26433,11 +26432,11 @@ extern ULONG eqos_base_addr;
 #define MAC_TQPM0R_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x98))
 
 #define MAC_TQPM0R_WR(data) do {\
-	iowritel(data, (void *)MAC_TQPM0R_OFFSET);\
+	iowrite32(data, (void *)MAC_TQPM0R_OFFSET);\
 } while (0)
 
 #define MAC_TQPM0R_RD(data) do {\
-	(data) = ioreadl((void *)MAC_TQPM0R_OFFSET);\
+	(data) = ioread32((void *)MAC_TQPM0R_OFFSET);\
 } while (0)
 
 
@@ -26519,11 +26518,11 @@ extern ULONG eqos_base_addr;
 #define MAC_RFCR_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x90))
 
 #define MAC_RFCR_WR(data) do {\
-	iowritel(data, (void *)MAC_RFCR_OFFSET);\
+	iowrite32(data, (void *)MAC_RFCR_OFFSET);\
 } while (0)
 
 #define MAC_RFCR_RD(data) do {\
-	(data) = ioreadl((void *)MAC_RFCR_OFFSET);\
+	(data) = ioread32((void *)MAC_RFCR_OFFSET);\
 } while (0)
 
 
@@ -26610,11 +26609,11 @@ extern ULONG eqos_base_addr;
 #define MAC_QTFCR7_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x8c))
 
 #define MAC_QTFCR7_WR(data) do {\
-	iowritel(data, (void *)MAC_QTFCR7_OFFSET);\
+	iowrite32(data, (void *)MAC_QTFCR7_OFFSET);\
 } while (0)
 
 #define MAC_QTFCR7_RD(data) do {\
-	(data) = ioreadl((void *)MAC_QTFCR7_OFFSET);\
+	(data) = ioread32((void *)MAC_QTFCR7_OFFSET);\
 } while (0)
 
 
@@ -26747,11 +26746,11 @@ extern ULONG eqos_base_addr;
 #define MAC_QTFCR6_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x88))
 
 #define MAC_QTFCR6_WR(data) do {\
-	iowritel(data, (void *)MAC_QTFCR6_OFFSET);\
+	iowrite32(data, (void *)MAC_QTFCR6_OFFSET);\
 } while (0)
 
 #define MAC_QTFCR6_RD(data) do {\
-	(data) = ioreadl((void *)MAC_QTFCR6_OFFSET);\
+	(data) = ioread32((void *)MAC_QTFCR6_OFFSET);\
 } while (0)
 
 
@@ -26884,11 +26883,11 @@ extern ULONG eqos_base_addr;
 #define MAC_QTFCR5_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x84))
 
 #define MAC_QTFCR5_WR(data) do {\
-	iowritel(data, (void *)MAC_QTFCR5_OFFSET);\
+	iowrite32(data, (void *)MAC_QTFCR5_OFFSET);\
 } while (0)
 
 #define MAC_QTFCR5_RD(data) do {\
-	(data) = ioreadl((void *)MAC_QTFCR5_OFFSET);\
+	(data) = ioread32((void *)MAC_QTFCR5_OFFSET);\
 } while (0)
 
 
@@ -27021,11 +27020,11 @@ extern ULONG eqos_base_addr;
 #define MAC_QTFCR4_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x80))
 
 #define MAC_QTFCR4_WR(data) do {\
-	iowritel(data, (void *)MAC_QTFCR4_OFFSET);\
+	iowrite32(data, (void *)MAC_QTFCR4_OFFSET);\
 } while (0)
 
 #define MAC_QTFCR4_RD(data) do {\
-	(data) = ioreadl((void *)MAC_QTFCR4_OFFSET);\
+	(data) = ioread32((void *)MAC_QTFCR4_OFFSET);\
 } while (0)
 
 
@@ -27158,11 +27157,11 @@ extern ULONG eqos_base_addr;
 #define MAC_QTFCR3_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x7c))
 
 #define MAC_QTFCR3_WR(data) do {\
-	iowritel(data, (void *)MAC_QTFCR3_OFFSET);\
+	iowrite32(data, (void *)MAC_QTFCR3_OFFSET);\
 } while (0)
 
 #define MAC_QTFCR3_RD(data) do {\
-	(data) = ioreadl((void *)MAC_QTFCR3_OFFSET);\
+	(data) = ioread32((void *)MAC_QTFCR3_OFFSET);\
 } while (0)
 
 
@@ -27295,11 +27294,11 @@ extern ULONG eqos_base_addr;
 #define MAC_QTFCR2_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x78))
 
 #define MAC_QTFCR2_WR(data) do {\
-	iowritel(data, (void *)MAC_QTFCR2_OFFSET);\
+	iowrite32(data, (void *)MAC_QTFCR2_OFFSET);\
 } while (0)
 
 #define MAC_QTFCR2_RD(data) do {\
-	(data) = ioreadl((void *)MAC_QTFCR2_OFFSET);\
+	(data) = ioread32((void *)MAC_QTFCR2_OFFSET);\
 } while (0)
 
 
@@ -27432,11 +27431,11 @@ extern ULONG eqos_base_addr;
 #define MAC_QTFCR1_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x74))
 
 #define MAC_QTFCR1_WR(data) do {\
-	iowritel(data, (void *)MAC_QTFCR1_OFFSET);\
+	iowrite32(data, (void *)MAC_QTFCR1_OFFSET);\
 } while (0)
 
 #define MAC_QTFCR1_RD(data) do {\
-	(data) = ioreadl((void *)MAC_QTFCR1_OFFSET);\
+	(data) = ioread32((void *)MAC_QTFCR1_OFFSET);\
 } while (0)
 
 
@@ -27569,11 +27568,11 @@ extern ULONG eqos_base_addr;
 #define MAC_Q0TFCR_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x70))
 
 #define MAC_Q0TFCR_WR(data) do {\
-	iowritel(data, (void *)MAC_Q0TFCR_OFFSET);\
+	iowrite32(data, (void *)MAC_Q0TFCR_OFFSET);\
 } while (0)
 
 #define MAC_Q0TFCR_RD(data) do {\
-	(data) = ioreadl((void *)MAC_Q0TFCR_OFFSET);\
+	(data) = ioread32((void *)MAC_Q0TFCR_OFFSET);\
 } while (0)
 
 
@@ -27706,11 +27705,11 @@ extern ULONG eqos_base_addr;
 #define DMA_AXI4CR7_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x14e4))
 
 #define DMA_AXI4CR7_WR(data) do {\
-	iowritel(data, (void *)DMA_AXI4CR7_OFFSET);\
+	iowrite32(data, (void *)DMA_AXI4CR7_OFFSET);\
 } while (0)
 
 #define DMA_AXI4CR7_RD(data) do {\
-	(data) = ioreadl((void *)DMA_AXI4CR7_OFFSET);\
+	(data) = ioread32((void *)DMA_AXI4CR7_OFFSET);\
 } while (0)
 
 
@@ -27774,11 +27773,11 @@ extern ULONG eqos_base_addr;
 #define DMA_AXI4CR6_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x1464))
 
 #define DMA_AXI4CR6_WR(data) do {\
-	iowritel(data, (void *)DMA_AXI4CR6_OFFSET);\
+	iowrite32(data, (void *)DMA_AXI4CR6_OFFSET);\
 } while (0)
 
 #define DMA_AXI4CR6_RD(data) do {\
-	(data) = ioreadl((void *)DMA_AXI4CR6_OFFSET);\
+	(data) = ioread32((void *)DMA_AXI4CR6_OFFSET);\
 } while (0)
 
 
@@ -27842,11 +27841,11 @@ extern ULONG eqos_base_addr;
 #define DMA_AXI4CR5_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x13e4))
 
 #define DMA_AXI4CR5_WR(data) do {\
-	iowritel(data, (void *)DMA_AXI4CR5_OFFSET);\
+	iowrite32(data, (void *)DMA_AXI4CR5_OFFSET);\
 } while (0)
 
 #define DMA_AXI4CR5_RD(data) do {\
-	(data) = ioreadl((void *)DMA_AXI4CR5_OFFSET);\
+	(data) = ioread32((void *)DMA_AXI4CR5_OFFSET);\
 } while (0)
 
 
@@ -27910,11 +27909,11 @@ extern ULONG eqos_base_addr;
 #define DMA_AXI4CR4_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x1364))
 
 #define DMA_AXI4CR4_WR(data) do {\
-	iowritel(data, (void *)DMA_AXI4CR4_OFFSET);\
+	iowrite32(data, (void *)DMA_AXI4CR4_OFFSET);\
 } while (0)
 
 #define DMA_AXI4CR4_RD(data) do {\
-	(data) = ioreadl((void *)DMA_AXI4CR4_OFFSET);\
+	(data) = ioread32((void *)DMA_AXI4CR4_OFFSET);\
 } while (0)
 
 
@@ -27978,11 +27977,11 @@ extern ULONG eqos_base_addr;
 #define DMA_AXI4CR3_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x12e4))
 
 #define DMA_AXI4CR3_WR(data) do {\
-	iowritel(data, (void *)DMA_AXI4CR3_OFFSET);\
+	iowrite32(data, (void *)DMA_AXI4CR3_OFFSET);\
 } while (0)
 
 #define DMA_AXI4CR3_RD(data) do {\
-	(data) = ioreadl((void *)DMA_AXI4CR3_OFFSET);\
+	(data) = ioread32((void *)DMA_AXI4CR3_OFFSET);\
 } while (0)
 
 
@@ -28046,11 +28045,11 @@ extern ULONG eqos_base_addr;
 #define DMA_AXI4CR2_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x1264))
 
 #define DMA_AXI4CR2_WR(data) do {\
-	iowritel(data, (void *)DMA_AXI4CR2_OFFSET);\
+	iowrite32(data, (void *)DMA_AXI4CR2_OFFSET);\
 } while (0)
 
 #define DMA_AXI4CR2_RD(data) do {\
-	(data) = ioreadl((void *)DMA_AXI4CR2_OFFSET);\
+	(data) = ioread32((void *)DMA_AXI4CR2_OFFSET);\
 } while (0)
 
 
@@ -28114,11 +28113,11 @@ extern ULONG eqos_base_addr;
 #define DMA_AXI4CR1_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x11e4))
 
 #define DMA_AXI4CR1_WR(data) do {\
-	iowritel(data, (void *)DMA_AXI4CR1_OFFSET);\
+	iowrite32(data, (void *)DMA_AXI4CR1_OFFSET);\
 } while (0)
 
 #define DMA_AXI4CR1_RD(data) do {\
-	(data) = ioreadl((void *)DMA_AXI4CR1_OFFSET);\
+	(data) = ioread32((void *)DMA_AXI4CR1_OFFSET);\
 } while (0)
 
 
@@ -28182,11 +28181,11 @@ extern ULONG eqos_base_addr;
 #define DMA_AXI4CR0_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x1164))
 
 #define DMA_AXI4CR0_WR(data) do {\
-	iowritel(data, (void *)DMA_AXI4CR0_OFFSET);\
+	iowrite32(data, (void *)DMA_AXI4CR0_OFFSET);\
 } while (0)
 
 #define DMA_AXI4CR0_RD(data) do {\
-	(data) = ioreadl((void *)DMA_AXI4CR0_OFFSET);\
+	(data) = ioread32((void *)DMA_AXI4CR0_OFFSET);\
 } while (0)
 
 
@@ -28250,11 +28249,11 @@ extern ULONG eqos_base_addr;
 #define DMA_RCR7_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x1488))
 
 #define DMA_RCR7_WR(data) do {\
-	iowritel(data, (void *)DMA_RCR7_OFFSET);\
+	iowrite32(data, (void *)DMA_RCR7_OFFSET);\
 } while (0)
 
 #define DMA_RCR7_RD(data) do {\
-	(data) = ioreadl((void *)DMA_RCR7_OFFSET);\
+	(data) = ioread32((void *)DMA_RCR7_OFFSET);\
 } while (0)
 
 
@@ -28428,11 +28427,11 @@ extern ULONG eqos_base_addr;
 #define DMA_RCR6_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x1408))
 
 #define DMA_RCR6_WR(data) do {\
-	iowritel(data, (void *)DMA_RCR6_OFFSET);\
+	iowrite32(data, (void *)DMA_RCR6_OFFSET);\
 } while (0)
 
 #define DMA_RCR6_RD(data) do {\
-	(data) = ioreadl((void *)DMA_RCR6_OFFSET);\
+	(data) = ioread32((void *)DMA_RCR6_OFFSET);\
 } while (0)
 
 
@@ -28606,11 +28605,11 @@ extern ULONG eqos_base_addr;
 #define DMA_RCR5_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x1388))
 
 #define DMA_RCR5_WR(data) do {\
-	iowritel(data, (void *)DMA_RCR5_OFFSET);\
+	iowrite32(data, (void *)DMA_RCR5_OFFSET);\
 } while (0)
 
 #define DMA_RCR5_RD(data) do {\
-	(data) = ioreadl((void *)DMA_RCR5_OFFSET);\
+	(data) = ioread32((void *)DMA_RCR5_OFFSET);\
 } while (0)
 
 
@@ -28784,11 +28783,11 @@ extern ULONG eqos_base_addr;
 #define DMA_RCR4_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x1308))
 
 #define DMA_RCR4_WR(data) do {\
-	iowritel(data, (void *)DMA_RCR4_OFFSET);\
+	iowrite32(data, (void *)DMA_RCR4_OFFSET);\
 } while (0)
 
 #define DMA_RCR4_RD(data) do {\
-	(data) = ioreadl((void *)DMA_RCR4_OFFSET);\
+	(data) = ioread32((void *)DMA_RCR4_OFFSET);\
 } while (0)
 
 
@@ -28962,11 +28961,11 @@ extern ULONG eqos_base_addr;
 #define DMA_RCR3_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x1288))
 
 #define DMA_RCR3_WR(data) do {\
-	iowritel(data, (void *)DMA_RCR3_OFFSET);\
+	iowrite32(data, (void *)DMA_RCR3_OFFSET);\
 } while (0)
 
 #define DMA_RCR3_RD(data) do {\
-	(data) = ioreadl((void *)DMA_RCR3_OFFSET);\
+	(data) = ioread32((void *)DMA_RCR3_OFFSET);\
 } while (0)
 
 
@@ -29140,11 +29139,11 @@ extern ULONG eqos_base_addr;
 #define DMA_RCR2_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x1208))
 
 #define DMA_RCR2_WR(data) do {\
-	iowritel(data, (void *)DMA_RCR2_OFFSET);\
+	iowrite32(data, (void *)DMA_RCR2_OFFSET);\
 } while (0)
 
 #define DMA_RCR2_RD(data) do {\
-	(data) = ioreadl((void *)DMA_RCR2_OFFSET);\
+	(data) = ioread32((void *)DMA_RCR2_OFFSET);\
 } while (0)
 
 
@@ -29318,11 +29317,11 @@ extern ULONG eqos_base_addr;
 #define DMA_RCR1_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x1188))
 
 #define DMA_RCR1_WR(data) do {\
-	iowritel(data, (void *)DMA_RCR1_OFFSET);\
+	iowrite32(data, (void *)DMA_RCR1_OFFSET);\
 } while (0)
 
 #define DMA_RCR1_RD(data) do {\
-	(data) = ioreadl((void *)DMA_RCR1_OFFSET);\
+	(data) = ioread32((void *)DMA_RCR1_OFFSET);\
 } while (0)
 
 
@@ -29496,11 +29495,11 @@ extern ULONG eqos_base_addr;
 #define DMA_RCR0_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x1108))
 
 #define DMA_RCR0_WR(data) do {\
-	iowritel(data, (void *)DMA_RCR0_OFFSET);\
+	iowrite32(data, (void *)DMA_RCR0_OFFSET);\
 } while (0)
 
 #define DMA_RCR0_RD(data) do {\
-	(data) = ioreadl((void *)DMA_RCR0_OFFSET);\
+	(data) = ioread32((void *)DMA_RCR0_OFFSET);\
 } while (0)
 
 
@@ -29674,11 +29673,11 @@ extern ULONG eqos_base_addr;
 #define DMA_TCR7_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x1484))
 
 #define DMA_TCR7_WR(data) do {\
-	iowritel(data, (void *)DMA_TCR7_OFFSET);\
+	iowrite32(data, (void *)DMA_TCR7_OFFSET);\
 } while (0)
 
 #define DMA_TCR7_RD(data) do {\
-	(data) = ioreadl((void *)DMA_TCR7_OFFSET);\
+	(data) = ioread32((void *)DMA_TCR7_OFFSET);\
 } while (0)
 
 
@@ -29827,11 +29826,11 @@ extern ULONG eqos_base_addr;
 #define DMA_TCR6_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x1404))
 
 #define DMA_TCR6_WR(data) do {\
-	iowritel(data, (void *)DMA_TCR6_OFFSET);\
+	iowrite32(data, (void *)DMA_TCR6_OFFSET);\
 } while (0)
 
 #define DMA_TCR6_RD(data) do {\
-	(data) = ioreadl((void *)DMA_TCR6_OFFSET);\
+	(data) = ioread32((void *)DMA_TCR6_OFFSET);\
 } while (0)
 
 
@@ -29980,11 +29979,11 @@ extern ULONG eqos_base_addr;
 #define DMA_TCR5_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x1384))
 
 #define DMA_TCR5_WR(data) do {\
-	iowritel(data, (void *)DMA_TCR5_OFFSET);\
+	iowrite32(data, (void *)DMA_TCR5_OFFSET);\
 } while (0)
 
 #define DMA_TCR5_RD(data) do {\
-	(data) = ioreadl((void *)DMA_TCR5_OFFSET);\
+	(data) = ioread32((void *)DMA_TCR5_OFFSET);\
 } while (0)
 
 
@@ -30133,11 +30132,11 @@ extern ULONG eqos_base_addr;
 #define DMA_TCR4_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x1304))
 
 #define DMA_TCR4_WR(data) do {\
-	iowritel(data, (void *)DMA_TCR4_OFFSET);\
+	iowrite32(data, (void *)DMA_TCR4_OFFSET);\
 } while (0)
 
 #define DMA_TCR4_RD(data) do {\
-	(data) = ioreadl((void *)DMA_TCR4_OFFSET);\
+	(data) = ioread32((void *)DMA_TCR4_OFFSET);\
 } while (0)
 
 
@@ -30286,11 +30285,11 @@ extern ULONG eqos_base_addr;
 #define DMA_TCR3_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x1284))
 
 #define DMA_TCR3_WR(data) do {\
-	iowritel(data, (void *)DMA_TCR3_OFFSET);\
+	iowrite32(data, (void *)DMA_TCR3_OFFSET);\
 } while (0)
 
 #define DMA_TCR3_RD(data) do {\
-	(data) = ioreadl((void *)DMA_TCR3_OFFSET);\
+	(data) = ioread32((void *)DMA_TCR3_OFFSET);\
 } while (0)
 
 
@@ -30439,11 +30438,11 @@ extern ULONG eqos_base_addr;
 #define DMA_TCR2_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x1204))
 
 #define DMA_TCR2_WR(data) do {\
-	iowritel(data, (void *)DMA_TCR2_OFFSET);\
+	iowrite32(data, (void *)DMA_TCR2_OFFSET);\
 } while (0)
 
 #define DMA_TCR2_RD(data) do {\
-	(data) = ioreadl((void *)DMA_TCR2_OFFSET);\
+	(data) = ioread32((void *)DMA_TCR2_OFFSET);\
 } while (0)
 
 
@@ -30592,11 +30591,11 @@ extern ULONG eqos_base_addr;
 #define DMA_TCR1_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x1184))
 
 #define DMA_TCR1_WR(data) do {\
-	iowritel(data, (void *)DMA_TCR1_OFFSET);\
+	iowrite32(data, (void *)DMA_TCR1_OFFSET);\
 } while (0)
 
 #define DMA_TCR1_RD(data) do {\
-	(data) = ioreadl((void *)DMA_TCR1_OFFSET);\
+	(data) = ioread32((void *)DMA_TCR1_OFFSET);\
 } while (0)
 
 
@@ -30745,11 +30744,11 @@ extern ULONG eqos_base_addr;
 #define DMA_TCR0_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x1104))
 
 #define DMA_TCR0_WR(data) do {\
-	iowritel(data, (void *)DMA_TCR0_OFFSET);\
+	iowrite32(data, (void *)DMA_TCR0_OFFSET);\
 } while (0)
 
 #define DMA_TCR0_RD(data) do {\
-	(data) = ioreadl((void *)DMA_TCR0_OFFSET);\
+	(data) = ioread32((void *)DMA_TCR0_OFFSET);\
 } while (0)
 
 
@@ -30898,11 +30897,11 @@ extern ULONG eqos_base_addr;
 #define DMA_CR7_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x1480))
 
 #define DMA_CR7_WR(data) do {\
-	iowritel(data, (void *)DMA_CR7_OFFSET);\
+	iowrite32(data, (void *)DMA_CR7_OFFSET);\
 } while (0)
 
 #define DMA_CR7_RD(data) do {\
-	(data) = ioreadl((void *)DMA_CR7_OFFSET);\
+	(data) = ioread32((void *)DMA_CR7_OFFSET);\
 } while (0)
 
 
@@ -31058,11 +31057,11 @@ extern ULONG eqos_base_addr;
 #define DMA_CR6_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x1400))
 
 #define DMA_CR6_WR(data) do {\
-	iowritel(data, (void *)DMA_CR6_OFFSET);\
+	iowrite32(data, (void *)DMA_CR6_OFFSET);\
 } while (0)
 
 #define DMA_CR6_RD(data) do {\
-	(data) = ioreadl((void *)DMA_CR6_OFFSET);\
+	(data) = ioread32((void *)DMA_CR6_OFFSET);\
 } while (0)
 
 
@@ -31218,11 +31217,11 @@ extern ULONG eqos_base_addr;
 #define DMA_CR5_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x1380))
 
 #define DMA_CR5_WR(data) do {\
-	iowritel(data, (void *)DMA_CR5_OFFSET);\
+	iowrite32(data, (void *)DMA_CR5_OFFSET);\
 } while (0)
 
 #define DMA_CR5_RD(data) do {\
-	(data) = ioreadl((void *)DMA_CR5_OFFSET);\
+	(data) = ioread32((void *)DMA_CR5_OFFSET);\
 } while (0)
 
 
@@ -31378,11 +31377,11 @@ extern ULONG eqos_base_addr;
 #define DMA_CR4_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x1300))
 
 #define DMA_CR4_WR(data) do {\
-	iowritel(data, (void *)DMA_CR4_OFFSET);\
+	iowrite32(data, (void *)DMA_CR4_OFFSET);\
 } while (0)
 
 #define DMA_CR4_RD(data) do {\
-	(data) = ioreadl((void *)DMA_CR4_OFFSET);\
+	(data) = ioread32((void *)DMA_CR4_OFFSET);\
 } while (0)
 
 
@@ -31538,11 +31537,11 @@ extern ULONG eqos_base_addr;
 #define DMA_CR3_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x1280))
 
 #define DMA_CR3_WR(data) do {\
-	iowritel(data, (void *)DMA_CR3_OFFSET);\
+	iowrite32(data, (void *)DMA_CR3_OFFSET);\
 } while (0)
 
 #define DMA_CR3_RD(data) do {\
-	(data) = ioreadl((void *)DMA_CR3_OFFSET);\
+	(data) = ioread32((void *)DMA_CR3_OFFSET);\
 } while (0)
 
 
@@ -31698,11 +31697,11 @@ extern ULONG eqos_base_addr;
 #define DMA_CR2_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x1200))
 
 #define DMA_CR2_WR(data) do {\
-	iowritel(data, (void *)DMA_CR2_OFFSET);\
+	iowrite32(data, (void *)DMA_CR2_OFFSET);\
 } while (0)
 
 #define DMA_CR2_RD(data) do {\
-	(data) = ioreadl((void *)DMA_CR2_OFFSET);\
+	(data) = ioread32((void *)DMA_CR2_OFFSET);\
 } while (0)
 
 
@@ -31858,11 +31857,11 @@ extern ULONG eqos_base_addr;
 #define DMA_CR1_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x1180))
 
 #define DMA_CR1_WR(data) do {\
-	iowritel(data, (void *)DMA_CR1_OFFSET);\
+	iowrite32(data, (void *)DMA_CR1_OFFSET);\
 } while (0)
 
 #define DMA_CR1_RD(data) do {\
-	(data) = ioreadl((void *)DMA_CR1_OFFSET);\
+	(data) = ioread32((void *)DMA_CR1_OFFSET);\
 } while (0)
 
 
@@ -32018,11 +32017,11 @@ extern ULONG eqos_base_addr;
 #define DMA_CR0_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x1100))
 
 #define DMA_CR0_WR(data) do {\
-	iowritel(data, (void *)DMA_CR0_OFFSET);\
+	iowrite32(data, (void *)DMA_CR0_OFFSET);\
 } while (0)
 
 #define DMA_CR0_RD(data) do {\
-	(data) = ioreadl((void *)DMA_CR0_OFFSET);\
+	(data) = ioread32((void *)DMA_CR0_OFFSET);\
 } while (0)
 
 
@@ -32178,11 +32177,11 @@ extern ULONG eqos_base_addr;
 #define MAC_WTR_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0xc))
 
 #define MAC_WTR_WR(data) do {\
-	iowritel(data, (void *)MAC_WTR_OFFSET);\
+	iowrite32(data, (void *)MAC_WTR_OFFSET);\
 } while (0)
 
 #define MAC_WTR_RD(data) do {\
-	(data) = ioreadl((void *)MAC_WTR_OFFSET);\
+	(data) = ioread32((void *)MAC_WTR_OFFSET);\
 } while (0)
 
 
@@ -32246,11 +32245,11 @@ extern ULONG eqos_base_addr;
 #define MAC_MPFR_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x8))
 
 #define MAC_MPFR_WR(data) do {\
-	iowritel(data, (void *)MAC_MPFR_OFFSET);\
+	iowrite32(data, (void *)MAC_MPFR_OFFSET);\
 } while (0)
 
 #define MAC_MPFR_RD(data) do {\
-	(data) = ioreadl((void *)MAC_MPFR_OFFSET);\
+	(data) = ioread32((void *)MAC_MPFR_OFFSET);\
 } while (0)
 
 
@@ -32624,11 +32623,11 @@ extern ULONG eqos_base_addr;
 #define MAC_MECR_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0x4))
 
 #define MAC_MECR_WR(data) do {\
-	iowritel(data, (void *)MAC_MECR_OFFSET);\
+	iowrite32(data, (void *)MAC_MECR_OFFSET);\
 } while (0)
 
 #define MAC_MECR_RD(data) do {\
-	(data) = ioreadl((void *)MAC_MECR_OFFSET);\
+	(data) = ioread32((void *)MAC_MECR_OFFSET);\
 } while (0)
 
 
@@ -32777,11 +32776,11 @@ extern ULONG eqos_base_addr;
 #define MAC_MCR_OFFSET ((volatile ULONG *)(BASE_ADDRESS + 0))
 
 #define MAC_MCR_WR(data) do {\
-	iowritel(data, (void *)MAC_MCR_OFFSET);\
+	iowrite32(data, (void *)MAC_MCR_OFFSET);\
 } while (0)
 
 #define MAC_MCR_RD(data) do {\
-	(data) = ioreadl((void *)MAC_MCR_OFFSET);\
+	(data) = ioread32((void *)MAC_MCR_OFFSET);\
 } while (0)
 
 
@@ -33320,11 +33319,11 @@ extern ULONG eqos_base_addr;
 #define MAC_MA32_127LR_OFFSET_Q(i) ((volatile ULONG *)(MAC_MA32_127LR_OFFSET + ((i-32)*8)))
 
 #define MAC_MA32_127LR_WR(i, data) do {\
-	iowritel(data, (void *)MAC_MA32_127LR_OFFSET_Q(i));\
+	iowrite32(data, (void *)MAC_MA32_127LR_OFFSET_Q(i));\
 } while (0)
 
 #define MAC_MA32_127LR_RD(i, data) do {\
-	(data) = ioreadl((void *)MAC_MA32_127LR_OFFSET_Q(i));\
+	(data) = ioread32((void *)MAC_MA32_127LR_OFFSET_Q(i));\
 } while (0)
 
 #define MAC_MA32_127LR_ADDRLO_WR(i, data) do {\
@@ -33340,11 +33339,11 @@ extern ULONG eqos_base_addr;
 #define MAC_MA32_127HR_OFFSET_Q(i) ((volatile ULONG *)(MAC_MA32_127HR_OFFSET + ((i-32)*8)))
 
 #define MAC_MA32_127HR_WR(i, data) do {\
-	iowritel(data, (void *)MAC_MA32_127HR_OFFSET_Q(i));\
+	iowrite32(data, (void *)MAC_MA32_127HR_OFFSET_Q(i));\
 } while (0)
 
 #define MAC_MA32_127HR_RD(i, data) do {\
-	(data) = ioreadl((void *)MAC_MA32_127HR_OFFSET_Q(i));\
+	(data) = ioread32((void *)MAC_MA32_127HR_OFFSET_Q(i));\
 } while (0)
 
 
@@ -33413,11 +33412,11 @@ extern ULONG eqos_base_addr;
 #define MAC_MA1_31LR_OFFSET_Q(i) ((volatile ULONG *)(MAC_MA1_31LR_OFFSET + ((i-1)*8)))
 
 #define MAC_MA1_31LR_WR(i, data) do {\
-	iowritel(data, (void *)MAC_MA1_31LR_OFFSET_Q(i));\
+	iowrite32(data, (void *)MAC_MA1_31LR_OFFSET_Q(i));\
 } while (0)
 
 #define MAC_MA1_31LR_RD(i, data) do {\
-	(data) = ioreadl((void *)MAC_MA1_31LR_OFFSET_Q(i));\
+	(data) = ioread32((void *)MAC_MA1_31LR_OFFSET_Q(i));\
 } while (0)
 
 #define MAC_MA1_31LR_ADDRLO_WR(i, data) do {\
@@ -33433,11 +33432,11 @@ extern ULONG eqos_base_addr;
 #define MAC_MA1_31HR_OFFSET_Q(i) ((volatile ULONG *)(MAC_MA1_31HR_OFFSET + ((i-1)*8)))
 
 #define MAC_MA1_31HR_WR(i, data) do {\
-	iowritel(data, (void *)MAC_MA1_31HR_OFFSET_Q(i));\
+	iowrite32(data, (void *)MAC_MA1_31HR_OFFSET_Q(i));\
 } while (0)
 
 #define MAC_MA1_31HR_RD(i, data) do {\
-	(data) = ioreadl((void *)MAC_MA1_31HR_OFFSET_Q(i));\
+	(data) = ioread32((void *)MAC_MA1_31HR_OFFSET_Q(i));\
 } while (0)
 
 
@@ -33548,11 +33547,11 @@ extern ULONG eqos_base_addr;
 #define MAC_L3A3R_OFFSET_Q(i) ((volatile ULONG *)(MAC_L3A3R_OFFSET + ((i-0)*48)))
 
 #define MAC_L3A3R_WR(i, data) do {\
-	iowritel(data, (void *)MAC_L3A3R_OFFSET_Q(i));\
+	iowrite32(data, (void *)MAC_L3A3R_OFFSET_Q(i));\
 } while (0)
 
 #define MAC_L3A3R_RD(i, data) do {\
-	(data) = ioreadl((void *)MAC_L3A3R_OFFSET_Q(i));\
+	(data) = ioread32((void *)MAC_L3A3R_OFFSET_Q(i));\
 } while (0)
 
 #define MAC_L3A3R_L3A30_WR(i, data) do {\
@@ -33568,11 +33567,11 @@ extern ULONG eqos_base_addr;
 #define MAC_L3A2R_OFFSET_Q(i) ((volatile ULONG *)(MAC_L3A2R_OFFSET + ((i-0)*48)))
 
 #define MAC_L3A2R_WR(i, data) do {\
-	iowritel(data, (void *)MAC_L3A2R_OFFSET_Q(i));\
+	iowrite32(data, (void *)MAC_L3A2R_OFFSET_Q(i));\
 } while (0)
 
 #define MAC_L3A2R_RD(i, data) do {\
-	(data) = ioreadl((void *)MAC_L3A2R_OFFSET_Q(i));\
+	(data) = ioread32((void *)MAC_L3A2R_OFFSET_Q(i));\
 } while (0)
 
 #define MAC_L3A2R_L3A20_WR(i, data) do {\
@@ -33588,11 +33587,11 @@ extern ULONG eqos_base_addr;
 #define MAC_L3A1R_OFFSET_Q(i) ((volatile ULONG *)(MAC_L3A1R_OFFSET + ((i-0)*48)))
 
 #define MAC_L3A1R_WR(i, data) do {\
-	iowritel(data, (void *)MAC_L3A1R_OFFSET_Q(i));\
+	iowrite32(data, (void *)MAC_L3A1R_OFFSET_Q(i));\
 } while (0)
 
 #define MAC_L3A1R_RD(i, data) do {\
-	(data) = ioreadl((void *)MAC_L3A1R_OFFSET_Q(i));\
+	(data) = ioread32((void *)MAC_L3A1R_OFFSET_Q(i));\
 } while (0)
 
 #define MAC_L3A1R_L3A10_WR(i, data) do {\
@@ -33608,11 +33607,11 @@ extern ULONG eqos_base_addr;
 #define MAC_L3A0R_OFFSET_Q(i) ((volatile ULONG *)(MAC_L3A0R_OFFSET + ((i-0)*48)))
 
 #define MAC_L3A0R_WR(i, data) do {\
-	iowritel(data, (void *)MAC_L3A0R_OFFSET_Q(i));\
+	iowrite32(data, (void *)MAC_L3A0R_OFFSET_Q(i));\
 } while (0)
 
 #define MAC_L3A0R_RD(i, data) do {\
-	(data) = ioreadl((void *)MAC_L3A0R_OFFSET_Q(i));\
+	(data) = ioread32((void *)MAC_L3A0R_OFFSET_Q(i));\
 } while (0)
 
 #define MAC_L3A0R_L3A00_WR(i, data) do {\
@@ -33628,11 +33627,11 @@ extern ULONG eqos_base_addr;
 #define MAC_L4AR_OFFSET_Q(i) ((volatile ULONG *)(MAC_L4AR_OFFSET + ((i-0)*48)))
 
 #define MAC_L4AR_WR(i, data) do {\
-	iowritel(data, (void *)MAC_L4AR_OFFSET_Q(i));\
+	iowrite32(data, (void *)MAC_L4AR_OFFSET_Q(i));\
 } while (0)
 
 #define MAC_L4AR_RD(i, data) do {\
-	(data) = ioreadl((void *)MAC_L4AR_OFFSET_Q(i));\
+	(data) = ioread32((void *)MAC_L4AR_OFFSET_Q(i));\
 } while (0)
 
 
@@ -33678,11 +33677,11 @@ extern ULONG eqos_base_addr;
 #define MAC_L3L4CR_OFFSET_Q(i) ((volatile ULONG *)(MAC_L3L4CR_OFFSET + ((i-0)*48)))
 
 #define MAC_L3L4CR_WR(i, data) do {\
-	iowritel(data, (void *)MAC_L3L4CR_OFFSET_Q(i));\
+	iowrite32(data, (void *)MAC_L3L4CR_OFFSET_Q(i));\
 } while (0)
 
 #define MAC_L3L4CR_RD(i, data) do {\
-	(data) = ioreadl((void *)MAC_L3L4CR_OFFSET_Q(i));\
+	(data) = ioread32((void *)MAC_L3L4CR_OFFSET_Q(i));\
 } while (0)
 
 
@@ -34008,11 +34007,11 @@ extern ULONG eqos_base_addr;
 #define MAC_PPS_WIDTH_OFFSET_Q(i) ((volatile ULONG *)(MAC_PPS_WIDTH_OFFSET + ((i-0)*16)))
 
 #define MAC_PPS_WIDTH_WR(i, data) do {\
-	iowritel(data, (void *)MAC_PPS_WIDTH_OFFSET_Q(i));\
+	iowrite32(data, (void *)MAC_PPS_WIDTH_OFFSET_Q(i));\
 } while (0)
 
 #define MAC_PPS_WIDTH_RD(i, data) do {\
-	(data) = ioreadl((void *)MAC_PPS_WIDTH_OFFSET_Q(i));\
+	(data) = ioread32((void *)MAC_PPS_WIDTH_OFFSET_Q(i));\
 } while (0)
 
 #define MAC_PPS_WIDTH_PPSWIDTH0_WR(i, data) do {\
@@ -34028,11 +34027,11 @@ extern ULONG eqos_base_addr;
 #define MAC_PPS_INTVAL_OFFSET_Q(i) ((volatile ULONG *)(MAC_PPS_INTVAL_OFFSET + ((i-0)*16)))
 
 #define MAC_PPS_INTVAL_WR(i, data) do {\
-	iowritel(data, (void *)MAC_PPS_INTVAL_OFFSET_Q(i));\
+	iowrite32(data, (void *)MAC_PPS_INTVAL_OFFSET_Q(i));\
 } while (0)
 
 #define MAC_PPS_INTVAL_RD(i, data) do {\
-	(data) = ioreadl((void *)MAC_PPS_INTVAL_OFFSET_Q(i));\
+	(data) = ioread32((void *)MAC_PPS_INTVAL_OFFSET_Q(i));\
 } while (0)
 
 #define MAC_PPS_INTVAL_PPSINT0_WR(i, data) do {\
@@ -34048,11 +34047,11 @@ extern ULONG eqos_base_addr;
 #define MAC_PPS_TTNS_OFFSET_Q(i) ((volatile ULONG *)(MAC_PPS_TTNS_OFFSET + ((i-0)*16)))
 
 #define MAC_PPS_TTNS_WR(i, data) do {\
-	iowritel(data, (void *)MAC_PPS_TTNS_OFFSET_Q(i));\
+	iowrite32(data, (void *)MAC_PPS_TTNS_OFFSET_Q(i));\
 } while (0)
 
 #define MAC_PPS_TTNS_RD(i, data) do {\
-	(data) = ioreadl((void *)MAC_PPS_TTNS_OFFSET_Q(i));\
+	(data) = ioread32((void *)MAC_PPS_TTNS_OFFSET_Q(i));\
 } while (0)
 
 
@@ -34098,11 +34097,11 @@ extern ULONG eqos_base_addr;
 #define MAC_PPS_TTS_OFFSET_Q(i) ((volatile ULONG *)(MAC_PPS_TTS_OFFSET + ((i-0)*16)))
 
 #define MAC_PPS_TTS_WR(i, data) do {\
-	iowritel(data, (void *)MAC_PPS_TTS_OFFSET_Q(i));\
+	iowrite32(data, (void *)MAC_PPS_TTS_OFFSET_Q(i));\
 } while (0)
 
 #define MAC_PPS_TTS_RD(i, data) do {\
-	(data) = ioreadl((void *)MAC_PPS_TTS_OFFSET_Q(i));\
+	(data) = ioread32((void *)MAC_PPS_TTS_OFFSET_Q(i));\
 } while (0)
 
 #define MAC_PPS_TTS_TSTRH0_WR(i, data) do {\
@@ -34118,11 +34117,11 @@ extern ULONG eqos_base_addr;
 #define MTL_QRCR_OFFSET_Q(i) ((volatile ULONG *)(MTL_QRCR_OFFSET + ((i-0)*64)))
 
 #define MTL_QRCR_WR(i, data) do {\
-	iowritel(data, (void *)MTL_QRCR_OFFSET_Q(i));\
+	iowrite32(data, (void *)MTL_QRCR_OFFSET_Q(i));\
 } while (0)
 
 #define MTL_QRCR_RD(i, data) do {\
-	(data) = ioreadl((void *)MTL_QRCR_OFFSET_Q(i));\
+	(data) = ioread32((void *)MTL_QRCR_OFFSET_Q(i));\
 } while (0)
 
 
@@ -34178,7 +34177,7 @@ extern ULONG eqos_base_addr;
 #define MTL_QRDR_OFFSET_Q(i) ((volatile ULONG *)(MTL_QRDR_OFFSET + ((i-3)*64)))
 
 #define MTL_QRDR_RD(i, data) do {\
-	(data) = ioreadl((void *)MTL_QRDR_OFFSET_Q(i));\
+	(data) = ioread32((void *)MTL_QRDR_OFFSET_Q(i));\
 } while (0)
 
 
@@ -34218,11 +34217,11 @@ extern ULONG eqos_base_addr;
 #define MTL_QOCR_OFFSET_Q(i) ((volatile ULONG *)(MTL_QOCR_OFFSET + ((i-0)*64)))
 
 #define MTL_QOCR_WR(i, data) do {\
-	iowritel(data, (void *)MTL_QOCR_OFFSET_Q(i));\
+	iowrite32(data, (void *)MTL_QOCR_OFFSET_Q(i));\
 } while (0)
 
 #define MTL_QOCR_RD(i, data) do {\
-	(data) = ioreadl((void *)MTL_QOCR_OFFSET_Q(i));\
+	(data) = ioread32((void *)MTL_QOCR_OFFSET_Q(i));\
 } while (0)
 
 
@@ -34334,11 +34333,11 @@ extern ULONG eqos_base_addr;
 #define MTL_QROMR_OFFSET_Q(i) ((volatile ULONG *)(MTL_QROMR_OFFSET + ((i-0)*64)))
 
 #define MTL_QROMR_WR(i, data) do {\
-	iowritel(data, (void *)MTL_QROMR_OFFSET_Q(i));\
+	iowrite32(data, (void *)MTL_QROMR_OFFSET_Q(i));\
 } while (0)
 
 #define MTL_QROMR_RD(i, data) do {\
-	(data) = ioreadl((void *)MTL_QROMR_OFFSET_Q(i));\
+	(data) = ioread32((void *)MTL_QROMR_OFFSET_Q(i));\
 } while (0)
 
 #ifdef EQOS_VER_4_0
@@ -34856,11 +34855,11 @@ extern ULONG eqos_base_addr;
 #define MTL_QLCR_OFFSET_Q(i) ((volatile ULONG *)(MTL_QLCR_OFFSET + ((i-0)*64)))
 
 #define MTL_QLCR_WR(i, data) do {\
-	iowritel(data, (void *)MTL_QLCR_OFFSET_Q(i));\
+	iowrite32(data, (void *)MTL_QLCR_OFFSET_Q(i));\
 } while (0)
 
 #define MTL_QLCR_RD(i, data) do {\
-	(data) = ioreadl((void *)MTL_QLCR_OFFSET_Q(i));\
+	(data) = ioread32((void *)MTL_QLCR_OFFSET_Q(i));\
 } while (0)
 
 
@@ -34894,11 +34893,11 @@ extern ULONG eqos_base_addr;
 #define MTL_QHCR_OFFSET_Q(i) ((volatile ULONG *)(MTL_QHCR_OFFSET + ((i-0)*64)))
 
 #define MTL_QHCR_WR(i, data) do {\
-	iowritel(data, (void *)MTL_QHCR_OFFSET_Q(i));\
+	iowrite32(data, (void *)MTL_QHCR_OFFSET_Q(i));\
 } while (0)
 
 #define MTL_QHCR_RD(i, data) do {\
-	(data) = ioreadl((void *)MTL_QHCR_OFFSET_Q(i));\
+	(data) = ioread32((void *)MTL_QHCR_OFFSET_Q(i));\
 } while (0)
 
 
@@ -34932,11 +34931,11 @@ extern ULONG eqos_base_addr;
 #define MTL_QSSCR_OFFSET_Q(i) ((volatile ULONG *)(MTL_QSSCR_OFFSET + ((i-0)*64)))
 
 #define MTL_QSSCR_WR(i, data) do {\
-	iowritel(data, (void *)MTL_QSSCR_OFFSET_Q(i));\
+	iowrite32(data, (void *)MTL_QSSCR_OFFSET_Q(i));\
 } while (0)
 
 #define MTL_QSSCR_RD(i, data) do {\
-	(data) = ioreadl((void *)MTL_QSSCR_OFFSET_Q(i));\
+	(data) = ioread32((void *)MTL_QSSCR_OFFSET_Q(i));\
 } while (0)
 
 
@@ -34970,11 +34969,11 @@ extern ULONG eqos_base_addr;
 #define MTL_QW_OFFSET_Q(i) ((volatile ULONG *)(MTL_QW_OFFSET + ((i-0)*64)))
 
 #define MTL_QW_WR(i, data) do {\
-	iowritel(data, (void *)MTL_QW_OFFSET_Q(i));\
+	iowrite32(data, (void *)MTL_QW_OFFSET_Q(i));\
 } while (0)
 
 #define MTL_QW_RD(i, data) do {\
-	(data) = ioreadl((void *)MTL_QW_OFFSET_Q(i));\
+	(data) = ioread32((void *)MTL_QW_OFFSET_Q(i));\
 } while (0)
 
 
@@ -35008,7 +35007,7 @@ extern ULONG eqos_base_addr;
 #define MTL_QESR_OFFSET_Q(i) ((volatile ULONG *)(MTL_QESR_OFFSET + ((i-0)*64)))
 
 #define MTL_QESR_RD(i, data) do {\
-	(data) = ioreadl((void *)MTL_QESR_OFFSET_Q(i));\
+	(data) = ioread32((void *)MTL_QESR_OFFSET_Q(i));\
 } while (0)
 
 
@@ -35032,11 +35031,11 @@ extern ULONG eqos_base_addr;
 #define MTL_QECR_OFFSET_Q(i) ((volatile ULONG *)(MTL_QECR_OFFSET + ((i-0)*64)))
 
 #define MTL_QECR_WR(i, data) do {\
-	iowritel(data, (void *)MTL_QECR_OFFSET_Q(i));\
+	iowrite32(data, (void *)MTL_QECR_OFFSET_Q(i));\
 } while (0)
 
 #define MTL_QECR_RD(i, data) do {\
-	(data) = ioreadl((void *)MTL_QECR_OFFSET_Q(i));\
+	(data) = ioread32((void *)MTL_QECR_OFFSET_Q(i));\
 } while (0)
 
 
@@ -35162,7 +35161,7 @@ extern ULONG eqos_base_addr;
 #define MTL_QTDR_OFFSET_Q(i) ((volatile ULONG *)(MTL_QTDR_OFFSET + ((i-0)*64)))
 
 #define MTL_QTDR_RD(i, data) do {\
-	(data) = ioreadl((void *)MTL_QTDR_OFFSET_Q(i));\
+	(data) = ioread32((void *)MTL_QTDR_OFFSET_Q(i));\
 } while (0)
 
 
@@ -35226,11 +35225,11 @@ extern ULONG eqos_base_addr;
 #define MTL_QUCR_OFFSET_Q(i) ((volatile ULONG *)(MTL_QUCR_OFFSET + ((i-0)*64)))
 
 #define MTL_QUCR_WR(i, data) do {\
-	iowritel(data, (void *)MTL_QUCR_OFFSET_Q(i));\
+	iowrite32(data, (void *)MTL_QUCR_OFFSET_Q(i));\
 } while (0)
 
 #define MTL_QUCR_RD(i, data) do {\
-	(data) = ioreadl((void *)MTL_QUCR_OFFSET_Q(i));\
+	(data) = ioread32((void *)MTL_QUCR_OFFSET_Q(i));\
 } while (0)
 
 
@@ -35273,11 +35272,11 @@ extern ULONG eqos_base_addr;
 #define MTL_QTOMR_OFFSET_Q(i) ((volatile ULONG *)(MTL_QTOMR_OFFSET + ((i-0)*64)))
 
 #define MTL_QTOMR_WR(i, data) do {\
-	iowritel(data, (void *)MTL_QTOMR_OFFSET_Q(i));\
+	iowrite32(data, (void *)MTL_QTOMR_OFFSET_Q(i));\
 } while (0)
 
 #define MTL_QTOMR_RD(i, data) do {\
-	(data) = ioreadl((void *)MTL_QTOMR_OFFSET_Q(i));\
+	(data) = ioread32((void *)MTL_QTOMR_OFFSET_Q(i));\
 } while (0)
 
 
@@ -35412,11 +35411,11 @@ extern ULONG eqos_base_addr;
 #define MAC_HTR_OFFSET_Q(i) ((volatile ULONG *)(MAC_HTR_OFFSET + ((i-0)*4)))
 
 #define MAC_HTR_WR(i, data) do {\
-	iowritel(data, (void *)MAC_HTR_OFFSET_Q(i));\
+	iowrite32(data, (void *)MAC_HTR_OFFSET_Q(i));\
 } while (0)
 
 #define MAC_HTR_RD(i, data) do {\
-	(data) = ioreadl((void *)MAC_HTR_OFFSET_Q(i));\
+	(data) = ioread32((void *)MAC_HTR_OFFSET_Q(i));\
 } while (0)
 
 #define MAC_HTR_HT_WR(i, data) do {\
@@ -35432,11 +35431,11 @@ extern ULONG eqos_base_addr;
 #define DMA_RIWTR_OFFSET_Q(i) ((volatile ULONG *)(DMA_RIWTR_OFFSET + ((i-0)*128)))
 
 #define DMA_RIWTR_WR(i, data) do {\
-	iowritel(data, (void *)DMA_RIWTR_OFFSET_Q(i));\
+	iowrite32(data, (void *)DMA_RIWTR_OFFSET_Q(i));\
 } while (0)
 
 #define DMA_RIWTR_RD(i, data) do {\
-	(data) = ioreadl((void *)DMA_RIWTR_OFFSET_Q(i));\
+	(data) = ioread32((void *)DMA_RIWTR_OFFSET_Q(i));\
 } while (0)
 
 
@@ -35470,11 +35469,11 @@ extern ULONG eqos_base_addr;
 #define DMA_RDRLR_OFFSET_Q(i) ((volatile ULONG *)(DMA_RDRLR_OFFSET + ((i-0)*128)))
 
 #define DMA_RDRLR_WR(i, data) do {\
-	iowritel(data, (void *)DMA_RDRLR_OFFSET_Q(i));\
+	iowrite32(data, (void *)DMA_RDRLR_OFFSET_Q(i));\
 } while (0)
 
 #define DMA_RDRLR_RD(i, data) do {\
-	(data) = ioreadl((void *)DMA_RDRLR_OFFSET_Q(i));\
+	(data) = ioread32((void *)DMA_RDRLR_OFFSET_Q(i));\
 } while (0)
 
 
@@ -35508,11 +35507,11 @@ extern ULONG eqos_base_addr;
 #define DMA_TDRLR_OFFSET_Q(i) ((volatile ULONG *)(DMA_TDRLR_OFFSET + ((i-0)*128)))
 
 #define DMA_TDRLR_WR(i, data) do {\
-	iowritel(data, (void *)DMA_TDRLR_OFFSET_Q(i));\
+	iowrite32(data, (void *)DMA_TDRLR_OFFSET_Q(i));\
 } while (0)
 
 #define DMA_TDRLR_RD(i, data) do {\
-	(data) = ioreadl((void *)DMA_TDRLR_OFFSET_Q(i));\
+	(data) = ioread32((void *)DMA_TDRLR_OFFSET_Q(i));\
 } while (0)
 
 
@@ -35546,11 +35545,11 @@ extern ULONG eqos_base_addr;
 #define DMA_RDTP_RPDR_OFFSET_Q(i) ((volatile ULONG *)(DMA_RDTP_RPDR_OFFSET + ((i-0)*128)))
 
 #define DMA_RDTP_RPDR_WR(i, data) do {\
-	iowritel(data, (void *)DMA_RDTP_RPDR_OFFSET_Q(i));\
+	iowrite32(data, (void *)DMA_RDTP_RPDR_OFFSET_Q(i));\
 } while (0)
 
 #define DMA_RDTP_RPDR_RD(i, data) do {\
-	(data) = ioreadl((void *)DMA_RDTP_RPDR_OFFSET_Q(i));\
+	(data) = ioread32((void *)DMA_RDTP_RPDR_OFFSET_Q(i));\
 } while (0)
 
 #define DMA_RDTP_RPDR_RDT_WR(i, data) do {\
@@ -35566,11 +35565,11 @@ extern ULONG eqos_base_addr;
 #define DMA_TDTP_TPDR_OFFSET_Q(i) ((volatile ULONG *)(DMA_TDTP_TPDR_OFFSET + ((i-0)*128)))
 
 #define DMA_TDTP_TPDR_WR(i, data) do {\
-	iowritel(data, (void *)DMA_TDTP_TPDR_OFFSET_Q(i));\
+	iowrite32(data, (void *)DMA_TDTP_TPDR_OFFSET_Q(i));\
 } while (0)
 
 #define DMA_TDTP_TPDR_RD(i, data) do {\
-	(data) = ioreadl((void *)DMA_TDTP_TPDR_OFFSET_Q(i));\
+	(data) = ioread32((void *)DMA_TDTP_TPDR_OFFSET_Q(i));\
 } while (0)
 
 #define DMA_TDTP_TPDR_TDT_WR(i, data) do {\
@@ -35590,13 +35589,13 @@ extern ULONG eqos_base_addr;
 #define DMA_RDLAR_OFFSET_Q(i) ((volatile ULONG *)(DMA_RDLAR_OFFSET + ((i-0)*128)))
 
 #define DMA_RDLAR_WR(i, data) do {\
-	iowritel((data>>32) & 0xFFFF, (void *)DMA_RDLAR_HR_OFFSET_Q(i));\
-	iowritel(data & 0xFFFFFFFF, (void *)DMA_RDLAR_OFFSET_Q(i));\
+	iowrite32((data>>32) & 0xFFFF, (void *)DMA_RDLAR_HR_OFFSET_Q(i));\
+	iowrite32(data & 0xFFFFFFFF, (void *)DMA_RDLAR_OFFSET_Q(i));\
 } while (0)
 
 #define DMA_RDLAR_RD(i, data) do {\
-	uint64_t hread = ioreadl((void *)DMA_RDLAR_HR_OFFSET_Q(i));\
-	uint64_t lread = ioreadl((void *)DMA_RDLAR_OFFSET_Q(i));\
+	uint64_t hread = ioread32((void *)DMA_RDLAR_HR_OFFSET_Q(i));\
+	uint64_t lread = ioread32((void *)DMA_RDLAR_OFFSET_Q(i));\
 	(data) |= (hread << 32) | lread;\
 } while (0)
 
@@ -35617,13 +35616,13 @@ extern ULONG eqos_base_addr;
 #define DMA_TDLAR_HR_OFFSET_Q(i) ((volatile ULONG *)(DMA_TDLAR_HR_OFFSET + ((i-0)*128)))
 
 #define DMA_TDLAR_WR(i, data) do {\
-	iowritel((((data) >> 32) & 0xFFFF), (void *)DMA_TDLAR_HR_OFFSET_Q(i));\
-	iowritel(data, (void *)DMA_TDLAR_OFFSET_Q(i));\
+	iowrite32((((data) >> 32) & 0xFFFF), (void *)DMA_TDLAR_HR_OFFSET_Q(i));\
+	iowrite32(data, (void *)DMA_TDLAR_OFFSET_Q(i));\
 } while (0)
 
 #define DMA_TDLAR_RD(i, data) do {\
-	(data) = (ioreadl((void *)DMA_TDLAR_HR_OFFSET_Q(i)) << 32);\
-	(data) |= ioreadl((void *)DMA_TDLAR_OFFSET_Q(i));\
+	(data) = (ioread32((void *)DMA_TDLAR_HR_OFFSET_Q(i)) << 32);\
+	(data) |= ioread32((void *)DMA_TDLAR_OFFSET_Q(i));\
 } while (0)
 
 #define DMA_TDLAR_TDESLA_WR(i, data) do {\
@@ -35641,11 +35640,11 @@ extern ULONG eqos_base_addr;
 #define DMA_IER_OFFSET_Q(i) ((volatile ULONG *)(DMA_IER_OFFSET + ((i-0)*128)))
 
 #define DMA_IER_WR(i, data) do {\
-	iowritel(data, (void *)DMA_IER_OFFSET_Q(i));\
+	iowrite32(data, (void *)DMA_IER_OFFSET_Q(i));\
 } while (0)
 
 #define DMA_IER_RD(i, data) do {\
-	(data) = ioreadl((void *)DMA_IER_OFFSET_Q(i));\
+	(data) = ioread32((void *)DMA_IER_OFFSET_Q(i));\
 } while (0)
 
 
@@ -35998,11 +35997,11 @@ extern ULONG eqos_base_addr;
 #define DMA_IER_OFFSET_Q(i) ((volatile ULONG *)(DMA_IER_OFFSET + ((i-0)*128)))
 
 #define DMA_IER_WR(i, data) do {\
-	iowritel(data, (void *)DMA_IER_OFFSET_Q(i));\
+	iowrite32(data, (void *)DMA_IER_OFFSET_Q(i));\
 } while (0)
 
 #define DMA_IER_RD(i, data) do {\
-	(data) = ioreadl((void *)DMA_IER_OFFSET_Q(i));\
+	(data) = ioread32((void *)DMA_IER_OFFSET_Q(i));\
 } while (0)
 
 #define DMA_IER_MASK_16 (ULONG)(0xffff)
@@ -36290,11 +36289,11 @@ extern ULONG eqos_base_addr;
 #define DMA_SR_OFFSET_Q(i) ((volatile ULONG *)(DMA_SR_OFFSET + ((i-0)*128)))
 
 #define DMA_SR_WR(i, data) do {\
-	iowritel(data, (void *)DMA_SR_OFFSET_Q(i));\
+	iowrite32(data, (void *)DMA_SR_OFFSET_Q(i));\
 } while (0)
 
 #define DMA_SR_RD(i, data) do {\
-	(data) = ioreadl((void *)DMA_SR_OFFSET_Q(i));\
+	(data) = ioread32((void *)DMA_SR_OFFSET_Q(i));\
 } while (0)
 
 
@@ -36625,8 +36624,8 @@ extern ULONG eqos_base_addr;
 #define DMA_CHRBAR_OFFSET_Q(i) ((volatile ULONG *)(DMA_CHRBAR_OFFSET + ((i-0)*128)))
 
 #define DMA_CHRBAR_RD(i, data) do {\
-	(data) = ioreadl((void *)DMA_CHRBARH_OFFSET_Q(i)) << 32;\
-	(data) |= ioreadl((void *)DMA_CHRBAR_OFFSET_Q(i));\
+	(data) = ioread32((void *)DMA_CHRBARH_OFFSET_Q(i)) << 32;\
+	(data) |= ioread32((void *)DMA_CHRBAR_OFFSET_Q(i));\
 } while (0)
 
 #define DMA_CHRBAR_CURRBUFAPTR_RD(i, data) do {\
@@ -36642,8 +36641,8 @@ extern ULONG eqos_base_addr;
 #define DMA_CHTBAR_OFFSET_Q(i) ((volatile ULONG *)(DMA_CHTBAR_OFFSET + ((i-0)*128)))
 
 #define DMA_CHTBAR_RD(i, data) do {\
-	(data) = ioreadl((void *)DMA_CHTBARH_OFFSET_Q(i)) << 32;\
-	(data) |= ioreadl((void *)DMA_CHTBAR_OFFSET_Q(i));\
+	(data) = ioread32((void *)DMA_CHTBARH_OFFSET_Q(i)) << 32;\
+	(data) |= ioread32((void *)DMA_CHTBAR_OFFSET_Q(i));\
 } while (0)
 
 #define DMA_CHTBAR_CURTBUFAPTR_RD(i, data) do {\
@@ -36655,7 +36654,7 @@ extern ULONG eqos_base_addr;
 #define DMA_CHRDR_OFFSET_Q(i) ((volatile ULONG *)(DMA_CHRDR_OFFSET + ((i-0)*128)))
 
 #define DMA_CHRDR_RD(i, data) do {\
-	(data) = ioreadl((void *)DMA_CHRDR_OFFSET_Q(i));\
+	(data) = ioread32((void *)DMA_CHRDR_OFFSET_Q(i));\
 } while (0)
 
 #define DMA_CHRDR_CURRDESAPTR_RD(i, data) do {\
@@ -36667,7 +36666,7 @@ extern ULONG eqos_base_addr;
 #define DMA_CHTDR_OFFSET_Q(i) ((volatile ULONG *)(DMA_CHTDR_OFFSET + ((i-0)*128)))
 
 #define DMA_CHTDR_RD(i, data) do {\
-	(data) = ioreadl((void *)DMA_CHTDR_OFFSET_Q(i));\
+	(data) = ioread32((void *)DMA_CHTDR_OFFSET_Q(i));\
 } while (0)
 
 #define DMA_CHTDR_CURTDESAPTR_RD(i, data) do {\
@@ -36679,11 +36678,11 @@ extern ULONG eqos_base_addr;
 #define DMA_SFCSR_OFFSET_Q(i) ((volatile ULONG *)(DMA_SFCSR_OFFSET + ((i-0)*128)))
 
 #define DMA_SFCSR_WR(i, data) do {\
-	iowritel(data, (void *)DMA_SFCSR_OFFSET_Q(i));\
+	iowrite32(data, (void *)DMA_SFCSR_OFFSET_Q(i));\
 } while (0)
 
 #define DMA_SFCSR_RD(i, data) do {\
-	(data) = ioreadl((void *)DMA_SFCSR_OFFSET_Q(i));\
+	(data) = ioread32((void *)DMA_SFCSR_OFFSET_Q(i));\
 } while (0)
 
 
@@ -36773,11 +36772,11 @@ extern ULONG eqos_base_addr;
 #define MAC_QTFCR_OFFSET_Q(i) ((volatile ULONG *)(MAC_QTFCR_OFFSET + ((i-0)*4)))
 
 #define MAC_QTFCR_WR(i, data) do {\
-	iowritel(data, (void *)MAC_QTFCR_OFFSET_Q(i));\
+	iowrite32(data, (void *)MAC_QTFCR_OFFSET_Q(i));\
 } while (0)
 
 #define MAC_QTFCR_RD(i, data) do {\
-	(data) = ioreadl((void *)MAC_QTFCR_OFFSET_Q(i));\
+	(data) = ioread32((void *)MAC_QTFCR_OFFSET_Q(i));\
 } while (0)
 
 
@@ -36912,11 +36911,11 @@ extern ULONG eqos_base_addr;
 #define DMA_AXI4CR_OFFSET_Q(i) ((volatile ULONG *)(DMA_AXI4CR_OFFSET + ((i-0)*128)))
 
 #define DMA_AXI4CR_WR(i, data) do {\
-	iowritel(data, (void *)DMA_AXI4CR_OFFSET_Q(i));\
+	iowrite32(data, (void *)DMA_AXI4CR_OFFSET_Q(i));\
 } while (0)
 
 #define DMA_AXI4CR_RD(i, data) do {\
-	(data) = ioreadl((void *)DMA_AXI4CR_OFFSET_Q(i));\
+	(data) = ioread32((void *)DMA_AXI4CR_OFFSET_Q(i));\
 } while (0)
 
 
@@ -36982,11 +36981,11 @@ extern ULONG eqos_base_addr;
 #define DMA_RCR_OFFSET_Q(i) ((volatile ULONG *)(DMA_RCR_OFFSET + ((i-0)*128)))
 
 #define DMA_RCR_WR(i, data) do {\
-	iowritel(data, (void *)DMA_RCR_OFFSET_Q(i));\
+	iowrite32(data, (void *)DMA_RCR_OFFSET_Q(i));\
 } while (0)
 
 #define DMA_RCR_RD(i, data) do {\
-	(data) = ioreadl((void *)DMA_RCR_OFFSET_Q(i));\
+	(data) = ioread32((void *)DMA_RCR_OFFSET_Q(i));\
 } while (0)
 
 
@@ -37162,11 +37161,11 @@ extern ULONG eqos_base_addr;
 #define DMA_TCR_OFFSET_Q(i) ((volatile ULONG *)(DMA_TCR_OFFSET + ((i-0)*128)))
 
 #define DMA_TCR_WR(i, data) do {\
-	iowritel(data, (void *)DMA_TCR_OFFSET_Q(i));\
+	iowrite32(data, (void *)DMA_TCR_OFFSET_Q(i));\
 } while (0)
 
 #define DMA_TCR_RD(i, data) do {\
-	(data) = ioreadl((void *)DMA_TCR_OFFSET_Q(i));\
+	(data) = ioread32((void *)DMA_TCR_OFFSET_Q(i));\
 } while (0)
 
 
@@ -37317,11 +37316,11 @@ extern ULONG eqos_base_addr;
 #define DMA_CR_OFFSET_Q(i) ((volatile ULONG *)(DMA_CR_OFFSET + ((i-0)*128)))
 
 #define DMA_CR_WR(i, data) do {\
-	iowritel(data, (void *)DMA_CR_OFFSET_Q(i));\
+	iowrite32(data, (void *)DMA_CR_OFFSET_Q(i));\
 } while (0)
 
 #define DMA_CR_RD(i, data) do {\
-	(data) = ioreadl((void *)DMA_CR_OFFSET_Q(i));\
+	(data) = ioread32((void *)DMA_CR_OFFSET_Q(i));\
 } while (0)
 
 

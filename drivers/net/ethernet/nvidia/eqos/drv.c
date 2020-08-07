@@ -1738,6 +1738,12 @@ static int eqos_start_xmit(struct sk_buff *skb, struct net_device *dev)
 	/* configure required descriptor fields for transmission */
 	hw_if->pre_xmit(pdata, qinx);
 
+	if (ptx_ring->dirty_tx == ptx_ring->cur_tx) {
+		ptx_ring->tx_full = true;
+		napi_schedule(&pdata->tx_queue[qinx].napi);
+		netif_stop_subqueue(dev, qinx);
+	}
+
 	/* Stop the queue if there might not be enough descriptors for another
 	 * packet.
 	 */
@@ -2008,6 +2014,7 @@ static int process_tx_completions(struct eqos_tx_queue *tx_queue, int budget)
 
 	pdata->xstats.tx_clean_n[qinx]++;
 	while (entry != ptx_ring->cur_tx && processed < budget) {
+cleanup:
 		ptx_desc = GET_TX_DESC_PTR(qinx, entry);
 		ptx_swcx_desc = GET_TX_BUF_PTR(qinx, entry);
 		tstamp_taken = 0;
@@ -2115,6 +2122,14 @@ static int process_tx_completions(struct eqos_tx_queue *tx_queue, int budget)
 	__netif_tx_lock(txq, smp_processor_id());
 	/* Update the dirty pointer and wake up the TX queue, if necessary. */
 	ptx_ring->dirty_tx = entry;
+
+	if ((ptx_ring->dirty_tx == ptx_ring->cur_tx) &&
+	    ptx_ring->tx_full) {
+		ptx_ring->tx_full = false;
+		__netif_tx_unlock(txq);
+		goto cleanup;
+	}
+
 	if (netif_tx_queue_stopped(txq) &&
 	    eqos_tx_avail(ptx_ring) > EQOS_TX_DESC_THRESHOLD) {
 		netif_tx_wake_queue(txq);

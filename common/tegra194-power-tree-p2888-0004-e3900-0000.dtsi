@@ -71,6 +71,10 @@
 		vdd-fan-supply = <&e3900_atx_12v_cvb>;
 	};
 
+	pwm-fan-fpga {
+		vdd-fan-supply = <&e3900_atx_12v_cvb>;
+	};
+
 	bpmp_i2c {
 		spmic@3c {
 			regulators {

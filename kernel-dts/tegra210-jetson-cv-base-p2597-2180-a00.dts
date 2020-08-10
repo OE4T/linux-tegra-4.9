@@ -41,6 +41,7 @@
 #include <tegra210-soc/tegra210-edp.dtsi>
 #include <t210-common-platforms/tegra210-sysedp.dtsi>
 #include <t210-common-platforms/tegra210-thermal-nct72-p2530.dtsi>
+#include <t210-common-platforms/tegra210-thermal-userspace-alert.dtsi>
 #include <tegra210-soc/tegra210-thermal-Tboard-Tdiode.dtsi>
 #include "jetson-platforms/tegra210-jetson-cv-powermon-p2180-1000-a00.dtsi"
 #include "jetson-platforms/tegra210-jetson-cv-powermon-p2597.dtsi"
@@ -1214,5 +1215,13 @@
 		pinctrl-names = "dvfs_pwm_enable", "dvfs_pwm_disable";
 		pinctrl-0 = <&dvfs_pwm_active_state>;
 		pinctrl-1 = <&dvfs_pwm_inactive_state>;
+	};
+
+	cpu_alert: cpu-throttle-alert {
+		status = "okay";
+	};
+
+	gpu_alert: gpu-throttle-alert {
+		status = "okay";
 	};
 };

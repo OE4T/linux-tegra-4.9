@@ -4074,6 +4074,7 @@ static int tegra_se_nvhost_prepare_poweroff(struct platform_device *pdev)
 	struct tegra_se_dev *se_dev = pdata->private_data;
 
 	if (se_dev->channel) {
+		nvhost_syncpt_put_ref_ext(se_dev->pdev, se_dev->syncpt_id);
 		nvhost_putchannel(se_dev->channel, 1);
 		se_dev->channel = NULL;
 

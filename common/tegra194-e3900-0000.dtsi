@@ -44,4 +44,8 @@
 			gpio-key,wakeup;
 		};
 	};
+
+	soctherm-oc-event {
+		status = "okay";
+	};
 };

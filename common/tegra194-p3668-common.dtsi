@@ -521,6 +521,10 @@
 				<&bpmp_clks TEGRA194_CLK_CAN2>;
 		};
 	};
+
+	soctherm-oc-event {
+		status = "okay";
+	};
 };
 
 #if LINUX_VERSION >= 414

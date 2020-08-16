@@ -13,6 +13,7 @@
 /* NVS = NVidia Sensor framework */
 /* Uses one of the NVS kernel modules: nvs_iio, nvs_input, nvs_relay, nvs_nv */
 /* See nvs.h for documentation */
+/* See nvs_on_change.c and nvs_on_change.h for documentation */
 
 /* This driver supports these Bosch IMUs:
  * - BMI085
@@ -66,9 +67,10 @@
 #include <linux/of_gpio.h>
 #include <linux/of.h>
 #include <linux/nvs.h>
+#include <linux/nvs_on_change.h>
 #include <linux/nvs_gte.h>
 
-#define BMI_DRIVER_VERSION		(3)
+#define BMI_DRIVER_VERSION		(4)
 
 #define BMI_VENDOR			"Bosch"
 #define BMI_NAME_BMI085			"bmi085"
@@ -76,6 +78,7 @@
 #define BMI_NAME			"bmi08x"
 #define BMI_ACC_VERSION			(1)
 #define BMI_GYR_VERSION			(1)
+#define BMI_TMP_VERSION			(1)
 #define BMI_ACC_BUF_SZ			(64)
 #define BMI_GYR_BUF_SZ			(600) /* 6 (frame sz) * 100 (buf sz) */
 #define BMI_ACC_SELF_TEST_LIMIT_X	(1000)
@@ -83,6 +86,7 @@
 #define BMI_ACC_SELF_TEST_LIMIT_Z	(500)
 #define BMI_ACC_SELFTEST_DELAY_MS	(50)
 #define BMI_GYR_SELFTEST_DELAY_MS	(20)
+#define BMI_GYR_SELFTEST_RD_LOOP_N	(10)
 #define BMI_ACC_SOFTRESET_DELAY_MS	(1)
 #define BMI_GYR_SOFTRESET_DELAY_MS	(30)
 #define BMI_ACC_PM_DELAY_MS		(5)
@@ -107,8 +111,8 @@
 #define BMI_REG_SENSORTIME_1		(0x19)
 #define BMI_REG_SENSORTIME_2		(0x1A)
 #define BMI_REG_ACC_INT_STAT_1		(0x1D)
-#define BMI_REG_TEMP_LSB		(0x20)
-#define BMI_REG_TEMP_MSB		(0x21)
+#define BMI_REG_TEMP_MSB		(0x22)
+#define BMI_REG_TEMP_LSB		(0x23)
 #define BMI_REG_FIFO_LENGTH_0		(0x24)
 #define BMI_REG_FIFO_LENGTH_1		(0x25)
 #define BMI_REG_ACC_FIFO_DATA		(0x26)
@@ -210,7 +214,8 @@
 /* hardware devices */
 #define BMI_HW_ACC			(0)
 #define BMI_HW_GYR			(1)
-#define BMI_HW_N			(2)
+#define BMI_HW_TMP			(2)
+#define BMI_HW_N			(3)
 /* switch toggles */
 #define BMI_STS_SPEW_FIFO		(NVS_STS_EXT_N)
 #define BMI_STS_SPEW_FIFO_ACC		(1 << (NVS_STS_EXT_N + BMI_HW_ACC))
@@ -271,6 +276,12 @@ static u8 bmi_chip_ids_acc[] = {
 static u8 bmi_chip_ids_gyr[] = {
 	0x0F,
 	0x0F,
+};
+
+static unsigned int bmi_hw_dpnd_msks[] = {
+	[BMI_HW_ACC] = (1 << BMI_HW_ACC) | (1 << BMI_HW_TMP),
+	[BMI_HW_GYR] = (1 << BMI_HW_GYR),
+	[BMI_HW_TMP] = (1 << BMI_HW_ACC) | (1 << BMI_HW_TMP),
 };
 
 struct bmi_reg_rd {
@@ -408,6 +419,41 @@ static struct sensor_cfg bmi_snsr_cfgs[] = {
 		.matrix[4]		= 1,
 		.matrix[8]		= 1,
 		.float_significance	= NVS_FLOAT_NANO,
+	},
+	{
+		.name			= "temperature",
+		.snsr_id		= BMI_HW_TMP,
+		.ch_n			= 1,
+		.ch_sz			= -2,
+		.part			= BMI_NAME,
+		.vendor			= BMI_VENDOR,
+		.version		= BMI_TMP_VERSION,
+		.max_range		= {
+			.ival		= 150,
+			.fval		= 0,
+		},
+		.resolution		= {
+			.ival		= 0,
+			.fval		= 125000,
+		},
+		.milliamp		= {
+			.ival		= 0,
+			.fval		= 150000,
+		},
+		.delay_us_min		= 0,
+		.delay_us_max		= 1280000,
+		.flags			= SENSOR_FLAG_ON_CHANGE_MODE,
+		.thresh_lo		= 1,
+		.thresh_hi		= 1,
+		.float_significance	= NVS_FLOAT_MICRO,
+		.scale			= {
+			.ival		= 0,
+			.fval		= 125000,
+		},
+		.offset			= {
+			.ival		= 23,
+			.fval		= 0,
+		},
 	},
 };
 
@@ -586,6 +632,23 @@ static struct bmi_rrs bmi_rrs_gyr[] = {
 };
 
 struct bmi_state;
+static int bmi_acc_able(struct bmi_state *st, int en);
+static int bmi_acc_batch(struct bmi_state *st, unsigned int *odr_us,
+			 unsigned int period_us, unsigned int timeout_us);
+static int bmi_acc_softreset(struct bmi_state *st, unsigned int hw);
+static int bmi_acc_selftest(struct bmi_state *st);
+static int bmi_acc_pm(struct bmi_state *st, unsigned int hw, int able);
+static unsigned long bmi_acc_irqflags(struct bmi_state *st);
+static int bmi_gyr_able(struct bmi_state *st, int en);
+static int bmi_gyr_batch(struct bmi_state *st, unsigned int *odr_us,
+			 unsigned int period_us, unsigned int timeout_us);
+static int bmi_gyr_softreset(struct bmi_state *st, unsigned int hw);
+static int bmi_gyr_selftest(struct bmi_state *st);
+static int bmi_gyr_pm(struct bmi_state *st, unsigned int hw, int able);
+static unsigned long bmi_gyr_irqflags(struct bmi_state *st);
+static int bmi_tmp_able(struct bmi_state *st, int en);
+static int bmi_tmp_batch(struct bmi_state *st, unsigned int *odr_us,
+			 unsigned int period_us, unsigned int timeout_us);
 
 struct bmi_hw {
 	struct bmi_reg_rd *reg_rds;
@@ -599,27 +662,11 @@ struct bmi_hw {
 	int (*fn_able)(struct bmi_state *st, int en);
 	int (*fn_batch)(struct bmi_state *st, unsigned int *odr_us,
 			unsigned int period_us, unsigned int timeout_us);
+	int (*fn_softreset)(struct bmi_state *st, unsigned int hw);
 	int (*fn_selftest)(struct bmi_state *st);
-	int (*fn_softreset)(struct bmi_state *st);
-	int (*fn_pm)(struct bmi_state *st, unsigned int able);
+	int (*fn_pm)(struct bmi_state *st, unsigned int hw, int able);
 	unsigned long (*fn_irqflags)(struct bmi_state *st);
 };
-
-static int bmi_acc_able(struct bmi_state *st, int en);
-static int bmi_acc_batch(struct bmi_state *st, unsigned int *odr_us,
-			 unsigned int period_us, unsigned int timeout_us);
-static int bmi_acc_selftest(struct bmi_state *st);
-static int bmi_acc_softreset(struct bmi_state *st);
-static int bmi_acc_pm(struct bmi_state *st, unsigned int able);
-static unsigned long bmi_acc_irqflags(struct bmi_state *st);
-static int bmi_gyr_able(struct bmi_state *st, int en);
-static int bmi_gyr_batch(struct bmi_state *st, unsigned int *odr_us,
-			 unsigned int period_us, unsigned int timeout_us);
-static int bmi_gyr_selftest(struct bmi_state *st);
-static int bmi_gyr_softreset(struct bmi_state *st);
-static int bmi_gyr_pm(struct bmi_state *st, unsigned int able);
-static unsigned long bmi_gyr_irqflags(struct bmi_state *st);
-static int bmi_enable(void *client, int snsr_id, int enable);
 
 static struct bmi_hw bmi_hws[] = {
 	{
@@ -633,8 +680,8 @@ static struct bmi_hw bmi_hws[] = {
 		.i2c_addrs_n		= ARRAY_SIZE(bmi_i2c_addrs_acc),
 		.fn_able		= &bmi_acc_able,
 		.fn_batch		= &bmi_acc_batch,
-		.fn_selftest		= &bmi_acc_selftest,
 		.fn_softreset		= &bmi_acc_softreset,
+		.fn_selftest		= &bmi_acc_selftest,
 		.fn_pm			= &bmi_acc_pm,
 		.fn_irqflags		= &bmi_acc_irqflags,
 	},
@@ -649,10 +696,26 @@ static struct bmi_hw bmi_hws[] = {
 		.i2c_addrs_n		= ARRAY_SIZE(bmi_i2c_addrs_gyr),
 		.fn_able		= &bmi_gyr_able,
 		.fn_batch		= &bmi_gyr_batch,
-		.fn_selftest		= &bmi_gyr_selftest,
 		.fn_softreset		= &bmi_gyr_softreset,
+		.fn_selftest		= &bmi_gyr_selftest,
 		.fn_pm			= &bmi_gyr_pm,
 		.fn_irqflags		= &bmi_gyr_irqflags,
+	},
+	{
+		.reg_rds		= bmi_reg_rds_acc,
+		.rrs			= NULL,
+		.i2c_addrs		= bmi_i2c_addrs_acc,
+		.chip_ids		= bmi_chip_ids_acc,
+		.chip_id_reg		= BMI_REG_ACC_CHIP_ID,
+		.reg_rds_n		= ARRAY_SIZE(bmi_reg_rds_acc),
+		.rrs_0n			= 0,
+		.i2c_addrs_n		= ARRAY_SIZE(bmi_i2c_addrs_acc),
+		.fn_able		= &bmi_tmp_able,
+		.fn_batch		= &bmi_tmp_batch,
+		.fn_softreset		= &bmi_acc_softreset,
+		.fn_selftest		= NULL,
+		.fn_pm			= &bmi_acc_pm,
+		.fn_irqflags		= NULL,
 	},
 };
 
@@ -674,8 +737,9 @@ struct bmi_state {
 	struct bmi_snsr snsrs[BMI_HW_N];
 	struct nvs_gte_irq gis[BMI_HW_N];
 	struct regulator_bulk_data vreg[ARRAY_SIZE(bmi_vregs)];
-	struct work_struct ws;
 	struct workqueue_struct *wq;
+	struct work_struct ws;
+	struct nvs_on_change oc;	/* on-change temperature sensor*/
 	bool irq_setup_done;		/* irq probe status: true=setup done */
 	unsigned int part;		/* part index */
 	unsigned int sts;		/* status flags */
@@ -716,7 +780,7 @@ struct bmi_state {
 };
 
 
-static void bmi_mutex_lock(struct bmi_state *st)
+static int bmi_mutex_lock(struct bmi_state *st)
 {
 	unsigned int i;
 
@@ -725,10 +789,10 @@ static void bmi_mutex_lock(struct bmi_state *st)
 			st->nvs->nvs_mutex_lock(st->snsrs[i].nvs_st);
 	}
 
-	return;
+	return 0;
 }
 
-static void bmi_mutex_unlock(struct bmi_state *st)
+static int bmi_mutex_unlock(struct bmi_state *st)
 {
 	unsigned int i;
 
@@ -737,15 +801,15 @@ static void bmi_mutex_unlock(struct bmi_state *st)
 			st->nvs->nvs_mutex_unlock(st->snsrs[i].nvs_st);
 	}
 
-	return;
+	return 0;
 }
 
-static void bmi_err(struct bmi_state *st)
+static int bmi_err(struct bmi_state *st)
 {
 	st->errs++;
 	if (!st->errs)
 		st->errs--;
-	return;
+	return 0;
 }
 
 static int bmi_i2c_rd(struct bmi_state *st, unsigned int hw,
@@ -765,7 +829,7 @@ static int bmi_i2c_rd(struct bmi_state *st, unsigned int hw,
 		msg[1].len = len;
 		msg[1].buf = buf;
 		ts = st->ts_hw[hw];
-		if (st->hw_en & (1 << hw))
+		if (st->hw_en & bmi_hw_dpnd_msks[hw])
 			ts += (BMI_HW_DELAY_DEV_ON_US * 1000);
 		else
 			ts += (BMI_HW_DELAY_DEV_OFF_US * 1000);
@@ -804,7 +868,7 @@ static int bmi_i2c_w(struct bmi_state *st, unsigned int hw,
 		msg.len = len;
 		msg.buf = buf;
 		ts = st->ts_hw[hw];
-		if (st->hw_en & (1 << hw))
+		if (st->hw_en & bmi_hw_dpnd_msks[hw])
 			ts += (BMI_HW_DELAY_DEV_ON_US * 1000);
 		else
 			ts += (BMI_HW_DELAY_DEV_OFF_US * 1000);
@@ -871,6 +935,141 @@ static int bmi_i2c_wr16(struct bmi_state *st, unsigned int hw, u8 reg, u16 val)
 	return ret;
 }
 
+static int bmi_pm(struct bmi_state *st, int snsr_id, bool en)
+{
+	unsigned int hw_en = st->hw_en;
+	unsigned int hw;
+	unsigned int i;
+	int ret = 0;
+
+	if (en) {
+		if (!hw_en) {
+			ret = nvs_vregs_enable(&st->i2c->dev, st->vreg,
+					       ARRAY_SIZE(bmi_vregs));
+			if (ret > 0)
+				mdelay(BMI_HW_DELAY_POR_MS);
+		}
+		if (snsr_id < 0) {
+			ret = 0;
+			for (i = 0; i < st->hw_n; i++) {
+				hw = st->snsrs[i].hw;
+				if (st->hw_en & bmi_hw_dpnd_msks[hw]) {
+					st->hw_en |= (1 << hw);
+				} else  {
+					ret |= bmi_hws[hw].fn_softreset(st,
+									hw);
+					ret |= bmi_hws[hw].fn_pm(st, hw, 1);
+				}
+			}
+		} else {
+			hw = st->snsrs[snsr_id].hw;
+			if (hw_en & (bmi_hw_dpnd_msks[hw] & ~(1 << hw))) {
+				st->hw_en |= (1 << hw);
+			} else  {
+				ret = bmi_hws[hw].fn_softreset(st, hw);
+				ret |= bmi_hws[hw].fn_pm(st, hw, 1);
+			}
+		}
+	} else {
+		ret = nvs_vregs_sts(st->vreg, ARRAY_SIZE(bmi_vregs));
+		if ((ret < 0) || (ret == ARRAY_SIZE(bmi_vregs))) {
+			/* we're fully powered */
+			if (snsr_id < 0) {
+				ret = 0;
+				for (i = 0; i < st->hw_n; i++) {
+					hw = st->snsrs[i].hw;
+					ret |= bmi_hws[hw].fn_pm(st, hw, 0);
+				}
+			} else {
+				hw = st->snsrs[snsr_id].hw;
+				if ((hw_en &
+				     bmi_hw_dpnd_msks[hw]) & ~(1 << hw)) {
+					st->enabled &= ~(1 << snsr_id);
+					st->hw_en &= ~(1 << hw);
+				} else {
+					ret = bmi_hws[hw].fn_pm(st, hw, 0);
+				}
+			}
+		} else if (ret > 0) {
+			/* partially powered so go to full before disables */
+			ret = nvs_vregs_enable(&st->i2c->dev, st->vreg,
+					       ARRAY_SIZE(bmi_vregs));
+			mdelay(BMI_HW_DELAY_POR_MS);
+			if (snsr_id < 0) {
+				for (i = 0; i < st->hw_n; i++) {
+					hw = st->snsrs[i].hw;
+					ret |= bmi_hws[hw].fn_pm(st, hw, 0);
+				}
+			} else {
+				hw = st->snsrs[snsr_id].hw;
+				if ((hw_en &
+				     bmi_hw_dpnd_msks[hw]) & ~(1 << hw)) {
+					st->enabled &= ~(1 << snsr_id);
+					st->hw_en &= ~(1 << hw);
+				} else {
+					ret |= bmi_hws[hw].fn_pm(st, hw, 0);
+				}
+			}
+		}
+		/* disables put us in low power sleep state in case no vregs */
+		if (!st->hw_en) /* pull plug if all devices are low power */
+			ret |= nvs_vregs_disable(&st->i2c->dev, st->vreg,
+						 ARRAY_SIZE(bmi_vregs));
+	}
+	if (ret > 0)
+		ret = 0;
+	if (ret) {
+		if (snsr_id < 0)
+			dev_err(&st->i2c->dev, "%s ALL pm_en=%x  ERR=%d\n",
+				__func__, en, ret);
+		else
+			dev_err(&st->i2c->dev, "%s %s pm_en=%x  ERR=%d\n",
+				__func__, st->snsrs[snsr_id].cfg.name,
+				en, ret);
+	} else if (st->sts & NVS_STS_SPEW_MSG && hw_en != st->hw_en) {
+		dev_info(&st->i2c->dev, "%s hw_en: 0x%X=>0x%XS\n",
+			 __func__, hw_en, st->hw_en);
+	}
+	return ret;
+}
+
+static int bmi_pm_exit(struct bmi_state *st)
+{
+	bmi_pm(st, -1, false);
+	nvs_vregs_exit(&st->i2c->dev, st->vreg, ARRAY_SIZE(bmi_vregs));
+	return 0;
+}
+
+static int bmi_pm_init(struct bmi_state *st)
+{
+	int ret;
+
+	nvs_vregs_init(&st->i2c->dev,
+		       st->vreg, ARRAY_SIZE(bmi_vregs), (char **)bmi_vregs);
+	ret = bmi_pm(st, -1, true);
+	return ret;
+}
+
+static int bmi_hw_off(struct bmi_state *st, unsigned int hw)
+{
+	unsigned int snsr_id;
+	unsigned int hw_msk;
+	unsigned int i;
+
+	hw_msk = 1;
+	for (i = 0; i < BMI_HW_N; i++) {
+		if (bmi_hw_dpnd_msks[hw] & hw_msk) {
+			st->hw_en &= ~hw_msk;
+			snsr_id = st->hw2ids[i];
+			if (snsr_id < BMI_HW_N)
+				st->enabled &= ~(1 << snsr_id);
+		}
+		hw_msk <<= 1;
+	}
+
+	return 0;
+}
+
 static unsigned int bmi_buf2sensortime(u8 *buf)
 {
 	unsigned int snsr_t = 0;
@@ -935,18 +1134,22 @@ static int bmi_acc_batch(struct bmi_state *st, unsigned int *odr_us,
 	u16 val16;
 	unsigned int i;
 	unsigned int odr_i;
-	int ret;
+	int ret = 0;
 
-	i = st->hw2ids[BMI_HW_ACC];
-	st->snsrs[i].timeout_en = false;
 	odr_i = bmi_odr_i(bmi_odrs_acc, ARRAY_SIZE(bmi_odrs_acc), period_us);
-	if (st->hw_en & (1 << BMI_HW_ACC)) {
+	if (odr_us) {
+		*odr_us = bmi_odrs_acc[odr_i].period_us;
+	} else if (st->hw_en & bmi_hw_dpnd_msks[BMI_HW_ACC]) {
 		/* power is up */
 		val = bmi_odrs_acc[odr_i].hw;
 		val |= st->ra_0x40;
 		ret = bmi_i2c_wr(st, BMI_HW_ACC, BMI_REG_ACC_CONF, val);
-		if (!ret) {
+		i = st->hw2ids[BMI_HW_ACC];
+		if ((i < BMI_HW_N) && !ret) {
+			st->snsrs[i].timeout_en = false;
 			st->snsrs[i].odr_us = bmi_odrs_acc[odr_i].period_us;
+			st->ts_odr[BMI_HW_ACC] = (s64)st->snsrs[i].odr_us *
+									  1000;
 			if (timeout_us) {
 				/* calculate batch timeout */
 				timeout_us /= bmi_odrs_acc[odr_i].period_us;
@@ -960,11 +1163,7 @@ static int bmi_acc_batch(struct bmi_state *st, unsigned int *odr_us,
 					st->snsrs[i].timeout_en = true;
 			}
 		}
-	} else {
-		ret = 0;
 	}
-	if (odr_us)
-		*odr_us = bmi_odrs_acc[odr_i].period_us;
 	return ret;
 }
 
@@ -975,8 +1174,11 @@ static int bmi_acc_able(struct bmi_state *st, int en)
 	int ret;
 
 	if (en) {
-		i = st->hw2ids[BMI_HW_ACC]; /* st->hw2ids only valid on en */
-		val = st->snsrs[i].usr_cfg;
+		i = st->hw2ids[BMI_HW_ACC];
+		if (i < BMI_HW_N)
+			val = st->snsrs[i].usr_cfg;
+		else
+			val = 3; /* selftest value if ACC not populated */
 		ret = bmi_i2c_wr(st, BMI_HW_ACC, BMI_REG_ACC_RANGE, val);
 		st->frame_n = 0;
 		st->ts_hi = 0;
@@ -990,6 +1192,17 @@ static int bmi_acc_able(struct bmi_state *st, int en)
 	return ret;
 }
 
+static int bmi_acc_softreset(struct bmi_state *st, unsigned int hw)
+{
+	int ret;
+
+	ret = bmi_i2c_wr(st, BMI_HW_ACC, BMI_REG_ACC_SOFTRESET,
+			 BMI_REG_ACC_SOFTRESET_EXE);
+	mdelay(BMI_ACC_SOFTRESET_DELAY_MS);
+	bmi_hw_off(st, hw);
+	return ret;
+}
+
 static int bmi_acc_selftest(struct bmi_state *st)
 {
 	int16_t x_pos;
@@ -999,16 +1212,15 @@ static int bmi_acc_selftest(struct bmi_state *st)
 	int16_t y_neg;
 	int16_t z_neg;
 	unsigned int i;
-	unsigned int us;
 	unsigned int usr_cfg;
 	int ret;
 
 	i = st->hw2ids[BMI_HW_ACC];
-	us = st->snsrs[i].period_us;
 	usr_cfg = st->snsrs[i].usr_cfg;
-	st->snsrs[i].period_us = 625; /* 1600Hz */
+	ret = bmi_pm(st, i, true);
+	ret |= bmi_acc_batch(st, NULL, 625, 0); /* 1600Hz */
 	st->snsrs[i].usr_cfg = 3; /* 24g */
-	ret = bmi_enable(st, i, 1);
+	ret |= bmi_acc_able(st, 1);
 	mdelay(2);
 	/* Enable accel self-test with positive excitation */
 	ret |= bmi_i2c_wr(st, BMI_HW_ACC, BMI_REG_ACC_SELF_TEST,
@@ -1030,7 +1242,7 @@ static int bmi_acc_selftest(struct bmi_state *st)
 	mdelay(BMI_ACC_SELFTEST_DELAY_MS);
 	st->buf_acc_i = 0; /* self test corrupts buffer - reset buffer index */
 	st->snsrs[i].usr_cfg = usr_cfg; /* restore user configuration */
-	st->snsrs[i].period_us = us; /* restore user configuration */
+	bmi_acc_softreset(st, BMI_HW_ACC);
 	if (!ret) {
 		x_neg = (st->buf_acc[1] << 8) | (st->buf_acc[0]);
 		y_neg = (st->buf_acc[3] << 8) | (st->buf_acc[2]);
@@ -1043,23 +1255,8 @@ static int bmi_acc_selftest(struct bmi_state *st)
 	return ret;
 }
 
-static int bmi_acc_softreset(struct bmi_state *st)
+static int bmi_acc_pm(struct bmi_state *st, unsigned int hw, int able)
 {
-	unsigned int snsr_id;
-	int ret;
-
-	ret = bmi_i2c_wr(st, BMI_HW_ACC, BMI_REG_ACC_SOFTRESET,
-			 BMI_REG_ACC_SOFTRESET_EXE);
-	snsr_id = st->hw2ids[BMI_HW_ACC];
-	if (snsr_id < BMI_HW_N)
-		st->enabled &= ~(1 << snsr_id);
-	mdelay(BMI_ACC_SOFTRESET_DELAY_MS);
-	return ret;
-}
-
-static int bmi_acc_pm(struct bmi_state *st, unsigned int able)
-{
-	unsigned int snsr_id;
 	int ret;
 
 	if (able) {
@@ -1074,9 +1271,9 @@ static int bmi_acc_pm(struct bmi_state *st, unsigned int able)
 					 BMI_REG_ACC_PWR_CONF,
 					 BMI_REG_ACC_PWR_CONF_ACTV);
 			if (ret) {
-				st->hw_en &= ~(1 << BMI_HW_ACC);
+				st->hw_en &= ~(1 << hw);
 			} else {
-				st->hw_en |= (1 << BMI_HW_ACC);
+				st->hw_en |= (1 << hw);
 				mdelay(BMI_ACC_PM_DELAY_MS);
 				ret = bmi_i2c_wr(st, BMI_HW_ACC,
 						 BMI_REG_INT1_IO_CTRL,
@@ -1099,13 +1296,10 @@ static int bmi_acc_pm(struct bmi_state *st, unsigned int able)
 			ret = -ENOMEM;
 		}
 	} else {
-		snsr_id = st->hw2ids[BMI_HW_ACC];
-		if (snsr_id < BMI_HW_N)
-			st->snsrs[snsr_id].timeout_en = false;
 		ret = bmi_acc_able(st, 0);
 		ret |= bmi_i2c_wr(st, BMI_HW_ACC, BMI_REG_ACC_PWR_CONF,
 				  BMI_REG_ACC_PWR_CONF_SUSP);
-		st->hw_en &= ~(1 << BMI_HW_ACC);
+		bmi_hw_off(st, hw);
 	}
 	return ret;
 }
@@ -1141,17 +1335,21 @@ static int bmi_gyr_batch(struct bmi_state *st, unsigned int *odr_us,
 	unsigned int i;
 	unsigned int n;
 	unsigned int odr_i;
-	int ret;
+	int ret = 0;
 
-	i = st->hw2ids[BMI_HW_GYR];
-	st->snsrs[i].timeout_en = false;
 	odr_i = bmi_odr_i(bmi_odrs_gyr, ARRAY_SIZE(bmi_odrs_gyr), period_us);
-	if (st->hw_en & (1 << BMI_HW_GYR)) {
+	if (odr_us) {
+		*odr_us = bmi_odrs_gyr[odr_i].period_us;
+	} else if (st->hw_en & bmi_hw_dpnd_msks[BMI_HW_GYR]) {
 		/* power is up */
 		val = bmi_odrs_gyr[odr_i].hw;
 		ret = bmi_i2c_wr(st, BMI_HW_GYR, BMI_REG_GYR_BW, val);
-		if (!ret) {
+		i = st->hw2ids[BMI_HW_GYR];
+		if ((i < BMI_HW_N) && !ret) {
+			st->snsrs[i].timeout_en = false;
 			st->snsrs[i].odr_us = bmi_odrs_gyr[odr_i].period_us;
+			st->ts_odr[BMI_HW_GYR] = (s64)st->snsrs[i].odr_us *
+									  1000;
 			if (timeout_us) {
 				/* calculate batch timeout */
 				n = timeout_us;
@@ -1165,11 +1363,7 @@ static int bmi_gyr_batch(struct bmi_state *st, unsigned int *odr_us,
 					st->snsrs[i].timeout_en = true;
 			}
 		}
-	} else {
-		ret = 0;
 	}
-	if (odr_us)
-		*odr_us = bmi_odrs_gyr[odr_i].period_us;
 	return ret;
 }
 
@@ -1187,16 +1381,12 @@ static int bmi_gyr_able(struct bmi_state *st, int en)
 			ret = bmi_i2c_wr(st, BMI_HW_GYR,
 					 BMI_REG_FIFO_WM_ENABLE,
 					 BMI_REG_FIFO_WM_ENABLE_EN);
-			st->ts[BMI_HW_GYR] = nvs_timestamp();
-			ret |= bmi_i2c_wr(st, BMI_HW_GYR,
-					  BMI_REG_GYR_INT_CTRL,
-					  BMI_REG_GYR_INT_CTRL_FIFO_EN);
+			val = BMI_REG_GYR_INT_CTRL_FIFO_EN;
 		} else {
-			st->ts[BMI_HW_GYR] = nvs_timestamp();
-			ret = bmi_i2c_wr(st, BMI_HW_GYR,
-					 BMI_REG_GYR_INT_CTRL,
-					 BMI_REG_GYR_INT_CTRL_DATA_EN);
+			val = BMI_REG_GYR_INT_CTRL_DATA_EN;
 		}
+		st->ts[BMI_HW_GYR] = nvs_timestamp();
+		ret = bmi_i2c_wr(st, BMI_HW_GYR, BMI_REG_GYR_INT_CTRL, val);
 	} else {
 		ret = bmi_i2c_wr(st, BMI_HW_GYR, BMI_REG_FIFO_WM_ENABLE,
 				 BMI_REG_FIFO_WM_ENABLE_DIS);
@@ -1206,41 +1396,46 @@ static int bmi_gyr_able(struct bmi_state *st, int en)
 	return ret;
 }
 
-static int bmi_gyr_selftest(struct bmi_state *st)
+static int bmi_gyr_softreset(struct bmi_state *st, unsigned int hw)
 {
-	uint8_t val;
-	int ret;
-
-	ret = bmi_i2c_wr(st, BMI_HW_GYR, BMI_REG_GYR_SELF_TEST,
-			 BMI_REG_GYR_SELF_TEST_EXE);
-	mdelay(BMI_GYR_SELFTEST_DELAY_MS);
-	ret |= bmi_i2c_rd(st, BMI_HW_GYR, BMI_REG_GYR_SELF_TEST, 1, &val);
-	if (!ret) {
-		if (val & BMI_REG_GYR_SELF_TEST_FAIL)
-			/* failure */
-			ret = 1;
-	}
-	return ret;
-}
-
-static int bmi_gyr_softreset(struct bmi_state *st)
-{
-	unsigned int snsr_id;
 	int ret;
 
 	ret = bmi_i2c_wr(st, BMI_HW_GYR, BMI_REG_GYR_SOFTRESET,
 			 BMI_REG_GYR_SOFTRESET_EXE);
-	snsr_id = st->hw2ids[BMI_HW_GYR];
-	if (snsr_id < BMI_HW_N)
-		st->enabled &= ~(1 << snsr_id);
 	mdelay(BMI_GYR_SOFTRESET_DELAY_MS);
+	bmi_hw_off(st, hw);
 	return ret;
 }
 
-static int bmi_gyr_pm(struct bmi_state *st, unsigned int able)
+static int bmi_gyr_selftest(struct bmi_state *st)
+{
+	uint8_t val;
+	unsigned int i;
+	int ret;
+
+	ret = bmi_i2c_wr(st, BMI_HW_GYR, BMI_REG_GYR_SELF_TEST,
+			 BMI_REG_GYR_SELF_TEST_EXE);
+	if (!ret) {
+		for (i = 0; i < BMI_GYR_SELFTEST_RD_LOOP_N; i++) {
+			mdelay(BMI_GYR_SELFTEST_DELAY_MS);
+			ret = bmi_i2c_rd(st, BMI_HW_GYR, BMI_REG_GYR_SELF_TEST,
+					 1, &val);
+			if ((val & BMI_REG_GYR_SELF_TEST_RDY) && !ret)
+				break;
+		}
+		if (!ret) {
+			if (val & BMI_REG_GYR_SELF_TEST_FAIL)
+				/* failure */
+				ret = 1;
+		}
+	}
+	bmi_gyr_softreset(st, BMI_HW_GYR);
+	return ret;
+}
+
+static int bmi_gyr_pm(struct bmi_state *st, unsigned int hw, int able)
 {
 	size_t n;
-	unsigned int snsr_id;
 	int ret;
 
 	if (able) {
@@ -1254,9 +1449,9 @@ static int bmi_gyr_pm(struct bmi_state *st, unsigned int able)
 			ret = bmi_i2c_wr(st, BMI_HW_GYR, BMI_REG_GYR_LPM1,
 					 BMI_REG_GYR_LPM1_NORM);
 			if (ret) {
-				st->hw_en &= ~(1 << BMI_HW_GYR);
+				st->hw_en &= ~(1 << hw);
 			} else {
-				st->hw_en |= (1 << BMI_HW_GYR);
+				st->hw_en |= (1 << hw);
 				mdelay(BMI_GYR_PM_DELAY_MS);
 				ret = bmi_i2c_wr(st, BMI_HW_GYR,
 						 BMI_REG_INT_3_4_IO_CONF,
@@ -1275,13 +1470,10 @@ static int bmi_gyr_pm(struct bmi_state *st, unsigned int able)
 			ret = -ENOMEM;
 		}
 	} else {
-		snsr_id = st->hw2ids[BMI_HW_GYR];
-		if (snsr_id < BMI_HW_N)
-			st->snsrs[snsr_id].timeout_en = false;
 		ret = bmi_gyr_able(st, 0);
 		ret |= bmi_i2c_wr(st, BMI_HW_GYR, BMI_REG_GYR_LPM1,
 				  BMI_REG_GYR_LPM1_DEEP);
-		st->hw_en &= ~(1 << BMI_HW_GYR);
+		bmi_hw_off(st, hw);
 	}
 	return ret;
 }
@@ -1304,98 +1496,65 @@ static unsigned long bmi_gyr_irqflags(struct bmi_state *st)
 	return irqflags;
 }
 
-static int bmi_pm(struct bmi_state *st, int snsr_id, bool en)
+static int bmi_tmp_able(struct bmi_state *st, int en)
 {
-	unsigned int hw_en = st->hw_en;
-	unsigned int hw;
 	unsigned int i;
-	int ret;
+	int ret = 0;
 
 	if (en) {
-		if (!hw_en) {
-			ret = nvs_vregs_enable(&st->i2c->dev, st->vreg,
-					       ARRAY_SIZE(bmi_vregs));
-			if (ret > 0)
-				mdelay(BMI_HW_DELAY_POR_MS);
-		}
-		if (snsr_id < 0) {
-			ret = 0;
-			for (i = 0; i < st->hw_n; i++) {
-				hw = st->snsrs[i].hw;
-				ret |= bmi_hws[hw].fn_softreset(st);
-				ret |= bmi_hws[hw].fn_pm(st, 1);
-			}
-		} else {
-			hw = st->snsrs[snsr_id].hw;
-			ret = bmi_hws[hw].fn_softreset(st);
-			ret |= bmi_hws[hw].fn_pm(st, 1);
-		}
-	} else {
-		ret = nvs_vregs_sts(st->vreg, ARRAY_SIZE(bmi_vregs));
-		if ((ret < 0) || (ret == ARRAY_SIZE(bmi_vregs))) {
-			/* we're fully powered */
-			if (snsr_id < 0) {
-				ret = 0;
-				for (i = 0; i < st->hw_n; i++) {
-					hw = st->snsrs[i].hw;
-					ret |= bmi_hws[hw].fn_pm(st, 0);
-				}
-			} else {
-				hw = st->snsrs[snsr_id].hw;
-				ret = bmi_hws[hw].fn_pm(st, 0);
-			}
-		} else if (ret > 0) {
-			/* partially powered so go to full before disables */
-			ret = nvs_vregs_enable(&st->i2c->dev, st->vreg,
-					       ARRAY_SIZE(bmi_vregs));
-			mdelay(BMI_HW_DELAY_POR_MS);
-			if (snsr_id < 0) {
-				ret = 0;
-				for (i = 0; i < st->hw_n; i++) {
-					hw = st->snsrs[i].hw;
-					ret |= bmi_hws[hw].fn_pm(st, 0);
-				}
-			} else {
-				hw = st->snsrs[snsr_id].hw;
-				ret = bmi_hws[hw].fn_pm(st, 0);
-			}
-		}
-		/* disables put us in low power sleep state in case no vregs */
-		if (!st->hw_en) /* pull plug if all devices are low power */
-			ret |= nvs_vregs_disable(&st->i2c->dev, st->vreg,
-						 ARRAY_SIZE(bmi_vregs));
-	}
-	if (ret > 0)
-		ret = 0;
-	if (ret) {
-		if (snsr_id < 0)
-			dev_err(&st->i2c->dev, "%s ALL pm_en=%x  ERR=%d\n",
-				__func__, en, ret);
-		else
-			dev_err(&st->i2c->dev, "%s %s pm_en=%x  ERR=%d\n",
-				__func__, st->snsrs[snsr_id].cfg.name,
-				en, ret);
-	} else if (st->sts & NVS_STS_SPEW_MSG && hw_en != st->hw_en) {
-		dev_info(&st->i2c->dev, "%s hw_en: 0x%X=>0x%XS\n",
-			 __func__, hw_en, st->hw_en);
+		nvs_on_change_enable(&st->oc);
+		st->ts_hw[BMI_HW_TMP] = 0;
+		i = st->hw2ids[BMI_HW_ACC];
+		if (!(st->enabled & (1 << i)))
+			/* TMP needs ACC to be on */
+			ret = bmi_acc_able(st, 1);
 	}
 	return ret;
 }
 
-static void bmi_pm_exit(struct bmi_state *st)
+static int bmi_tmp_batch(struct bmi_state *st, unsigned int *odr_us,
+			 unsigned int period_us, unsigned int timeout_us)
 {
-	bmi_pm(st, -1, false);
-	nvs_vregs_exit(&st->i2c->dev, st->vreg, ARRAY_SIZE(bmi_vregs));
-	return;
+	unsigned int i;
+	int ret = 0;
+
+	i = st->hw2ids[BMI_HW_TMP];
+	if (odr_us) {
+		*odr_us = st->oc.period_us;
+	} else {
+		st->oc.period_us = period_us;
+		st->snsrs[i].odr_us = period_us;
+		st->ts_odr[BMI_HW_TMP] = (s64)st->snsrs[i].odr_us * 1000;
+	}
+	return ret;
 }
 
-static int bmi_pm_init(struct bmi_state *st)
+static int bmi_read_tmp(struct bmi_state *st)
 {
-	int ret;
+	u8 buf[2];
+	u16 hw;
+	unsigned int i;
+	int ret = 0;
 
-	nvs_vregs_init(&st->i2c->dev,
-		       st->vreg, ARRAY_SIZE(bmi_vregs), bmi_vregs);
-	ret = bmi_pm(st, -1, true);
+	i = st->hw2ids[BMI_HW_TMP];
+	if ((i < BMI_HW_N) && (st->enabled & (1 << i)) &&
+			       (st->ts_hw[BMI_HW_TMP] <= st->ts[BMI_HW_TMP])) {
+		ret = bmi_i2c_rd(st, BMI_HW_ACC, BMI_REG_TEMP_MSB,
+				 sizeof(buf), buf);
+		if ((buf[0] != 0x80) && !ret) { /* 0x80 == invalid */
+			hw = buf[0];
+			hw *= 8; /* TEMP_MSB * 8 */
+			buf[1] >>= 5; /* TEMP_LSB / 32*/
+			hw += buf[1];
+			if (hw > 1023)
+				hw -= 2048;
+			st->oc.hw = hw;
+			st->oc.timestamp = st->ts[BMI_HW_TMP];
+			ret = nvs_on_change_read(&st->oc);
+			st->ts_hw[BMI_HW_TMP] = (st->ts[BMI_HW_TMP] +
+						 st->ts_odr[BMI_HW_TMP]);
+		}
+	}
 	return ret;
 }
 
@@ -1415,30 +1574,24 @@ static void bmi_work(struct work_struct *ws)
 		bmi_mutex_lock(st);
 		ts1 = nvs_timestamp();
 		i = st->hw2ids[BMI_HW_GYR];
-		if (i < BMI_HW_N) {
-			if (st->enabled & (1 << i)) {
-				ret = bmi_i2c_rd(st, BMI_HW_GYR,
-						 BMI_REG_GYR_DATA,
-						 BMI_REG_GYR_DATA_N,
-						 st->buf_gyr);
-				if (!ret)
-					st->nvs->handler(st->snsrs[i].nvs_st,
-							 st->buf_gyr, ts1);
-			}
+		if ((i < BMI_HW_N) && (st->enabled & (1 << i))) {
+			ret = bmi_i2c_rd(st, BMI_HW_GYR, BMI_REG_GYR_DATA,
+					 BMI_REG_GYR_DATA_N, st->buf_gyr);
+			if (!ret)
+				st->nvs->handler(st->snsrs[i].nvs_st,
+						 st->buf_gyr, ts1);
 		}
 		ts2 = nvs_timestamp();
 		i = st->hw2ids[BMI_HW_ACC];
-		if (i < BMI_HW_N) {
-			if (st->enabled & (1 << i)) {
-				ret = bmi_i2c_rd(st, BMI_HW_ACC,
-						 BMI_REG_ACC_DATA,
-						 BMI_REG_ACC_DATA_N,
-						 st->buf_acc);
-				if (!ret)
-					st->nvs->handler(st->snsrs[i].nvs_st,
-							 st->buf_acc, ts2);
-			}
+		if ((i < BMI_HW_N) && (st->enabled & (1 << i))) {
+			ret = bmi_i2c_rd(st, BMI_HW_ACC, BMI_REG_ACC_DATA,
+					 BMI_REG_ACC_DATA_N, st->buf_acc);
+			if (!ret)
+				st->nvs->handler(st->snsrs[i].nvs_st,
+						 st->buf_acc, ts2);
 		}
+		st->ts_hw[BMI_HW_TMP] = ts2;
+		bmi_read_tmp(st);
 		ts3 = nvs_timestamp();
 		bmi_mutex_unlock(st);
 		ts_diff = (ts3 - ts1) / 1000; /* ns => us */
@@ -1452,8 +1605,6 @@ static void bmi_work(struct work_struct *ws)
 			/* SLEEPING FOR ~USECS OR SMALL MSECS ( 10us - 20ms) */
 			usleep_range(sleep_us, st->period_us);
 	}
-
-	return;
 }
 
 static int bmi_push_acc(struct bmi_state *st, s64 ts)
@@ -1463,10 +1614,10 @@ static int bmi_push_acc(struct bmi_state *st, s64 ts)
 
 	i = st->hw2ids[BMI_HW_ACC];
 	st->buf_acc_i++;
-	if (ts > 0)
+	if (i < BMI_HW_N)
 		st->nvs->handler(st->snsrs[i].nvs_st,
 				 &st->buf_acc[st->buf_acc_i], ts);
-	if (st->sts & BMI_STS_SPEW_FIFO_ACC) {
+	if ((i < BMI_HW_N) && (st->sts & BMI_STS_SPEW_FIFO_ACC)) {
 		for (n = 0; n < BMI_REG_ACC_DATA_N; n++) {
 			dev_info(&st->i2c->dev,
 				 "%s: buf[%u]=0x%02X\n",
@@ -1481,7 +1632,7 @@ static int bmi_push_acc(struct bmi_state *st, s64 ts)
 	return n;
 }
 
-static void bmi_ts_thr_dbg(struct bmi_state *st, s64 ts_irq)
+static int bmi_ts_thr_dbg(struct bmi_state *st, s64 ts_irq)
 {
 	if (ts_irq > 1) {
 		dev_info(&st->i2c->dev,
@@ -1499,7 +1650,7 @@ static void bmi_ts_thr_dbg(struct bmi_state *st, s64 ts_irq)
 			 __func__, st->ts[BMI_HW_ACC], st->ts_lo, st->ts_hi,
 			 st->ts_odr[BMI_HW_ACC]);
 	}
-	return;
+	return 0;
 }
 
 static int bmi_ts_thr(struct bmi_state *st)
@@ -1627,7 +1778,7 @@ static int bmi_frame_time(struct bmi_state *st)
 	return 0;
 }
 
-static int bmi_read_acc(struct bmi_state *st, bool poll)
+static int bmi_read_acc(struct bmi_state *st)
 {
 	u8 hdr;
 	u16 buf_n;
@@ -1638,7 +1789,7 @@ static int bmi_read_acc(struct bmi_state *st, bool poll)
 	ret = bmi_i2c_rd(st, BMI_HW_ACC, BMI_REG_FIFO_LENGTH_0,
 			 sizeof(fifo_n), (u8 *)&fifo_n);
 	if (ret)
-		goto bmi_read_acc_fie;
+		return ret;
 
 	if (st->sts & BMI_STS_SPEW_FIFO_ACC)
 		dev_info(&st->i2c->dev, "%s fifo_n=%u\n", __func__, fifo_n);
@@ -1653,7 +1804,7 @@ static int bmi_read_acc(struct bmi_state *st, bool poll)
 		ret = bmi_i2c_rd(st, BMI_HW_ACC, BMI_REG_ACC_FIFO_DATA,
 				 buf_n, st->buf_acc);
 		if (ret)
-			goto bmi_read_acc_fie;
+			return ret;
 
 		st->buf_acc_i = 0;
 		while (st->buf_acc_i < buf_n) {
@@ -1674,6 +1825,7 @@ static int bmi_read_acc(struct bmi_state *st, bool poll)
 				st->frame_n++;
 				bmi_ts_thr(st);
 				bmi_push_acc(st, st->ts[BMI_HW_ACC]);
+				st->ts[BMI_HW_TMP] = st->ts[BMI_HW_ACC];
 				st->ts[BMI_HW_ACC] += st->ts_odr[BMI_HW_ACC];
 			} else if (hdr == 0x40) {
 				/* drop frame */
@@ -1706,11 +1858,11 @@ static int bmi_read_acc(struct bmi_state *st, bool poll)
 		fifo_n -= st->buf_acc_i;
 	}
 
-bmi_read_acc_fie:
+	ret = bmi_read_tmp(st);
 	return ret;
 }
 
-static int bmi_read_gyr(struct bmi_state *st, bool poll)
+static int bmi_read_gyr(struct bmi_state *st)
 {
 	s64 ts1;
 	s64 ts2;
@@ -1727,32 +1879,24 @@ static int bmi_read_gyr(struct bmi_state *st, bool poll)
 	ret = bmi_i2c_rd(st, BMI_HW_GYR, BMI_REG_FIFO_STATUS,
 			 sizeof(fifo_n), (u8 *)&fifo_n);
 	ts2 = atomic64_read(&st->ts_irq[BMI_HW_GYR]);
-	if (poll) {
-		ts3 = st->ts_odr[BMI_HW_GYR]; /* event time difference */
-		ts3 <<= 1; /* X 2 error margin */
-		ts3 = st->ts_hw[BMI_HW_GYR] - ts3; /* ts @ bmi_i2c_rd - err */
-		if (ts2 < ts3) /* IRQ lagging too far */
-			ts2 = st->ts_hw[BMI_HW_GYR]; /* ts @ bmi_i2c_rd */
-	}
 	n = fifo_n & BMI_REG_FIFO_STATUS_N_MSK;
 	if ((!ret) && n) {
 		if (ts1 == ts2) {
 			/* nth read == ts_irq */
-			ts1 = n;
-			ts1 *= st->ts_odr[BMI_HW_GYR];
-			ts1 = ts2 - ts1;
+			ts3 = n;
+			ts3 *= st->ts_odr[BMI_HW_GYR];
+			ts3 = ts1 - ts3;
 			ts2 = st->ts_odr[BMI_HW_GYR];
-			if ((ts1 + ts2) <= st->ts[BMI_HW_GYR]) {
-				ts2 = ts2 - st->ts[BMI_HW_GYR];
+			if ((ts3 + ts2) <= st->ts[BMI_HW_GYR]) {
+				ts2 = ts1 - st->ts[BMI_HW_GYR];
 				ts2 /= n;
 			} else {
-				st->ts[BMI_HW_GYR] = ts1;
+				st->ts[BMI_HW_GYR] = ts3;
 			}
 			if (st->sts & BMI_STS_SPEW_TS_GYR)
 				dev_info(&st->i2c->dev,
-					 "%s SYNC: 1st ts=%lld n=%u @ %lld\n",
-					 __func__, st->ts[BMI_HW_GYR] + ts2,
-					 n, ts2);
+					 "%s S irq=%lld 1st=%lld n=%u @%lld\n",
+					 __func__, ts1, ts3 + ts2, n, ts2);
 		} else if (ts2 > ts1) {
 			ts3 = n;
 			ts3 *= st->ts_odr[BMI_HW_GYR];
@@ -1763,24 +1907,25 @@ static int bmi_read_gyr(struct bmi_state *st, bool poll)
 				ts2 /= n;
 			} else if (ts3 < ts1) {
 				/* out of range - need to adjust min limit */
-				ts2 = ts1 - st->ts[BMI_HW_GYR];
-				ts2 /= n;
+				ts2 = st->ts_odr[BMI_HW_GYR];
+				ts3 = n * ts2;
+				st->ts[BMI_HW_GYR] = ts1 - ts3;
 			} else { /* ts3 >= ts1 && ts3 <= ts2 */
 				ts2 = st->ts_odr[BMI_HW_GYR];
 			}
 			if (st->sts & BMI_STS_SPEW_TS_GYR)
 				dev_info(&st->i2c->dev,
-					 "%s 1st ts=%lld n=%u @ %lld\n",
-					 __func__, st->ts[BMI_HW_GYR] + ts2,
-					 n, ts2);
+					 "%s R irq=%lld 1st=%lld n=%u @%lld\n",
+					 __func__, ts1,
+					 st->ts[BMI_HW_GYR] + ts2, n, ts2);
 		} else { /* ts2 < ts1 */
 			/* internal error */
 			ts2 = st->ts_odr[BMI_HW_GYR];
 			if (st->sts & BMI_STS_SPEW_TS_GYR)
 				dev_info(&st->i2c->dev,
-					 "%s ERR: 1st ts=%lld n=%u @ %lld\n",
-					 __func__, st->ts[BMI_HW_GYR] + ts2,
-					 n, ts2);
+					 "%s E irq=%lld 1st=%lld n=%u @%lld\n",
+					 __func__, ts1,
+					 st->ts[BMI_HW_GYR] + ts2, n, ts2);
 			bmi_err(st);
 		}
 		if (st->sts & BMI_STS_SPEW_FIFO_GYR)
@@ -1818,9 +1963,9 @@ static irqreturn_t bmi_irq_thread(int irq, void *dev_id)
 
 	bmi_mutex_lock(st);
 	if (irq == st->gis[BMI_HW_ACC].irq)
-		bmi_read_acc(st, false);
+		bmi_read_acc(st);
 	if (irq == st->gis[BMI_HW_GYR].irq)
-		bmi_read_gyr(st, false);
+		bmi_read_gyr(st);
 	bmi_mutex_unlock(st);
 	return IRQ_HANDLED;
 }
@@ -1869,9 +2014,9 @@ static int bmi_read(struct bmi_state *st, int snsr_id)
 	int ret;
 
 	if (st->snsrs[snsr_id].hw == BMI_HW_ACC)
-		ret = bmi_read_acc(st, true);
+		ret = bmi_read_acc(st);
 	else if (st->snsrs[snsr_id].hw == BMI_HW_GYR)
-		ret = bmi_read_gyr(st, true);
+		ret = bmi_read_gyr(st);
 	else
 		ret = -ENODEV;
 	return ret;
@@ -1881,10 +2026,9 @@ static int bmi_period(struct bmi_state *st, unsigned int msk_en, int snsr_id)
 {
 	unsigned int hw;
 	unsigned int i;
-	unsigned int odr;
 	unsigned int to;
 	unsigned int us;
-	int ret;
+	int ret = 0;
 
 	if (st->op_mode == BMI_OP_MODE_IRQ) {
 		hw = st->snsrs[snsr_id].hw;
@@ -1894,14 +2038,12 @@ static int bmi_period(struct bmi_state *st, unsigned int msk_en, int snsr_id)
 			/* already enabled */
 			ret = bmi_hws[hw].fn_able(st, 0);
 			bmi_read(st, snsr_id); /* empty FIFO */
-			ret |= bmi_hws[hw].fn_batch(st, &us, us, to);
-			st->ts_odr[hw] = (s64)us * 1000; /* us => ns */
+			ret |= bmi_hws[hw].fn_batch(st, NULL, us, to);
 			ret |= bmi_hws[hw].fn_able(st, 1); /* reenable */
 		} else {
-			ret = bmi_hws[hw].fn_batch(st, &us, us, to);
-			st->ts_odr[hw] = (s64)us * 1000; /* us => ns */
+			ret = bmi_hws[hw].fn_batch(st, NULL, us, to);
 		}
-	} else {
+	} else if (msk_en) {
 		/* find the fastest poll time of enabled devices */
 		us = st->period_us_max;
 		for (i = 0; i < st->hw_n; i++) {
@@ -1936,9 +2078,8 @@ static int bmi_period(struct bmi_state *st, unsigned int msk_en, int snsr_id)
 			for (i = 0; i < st->hw_n; i++) {
 				if (msk_en & (1 << i)) {
 					hw = st->snsrs[i].hw;
-					ret |= bmi_hws[hw].fn_batch(st, &odr,
+					ret |= bmi_hws[hw].fn_batch(st, NULL,
 								    us, 0);
-					st->ts_odr[hw] = (s64)odr * 1000;
 				}
 			}
 
@@ -1956,28 +2097,11 @@ static int bmi_period(struct bmi_state *st, unsigned int msk_en, int snsr_id)
 
 static int bmi_disable(struct bmi_state *st, int snsr_id)
 {
-	bool disable = true;
-	unsigned int msk;
 	int ret;
 
-	if (snsr_id >= 0) {
-		msk = ~(1 << snsr_id);
-		if (st->enabled & msk) {
-			/* other device still enabled */
-			disable = false;
-			ret = bmi_pm(st, snsr_id, false);
-			if (!ret) {
-				st->enabled &= msk;
-				if (st->op_mode != BMI_OP_MODE_IRQ)
-					bmi_period(st, st->enabled, snsr_id);
-			}
-		}
-	}
-	if (disable) {
-		ret = bmi_pm(st, -1, false);
-		if (!ret)
-			st->enabled = 0;
-	}
+	ret = bmi_pm(st, snsr_id, false);
+	if (st->op_mode != BMI_OP_MODE_IRQ)
+		bmi_period(st, st->enabled, snsr_id);
 	return ret;
 }
 
@@ -1987,16 +2111,14 @@ static int bmi_enable(void *client, int snsr_id, int enable)
 	unsigned int hw;
 	int ret;
 
-	if (enable < 0) {
-		ret = st->enabled & (1 << snsr_id);
-		goto bmi_enable_fie;
-	}
+	if (enable < 0)
+		return (st->enabled & (1 << snsr_id));
 
 	if (enable) {
 		enable = st->enabled | (1 << snsr_id);
 		ret = bmi_pm(st, snsr_id, true);
 		if (ret < 0)
-			goto bmi_enable_fie;
+			return ret;
 
 		ret = bmi_period(st, enable, snsr_id);
 		if (st->op_mode != BMI_OP_MODE_IRQ_SHARED) {
@@ -2023,7 +2145,7 @@ static int bmi_enable(void *client, int snsr_id, int enable)
 	} else {
 		ret = bmi_disable(st, snsr_id);
 	}
-bmi_enable_fie:
+
 	return ret;
 }
 
@@ -2031,18 +2153,16 @@ static int bmi_batch(void *client, int snsr_id, int flags,
 		     unsigned int period_us, unsigned int timeout_us)
 {
 	struct bmi_state *st = (struct bmi_state *)client;
-	int ret;
+	int ret = 0;
 
-	if (timeout_us && !st->snsrs[snsr_id].cfg.fifo_max_evnt_cnt) {
+	if (timeout_us && !st->snsrs[snsr_id].cfg.fifo_max_evnt_cnt)
 		/* timeout not supported */
-		ret = -EINVAL;
-		goto bmi_batch_fie;
-	}
+		return -EINVAL;
 
 	st->snsrs[snsr_id].period_us = period_us;
 	st->snsrs[snsr_id].timeout_us = timeout_us;
-	ret = bmi_period(st, st->enabled, snsr_id);
-bmi_batch_fie:
+	if (st->enabled & (1 << snsr_id))
+		ret = bmi_period(st, st->enabled, snsr_id);
 	return ret;
 }
 
@@ -2050,12 +2170,22 @@ static int bmi_batch_read(void *client, int snsr_id,
 			  unsigned int *period_us, unsigned int *timeout_us)
 {
 	struct bmi_state *st = (struct bmi_state *)client;
+	unsigned int hw;
+	int ret = 0;
 
-	if (period_us)
-		*period_us = st->snsrs[snsr_id].odr_us;
+	if (period_us) {
+		if (st->enabled & (1 << snsr_id)) {
+			*period_us = st->snsrs[snsr_id].odr_us;
+		} else {
+			hw = st->snsrs[snsr_id].hw;
+			ret = bmi_hws[hw].fn_batch(st, period_us,
+						  st->snsrs[snsr_id].period_us,
+						st->snsrs[snsr_id].timeout_us);
+		}
+	}
 	if (timeout_us)
 		*timeout_us = st->snsrs[snsr_id].timeout_us;
-	return 0;
+	return ret;
 }
 
 static int bmi_flush(void *client, int snsr_id)
@@ -2074,12 +2204,12 @@ static int bmi_max_range(void *client, int snsr_id, int max_range)
 {
 	struct bmi_state *st = (struct bmi_state *)client;
 	unsigned int i = max_range;
-	int ret;
 
-	if (st->enabled & (1 << snsr_id)) {
+	if (st->enabled & (1 << snsr_id))
 		/* can't change settings on the fly (disable device first) */
-		ret = -EPERM;
-	} else {
+		return -EBUSY;
+
+	if (st->snsrs[snsr_id].rrs) {
 		if (i > st->snsrs[snsr_id].rrs->rr_0n)
 			/* clamp to highest setting */
 			i = st->snsrs[snsr_id].rrs->rr_0n;
@@ -2096,19 +2226,34 @@ static int bmi_max_range(void *client, int snsr_id, int max_range)
 				 st->snsrs[snsr_id].rrs->rr[i].resolution.ival;
 		st->snsrs[snsr_id].cfg.scale.fval =
 				 st->snsrs[snsr_id].rrs->rr[i].resolution.fval;
-		ret = 0;
 	}
-	return ret;
+	return 0;
+}
+
+static int bmi_thresh_lo(void *client, int snsr_id, int thresh_lo)
+{
+	struct bmi_state *st = (struct bmi_state *)client;
+
+	return nvs_on_change_threshold_lo(&st->oc, thresh_lo);
+}
+
+static int bmi_thresh_hi(void *client, int snsr_id, int thresh_hi)
+{
+	struct bmi_state *st = (struct bmi_state *)client;
+
+	return nvs_on_change_threshold_hi(&st->oc, thresh_hi);
 }
 
 static int bmi_reset(void *client, int snsr_id)
 {
 	struct bmi_state *st = (struct bmi_state *)client;
-	int ret;
+	unsigned int hw = st->snsrs[snsr_id].hw;
+	int ret = -EPERM;
 
-	/* powering up will cause a softreset */
-	ret = bmi_pm(st, snsr_id, true);
-	/* leave the device in the softreset state */
+	if (st->hw_en & (1 << hw))
+		/* device is powered on */
+		ret = bmi_hws[hw].fn_softreset(st, hw);
+		/* leave the device in the softreset state */
 	return ret;
 }
 
@@ -2201,12 +2346,10 @@ static int bmi_nvs_write(void *client, int snsr_id, unsigned int nvs)
 		break;
 
 	default:
-		ret = -EINVAL;
-		goto bmi_nvs_write_fie;
+		return -EINVAL;
 	}
 
 	st->inf = nvs;
-bmi_nvs_write_fie:
 	return ret;
 }
 
@@ -2307,6 +2450,8 @@ static int bmi_nvs_read(void *client, int snsr_id, char *buf)
 			      "%s_register_0x34=0x%02X\n",
 			      bmi_snsr_cfgs[BMI_HW_GYR].name,
 			      st->rg_0x34);
+		t += nvs_on_change_dbg_dt(&st->oc, buf + t, PAGE_SIZE - t,
+					  NULL);
 		break;
 
 	case BMI_INF_DBG:
@@ -2325,6 +2470,9 @@ static int bmi_nvs_read(void *client, int snsr_id, char *buf)
 			t += snprintf(buf + t, PAGE_SIZE - t, "period_us=%u\n",
 				      st->period_us);
 		}
+		if (snsr_id == BMI_HW_TMP)
+			t += nvs_on_change_dbg(&st->oc, buf + t,
+					       PAGE_SIZE - t);
 		i = snsr_id;
 		t += snprintf(buf + t, PAGE_SIZE - t, "i2c_addr=0x%X\n",
 			      st->i2c_addrs[hw]);
@@ -2396,6 +2544,8 @@ static struct nvs_fn_dev bmi_fn_dev = {
 	.batch_read			= bmi_batch_read,
 	.flush				= bmi_flush,
 	.max_range			= bmi_max_range,
+	.thresh_lo			= bmi_thresh_lo,
+	.thresh_hi			= bmi_thresh_hi,
 	.reset				= bmi_reset,
 	.self_test			= bmi_selftest,
 	.regs				= bmi_regs,
@@ -2510,7 +2660,7 @@ static int bmi_id_dev(struct bmi_state *st, unsigned int hw)
 				st->part = i;
 			else
 				i = BMI_PART_AUTO;
-			dev_info(&st->i2c->dev, "%s %s found from %s\n",
+			dev_info(&st->i2c->dev, "%s %s found in %s\n",
 				 __func__, bmi_snsr_cfgs[hw].name,
 				 bmi_i2c_device_ids[i].name);
 		} else {
@@ -2525,6 +2675,22 @@ static int bmi_id_i2c(struct bmi_state *st, unsigned int hw)
 	unsigned int i;
 	unsigned int n;
 	int ret = -ENODEV;
+
+	for (i = 0; i < hw; i++) {
+		if (bmi_hws[i].i2c_addrs == bmi_hws[hw].i2c_addrs) {
+			/* we've already searched for these I2C addresses */
+			if (st->i2c_addrs[i]) {
+				/* and already found this I2C device */
+				st->i2c_addrs[hw] = st->i2c_addrs[i];
+				dev_info(&st->i2c->dev, "%s %s found in %s\n",
+					 __func__, bmi_snsr_cfgs[hw].name,
+					 bmi_i2c_device_ids[st->part].name);
+				return 0;
+			}
+
+			return -ENODEV;
+		}
+	}
 
 	n = bmi_hws[hw].i2c_addrs_n;
 	for (i = 0; i < n; i++) {
@@ -2551,71 +2717,83 @@ static int bmi_id_i2c(struct bmi_state *st, unsigned int hw)
 
 static int bmi_of_dt(struct bmi_state *st, struct device_node *dn)
 {
-	u8 val;
-	u32 tmp;
+	u8 val8;
+	u32 val32;
 
 	if (dn) {
 		if (!st->i2c_addrs[BMI_HW_ACC]) {
 			if (!of_property_read_u32(dn, "accelerometer_i2c_addr",
-						  &tmp))
-				st->i2c_addrs[BMI_HW_ACC] = tmp;
+						  &val32))
+				st->i2c_addrs[BMI_HW_ACC] = val32;
 		}
 		/* driver specific device tree parameters */
 		st->gis[BMI_HW_ACC].gpio =
 			    of_get_named_gpio(dn, "accelerometer_irq_gpio", 0);
 		if (!of_property_read_u32(dn, "accelerometer_buffer_size",
-					  &tmp))
-			st->buf_acc_n = tmp;
+					  &val32))
+			st->buf_acc_n = val32;
 		if (!of_property_read_u32(dn, "accelerometer_register_0x40",
-					  &tmp)) {
-			tmp &= BMI_REG_ACC_CONF_BWP_MSK;
-			st->ra_0x40 = tmp;
+					  &val32)) {
+			val8 = val32 & BMI_REG_ACC_CONF_BWP_MSK;
+			st->ra_0x40 = val8;
 		}
 /* not needed - but note that it could be optional
  *		if (!of_property_read_u32(dn, "accelerometer_register_0x48",
- *					  &tmp)) {
- *			tmp &= BMI_REG_ACC_FIFO_CFG_0_MSK;
- *			tmp |= BMI_REG_ACC_FIFO_CFG_0_DFLT;
- *			st->ra_0x48 = tmp;
+ *					  &val32)) {
+ *			val8 = val32 & BMI_REG_ACC_FIFO_CFG_0_MSK;
+ *			val8 |= BMI_REG_ACC_FIFO_CFG_0_DFLT;
+ *			st->ra_0x48 = val8;
  *		}
  */
 		if (!of_property_read_u32(dn, "accelerometer_register_0x49",
-					  &tmp)) {
-			tmp &= BMI_REG_ACC_FIFO_CFG_0_MSK;
-			val = tmp;
-			val |= BMI_REG_ACC_FIFO_CFG_0_DFLT;
-			st->ra_0x49 = val;
+					  &val32)) {
+			val8 = val32 & BMI_REG_ACC_FIFO_CFG_0_MSK;
+			val8 |= BMI_REG_ACC_FIFO_CFG_0_DFLT;
+			st->ra_0x49 = val8;
 		}
 		if (!of_property_read_u32(dn, "accelerometer_register_0x53",
-					  &tmp))
-			st->ra_0x53 = tmp;
+					  &val32)) {
+			val8 = val32;
+			st->ra_0x53 = val8;
+		}
 		if (!of_property_read_u32(dn, "accelerometer_register_0x54",
-					  &tmp))
-			st->ra_0x54 = tmp;
+					  &val32)) {
+			val8 = val32;
+			st->ra_0x54 = val8;
+		}
 		if (!of_property_read_u32(dn, "accelerometer_register_0x58",
-					  &tmp))
-			st->ra_0x58 = tmp;
+					  &val32)) {
+			val8 = val32;
+			st->ra_0x58 = val8;
+		}
 		st->gis[BMI_HW_GYR].gpio =
 				of_get_named_gpio(dn, "gyroscope_irq_gpio", 0);
-		if (!of_property_read_u32(dn, "gyroscope_buffer_size", &tmp)) {
+		if (!of_property_read_u32(dn, "gyroscope_buffer_size",
+					  &val32)) {
 			/* needs to be divisible by 6 */
-			tmp /= BMI_REG_GYR_DATA_N;
+			val32 /= BMI_REG_GYR_DATA_N;
 			/* buf_gyr_n == frame count (event is 6 bytes) */
-			st->buf_gyr_n = tmp;
+			st->buf_gyr_n = val32;
 		}
-		if (!of_property_read_u32(dn, "gyroscope_register_0x16", &tmp))
-			st->rg_0x16 = tmp;
+		if (!of_property_read_u32(dn, "gyroscope_register_0x16",
+					  &val32)) {
+			val8 = val32;
+			st->rg_0x16 = val8;
+		}
 		if (!of_property_read_u32(dn, "gyroscope_register_0x18",
-					  &tmp)) {
-			val = 0;
-			if (tmp & BMI_REG_INT_3_4_IO_MAP_INT3)
-				val |= BMI_REG_INT_3_4_IO_MAP_INT3;
-			if (tmp & BMI_REG_INT_3_4_IO_MAP_INT4)
-				val |= BMI_REG_INT_3_4_IO_MAP_INT4;
-			st->rg_0x18 = val;
+					  &val32)) {
+			val8 = 0;
+			if (val32 & BMI_REG_INT_3_4_IO_MAP_INT3)
+				val8 |= BMI_REG_INT_3_4_IO_MAP_INT3;
+			if (val32 & BMI_REG_INT_3_4_IO_MAP_INT4)
+				val8 |= BMI_REG_INT_3_4_IO_MAP_INT4;
+			st->rg_0x18 = val8;
 		}
-		if (!of_property_read_u32(dn, "gyroscope_register_0x34", &tmp))
-			st->rg_0x34 = tmp;
+		if (!of_property_read_u32(dn, "gyroscope_register_0x34",
+					  &val32)) {
+			val8 = val32;
+			st->rg_0x34 = val8;
+		}
 	}
 	return 0;
 }
@@ -2656,8 +2834,7 @@ static int bmi_init(struct bmi_state *st, const struct i2c_device_id *id)
 		if (!n) {
 			/* no devices were found */
 			dev_err(&st->i2c->dev, "%s _id_i2c ERR\n", __func__);
-			ret = -ENODEV;
-			goto bmi_init_fie;
+			return -ENODEV;
 		}
 	} else {
 		st->part = id->driver_data;
@@ -2674,8 +2851,7 @@ static int bmi_init(struct bmi_state *st, const struct i2c_device_id *id)
 	st->nvs = nvs_auto(NVS_CFG_KIF);
 	if (st->nvs == NULL) {
 		dev_err(&st->i2c->dev, "%s nvs_ ERR\n", __func__);
-		ret = -ENODEV;
-		goto bmi_init_fie;
+		return -ENODEV;
 	}
 
 	n = 0;
@@ -2691,25 +2867,44 @@ static int bmi_init(struct bmi_state *st, const struct i2c_device_id *id)
 			st->snsrs[n].cfg.part =
 					     bmi_i2c_device_ids[st->part].name;
 			st->snsrs[n].hw = i;
-			st->snsrs[n].rrs = &bmi_hws[i].rrs[st->part];
-			bmi_max_range(st, n, st->snsrs[n].cfg.max_range.ival);
+			if (bmi_hws[i].rrs) {
+				st->snsrs[n].rrs = &bmi_hws[i].rrs[st->part];
+				bmi_max_range(st, n,
+					      st->snsrs[n].cfg.max_range.ival);
+			} else {
+				st->snsrs[n].rrs = NULL;
+			}
 			n++;
 		}
 	}
-	if (!n) {
-		ret = -ENODEV;
-		goto bmi_init_fie;
-	}
+	if (!n)
+		return -ENODEV;
 
 	st->hw_n = n;
+	i = st->hw2ids[BMI_HW_TMP];
+	if (i < BMI_HW_N) {
+		st->oc.cfg = &st->snsrs[i].cfg;
+		st->oc.nvs_st = st->snsrs[i].nvs_st;
+		st->oc.handler = st->nvs->handler;
+		nvs_on_change_of_dt(&st->oc, st->i2c->dev.of_node, NULL);
+		st->oc.hw_min = 0;
+		st->oc.hw_max = 0xFFFF;
+		st->oc.reverse_range_en = false;
+		st->oc.scale_float_en = false;
+		st->oc.binary_report_en = false;
+	}
 	ret = bmi_of_dt(st, st->i2c->dev.of_node);
 	if (ret) {
 		dev_err(&st->i2c->dev, "%s _of_dt ERR\n", __func__);
-		goto bmi_init_fie;
+		return ret;
 	}
 
 	/* determine operating mode */
 	for (i = 0; i < st->hw_n; i++) {
+		if (!bmi_hws[st->snsrs[i].hw].fn_irqflags)
+			/* sensor doesn't take an IRQ */
+			continue;
+
 		if (st->gis[st->snsrs[i].hw].gpio < 0) {
 			/* device has no IRQ defined putting us in poll mode */
 			st->op_mode = BMI_OP_MODE_POLL;
@@ -2766,8 +2961,7 @@ static int bmi_init(struct bmi_state *st, const struct i2c_device_id *id)
 			if (!st->wq) {
 				dev_err(&st->i2c->dev,
 					"%s create_workqueue ERR\n", __func__);
-				ret = -ENODEV;
-				goto bmi_init_fie;
+				return -ENODEV;
 			}
 
 			INIT_WORK(&st->ws, bmi_work);
@@ -2792,7 +2986,7 @@ static int bmi_init(struct bmi_state *st, const struct i2c_device_id *id)
 
 		ret = nvs_gte_init(&st->i2c->dev, st->gis, BMI_HW_N);
 		if (ret < 0)
-			goto bmi_init_fie;
+			return ret;
 
 		if (st->op_mode == BMI_OP_MODE_IRQ_SHARED)
 			n = st->hw_n - 1; /* single loop iteration */
@@ -2800,17 +2994,20 @@ static int bmi_init(struct bmi_state *st, const struct i2c_device_id *id)
 			n = 0;
 		for (; n < st->hw_n; n++) {
 			i = st->snsrs[n].hw;
-			irqflags = bmi_hws[i].fn_irqflags(st);
-			ret = request_threaded_irq(st->gis[i].irq,
-						   bmi_irq_handler,
-						   bmi_irq_thread, irqflags,
-						   st->gis[i].dev_name, st);
-			if (ret) {
-				dev_err(&st->i2c->dev,
-					"%s req_threaded_irq ERR %d\n",
-					__func__, ret);
-				ret = -ENOMEM;
-				goto bmi_init_fie;
+			if (bmi_hws[i].fn_irqflags) {
+				irqflags = bmi_hws[i].fn_irqflags(st);
+				ret = request_threaded_irq(st->gis[i].irq,
+							   bmi_irq_handler,
+							   bmi_irq_thread,
+							   irqflags,
+							   st->gis[i].dev_name,
+							   st);
+				if (ret) {
+					dev_err(&st->i2c->dev,
+						"%s req_threaded_irq ERR %d\n",
+						__func__, ret);
+					return -ENOMEM;
+				}
 			}
 		}
 
@@ -2831,7 +3028,6 @@ static int bmi_init(struct bmi_state *st, const struct i2c_device_id *id)
 		st->snsrs[i].cfg.fifo_rsrv_evnt_cnt = 0;
 	}
 
-bmi_init_fie:
 	return ret;
 }
 
@@ -2844,14 +3040,12 @@ static int bmi_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	ret = nvs_of_dt(client->dev.of_node, NULL, NULL);
 	if (ret == -ENODEV) {
 		dev_info(&client->dev, "%s DT disabled\n", __func__);
-		goto bmi_probe_fie;
+		return ret;
 	}
 
 	st = devm_kzalloc(&client->dev, sizeof(*st), GFP_KERNEL);
-	if (st == NULL) {
-		ret = -ENOMEM;
-		goto bmi_probe_fie;
-	}
+	if (st == NULL)
+		return -ENOMEM;
 
 	i2c_set_clientdata(client, st);
 	st->i2c = client;
@@ -2860,7 +3054,6 @@ static int bmi_probe(struct i2c_client *client, const struct i2c_device_id *id)
 		bmi_remove(client);
 	dev_info(&client->dev, "%s done\n", __func__);
 	device_unblock_probing();
-bmi_probe_fie:
 	return ret;
 }
 

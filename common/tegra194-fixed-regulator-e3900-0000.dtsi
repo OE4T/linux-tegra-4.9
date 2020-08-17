@@ -49,7 +49,7 @@
 			regulator-max-microvolt = <5000000>;
 		};
 
-		e3900_atx_3v3_cvb: regulator@205 {
+		hdr40_vdd_3v3: e3900_atx_3v3_cvb: regulator@205 {
 			compatible = "regulator-fixed";
 			reg = <205>;
 			regulator-name = "atx-3v3-cvb";

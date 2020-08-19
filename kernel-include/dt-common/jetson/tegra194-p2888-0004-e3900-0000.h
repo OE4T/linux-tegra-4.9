@@ -23,7 +23,7 @@
 #define HDR40_PIN7	"soc_gpio42_pq6"
 #define HDR40_PIN11	"uart1_rts_pr4"
 #define HDR40_PIN12	"dap2_sclk_ph7"
-#define HDR40_PIN13	"soc_gpio44_pr0"
+#define HDR40_PIN13	"soc_gpio04_pp4"
 #define HDR40_PIN15	"soc_gpio54_pn1"
 #define HDR40_PIN16	"can1_stb_pbb0"
 #define HDR40_PIN18	"soc_gpio12_ph0"
@@ -47,7 +47,7 @@
 #define HDR40_PIN7_GPIO		TEGRA_MAIN_GPIO(Q, 6)
 #define HDR40_PIN11_GPIO	TEGRA_MAIN_GPIO(R, 4)
 #define HDR40_PIN12_GPIO	TEGRA_MAIN_GPIO(H, 7)
-#define HDR40_PIN13_GPIO	TEGRA_MAIN_GPIO(R, 0)
+#define HDR40_PIN13_GPIO	TEGRA_MAIN_GPIO(P, 4)
 #define HDR40_PIN15_GPIO	TEGRA_MAIN_GPIO(N, 1)
 #define HDR40_PIN16_GPIO	TEGRA_AON_GPIO(BB, 0)
 #define HDR40_PIN18_GPIO	TEGRA_MAIN_GPIO(H, 0)

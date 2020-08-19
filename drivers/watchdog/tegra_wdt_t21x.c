@@ -176,8 +176,6 @@ static int tegra_wdt_ping(struct watchdog_device *wdd)
 
 	if (readl(wdt->wdt_regs + WDT_STS) & WDT_STS_COUNTER_ACTIVE)
 		writel(WDT_CMD_START_COUNTER, wdt->wdt_regs + WDT_CMD);
-	else
-		dev_err(wdt->dev, "can't ping, tegra wdt is not active\n");
 
 	return 0;
 }

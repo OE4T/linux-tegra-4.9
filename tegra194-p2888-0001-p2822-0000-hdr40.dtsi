@@ -61,7 +61,7 @@
 					nvidia,lpdr = <TEGRA_PIN_DISABLE>;
 				};
 				pin13 {
-					nvidia,pins = "soc_gpio44_pr0";
+					nvidia,pins = HDR40_PIN13;
 					nvidia,pull = <TEGRA_PIN_PULL_DOWN>;
 					nvidia,tristate = <TEGRA_PIN_DISABLE>;
 					nvidia,enable-input = <TEGRA_PIN_DISABLE>;

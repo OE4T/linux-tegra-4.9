@@ -28,6 +28,7 @@
 #include <nvgpu/list.h>
 #include <nvgpu/rbtree.h>
 #include <nvgpu/lock.h>
+#include <nvgpu/bitops.h>
 
 /*
  * This is the GMMU API visible to blocks outside of the GMMU. Basically this
@@ -56,18 +57,25 @@ enum gk20a_mem_rw_flag {
  */
 #define NVGPU_PD_CACHE_MIN		256U
 #define NVGPU_PD_CACHE_MIN_SHIFT	9U
-#define NVGPU_PD_CACHE_COUNT		4U
+#define NVGPU_PD_CACHE_COUNT		8U
+#define NVGPU_PD_CACHE_SIZE		(NVGPU_PD_CACHE_MIN * (1U << NVGPU_PD_CACHE_COUNT))
 
 struct nvgpu_pd_mem_entry {
 	struct nvgpu_mem		mem;
 
 	/*
-	 * Size of the page directories (not the mem). bmap is a bitmap showing
-	 * which PDs have been allocated. The size of mem will always be one
-	 * page. pd_size will always be a power of 2.
+	 * Size of the page directories (not the mem). alloc_map is a bitmap
+	 * showing which PDs have been allocated.
+	 *
+	 * The size of mem will be NVGPU_PD_CACHE_SIZE
+	 * and pd_size will always be a power of 2.
+	 *
 	 */
 	u32				pd_size;
-	unsigned long			alloc_map;
+	DECLARE_BITMAP(alloc_map, NVGPU_PD_CACHE_SIZE / NVGPU_PD_CACHE_MIN);
+
+	/* Total number of allocations in this PD. */
+	u32				allocs;
 
 	struct nvgpu_list_node		list_entry;
 	struct nvgpu_rbtree_node	tree_entry;
@@ -251,7 +259,10 @@ void nvgpu_gmmu_unmap(struct vm_gk20a *vm,
 		      struct nvgpu_mem *mem,
 		      u64 gpu_va);
 
-int nvgpu_pd_alloc(struct vm_gk20a *vm, struct nvgpu_gmmu_pd *pd, u32 bytes);
+int nvgpu_pd_alloc(struct vm_gk20a *vm,
+		   struct nvgpu_gmmu_pd *pd,
+		   u32 bytes);
+
 void nvgpu_pd_free(struct vm_gk20a *vm, struct nvgpu_gmmu_pd *pd);
 int nvgpu_pd_cache_alloc_direct(struct gk20a *g,
 				  struct nvgpu_gmmu_pd *pd, u32 bytes);

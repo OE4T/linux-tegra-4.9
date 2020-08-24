@@ -1,7 +1,7 @@
 /*
  * VI NOTIFY driver for Tegra186
  *
- * Copyright (c) 2015-2021 NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2015-2022 NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -37,6 +37,7 @@
 #include <linux/time64.h>
 #include <asm/arch_timer.h>
 #include <linux/timekeeping.h>
+#include <linux/kthread.h>
 
 #include "drivers/video/tegra/host/vi/vi_notify.h"
 #include "drivers/video/tegra/host/nvhost_acm.h"
@@ -90,7 +91,9 @@ struct tegra_ivc_vi_notify {
 	u16 channels_mask;
 	wait_queue_head_t write_q;
 	struct completion ack;
-	struct work_struct notify_work;
+	struct kthread_work notify_work;
+	struct kthread_worker ivc_worker;
+	struct task_struct *ivc_kthread;
 	size_t status_mem_size;
 	struct vi_capture_status __iomem *status_mem;
 	dma_addr_t status_dmaptr;
@@ -174,7 +177,7 @@ static void tegra_ivc_vi_notify_recv(struct tegra_ivc_channel *chan,
 		tegra_ivc_vi_notify_process(chan, data, len);
 }
 
-static void tegra_ivc_channel_vi_notify_worker(struct work_struct *work)
+static void tegra_ivc_channel_vi_notify_worker(struct kthread_work *work)
 {
 	struct tegra_ivc_channel *chan;
 
@@ -198,7 +201,7 @@ static void tegra_ivc_channel_vi_notify_process(struct tegra_ivc_channel *chan)
 	WARN_ON(!chan->is_ready);
 
 	wake_up(&ivn->write_q);
-	schedule_work(&ivn->notify_work);
+	kthread_queue_work(&ivn->ivc_worker, &ivn->notify_work);
 }
 
 /* VI Notify */
@@ -540,23 +543,44 @@ static void tegra_ivc_channel_vi_notify_ready(struct tegra_ivc_channel *chan,
 }
 
 
+#define NV(x) "nvidia," #x
 static int tegra_ivc_channel_vi_notify_probe(struct tegra_ivc_channel *chan)
 {
 	struct tegra_ivc_vi_notify *ivn = tegra_ivc_channel_get_drvdata(chan);
 	struct device *dev = tegra_ivc_channel_to_camrtc_dev(chan);
 	int err;
+	u32 prio = 0;
+	struct sched_param sparm;
+	const char *service;
 
 	ivn = devm_kzalloc(&chan->dev, sizeof(*ivn), GFP_KERNEL);
-	if (unlikely(ivn == NULL))
-		return -ENOMEM;
+	if (unlikely(ivn == NULL)) {
+		err = -ENOMEM;
+		goto err_ivn_alloc;
+	}
 
 	chan->is_ready = false;
 	ivn->vi = tegra_vi_get(&chan->dev);
-	if (IS_ERR(ivn->vi))
-		return PTR_ERR(ivn->vi);
+	if (IS_ERR(ivn->vi)) {
+		err = PTR_ERR(ivn->vi);
+		goto err_ivn_alloc;
+	}
 
 	/* This must be power of 2 */
 	BUG_ON(VI_NOTIFY_STATUS_ENTRIES & (VI_NOTIFY_STATUS_ENTRIES - 1));
+
+	err = of_property_read_string(chan->dev.of_node, NV(service),
+			&service);
+	if (unlikely(err)) {
+		dev_err(dev, "missing <%s> property\n", NV(service));
+		goto err_kthread;
+	}
+
+	if (of_property_read_u32(chan->dev.of_node, NV(priority), &prio)) {
+		dev_info(dev, "no priority specified, using 99 as default\n");
+		prio = 99;
+	}
+	sparm.sched_priority = prio;
 
 	ivn->status_mem_size = sizeof(*ivn->status_mem)
 		* VI_NOTIFY_STATUS_ENTRIES * VI_NOTIFY_MAX_VI_CHANS;
@@ -570,17 +594,40 @@ static int tegra_ivc_channel_vi_notify_probe(struct tegra_ivc_channel *chan)
 	else
 		ivn->status_entries = VI_NOTIFY_STATUS_ENTRIES;
 
+	/* Initialize ivc_work */
+	kthread_init_work(&ivn->notify_work,
+		tegra_ivc_channel_vi_notify_worker);
+
+	kthread_init_worker(&ivn->ivc_worker);
+
+	ivn->ivc_kthread = kthread_create(&kthread_worker_fn,
+			&ivn->ivc_worker, service);
+	if (unlikely(IS_ERR(ivn->ivc_kthread))) {
+		dev_err(dev, "Cannot allocate ivc worker thread\n");
+		err = PTR_ERR(ivn->ivc_kthread);
+		goto err_kthread;
+	}
+	sched_setscheduler(ivn->ivc_kthread, SCHED_RR, &sparm);
+	wake_up_process(ivn->ivc_kthread);
+
 	ivn->chan = chan;
 	init_waitqueue_head(&ivn->write_q);
 	init_completion(&ivn->ack);
-	INIT_WORK(&ivn->notify_work, tegra_ivc_channel_vi_notify_worker);
 
 	tegra_ivc_channel_set_drvdata(chan, ivn);
 
 	err = vi_notify_register(&tegra_ivc_vi_notify_driver,
 		 &chan->dev, VI_NOTIFY_MAX_VI_CHANS);
 	if (err)
-		platform_device_put(ivn->vi);
+		goto err_vi_notify_register;
+
+	return 0;
+
+err_vi_notify_register:
+	kthread_stop(ivn->ivc_kthread);
+err_kthread:
+	platform_device_put(ivn->vi);
+err_ivn_alloc:
 	return err;
 }
 

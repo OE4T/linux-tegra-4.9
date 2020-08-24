@@ -1,7 +1,7 @@
 /*
  * Capture IVC driver
  *
- * Copyright (c) 2017-2021 NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2017-2022 NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -27,6 +27,7 @@
 #include <linux/tegra-ivc-bus.h>
 #include <linux/nospec.h>
 #include <linux/semaphore.h>
+#include <linux/kthread.h>
 
 #include <asm/barrier.h>
 
@@ -58,7 +59,9 @@ struct tegra_capture_ivc {
 	struct tegra_ivc_channel *chan;
 	struct mutex cb_ctx_lock;
 	struct mutex ivc_wr_lock;
-	struct work_struct work;
+	struct kthread_work work;
+	struct kthread_worker ivc_worker;
+	struct task_struct *ivc_kthread;
 	wait_queue_head_t write_q;
 	struct tegra_capture_ivc_cb_ctx cb_ctx[TOTAL_CHANNELS];
 	spinlock_t avl_ctx_list_lock;
@@ -418,7 +421,7 @@ int tegra_capture_ivc_unregister_capture_cb(uint32_t chan_id)
 }
 EXPORT_SYMBOL(tegra_capture_ivc_unregister_capture_cb);
 
-static void tegra_capture_ivc_worker(struct work_struct *work)
+static void tegra_capture_ivc_worker(struct kthread_work *work)
 {
 	struct tegra_capture_ivc *civc = container_of(work,
 					struct tegra_capture_ivc, work);
@@ -469,7 +472,7 @@ static void tegra_capture_ivc_notify(struct tegra_ivc_channel *chan)
 
 	/* Only 1 thread can wait on write_q, rest wait for write_lock */
 	wake_up(&civc->write_q);
-	schedule_work(&civc->work);
+	kthread_queue_work(&civc->ivc_worker, &civc->work);
 }
 
 #define NV(x) "nvidia," #x
@@ -481,6 +484,8 @@ static int tegra_capture_ivc_probe(struct tegra_ivc_channel *chan)
 	const char *service;
 	int ret;
 	uint32_t i;
+	u32 prio = 0;
+	struct sched_param sparm;
 
 	civc = devm_kzalloc(dev, (sizeof(*civc)), GFP_KERNEL);
 	if (unlikely(civc == NULL))
@@ -493,6 +498,12 @@ static int tegra_capture_ivc_probe(struct tegra_ivc_channel *chan)
 		return ret;
 	}
 
+	if (of_property_read_u32(dev->of_node, NV(priority), &prio)) {
+		dev_info(dev, "no priority specified, using 99 as default\n");
+		prio = 99;
+	}
+	sparm.sched_priority = prio;
+
 	civc->chan = chan;
 
 	mutex_init(&civc->cb_ctx_lock);
@@ -502,7 +513,19 @@ static int tegra_capture_ivc_probe(struct tegra_ivc_channel *chan)
 		sema_init(&civc->cb_ctx[i].sem_ch, 1);
 
 	/* Initialize ivc_work */
-	INIT_WORK(&civc->work, tegra_capture_ivc_worker);
+	kthread_init_work(&civc->work, tegra_capture_ivc_worker);
+
+	kthread_init_worker(&civc->ivc_worker);
+
+	civc->ivc_kthread = kthread_create(&kthread_worker_fn,
+			&civc->ivc_worker, service);
+	if (unlikely(IS_ERR(civc->ivc_kthread))) {
+		dev_err(dev, "Cannot allocate ivc worker thread\n");
+		ret = PTR_ERR(civc->ivc_kthread);
+		goto err;
+	}
+	sched_setscheduler(civc->ivc_kthread, SCHED_RR, &sparm);
+	wake_up_process(civc->ivc_kthread);
 
 	/* Initialize wait queue */
 	init_waitqueue_head(&civc->write_q);
@@ -518,26 +541,37 @@ static int tegra_capture_ivc_probe(struct tegra_ivc_channel *chan)
 	tegra_ivc_channel_set_drvdata(chan, civc);
 
 	if (!strcmp("capture-control", service)) {
-		if (WARN_ON(__scivc_control != NULL))
-			return -EEXIST;
+		if (WARN_ON(__scivc_control != NULL)) {
+			ret = -EEXIST;
+			goto err_service;
+		}
 		__scivc_control = civc;
 	} else if (!strcmp("capture", service)) {
-		if (WARN_ON(__scivc_capture != NULL))
-			return -EEXIST;
+		if (WARN_ON(__scivc_capture != NULL)) {
+			ret = -EEXIST;
+			goto err_service;
+		}
 		__scivc_capture = civc;
 	} else {
 		dev_err(dev, "Unknown ivc channel %s\n", service);
-		return -EINVAL;
+		ret = -EINVAL;
+		goto err_service;
 	}
 
 	return 0;
+
+err_service:
+	kthread_stop(civc->ivc_kthread);
+err:
+	return ret;
 }
 
 static void tegra_capture_ivc_remove(struct tegra_ivc_channel *chan)
 {
 	struct tegra_capture_ivc *civc = tegra_ivc_channel_get_drvdata(chan);
 
-	cancel_work_sync(&civc->work);
+	kthread_flush_worker(&civc->ivc_worker);
+	kthread_stop(civc->ivc_kthread);
 
 	if (__scivc_control == civc)
 		__scivc_control = NULL;

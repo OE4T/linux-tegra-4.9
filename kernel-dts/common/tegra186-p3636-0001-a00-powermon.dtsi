@@ -28,17 +28,17 @@
 			channel@0 {
 				reg = <0x0>;
 				ti,rail-name = "VDD_IN";
-				ti,shunt-resistor-mohm = <20>;
+				ti,shunt-resistor-mohm = <5>;
 			};
 			channel@1 {
 				reg = <0x1>;
 				ti,rail-name = "VDD_CPU_GPU";
-				ti,shunt-resistor-mohm = <20>;
+				ti,shunt-resistor-mohm = <5>;
 			};
 			channel@2 {
 				reg = <0x2>;
 				ti,rail-name = "VDD_SOC";
-				ti,shunt-resistor-mohm = <20>;
+				ti,shunt-resistor-mohm = <5>;
 			};
 		};
 

@@ -254,8 +254,12 @@ struct nvdla_status_notify {
 	_IOWR(NVHOST_NVDLA_IOCTL_MAGIC, 7, struct nvdla_get_q_status_args)
 #define NVDLA_IOCTL_EMU_TASK_SUBMIT \
 	_IOWR(NVHOST_NVDLA_IOCTL_MAGIC, 8, struct nvdla_submit_args)
+#define NVDLA_IOCTL_ALLOC_QUEUE \
+	_IO(NVHOST_NVDLA_IOCTL_MAGIC, 9)
+#define NVDLA_IOCTL_RELEASE_QUEUE \
+	_IO(NVHOST_NVDLA_IOCTL_MAGIC, 10)
 #define NVDLA_IOCTL_LAST		\
-		_IOC_NR(NVDLA_IOCTL_EMU_TASK_SUBMIT)
+		_IOC_NR(NVDLA_IOCTL_RELEASE_QUEUE)
 
 #define NVDLA_IOCTL_MAX_ARG_SIZE  \
 		sizeof(struct nvdla_pin_unpin_args)

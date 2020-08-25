@@ -178,6 +178,12 @@ static int nvdla_pin(struct nvdla_private *priv, void *arg)
 
 	nvdla_dbg_fn(pdev, "");
 
+	if (!nvdla_buffer_is_valid(priv->buffers)) {
+		nvdla_dbg_err(pdev, "Invalid buffer\n");
+		err = -EINVAL;
+		goto fail_to_get_val_arg;
+	}
+
 	if (!buf_list) {
 		nvdla_dbg_err(pdev, "Invalid argument ptr in pin\n");
 		err = -EINVAL;
@@ -232,6 +238,12 @@ static int nvdla_unpin(struct nvdla_private *priv, void *arg)
 	struct platform_device *pdev = priv->pdev;
 
 	nvdla_dbg_fn(pdev, "");
+
+	if (!nvdla_buffer_is_valid(priv->buffers)) {
+		nvdla_dbg_err(pdev, "Invalid buffer\n");
+		err = -EINVAL;
+		goto fail_to_get_val_arg;
+	}
 
 	if (!buf_list) {
 		nvdla_dbg_err(pdev, "Invalid argument for pointer\n");
@@ -930,6 +942,70 @@ exit:
 	return 0;
 }
 
+static int nvdla_queue_alloc_handler(struct nvdla_private *priv, void *arg)
+{
+	int err = 0;
+	struct platform_device *pdev = priv->pdev;
+	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
+	struct nvdla_device *nvdla_dev = pdata->private_data;
+
+	/* Currently unused and kept to be consistent with other handlers. */
+	(void) arg;
+
+	/* If queue is already allocated, error out. */
+	if (unlikely(NULL != priv->queue)) {
+		nvdla_dbg_err(pdev, "Queue already allocated");
+		err = -EINVAL;
+		goto fail;
+	}
+
+	/* Allocate the queue */
+	priv->queue = nvdla_queue_alloc(nvdla_dev->pool, MAX_NVDLA_TASK_COUNT,
+					nvdla_dev->submit_mode == NVDLA_SUBMIT_MODE_CHANNEL);
+	if (IS_ERR(priv->queue)) {
+		err = PTR_ERR(priv->queue);
+		priv->queue = NULL;
+		goto fail;
+	}
+
+	/* Set nvdla_buffers platform device */
+	nvdla_buffer_set_platform_device(priv->buffers, priv->queue->vm_pdev);
+
+fail:
+	return err;
+}
+
+static int nvdla_queue_release_handler(struct nvdla_private *priv, void *arg)
+{
+	int err = 0;
+	struct platform_device *pdev = priv->pdev;
+
+	/**
+	 * Note: This functiona shall be reached directly either
+	 * [1] NVDLA_IOCTL_RELEASE_QUEUE ioctl call.
+	 * [2] when fd is closed before releasing the queue.
+	 **/
+
+	/* Currently unused and kept to be consistent with other handlers. */
+	(void) arg;
+
+	/* If no queue is allocated, error out. */
+	if (unlikely(NULL == priv->queue)) {
+		nvdla_dbg_err(pdev, "No queue to be released.");
+		err = -EINVAL;
+		goto fail;
+	}
+
+	/* Release the queue */
+	(void) nvdla_queue_abort(priv->queue);
+	nvdla_queue_put(priv->queue);
+
+	priv->queue = NULL;
+fail:
+	return err;
+}
+
+
 static int nvdla_submit(struct nvdla_private *priv, void *arg)
 {
 	struct nvdla_submit_args *args =
@@ -1097,6 +1173,12 @@ static long nvdla_ioctl(struct file *file, unsigned int cmd,
 	case NVDLA_IOCTL_EMU_TASK_SUBMIT:
 		err = nvdla_emu_task_submit(priv, (void *)buf);
 		break;
+	case NVDLA_IOCTL_ALLOC_QUEUE:
+		err = nvdla_queue_alloc_handler(priv, (void*)buf);
+		break;
+	case NVDLA_IOCTL_RELEASE_QUEUE:
+		err = nvdla_queue_release_handler(priv, (void*)buf);
+		break;
 	default:
 		nvdla_dbg_err(pdev, "invalid IOCTL CMD");
 		err = -ENOIOCTLCMD;
@@ -1115,7 +1197,6 @@ static int nvdla_open(struct inode *inode, struct file *file)
 	struct nvhost_device_data *pdata = container_of(inode->i_cdev,
 					struct nvhost_device_data, ctrl_cdev);
 	struct platform_device *pdev = pdata->pdev;
-	struct nvdla_device *nvdla_dev = pdata->private_data;
 	struct nvdla_private *priv;
 	int err = 0, index;
 
@@ -1146,20 +1227,19 @@ static int nvdla_open(struct inode *inode, struct file *file)
 			err = nvhost_module_set_rate(pdev, priv, UINT_MAX,
 				index, clock->bwmgr_request_type);
 			if (err < 0)
-				goto err_alloc_queue;
+				goto err_set_emc_rate;
 			break;
 		}
 	}
 
-	priv->queue = nvdla_queue_alloc(nvdla_dev->pool,
-		MAX_NVDLA_TASK_COUNT,
-		nvdla_dev->submit_mode == NVDLA_SUBMIT_MODE_CHANNEL);
-	if (IS_ERR(priv->queue)) {
-		err = PTR_ERR(priv->queue);
-		goto err_alloc_queue;
-	}
+	/* Zero out explicitly */
+	priv->queue = NULL;
 
-	priv->buffers = nvdla_buffer_init(priv->queue->vm_pdev);
+	/**
+	 * Platform device corresponding to buffers is deferred
+	 * to queue allocation.
+	 **/
+	priv->buffers = nvdla_buffer_init(NULL);
 	if (IS_ERR(priv->buffers)) {
 		err = PTR_ERR(priv->buffers);
 		goto err_alloc_buffer;
@@ -1169,7 +1249,7 @@ static int nvdla_open(struct inode *inode, struct file *file)
 
 err_alloc_buffer:
 	kfree(priv->buffers);
-err_alloc_queue:
+err_set_emc_rate:
 	nvhost_module_remove_client(pdev, priv);
 err_add_client:
 	kfree(priv);
@@ -1184,8 +1264,16 @@ static int nvdla_release(struct inode *inode, struct file *file)
 
 	nvdla_dbg_fn(pdev, "priv:%p", priv);
 
-	nvdla_queue_abort(priv->queue);
-	nvdla_queue_put(priv->queue);
+	/* If NVDLA_IOCTL_RELEASE_QUEUE is not called, free it explicitly. */
+	if (NULL != priv->queue) {
+		/**
+		 * Error value is intentionally ignored to continue freeing
+		 * other resources.
+		 * arg is set to NULL and should work since they are unused.
+		 **/
+		nvdla_queue_release_handler(priv, NULL);
+	}
+
 	nvdla_buffer_release(priv->buffers);
 	nvhost_module_remove_client(pdev, priv);
 

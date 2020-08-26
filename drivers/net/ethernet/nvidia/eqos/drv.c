@@ -166,7 +166,9 @@ static void eqos_all_ch_napi_disable(struct eqos_prv_data *pdata)
 	pr_debug("-->eqos_napi_disable\n");
 
 	for (qinx = 0; qinx < EQOS_RX_QUEUE_CNT; qinx++) {
+		napi_synchronize(&pdata->rx_queue[qinx].napi);
 		napi_disable(&pdata->rx_queue[qinx].napi);
+		napi_synchronize(&pdata->tx_queue[qinx].napi);
 		napi_disable(&pdata->tx_queue[qinx].napi);
 	}
 

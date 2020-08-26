@@ -1077,14 +1077,18 @@ static void eqos_unmap_rx_skb(struct eqos_prv_data *pdata,
 
 	/* unmap the first buffer */
 	if (prx_swcx_desc->dma) {
-		dma_unmap_single(&pdata->pdev->dev, prx_swcx_desc->dma,
-				 pdata->rx_buffer_len,
-				 DMA_FROM_DEVICE);
+		if (pdata->resv_dma != prx_swcx_desc->dma) {
+			dma_unmap_single(&pdata->pdev->dev, prx_swcx_desc->dma,
+					 pdata->rx_buffer_len,
+					 DMA_FROM_DEVICE);
+		}
 		prx_swcx_desc->dma = 0;
 	}
 
 	if (prx_swcx_desc->skb) {
-		dev_kfree_skb_any(prx_swcx_desc->skb);
+		if (pdata->resv_skb != prx_swcx_desc->skb) {
+			dev_kfree_skb_any(prx_swcx_desc->skb);
+		}
 		prx_swcx_desc->skb = NULL;
 	}
 

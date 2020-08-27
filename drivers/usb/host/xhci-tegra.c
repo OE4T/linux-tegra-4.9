@@ -1,7 +1,7 @@
 /*
  * NVIDIA Tegra xHCI host controller driver
  *
- * Copyright (c) 2014-2020, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2014-2021, NVIDIA CORPORATION. All rights reserved.
  * Copyright (C) 2014 Google, Inc.
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -550,6 +550,8 @@ struct tegra_xusb {
 	bool xhci_err_init;
 	struct usb_downgraded_port degraded_port[DEGRADED_PORT_COUNT];
 	unsigned int downgrade_enabled;
+
+	struct device *fwdev;
 };
 
 static struct hc_driver __read_mostly tegra_xhci_hc_driver;
@@ -3028,8 +3030,9 @@ static void tegra_xusb_probe_finish(const struct firmware *fw, void *context)
 		goto remove_padctl_irq;
 	}
 
-	if (IS_ERR(devm_tegrafw_register(dev, NULL,
-		TFW_NORMAL, fw_version_show, NULL)))
+	tegra->fwdev = devm_tegrafw_register(dev, NULL,
+			TFW_NORMAL, fw_version_show, NULL);
+	if (IS_ERR(tegra->fwdev))
 		dev_warn(dev, "cannot register firmware reader");
 
 	/* Enable EU3S bit of USBCMD */
@@ -3769,6 +3772,9 @@ static int tegra_xusb_remove(struct platform_device *pdev)
 
 	pm_runtime_get_sync(tegra->dev);
 	device_remove_file(&pdev->dev, &dev_attr_reload_hcd);
+
+	if (!IS_ERR(tegra->fwdev))
+		devm_tegrafw_unregister(dev, tegra->fwdev);
 
 	sysfs_remove_group(&pdev->dev.kobj, &tegra_xhci_attr_group);
 

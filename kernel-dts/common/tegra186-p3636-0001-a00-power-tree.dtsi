@@ -51,15 +51,19 @@
 
 	host1x {
 		nvdisplay@15200000 {
-			avdd_dsi_csi-supply = <&spmic_sd1>;
 			vdd-dp-pwr-supply = <&battery_reg>;
-			/* added hdmi for testing in head 0 */
+			avdd-dp-pll-supply = <&battery_reg>;
+			vdd-edp-sec-mode-supply = <&battery_reg>;
+			vdd-dp-pad-supply = <&battery_reg>;
 			avdd_hdmi-supply = <&spmic_ldo7>;
 			avdd_hdmi_pll-supply = <&spmic_sd2>;
 			vdd_hdmi_5v0-supply = <&p3509_vdd_hdmi_5v0>;
 		};
 		nvdisplay@15210000 {
 			vdd-dp-pwr-supply = <&battery_reg>;
+			avdd-dp-pll-supply = <&battery_reg>;
+			vdd-edp-sec-mode-supply = <&battery_reg>;
+			vdd-dp-pad-supply = <&battery_reg>;
 			avdd_hdmi-supply = <&spmic_ldo7>;
 			avdd_hdmi_pll-supply = <&spmic_sd2>;
 			vdd_hdmi_5v0-supply = <&p3509_vdd_hdmi_5v0>;
@@ -69,7 +73,6 @@
 			avdd-dp-pll-supply = <&battery_reg>;
 			vdd-edp-sec-mode-supply = <&battery_reg>;
 			vdd-dp-pad-supply = <&battery_reg>;
-			/* added hdmi for testing in head 0 */
 			avdd_hdmi-supply = <&spmic_ldo7>;
 			avdd_hdmi_pll-supply = <&spmic_sd2>;
 			vdd_hdmi_5v0-supply = <&p3509_vdd_hdmi_5v0>;

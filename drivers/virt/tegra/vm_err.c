@@ -314,7 +314,10 @@ static int shared_mem_map(struct platform_device *pdev)
 		 * of this code, but PCT hasn't enabled error injection.
 		 * A warning should suffice.
 		 */
-		dev_warn(ctrl->dev, "%s: invalid shared memory parameters\n",
+		dev_warn(ctrl->dev, "%s: invalid shared memory parameters.\n",
+			__func__);
+		dev_warn(ctrl->dev,
+			"%s: make sure error injection is enabled in PCT\n",
 			__func__);
 		return -ENOMEM;
 	}

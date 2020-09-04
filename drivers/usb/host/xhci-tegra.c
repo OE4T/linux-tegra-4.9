@@ -49,6 +49,10 @@ MODULE_PARM_DESC(en_hcd_reinit, "Enable hcd reinit when hc died");
 static void xhci_reinit_work(struct work_struct *work);
 static int tegra_xhci_hcd_reinit(struct usb_hcd *hcd);
 
+static bool max_burst_war_enable = true;
+module_param(max_burst_war_enable, bool, 0644);
+MODULE_PARM_DESC(max_burst_war_enable, "Max burst WAR");
+
 #define BLACKLIST_SIZE	100
 static uint downgraded_usb3[BLACKLIST_SIZE];
 static int downgraded_count;
@@ -227,24 +231,6 @@ static LIST_HEAD(hub_downgraded_list);
 static struct usb_device_id disable_usb_persist_quirk_list[] = {
 	/* Sandisk Extreme USB 3.0 pen drive, SuperSpeed */
 	{ USB_DEVICE_SS(0x0781, 0x5580) },
-	{ }  /* terminating entry must be last */
-};
-
-static struct usb_device_id max_burst_quirk_list[] = {
-	/* Seagate BUP Slim B */
-	{ USB_DEVICE_SS(0x0bc2, 0xab26) },
-	/* Seagate Expansion Portable Drive 1TB */
-	{ USB_DEVICE_SS(0x0bc2, 0x231a) },
-	/* JMicron TEYADI External SSD */
-	{ USB_DEVICE_SS(0x152d, 0x0576) },
-	/* JMicron JMS578 USB 3.1 to SATA Bridge */
-	{ USB_DEVICE_SS(0x152d, 0x0578) },
-	/* JMicron AXAGON USB to SATA adaptor */
-	{ USB_DEVICE_SS(0x152d, 0x1576) },
-	/* Inateck SS USB-SATA adaptor */
-	{ USB_DEVICE_SS(0x0080, 0xa001) },
-	/* M2X SSD */
-	{ USB_DEVICE_SS(0x152d, 0x0583) },
 	{ }  /* terminating entry must be last */
 };
 
@@ -5085,15 +5071,13 @@ static int tegra_xhci_add_endpoint(struct usb_hcd *hcd, struct usb_device *udev,
 
 	if ((udev->speed >= USB_SPEED_SUPER) &&
 		((desc->bEndpointAddress & USB_ENDPOINT_DIR_MASK) ==
-			USB_DIR_OUT)) {
-		const struct usb_device_id *id;
-
-		for (id = max_burst_quirk_list; id->match_flags; id++) {
-			if (usb_match_device(udev, id) &&
-					usb_match_speed(udev, id)) {
-				ep->ss_ep_comp.bMaxBurst = 15;
-				break;
-			}
+			USB_DIR_OUT) && usb_endpoint_xfer_bulk(desc) &&
+			max_burst_war_enable) {
+		if (ep->ss_ep_comp.bMaxBurst != 15) {
+			dev_dbg(&udev->dev, "change ep %02x bMaxBurst (%d) to 15\n",
+				ep->ss_ep_comp.bMaxBurst,
+				desc->bEndpointAddress);
+			ep->ss_ep_comp.bMaxBurst = 15;
 		}
 	}
 

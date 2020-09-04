@@ -748,6 +748,10 @@
 	};
 
 	gpio-keys {
+		compatible = "gpio-keys";
+		gpio-keys,name = "gpio-keys";
+		status = "disabled";
+
 		sw_wake {
 			label = "sw-wake";
 			interrupt-parent = <&pm_irq>;

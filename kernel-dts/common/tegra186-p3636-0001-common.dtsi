@@ -22,6 +22,7 @@
 
 #include <tegra186-soc/tegra186-soc-cvm.dtsi>
 #include <t18x-common-platforms/tegra186-platforms-simple-bus.dtsi>
+#include "t18x-common-platforms/tegra186-thermal-userspace-alert.dtsi"
 
 #include "tegra186-p3636-0001-a00-disp.dtsi"
 #include "tegra186-p3636-0001-a00-powermon.dtsi"
@@ -214,6 +215,18 @@
 
 	nvdumper {
 		status = "disabled";
+	};
+
+	bcpu_alert: bcpu-throttle-alert {
+		status = "okay";
+	};
+
+	mcpu_alert: mcpu-throttle-alert {
+		status = "okay";
+	};
+
+	gpu_alert: gpu-throttle-alert {
+		status = "okay";
 	};
 };
 

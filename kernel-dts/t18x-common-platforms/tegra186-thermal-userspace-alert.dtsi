@@ -44,7 +44,7 @@
 		};
 		MCPU-therm {
 			cooling-maps {
-				map0 {
+				user-alert-map0 {
 					trip = <&{/thermal-zones/MCPU-therm/trips/trip_bthrot}>;
 					cooling-device = <&mcpu_alert 1 1>;
 				};

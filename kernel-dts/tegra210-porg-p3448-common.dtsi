@@ -30,6 +30,8 @@
 #include "porg-platforms/tegra210-porg-camera.dtsi"
 #include "porg-platforms/tegra210-porg-camera-rbpcv2-imx219.dtsi"
 #include "porg-platforms/tegra210-porg-camera-rbpcv2-dual-imx219.dtsi"
+#include "porg-platforms/tegra210-porg-camera-rbpcv3-imx477.dtsi"
+#include "porg-platforms/tegra210-porg-camera-rbpcv3-dual-imx477.dtsi"
 #include <t210-common-platforms/tegra210-ers-hdmi-e2190-1100-a00.dtsi>
 #include <t210-common-platforms/tegra210-dp.dtsi>
 #include "porg-platforms/tegra210-porg-thermal.dtsi"

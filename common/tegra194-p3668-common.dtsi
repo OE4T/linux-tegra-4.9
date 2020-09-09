@@ -201,6 +201,12 @@
 
 	mttcan@c310000 {
 		status = "okay";
+		pll_source = "pllc";
+		clocks = <&bpmp_clks TEGRA194_CLK_CAN1_CORE>,
+			<&bpmp_clks TEGRA194_CLK_CAN1_HOST>,
+			<&bpmp_clks TEGRA194_CLK_CAN1>,
+			<&bpmp_clks TEGRA194_CLK_PLLC>;
+		clock-names = "can_core", "can_host","can", "pllc";
 	};
 
 	mttcan@c320000 {

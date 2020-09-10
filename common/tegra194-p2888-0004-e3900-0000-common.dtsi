@@ -320,6 +320,12 @@
 					function = "i2c";
 				};
 			};
+
+			prod-settings {
+				prod_c_dpaux_dp {
+					prod = <0x0 0x124 0x37fe 0xc001>;
+				};
+			};
 		};
 	};
 

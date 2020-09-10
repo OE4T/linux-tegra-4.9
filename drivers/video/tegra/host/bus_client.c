@@ -87,6 +87,9 @@ static int validate_reg(struct platform_device *ndev, u32 offset, int count)
 		err = -EPERM;
 	}
 
+	/* prevent speculative access to mod's aperture + offset */
+	speculation_barrier();
+
 	return err;
 }
 
@@ -200,9 +203,6 @@ int nvhost_read_module_regs(struct platform_device *ndev,
 	err = nvhost_module_busy(ndev);
 	if (err)
 		return err;
-
-	/* prevent speculative access to mod's aperture + offset */
-	speculation_barrier();
 
 	while (count--) {
 		*(values++) = host1x_readl(ndev, offset);

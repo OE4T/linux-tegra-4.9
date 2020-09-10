@@ -38,6 +38,7 @@
 #include <linux/clk/tegra.h>
 #include <linux/clk-provider.h>
 #include <linux/dma-mapping.h>
+#include <linux/nospec.h>
 
 #include <linux/platform/tegra/mc.h>
 #if defined(CONFIG_TEGRA_BWMGR)
@@ -338,6 +339,8 @@ int nvhost_module_get_rate(struct platform_device *dev, unsigned long *rate,
 {
 	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
 
+	index = array_index_nospec(index, NVHOST_MODULE_MAX_CLOCKS);
+
 #if defined(CONFIG_TEGRA_BWMGR)
 	if (nvhost_is_bwmgr_clk(pdata, index)) {
 		*rate = tegra_bwmgr_get_emc_rate();
@@ -446,6 +449,8 @@ int nvhost_module_set_rate(struct platform_device *dev, void *priv,
 	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
 
 	nvhost_dbg_fn("%s", dev->name);
+
+	index = array_index_nospec(index, NVHOST_MODULE_MAX_CLOCKS);
 
 	mutex_lock(&client_list_lock);
 	list_for_each_entry(m, &pdata->client_list, node) {

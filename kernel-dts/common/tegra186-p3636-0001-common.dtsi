@@ -30,6 +30,7 @@
 #include "tegra186-p3636-0001-a00-pwm-fan.dtsi"
 #include "tegra186-p3636-0001-a00-thermal-fan-est.dtsi"
 #include "tegra186-p3636-0001-a00-eqos.dtsi"
+#include "tegra186-p3636-0001-a00-audio.dtsi"
 #include "tegra186-p3636-0001-a00-thermal.dtsi"
 
 #define EXTCON_NONE		0

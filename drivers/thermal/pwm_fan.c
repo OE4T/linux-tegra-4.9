@@ -440,7 +440,8 @@ static int pwm_fan_set_cur_state(struct thermal_cooling_device *cdev,
 
 	fan_data->next_state = cur_state;
 
-	if (fan_data->next_state <= 0) {
+	if ((fan_data->next_state < 0) ||
+	    (fan_data->fan_pwm[fan_data->next_state] == 0)) {
 		target_pwm = 0;
 		if (fan_data->kickstart_en
 			&& delayed_work_pending(&fan_data->fan_hyst_work)) {

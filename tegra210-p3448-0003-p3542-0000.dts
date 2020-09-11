@@ -24,8 +24,8 @@
 #include "batuu-platforms/tegra210-batuu-p3448-emc-a00.dtsi"
 
 / {
-	model = "NVIDIA Jetson Nano Lite Developer Kit";
-	compatible = "nvidia,p3542-0000+p3448-0003", "nvidia,jetson-nano-lite", "nvidia,jetson-nano", "nvidia,tegra210";
+	model = "NVIDIA Jetson Nano 2GB Developer Kit";
+	compatible = "nvidia,p3542-0000+p3448-0003", "nvidia,jetson-nano-2gb", "nvidia,jetson-nano", "nvidia,tegra210";
 	nvidia,dtsfilename = __FILE__;
 
 	reserved-memory {

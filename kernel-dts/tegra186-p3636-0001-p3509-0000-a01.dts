@@ -19,6 +19,7 @@
 
 /* plugin manager */
 #include "common/tegra186-p3636-plugin-manager.dtsi"
+#include "common/tegra186-super-module-e2614-p3509-0000-a00.dtsi"
 
 / {
 	compatible = "nvidia,lanai", "nvidia,p3509-0000+p3636-0001", "nvidia,tegra186";

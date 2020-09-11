@@ -42,6 +42,10 @@
 
 		mclk-fs = <256>;
 
-		hdr40_snd_link_i2s: nvidia,dai-link-1 { };
+		/* TODO Avoid rt565x_dai_link definition by modifying common base file
+		 * since current base does not have definition of dai link as
+		 * rt565x_dai_link,  had to add here
+		 */
+		hdr40_snd_link_i2s: rt565x_dai_link: nvidia,dai-link-1 { };
 	};
 };

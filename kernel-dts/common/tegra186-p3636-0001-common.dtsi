@@ -21,6 +21,7 @@
 /memreserve/ 0x80000000 0x00010000;
 
 #include <tegra186-soc/tegra186-soc-cvm.dtsi>
+#include <tegra186-soc/mods-simple-bus.dtsi>
 #include <t18x-common-platforms/tegra186-platforms-simple-bus.dtsi>
 #include "t18x-common-platforms/tegra186-thermal-userspace-alert.dtsi"
 

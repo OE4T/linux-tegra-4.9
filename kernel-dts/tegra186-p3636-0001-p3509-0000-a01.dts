@@ -133,6 +133,22 @@
 		};
 	};
 
+        gpio@2200000 {
+		w-disable1 {
+			gpio-hog;
+			output-high;
+			gpios = <TEGRA_MAIN_GPIO(L, 0) GPIO_ACTIVE_LOW>;
+			label = "w-disable1";
+			status = "okay";
+		};
+		w-disable2 {
+			gpio-hog;
+			output-high;
+			gpios = <TEGRA_MAIN_GPIO(L, 2) GPIO_ACTIVE_LOW>;
+			label = "w-disable2";
+			status = "okay";
+		};
+        };
 
 	cpufreq@e070000 {
 		cpu_emc_map =

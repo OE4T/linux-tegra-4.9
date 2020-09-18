@@ -49,7 +49,6 @@
 #include "tegra194-soc/tegra194-cpus.dtsi"
 #include "tegra194-soc-thermal.dtsi"
 #include "dt-bindings/soc/tegra-io-pads.h"
-#include "dt-bindings/input/input.h"
 
 / {
 	compatible = "nvidia,tegra186";
@@ -2047,15 +2046,6 @@
 		status = "disabled";
 	};
 
-	gpio-keys {
-		sw_wake {
-			label = "sw-wake";
-			interrupt-parent = <&tegra_pm_irq>;
-			interrupts = <0 25 IRQ_TYPE_LEVEL_HIGH>;
-			linux,code = <KEY_POWER>;
-			wakeup-source;
-		};
-	};
 
 #if TEGRA_XUSB_PADCONTROL_VERSION >= DT_VERSION_2
 

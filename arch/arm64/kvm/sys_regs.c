@@ -1177,7 +1177,7 @@ static const struct sys_reg_desc sys_reg_descs[] = {
 	  NULL, reset_unknown, IFSR32_EL2 },
 	/* FPEXC32_EL2 */
 	{ Op0(0b11), Op1(0b100), CRn(0b0101), CRm(0b0011), Op2(0b000),
-	  NULL, reset_val, FPEXC32_EL2, 0x70 },
+	  NULL, reset_val, FPEXC32_EL2, 0x700 },
 };
 
 static bool trap_dbgidr(struct kvm_vcpu *vcpu,

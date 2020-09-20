@@ -21,18 +21,18 @@
 / {
 
 	fixed-regulators {
-		vdd_1v8_ap: regulator@101 {
+		vdd_1v8_ap: regulator@201 {
 			compatible = "regulator-fixed";
-			reg = <101>;
+			reg = <201>;
 			regulator-name = "vdd-1v8-ap";
 			regulator-min-microvolt = <1800000>;
 			regulator-max-microvolt = <1800000>;
 			regulator-always-on;
 			regulator-boot-on;
 		};
-		hdr40_vdd_5v0: battery_reg: regulator@0 {
+		hdr40_vdd_5v0: battery_reg: regulator@202 {
 			compatible = "regulator-fixed";
-			reg = <0>;
+			reg = <202>;
 			regulator-name = "vdd-ac-bat";
 			regulator-min-microvolt = <5000000>;
 			regulator-max-microvolt = <5000000>;

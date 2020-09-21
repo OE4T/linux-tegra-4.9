@@ -24,7 +24,7 @@
 #include <tegra186-soc/mods-simple-bus.dtsi>
 #include <t18x-common-platforms/tegra186-platforms-simple-bus.dtsi>
 #include "t18x-common-platforms/tegra186-thermal-userspace-alert.dtsi"
-
+#include "tegra186-camera-lanai-rbpcv2-imx219.dtsi"
 #include "tegra186-p3636-0001-a00-disp.dtsi"
 #include "tegra186-p3636-0001-a00-powermon.dtsi"
 #include "tegra186-p3636-0001-a00-power-tree.dtsi"
@@ -221,6 +221,10 @@
 
 	gpu_alert: gpu-throttle-alert {
 		status = "okay";
+	};
+
+	mipical {
+		status="okay";
 	};
 };
 

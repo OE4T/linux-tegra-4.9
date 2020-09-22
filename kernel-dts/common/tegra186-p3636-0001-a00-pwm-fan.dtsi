@@ -32,6 +32,7 @@
 		tach_period = <1000>;
 		pwm_gpio = <&tegra_aon_gpio TEGRA_AON_GPIO(V, 6) GPIO_ACTIVE_LOW>; /* TEGRA_MAIN_GPIO_PV6 */
 		pwm_polarity = <PWM_POLARITY_NORMAL>;
+		suspend_state = <0>;
 	};
 	pwm-fan {
 		status = "okay";

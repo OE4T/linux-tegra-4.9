@@ -127,6 +127,17 @@
 		avdd_usb-supply = <&spmic_sd3>;
 		vclamp_usb-supply = <&spmic_sd2>;
 		avdd_pll_erefeut-supply = <&spmic_sd2>;
+		ports {
+			usb2-0 {
+				vbus-supply = <&battery_reg>;
+			};
+			usb2-1 {
+				vbus-supply = <&battery_reg>;
+			};
+			usb2-2 {
+				vbus-supply = <&battery_reg>;
+			};
+		};
 	};
 
 	pcie-controller@10003000 {

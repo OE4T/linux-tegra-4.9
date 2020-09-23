@@ -133,11 +133,10 @@
 			reg = <0x1>;
 			extcon-gpio,name = "VBUS";
 			extcon-gpio,wait-for-gpio-scan = <0>;
-			extcon-gpio,cable-states = <0x3 0x0
-						    0x0 0x2
-						    0x1 0x2
-						    0x2 0x1>;
-			gpios = <&tegra_main_gpio TEGRA_MAIN_GPIO(L, 4) 0 &spmic 0 0>;
+			extcon-gpio,cable-states = <
+						    0x0 0x1
+						    0x1 0x0>;
+			gpios = <&tegra_main_gpio TEGRA_MAIN_GPIO(L, 4) 0>;
 			extcon-gpio,out-cable-names = <EXTCON_USB EXTCON_USB_Host EXTCON_NONE>;
 			wakeup-source;
 			#extcon-cells = <1>;
@@ -186,16 +185,9 @@
 		#extcon-cells = <1>;
 	};
 
-#if TEGRA_XUSB_DT_VERSION >= DT_VERSION_2
 	xhci@3530000 {
 		extcon-cables = <&vbus_id_extcon 1>;
 		extcon-cable-names = "id";
-		#extcon-cells = <1>;
-	};
-#endif
-	xotg {
-		extcon-cables = <&vbus_id_extcon 1>, <&vbus_id_extcon 0>;
-		extcon-cable-names = "id", "vbus";
 		#extcon-cells = <1>;
 	};
 

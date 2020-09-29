@@ -95,6 +95,10 @@
 		status = "disabled";
 	};
 
+	spi@c260000 {
+		status = "disabled";
+	};
+
 	host1x {
 		nvdisplay@15200000 {
 			status = "disabled";

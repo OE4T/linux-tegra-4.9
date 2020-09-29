@@ -15,7 +15,6 @@
  *
  */
 
-#include "tegra186-p3509-0000-a00-fixed-regulator.dtsi"
 #include "tegra186-p3636-0001-a00-spmic.dtsi"
 
 / {

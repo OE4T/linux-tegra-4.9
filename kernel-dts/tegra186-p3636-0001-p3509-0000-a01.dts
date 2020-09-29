@@ -13,6 +13,8 @@
  * more details.
  */
 #include "common/tegra186-p3636-0001-common.dtsi"
+#include "common/tegra186-p3509-0000-cvb.dtsi"
+#include "common/tegra186-p3509-0000-a00-fixed-regulator.dtsi"
 #include "common/tegra186-p3636-0001-a00-prod.dtsi"
 
 /* plugin manager */

@@ -29,6 +29,7 @@
 #include <nvgpu/rbtree.h>
 #include <nvgpu/lock.h>
 #include <nvgpu/bitops.h>
+#include <nvgpu/mm.h>
 
 /*
  * This is the GMMU API visible to blocks outside of the GMMU. Basically this
@@ -54,10 +55,28 @@ enum gk20a_mem_rw_flag {
  * Minimum size of a cache. The number of different caches in the nvgpu_pd_cache
  * structure is of course depending on this. The MIN_SHIFT define is the right
  * number of bits to shift to determine which list to use in the array of lists.
+ *
+ * For Linux, limit the use of the cache to entries less than the page size, to
+ * avoid potential problems with running out of CMA memory when allocating large,
+ * contiguous slabs, as would be required for non-iommmuable chips.
  */
 #define NVGPU_PD_CACHE_MIN		256U
 #define NVGPU_PD_CACHE_MIN_SHIFT	9U
+
+#ifdef __KERNEL__
+
+#if PAGE_SIZE == 4096
+#define NVGPU_PD_CACHE_COUNT		4U
+#elif PAGE_SIZE == 65536
 #define NVGPU_PD_CACHE_COUNT		8U
+#else
+#error "Unsupported page size."
+#endif
+
+#else
+#define NVGPU_PD_CACHE_COUNT		8U
+#endif
+
 #define NVGPU_PD_CACHE_SIZE		(NVGPU_PD_CACHE_MIN * (1U << NVGPU_PD_CACHE_COUNT))
 
 struct nvgpu_pd_mem_entry {

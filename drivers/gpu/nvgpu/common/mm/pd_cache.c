@@ -423,12 +423,19 @@ static void nvgpu_pd_cache_do_free(struct gk20a *g,
 		 * this just re-adds it.
 		 *
 		 * Since the memory used for the entries is still mapped, if
-		 * igpu make sure the entries are invalidated so that the hw
-		 * doesn't accidentally try to prefetch non-existent fb memory.
+		 * iommu is being used,  make sure PTE entries in particular
+		 * are invalidated so that the hw doesn't accidentally try to
+		 * prefetch non-existent fb memory.
 		 *
-		 * TBD: what about dgpu? (Not supported in Drive 5.0)
+		 * Notes:
+		 *   - The check for NVGPU_PD_CACHE_SIZE > PAGE_SIZE effectively
+		 *     determines whether PTE entries use the cache.
+		 *   - In the case where PTE entries ues the cache, we also
+		 *     end up invalidating the PDE entries, but that's a minor
+		 *     performance hit, as there are far fewer of those
+		 *     typically than there are PTE entries.
 		 */
-		if (pd->mem->cpu_va != NULL) {
+		if (nvgpu_iommuable(g) && (NVGPU_PD_CACHE_SIZE > PAGE_SIZE)) {
 			memset((void *)((u64)pd->mem->cpu_va + pd->mem_offs), 0,
 					pentry->pd_size);
 		}

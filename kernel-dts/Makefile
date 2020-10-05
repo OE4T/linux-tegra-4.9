@@ -5,6 +5,7 @@ dtbo-y :=
 makefile-path := platform/t18x/lanai/kernel-dts
 
 dtb-$(CONFIG_ARCH_TEGRA_18x_SOC) += tegra186-p3636-0001-p3509-0000-a01.dtb
+dtb-$(CONFIG_ARCH_TEGRA_18x_SOC) += tegra186-p3636-0002-p3509-0000-a01.dtb
 
 ifneq ($(dtb-y),)
 dtb-y := $(addprefix $(makefile-path)/,$(dtb-y))

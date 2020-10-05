@@ -37,6 +37,20 @@
 			regulator-max-microvolt = <5000000>;
 			regulator-always-on;
 		};
+		vdd_disp_3v3: regulator@203 {
+			compatible = "regulator-fixed";
+			reg = <203>;
+			regulator-name = "vdd-3v3-cvb";
+			regulator-min-microvolt = <3300000>;
+			regulator-max-microvolt = <3300000>;
+		};
+		vdd_bl_en: regulator@204 {
+			compatible = "regulator-fixed-sync";
+			reg = <204>;
+			regulator-name = "vdd-sys-bl";
+			regulator-min-microvolt = <3300000>;
+			regulator-max-microvolt = <3300000>;
+		};
 	};
 
 
@@ -57,6 +71,13 @@
 			avdd_hdmi-supply = <&spmic_ldo7>;
 			avdd_hdmi_pll-supply = <&spmic_sd2>;
 			vdd_hdmi_5v0-supply = <&p3509_vdd_hdmi_5v0>;
+			/* Used fixed regulator for P3509 CVB,
+			   can change for other CVB if have GPIO enabled regulator*/
+			avdd_lcd-supply = <&vdd_disp_3v3>;
+			dvdd_lcd-supply = <&vdd_1v8_ap>;
+			avdd_dsi_csi-supply = <&spmic_sd1>;
+			vdd_lcd_bl-supply = <&battery_reg>;
+			vdd_lcd_bl_en-supply = <&vdd_bl_en>;
 		};
 		nvdisplay@15210000 {
 			vdd-dp-pwr-supply = <&battery_reg>;
@@ -66,6 +87,13 @@
 			avdd_hdmi-supply = <&spmic_ldo7>;
 			avdd_hdmi_pll-supply = <&spmic_sd2>;
 			vdd_hdmi_5v0-supply = <&p3509_vdd_hdmi_5v0>;
+			/* Used fixed regulator for P3509 CVB,
+			   can change for other CVB if have GPIO enabled regulator*/
+			avdd_lcd-supply = <&vdd_disp_3v3>;
+			dvdd_lcd-supply = <&vdd_1v8_ap>;
+			avdd_dsi_csi-supply = <&spmic_sd1>;
+			vdd_lcd_bl-supply = <&battery_reg>;
+			vdd_lcd_bl_en-supply = <&vdd_bl_en>;
 		};
 		nvdisplay@15220000 {
 			vdd-dp-pwr-supply = <&battery_reg>;
@@ -75,6 +103,13 @@
 			avdd_hdmi-supply = <&spmic_ldo7>;
 			avdd_hdmi_pll-supply = <&spmic_sd2>;
 			vdd_hdmi_5v0-supply = <&p3509_vdd_hdmi_5v0>;
+			/* Used fixed regulator for P3509 CVB,
+			   can change for other CVB if have GPIO enabled regulator*/
+			avdd_lcd-supply = <&vdd_disp_3v3>;
+			dvdd_lcd-supply = <&vdd_1v8_ap>;
+			avdd_dsi_csi-supply = <&spmic_sd1>;
+			vdd_lcd_bl-supply = <&battery_reg>;
+			vdd_lcd_bl_en-supply = <&vdd_bl_en>;
 		};
 		vi@15700000 {
 			avdd_dsi_csi-supply = <&spmic_sd1>;

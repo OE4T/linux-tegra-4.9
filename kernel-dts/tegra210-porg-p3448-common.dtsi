@@ -907,6 +907,49 @@
 	gpu_alert: gpu-throttle-alert {
 		status = "okay";
 	};
+
+	hot_surface_alert: hot-surface-alert {
+		compatible = "userspace-therm-alert";
+		cdev-type = "hot-surface-alert";
+		status = "okay";
+		#cooling-cells = <2>;
+	};
+
+	thermal-zones {
+		GPU-therm {
+			trips {
+				gpu_hot_surface_trip: gpu-hot-surface-trip {
+					temperature = <70000>;
+					hysteresis = <8000>;
+					type = "active";
+				};
+			};
+
+			cooling-maps {
+				gpu-hot-surface-map0 {
+					trip = <&gpu_hot_surface_trip>;
+					cooling-device = <&hot_surface_alert 1 1>;
+				};
+			};
+		};
+
+		PLL-therm {
+			trips {
+				pll_hot_surface_trip: pll-hot-surface-trip {
+					temperature = <70000>;
+					hysteresis = <8000>;
+					type = "active";
+				};
+			};
+
+			cooling-maps {
+				pll-hot-surface-map0 {
+					trip = <&pll_hot_surface_trip>;
+					cooling-device = <&hot_surface_alert 1 1>;
+				};
+			};
+		};
+	};
 };
 
 #if LINUX_VERSION >= 414

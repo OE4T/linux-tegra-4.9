@@ -382,7 +382,7 @@ struct nvmap_handle_ref *__nvmap_validate_locked(struct nvmap_client *priv,
 struct nvmap_handle *nvmap_validate_get(struct nvmap_handle *h);
 
 struct nvmap_handle_ref *nvmap_create_handle(struct nvmap_client *client,
-					     size_t size);
+					     size_t size, bool ro_buf);
 
 struct nvmap_handle_ref *nvmap_create_handle_from_va(struct nvmap_client *client,
 						     ulong addr, size_t size,
@@ -468,7 +468,7 @@ int nvmap_cache_debugfs_init(struct dentry *nvmap_root);
 struct dma_buf *__nvmap_dmabuf_export(struct nvmap_client *client,
 				 struct nvmap_handle *handle);
 struct dma_buf *__nvmap_make_dmabuf(struct nvmap_client *client,
-				    struct nvmap_handle *handle);
+				    struct nvmap_handle *handle, bool ro_buf);
 struct sg_table *__nvmap_sg_table(struct nvmap_client *client,
 				  struct nvmap_handle *h);
 void __nvmap_free_sg_table(struct nvmap_client *client,

@@ -186,7 +186,7 @@ struct nvmap_handle_ref *nvmap_create_handle_from_va(struct nvmap_client *client
 	if (!(vm_flags & VM_WRITE) && !(flags & NVMAP_HANDLE_RO))
 		return ERR_PTR(-EINVAL);
 
-	ref = nvmap_create_handle(client, size);
+	ref = nvmap_create_handle(client, size, flags & NVMAP_HANDLE_RO);
 	if (!IS_ERR(ref))
 		ref->handle->orig_size = size;
 
@@ -194,7 +194,7 @@ struct nvmap_handle_ref *nvmap_create_handle_from_va(struct nvmap_client *client
 }
 
 struct nvmap_handle_ref *nvmap_create_handle(struct nvmap_client *client,
-					     size_t size)
+					     size_t size, bool ro_buf)
 {
 	void *err = ERR_PTR(-ENOMEM);
 	struct nvmap_handle *h;
@@ -231,7 +231,7 @@ struct nvmap_handle_ref *nvmap_create_handle(struct nvmap_client *client,
 	 * This takes out 1 ref on the dambuf. This corresponds to the
 	 * handle_ref that gets automatically made by nvmap_create_handle().
 	 */
-	h->dmabuf = __nvmap_make_dmabuf(client, h);
+	h->dmabuf = __nvmap_make_dmabuf(client, h, ro_buf);
 	if (IS_ERR(h->dmabuf)) {
 		err = h->dmabuf;
 		goto make_dmabuf_fail;

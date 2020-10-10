@@ -223,7 +223,7 @@ int nvmap_ioctl_create(struct file *filp, unsigned int cmd, void __user *arg)
 		op.size64 = op.size;
 
 	if ((cmd == NVMAP_IOC_CREATE) || (cmd == NVMAP_IOC_CREATE_64)) {
-		ref = nvmap_create_handle(client, op.size64);
+		ref = nvmap_create_handle(client, op.size64, false);
 		if (!IS_ERR(ref))
 			ref->handle->orig_size = op.size64;
 	} else if (cmd == NVMAP_IOC_FROM_FD) {
@@ -632,7 +632,7 @@ int nvmap_ioctl_create_from_ivc(struct file *filp, void __user *arg)
 			((1ULL << NVMAP_IVM_LENGTH_WIDTH) - 1)) << PAGE_SHIFT;
 		peer = (op.ivm_id >> NVMAP_IVM_IVMID_SHIFT);
 
-		ref = nvmap_create_handle(client, size);
+		ref = nvmap_create_handle(client, size, false);
 		if (IS_ERR(ref)) {
 			nvmap_heap_free(block);
 			return PTR_ERR(ref);

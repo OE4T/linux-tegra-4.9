@@ -1218,6 +1218,15 @@ int eqos_probe(struct platform_device *pdev)
 			dev_info(&pdev->dev,
 				 "fail to enable eqos pad ctrl prod settings\n");
 	}
+	/* set the pad auto calibration reg settings value as per
+	 * recommended values from BUG:3112028
+	 */
+	ret = of_property_read_u32(node, "nvidia,eqos_auto_cal_config_0_reg",
+			&(pdata->dt_cfg.reg_auto_cal_config_0_val));
+	if (ret < 0) {
+		dev_info(&pdev->dev, "failed to read eqos_auto_cal_config_0_reg\n");
+		pdata->dt_cfg.reg_auto_cal_config_0_val = 0x0;
+	}
 
 	/* calibrate pad */
 	ret = hw_if->pad_calibrate(pdata);

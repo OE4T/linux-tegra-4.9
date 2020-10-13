@@ -3190,7 +3190,7 @@ static INT eqos_pad_calibrate(struct eqos_prv_data *pdata)
 	struct platform_device *pdev = pdata->pdev;
 	int ret;
 	int i;
-	u32 hwreg;
+	u32 hwreg = 0;
 
 	if (tegra_platform_is_unit_fpga())
 		return 0;
@@ -3205,12 +3205,17 @@ static INT eqos_pad_calibrate(struct eqos_prv_data *pdata)
 	/* 2. delay for 1 usec */
 	usleep_range(1, 3);
 
+	/* use platform specific ETHER_QOS_AUTO_CAL_CONFIG_0 register value if set */
+	if(pdata->dt_cfg.reg_auto_cal_config_0_val)
+		hwreg = pdata->dt_cfg.reg_auto_cal_config_0_val;
+	else
+		PAD_AUTO_CAL_CFG_RD(hwreg);
+
 	/* 3. Set AUTO_CAL_ENABLE and AUTO_CAL_START in
 	 * reg ETHER_QOS_AUTO_CAL_CONFIG_0.
 	 */
-	PAD_AUTO_CAL_CFG_RD(hwreg);
 	hwreg |=
-	    ((PAD_AUTO_CAL_CFG_START_MASK) | (PAD_AUTO_CAL_CFG_ENABLE_MASK));
+		(PAD_AUTO_CAL_CFG_START_MASK) | (PAD_AUTO_CAL_CFG_ENABLE_MASK);
 
 	PAD_AUTO_CAL_CFG_WR(hwreg);
 

@@ -1359,6 +1359,7 @@ struct eqos_cfg {
 	uint		iso_bw;
 	uint		eth_iso_enable;
 	bool		phy_apd_mode;	/* Represents PHY AUTO POWER DOWN mode */
+	uint		reg_auto_cal_config_0_val; /* EQOS_AUTO_CAL_CONFIG_0 REG */
 	u32		slot_intvl_val; /* Slot Interval Value*/
 };
 

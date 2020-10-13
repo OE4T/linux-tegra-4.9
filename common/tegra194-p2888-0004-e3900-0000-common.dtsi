@@ -73,6 +73,10 @@
 		status = "disabled";
 	};
 
+	ether_qos@2490000 {
+		nvidia,eqos_auto_cal_config_0_reg = <0x20010103>;
+	};
+
 	pmc@c370000 {
 		nvidia,invert-interrupt;
 	};

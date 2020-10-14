@@ -61,6 +61,7 @@
 
 	chosen {
 		board-has-eeprom;
+		firmware-blob-partition = "RP4";
 		stdout-path = &uarta;
 		verified-boot {
 			poweroff-on-red-state;

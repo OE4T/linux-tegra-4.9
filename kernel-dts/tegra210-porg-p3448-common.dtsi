@@ -609,7 +609,6 @@
 	};
 
 	chosen {
-		nvidia,bootloader-xusb-enable;
 		nvidia,bootloader-vbus-enable=<0x1>;
 		nvidia,fastboot_without_usb;
 		nvidia,gpu-disable-power-saving;

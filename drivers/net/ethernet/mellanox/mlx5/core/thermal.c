@@ -88,7 +88,11 @@ static int mlx5_thermal_get_mtmp_temp(struct mlx5_core_dev *core, int *p_temp)
 				   &mtmp_out, sizeof(mtmp_out),
 				   MLX5_REG_MTMP, 0, 0);
 	if (!err)
-		*p_temp = (mtmp_out.temp[0] << 8 | mtmp_out.temp[1]) >> 3;
+		/*
+		 * The unit of temp returned is in 0.125 C. The thermal
+		 * framework expects the value in 0.001 C.
+		 */
+		*p_temp = (mtmp_out.temp[0] << 8 | mtmp_out.temp[1]) * 125;
 
 	return err;
 }

@@ -175,7 +175,7 @@
 			override@0 {
 				target = <&max77620_ldo6>;
 				_overlay_ {
-					status = "disabled";
+                                        status = "disabled";
 				};
 			};
 			override@1 {
@@ -299,58 +299,6 @@
 				target = <&cam_module1>;
 				_overlay_ {
 					status = "disabled";
-				};
-			};
-			/* IMX477 single sensor module */
-			override@17 {
-				target = <&imx477_single_cam0>;
-				_overlay_ {
-					status = "okay";
-				};
-			};
-			override@18 {
-				target = <&cam_module0>;
-				_overlay_ {
-					status = "okay";
-					badge = "porg_front_RBPCV3";
-					position = "front";
-					orientation = "1";
-				};
-			};
-			override@19 {
-				target = <&cam_module0_drivernode0>;
-				_overlay_ {
-					status = "okay";
-					pcl_id = "v4l2_sensor";
-					devname = "imx477 6-001a";
-					proc-device-tree = "/proc/device-tree/host1x/i2c@546c0000/rbpcv3_imx477_a@1a";
-				};
-			};
-			/* Enable VI ports. Skip common overrides with IMX219 */
-			override@20 {
-				target = <&rbpcv3_imx477_vi_in0>;
-				_overlay_ {
-					status = "okay";
-					port-index = <0>;
-					bus-width = <2>;
-					remote-endpoint = <&rbpcv3_imx477_csi_out0>;
-				};
-			};
-			/* Enable CSI ports. Skip common overrides with IMX219 */
-			override@21 {
-				target = <&rbpcv3_imx477_csi_in0>;
-				_overlay_ {
-					status = "okay";
-					port-index = <0>;
-					bus-width = <2>;
-					remote-endpoint = <&rbpcv3_imx477_out0>;
-				};
-			};
-			override@22 {
-				target = <&rbpcv3_imx477_csi_out0>;
-				_overlay_ {
-					status = "okay";
-					remote-endpoint = <&rbpcv3_imx477_vi_in0>;
 				};
 			};
 		};
@@ -533,129 +481,8 @@
 					status = "okay";
 				};
 			};
-			/* IMX477 Dual sensor module*/
-			override@28 {
-				target = <&imx477_cam0>;
-				_overlay_ {
-					status = "okay";
-				};
-			};
-			override@29 {
-				target = <&cam_module0>;
-				_overlay_ {
-					status = "okay";
-					badge = "porg_front_RBPCV3";
-					position = "front";
-					orientation = "1";
-				};
-			};
-			override@30 {
-				target = <&cam_module0_drivernode0>;
-				_overlay_ {
-					status = "okay";
-					pcl_id = "v4l2_sensor";
-					devname = "imx477 7-0010";
-					proc-device-tree = "/proc/device-tree/cam_i2cmux/i2c@0/rbpcv3_imx477_a@1a";
-				};
-			};
-			override@31 {
-				target = <&cam_module0_drivernode1>;
-				_overlay_ {
-					status = "okay";
-					pcl_id = "v4l2_lens";
-					proc-device-tree = "/proc/device-tree/lens_imx477@RBPCV3/";
-				};
-			};
-			override@32 {
-				target = <&imx477_cam1>;
-				_overlay_ {
-					status = "okay";
-				};
-			};
-			override@33 {
-				target = <&cam_module1>;
-				_overlay_ {
-					status = "okay";
-					badge = "porg_rear_RBPCV3";
-					position = "rear";
-					orientation = "1";
-				};
-			};
-			override@34 {
-				target = <&cam_module1_drivernode0>;
-				_overlay_ {
-					status = "okay";
-					pcl_id = "v4l2_sensor";
-					devname = "imx477 8-0010";
-					proc-device-tree = "/proc/device-tree/cam_i2cmux/i2c@1/rbpcv3_imx477_e@1a";
-				};
-			};
-			override@35 {
-				target = <&cam_module1_drivernode1>;
-				_overlay_ {
-					status = "okay";
-					pcl_id = "v4l2_lens";
-					proc-device-tree = "/proc/device-tree/lens_imx477@RBPCV3/";
-				};
-			};
-			/* Enable VI uncommon ports */
-			override@36 {
-				target = <&rbpcv3_imx477_vi_in0>;
-				_overlay_ {
-					status = "okay";
-					port-index = <0>;
-					bus-width = <2>;
-					remote-endpoint = <&rbpcv3_imx477_csi_out0>;
-				};
-			};
-			override@37 {
-				target = <&rbpcv3_imx477_vi_in1>;
-				_overlay_ {
-					status = "okay";
-					port-index = <4>;
-					bus-width = <2>;
-					remote-endpoint = <&rbpcv3_imx477_csi_out1>;
-				};
-			};
-			/* Enable CSI uncommon ports */
-			override@38 {
-				target = <&rbpcv3_imx477_csi_in0>;
-				_overlay_ {
-					status = "okay";
-					port-index = <0>;
-					bus-width = <2>;
-					remote-endpoint = <&rbpcv3_imx477_dual_out0>;
-				};
-			};
-			override@39 {
-				target = <&rbpcv3_imx477_csi_out0>;
-				_overlay_ {
-					status = "okay";
-				};
-			};
-			override@40 {
-				target = <&rbpcv3_imx477_csi_in1>;
-				_overlay_ {
-					status = "okay";
-					port-index = <4>;
-					bus-width = <2>;
-					remote-endpoint = <&rbpcv3_imx477_out1>;
-				};
-			};
-			override@41 {
-				target = <&csi_chan1_port1>;
-				_overlay_ {
-					status = "okay";
-				};
-			};
-			override@42 {
-				target = <&rbpcv3_imx477_csi_out1>;
-				_overlay_ {
-					status = "okay";
-				};
-			};
 			/* tegra-camera-platform settings */
-			override@43 {
+			override@28 {
 				target = <&tcp>;
 				_overlay_ {
 					num_csi_lanes = <4>;
@@ -669,19 +496,19 @@
 				};
 			};
 			/* gpio based i2c mux */
-			override@44 {
+			override@29 {
 				target = <&{/cam_i2cmux}>;
 				_overlay_ {
 					status = "okay";
 				};
 			};
-			override@45 {
+			override@30 {
 				target = <&i2c_0>;
 				_overlay_ {
 					status = "okay";
 				};
 			};
-			override@46 {
+			override@31 {
 				target = <&i2c_1>;
 				_overlay_ {
 					status = "okay";

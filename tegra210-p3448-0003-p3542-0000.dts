@@ -19,6 +19,8 @@
  */
 
 #include "../../porg/kernel-dts/tegra210-porg-p3448-common.dtsi"
+#include "../../porg/kernel-dts/porg-platforms/tegra210-porg-camera-rbpcv3-imx477.dtsi"
+#include "../../porg/kernel-dts/porg-platforms/tegra210-porg-camera-rbpcv2-imx219.dtsi"
 #include "batuu-platforms/tegra210-batuu-pinmux-p3448-0003.dtsi"
 #include "batuu-platforms/tegra210-batuu-gpio-p3448-0003.dtsi"
 #include "batuu-platforms/tegra210-batuu-p3448-emc-a00.dtsi"

@@ -166,12 +166,14 @@
 	host1x {
 		nvdisplay@15200000 {
 			status = "okay";
+			bootloader-status = "disabled";
 		};
 		nvdisplay@15210000 {
 			status = "okay";
 		};
 		nvdisplay@15220000 {
 			status = "okay";
+			bootloader-status = "disabled";
 		};
 		dsi {
 			status = "okay";

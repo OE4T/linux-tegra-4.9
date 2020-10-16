@@ -71,6 +71,10 @@
 				status = "disabled";
 				/* Only 2 lanes used on LANAI */
 				nvidia,dsi-n-data-lanes = <2>;
+				disp-default-out {
+					nvidia,out-parent-clk = "pll_d";
+					nvidia,out-flags = <TEGRA_DC_OUT_CONTINUOUS_MODE>;
+				};
 			};
 		};
 

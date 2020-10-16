@@ -3,7 +3,7 @@
  *
  * Interface with nvmap carveouts
  *
- * Copyright (c) 2011-2018, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2011-2022, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -132,7 +132,8 @@ struct nvmap_heap_block *do_nvmap_carveout_alloc(struct nvmap_client *client,
 		if (!(co_heap->heap_bit & type))
 			continue;
 
-		if (type & NVMAP_HEAP_CARVEOUT_IVM)
+		if (type &
+			(NVMAP_HEAP_CARVEOUT_IVM | NVMAP_HEAP_CARVEOUT_IVM_VPR))
 			handle->size = ALIGN(handle->size, NVMAP_IVM_ALIGNMENT);
 
 		block = nvmap_heap_alloc(co_heap->carveout, handle, start);

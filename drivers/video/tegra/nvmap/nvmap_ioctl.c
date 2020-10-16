@@ -3,7 +3,7 @@
  *
  * User-space interface to nvmap
  *
- * Copyright (c) 2011-2021, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2011-2022, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -571,15 +571,25 @@ int nvmap_ioctl_get_ivcid(struct file *filp, void __user *arg)
 
 int nvmap_ioctl_get_ivc_heap(struct file *filp, void __user *arg)
 {
+	const unsigned int allowed_heaps =
+		NVMAP_HEAP_CARVEOUT_IVM | NVMAP_HEAP_CARVEOUT_IVM_VPR;
 	struct nvmap_device *dev = nvmap_dev;
+	unsigned int queried_heap;
 	int i;
 	unsigned int heap_mask = 0;
+
+	if (copy_from_user(&queried_heap, arg, sizeof(queried_heap)))
+		return -EFAULT;
+
+	/* Only one heap type at a time can be queried */
+	if (hweight_long(queried_heap & allowed_heaps) != 1U)
+		return -EINVAL;
 
 	for (i = 0; i < dev->nr_carveouts; i++) {
 		struct nvmap_carveout_node *co_heap = &dev->heaps[i];
 		int peer;
 
-		if (!(co_heap->heap_bit & NVMAP_HEAP_CARVEOUT_IVM))
+		if (!(co_heap->heap_bit & queried_heap))
 			continue;
 
 		peer = nvmap_query_heap_peer(co_heap->carveout);
@@ -605,6 +615,7 @@ int nvmap_ioctl_create_from_ivc(struct file *filp, void __user *arg)
 	size_t size = 0;
 	int peer;
 	struct nvmap_heap_block *block = NULL;
+	bool is_ivm_vpr;
 
 	/* First create a new handle and then fake carveout allocation */
 	if (copy_from_user(&op, arg, sizeof(op)))
@@ -615,15 +626,22 @@ int nvmap_ioctl_create_from_ivc(struct file *filp, void __user *arg)
 
 	ref = nvmap_try_duplicate_by_ivmid(client, op.ivm_id, &block);
 	if (!ref) {
+		u32 type;
 		/*
 		 * See nvmap_heap_alloc() for encoding details.
 		 */
-		offs = ((op.ivm_id &
-		       ~((u64)NVMAP_IVM_IVMID_MASK << NVMAP_IVM_IVMID_SHIFT)) >>
-			NVMAP_IVM_LENGTH_WIDTH) << (ffs(NVMAP_IVM_ALIGNMENT) - 1);
-		size = (op.ivm_id &
-			((1ULL << NVMAP_IVM_LENGTH_WIDTH) - 1)) << PAGE_SHIFT;
-		peer = (op.ivm_id >> NVMAP_IVM_IVMID_SHIFT);
+		size = ((op.ivm_id & NVMAP_IVM_SIZE_MASK) >>
+			NVMAP_IVM_SIZE_SHIFT);
+		size <<= PAGE_SHIFT;
+
+		offs = ((op.ivm_id & NVMAP_IVM_OFFSET_MASK) >>
+			NVMAP_IVM_OFFSET_SHIFT);
+		offs <<= (ffs(NVMAP_IVM_ALIGNMENT) - 1);
+
+		peer = ((op.ivm_id & NVMAP_IVM_PEER_MASK) >>
+			NVMAP_IVM_PEER_SHIFT);
+		is_ivm_vpr = ((op.ivm_id & NVMAP_IVM_ISVPR_MASK) >>
+			NVMAP_IVM_ISVPR_SHIFT);
 
 		ref = nvmap_create_handle(client, size, false);
 		if (IS_ERR(ref)) {
@@ -633,15 +651,21 @@ int nvmap_ioctl_create_from_ivc(struct file *filp, void __user *arg)
 		ref->handle->orig_size = size;
 
 		ref->handle->peer = peer;
-		if (!block)
+
+		type = is_ivm_vpr ? NVMAP_HEAP_CARVEOUT_IVM_VPR :
+			NVMAP_HEAP_CARVEOUT_IVM;
+
+		if (!block) {
 			block = nvmap_carveout_alloc(client, ref->handle,
-					NVMAP_HEAP_CARVEOUT_IVM, &offs);
+				type, &offs);
+		}
+
 		if (!block) {
 			nvmap_free_handle(client, ref->handle);
 			return -ENOMEM;
 		}
 
-		ref->handle->heap_type = NVMAP_HEAP_CARVEOUT_IVM;
+		ref->handle->heap_type = type;
 		ref->handle->heap_pgalloc = false;
 		ref->handle->ivm_id = op.ivm_id;
 		ref->handle->carveout = block;

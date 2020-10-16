@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2019 NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2016-2022 NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,6 +23,8 @@ extern phys_addr_t tegra_vpr_size;
 extern bool tegra_vpr_resize;
 static DEFINE_MUTEX(vpr_lock);
 
+/* "Classic" VPR is not supported in virtualized systems. */
+#if !IS_ENABLED(CONFIG_TEGRA_VIRTUALIZATION)
 static int tegra_vpr_arg(char *options)
 {
 	char *p = options;
@@ -42,6 +44,7 @@ static int tegra_vpr_resize_arg(char *options)
 	return 0;
 }
 early_param("vpr_resize", tegra_vpr_resize_arg);
+#endif
 
 #define NUM_MODULES_IDLE_VPR_RESIZE 3
 static struct vpr_user_module_info {

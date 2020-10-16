@@ -3,7 +3,7 @@
  *
  * Handle allocation and freeing routines for nvmap
  *
- * Copyright (c) 2011-2021, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2011-2022, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -741,6 +741,7 @@ static const unsigned int heap_policy_large[] = {
 
 static const unsigned int heap_policy_excl[] = {
 	NVMAP_HEAP_CARVEOUT_IVM,
+	NVMAP_HEAP_CARVEOUT_IVM_VPR,
 	NVMAP_HEAP_CARVEOUT_VIDMEM,
 	0,
 };
@@ -777,10 +778,11 @@ int nvmap_alloc_handle(struct nvmap_client *client,
 	h->userflags = flags;
 	nr_page = ((h->size + PAGE_SIZE - 1) >> PAGE_SHIFT);
 	/* Force mapping to uncached for VPR memory. */
-	if (heap_mask & (NVMAP_HEAP_CARVEOUT_VPR | ~nvmap_dev->cpu_access_mask))
+	if (heap_mask & (NVMAP_HEAP_CARVEOUT_VPR | NVMAP_HEAP_CARVEOUT_IVM_VPR |
+		~nvmap_dev->cpu_access_mask))
 		h->flags = NVMAP_HANDLE_UNCACHEABLE;
 	else
-		h->flags = (flags & NVMAP_HANDLE_CACHE_FLAG);
+		h->flags = flags & NVMAP_HANDLE_CACHE_FLAG;
 	h->align = max_t(size_t, align, L1_CACHE_BYTES);
 	h->peer = peer;
 	tag = flags >> 16;

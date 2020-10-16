@@ -3,7 +3,7 @@
  *
  * GPU heap allocator.
  *
- * Copyright (c) 2011-2018, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2011-2022, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -76,9 +76,10 @@ struct nvmap_heap {
 	struct device *cma_dev;
 	struct device *dma_dev;
 	bool is_ivm;
-	bool can_alloc; /* Used only if is_ivm == true */
-	int peer; /* Used only if is_ivm == true */
-	int vm_id; /* Used only if is_ivm == true */
+	bool can_alloc;  /* Used only if is_ivm == true */
+	int peer;        /* Used only if is_ivm == true */
+	int vm_id;       /* Used only if is_ivm == true */
+	bool is_ivm_vpr; /* Used only if is_ivm == true */
 	struct nvmap_pm_ops pm_ops;
 };
 
@@ -332,19 +333,41 @@ struct nvmap_heap_block *nvmap_heap_alloc(struct nvmap_heap *h,
 		handle->carveout = b;
 		/* Generate IVM for partition that can alloc */
 		if (h->is_ivm && h->can_alloc) {
-			unsigned int offs = (b->base - h->base);
-			BUG_ON(offs & (NVMAP_IVM_ALIGNMENT - 1));
-			BUG_ON((offs >> ffs(NVMAP_IVM_ALIGNMENT)) &
-				~((1 << NVMAP_IVM_OFFSET_WIDTH) - 1));
-			BUG_ON(h->vm_id & ~(NVMAP_IVM_IVMID_MASK));
-			/* So, page alignment is sufficient check.
+			u64 size_temp = len;
+
+			/* h->base is the address of the whole IVM carveout.
+			 * b->base is an address of an allocation region that
+			 * lives inside the carveout.
 			 */
-			BUG_ON(len & ~(PAGE_MASK));
-			handle->ivm_id = ((u64)h->vm_id << NVMAP_IVM_IVMID_SHIFT);
-			handle->ivm_id |= (((offs >> (ffs(NVMAP_IVM_ALIGNMENT) - 1)) &
-					 ((1ULL << NVMAP_IVM_OFFSET_WIDTH) - 1)) <<
-					  NVMAP_IVM_OFFSET_SHIFT);
-			handle->ivm_id |= (len >> PAGE_SHIFT);
+			u64 offs_temp = b->base - h->base;
+			u64 peer_temp = h->vm_id;
+
+			/* Is offset NVMAP_IVM_ALIGNMENT aligned? */
+			BUG_ON(offs_temp & (NVMAP_IVM_ALIGNMENT - 1));
+
+			/* Is size PAGE aligned */
+			BUG_ON(size_temp & ~PAGE_MASK);
+
+			// Offset as multiples of NVMAP_IVM_ALIGNMENT.
+			offs_temp >>= (ffs(NVMAP_IVM_ALIGNMENT) - 1);
+
+			// Size as multiples of a PAGE.
+			size_temp >>= PAGE_SHIFT;
+
+			// Check they fit into their bitfields.
+			BUG_ON((size_temp << NVMAP_IVM_SIZE_SHIFT) &
+				~(NVMAP_IVM_SIZE_MASK));
+			BUG_ON((offs_temp << NVMAP_IVM_OFFSET_SHIFT) &
+				~(NVMAP_IVM_OFFSET_MASK));
+			BUG_ON((peer_temp << NVMAP_IVM_PEER_SHIFT) &
+				~(NVMAP_IVM_PEER_MASK));
+
+			handle->ivm_id = size_temp << NVMAP_IVM_SIZE_SHIFT;
+			handle->ivm_id |= offs_temp << NVMAP_IVM_OFFSET_SHIFT;
+			handle->ivm_id |= peer_temp << NVMAP_IVM_PEER_SHIFT;
+
+			if (h->is_ivm_vpr)
+				handle->ivm_id |= 1ULL << NVMAP_IVM_ISVPR_SHIFT;
 		}
 	}
 	mutex_unlock(&h->lock);
@@ -448,6 +471,7 @@ struct nvmap_heap *nvmap_heap_create(struct device *parent,
 	h->len = len;
 	h->peer = co->peer;
 	h->vm_id = co->vmid;
+	h->is_ivm_vpr = (co->usage_mask == NVMAP_HEAP_CARVEOUT_IVM_VPR);
 	if (co->pm_ops.busy)
 		h->pm_ops.busy = co->pm_ops.busy;
 

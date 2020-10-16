@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014-2020, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (C) 2014-2022, NVIDIA CORPORATION. All rights reserved.
  *
  * Hypervisor interfaces
  *
@@ -79,6 +79,8 @@ struct tegra_hv_queue_data {
 };
 
 struct ivc_mempool {
+	uint32_t is_vpr;
+	uint32_t can_alloc; /* Only valid when is_vpr == 1 */
 	uint64_t pa;
 	uint64_t size;
 	uint32_t id;
@@ -97,14 +99,21 @@ struct ivc_info_page {
 	uint32_t nr_queues;
 	uint32_t nr_areas;
 	uint32_t nr_mempools;
+	uint32_t padding;	// IMPORTANT: Padding is needed to align
+				// sizeof(struct ivc_info_page) to 64 bits.
 
-	/* The actual length of this array is nr_areas. */
-	struct ivc_shared_area areas[];
+	/* The ivc_shared_area follows the above fields.
+	 * The actual length of this array is nr_areas.
+	 * Accessing the ivc_shared_area must be done via inline function
+	 * "ivc_shared_array".
+	 *
+	 * struct ivc_shared_area areas[nr_areas];
+	 */
 
 	/*
-	 * Following the shared array is an array of queue data structures with
-	 * an entry per queue that is assigned to the guest. This  array is
-	 * terminated by an entry with no frames.
+	 * Following this array is an array of queue data structures with an
+	 * entry per queue that is accessible in the current guest. This array
+	 * is terminated by an entry with no frames.
 	 *
 	 * struct tegra_hv_queue_data queue_data[nr_queues];
 	 */
@@ -118,16 +127,17 @@ struct ivc_info_page {
 };
 
 static inline struct ivc_shared_area *ivc_shared_area_addr(
-		const struct ivc_info_page *info, uint32_t area_num)
-{
-	return ((struct ivc_shared_area *) (((uintptr_t) info) + sizeof(*info)))
-		+ area_num;
+	const struct ivc_info_page *info, uint32_t area_num) {
+
+	return ((struct ivc_shared_area *) (((uintptr_t) info) +
+		sizeof(*info))) + area_num;
 }
 
 static inline const struct tegra_hv_queue_data *ivc_info_queue_array(
 		const struct ivc_info_page *info)
 {
-	return (struct tegra_hv_queue_data *)&info->areas[info->nr_areas];
+	return (const struct tegra_hv_queue_data *)
+		((uintptr_t) ivc_shared_area_addr(info, info->nr_areas));
 }
 
 static inline const struct ivc_mempool *ivc_info_mempool_array(

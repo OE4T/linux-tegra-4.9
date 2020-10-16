@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2018, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2014-2022, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -37,7 +37,8 @@
 #include "board.h"
 #include <linux/platform/tegra/common.h>
 
-#ifdef CONFIG_TEGRA_VIRTUALIZATION
+#include <soc/tegra/chip-id.h>
+#if IS_ENABLED(CONFIG_TEGRA_VIRTUALIZATION)
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 4, 0)
 #include <soc/tegra/virt/syscalls.h>
 #else
@@ -98,6 +99,9 @@ static struct nvmap_platform_carveout nvmap_carveouts[] = {
 		.cma_dev	= &tegra_generic_cma_dev,
 		.dma_info	= &generic_dma_info,
 	},
+	/* This is the "classic" VPR from pre-virtualization days, intended to
+	 * be used by a single VM or native OS.
+	 */
 	[2] = {
 		.name		= "vpr",
 		.usage_mask	= NVMAP_HEAP_CARVEOUT_VPR,
@@ -116,11 +120,15 @@ static struct nvmap_platform_carveout nvmap_carveouts[] = {
 		.disable_dynamic_dma_map = true,
 		.no_cpu_access = true,
 	},
-	/* Need uninitialized entries for IVM carveouts */
+	/* This is a VPR-backed IVM carveout. It is intended to be used in a
+	 * cross-VM setup, for example, VM0 being a producer and VM1 being a
+	 * consumer.
+	 */
 	[4] = {
 		.name		= NULL,
-		.usage_mask	= NVMAP_HEAP_CARVEOUT_IVM,
+		.usage_mask	= NVMAP_HEAP_CARVEOUT_IVM_VPR,
 	},
+	/* Need uninitialized entries for IVM carveouts */
 	[5] = {
 		.name		= NULL,
 		.usage_mask	= NVMAP_HEAP_CARVEOUT_IVM,
@@ -133,11 +141,15 @@ static struct nvmap_platform_carveout nvmap_carveouts[] = {
 		.name		= NULL,
 		.usage_mask	= NVMAP_HEAP_CARVEOUT_IVM,
 	},
+	[8] = {
+		.name		= NULL,
+		.usage_mask	= NVMAP_HEAP_CARVEOUT_IVM,
+	},
 };
 
 static struct nvmap_platform_data nvmap_data = {
 	.carveouts	= nvmap_carveouts,
-	.nr_carveouts	= 4,
+	.nr_carveouts	= 5,
 };
 
 static struct nvmap_platform_carveout *nvmap_get_carveout_pdata(const char *name)
@@ -146,6 +158,9 @@ static struct nvmap_platform_carveout *nvmap_get_carveout_pdata(const char *name
 	for (co = nvmap_carveouts;
 	     co < nvmap_carveouts + ARRAY_SIZE(nvmap_carveouts); co++) {
 		int i = min_t(int, strcspn(name, "_"), strcspn(name, "-"));
+		if (co->usage_mask == NVMAP_HEAP_CARVEOUT_IVM_VPR)
+			continue;
+
 		/* handle IVM carveouts */
 		if ((co->usage_mask == NVMAP_HEAP_CARVEOUT_IVM) &&  !co->name)
 			goto found;
@@ -184,7 +199,7 @@ int nvmap_register_vidmem_carveout(struct device *dma_dev,
 }
 EXPORT_SYMBOL(nvmap_register_vidmem_carveout);
 
-#ifdef CONFIG_TEGRA_VIRTUALIZATION
+#if IS_ENABLED(CONFIG_TEGRA_VIRTUALIZATION)
 int __init nvmap_populate_ivm_carveout(struct reserved_mem *rmem)
 {
 	u32 id;
@@ -194,7 +209,6 @@ int __init nvmap_populate_ivm_carveout(struct reserved_mem *rmem)
 	unsigned long fdt_node = rmem->fdt_node;
 	const __be32 *prop;
 	int len;
-	char *name;
 	int ret = 0;
 
 	co = nvmap_get_carveout_pdata(rmem->name);
@@ -239,21 +253,19 @@ int __init nvmap_populate_ivm_carveout(struct reserved_mem *rmem)
 		goto fail;
 	}
 
-	name = kzalloc(32, GFP_KERNEL);
-	if (!name) {
+	co->can_alloc = of_read_number(prop, 1);
+	co->is_ivm    = true;
+
+	co->name = kasprintf(GFP_KERNEL, "ivm%02d%02d%02d", co->vmid, co->peer,
+		co->can_alloc);
+	if (!co->name) {
 		ret = -ENOMEM;
 		goto fail;
 	}
 
-	co->can_alloc = of_read_number(prop, 1);
-
-	co->is_ivm    = true;
-
-	sprintf(name, "ivm%02d%02d%02d", co->vmid, co->peer, co->can_alloc);
 	pr_info("IVM carveout IPA:%p, size=%zu, peer vmid=%d, name=%s\n",
-		(void *)(uintptr_t)co->base, co->size, co->peer, name);
+		(void *)(uintptr_t)co->base, co->size, co->peer, co->name);
 
-	co->name      = name;
 	nvmap_data.nr_carveouts++;
 
 	return 0;
@@ -263,10 +275,85 @@ fail:
 	co->peer     = 0;
 	co->size     = 0;
 	co->vmid     = 0;
+	tegra_hv_mempool_unreserve(ivm);
+
+	return ret;
+}
+
+int __init nvmap_populate_ivm_vpr_carveout(
+		struct nvmap_platform_carveout *co)
+{
+	unsigned int guestid;
+	struct tegra_hv_ivm_cookie *ivm;
+	int ret = 0;
+
+	if (!co)
+		return -ENOMEM;
+
+	if (hyp_read_gid(&guestid)) {
+		pr_err("failed to read gid\n");
+		return -EINVAL;
+	}
+
+	ivm = tegra_hv_mempool_reserve_vpr();
+	if (IS_ERR_OR_NULL(ivm)) {
+		if (PTR_ERR(ivm) == -ENODEV) {
+			/* Skip silently if there is no IVM-VPR defined */
+			return 0;
+		}
+
+		if (PTR_ERR(ivm) == -EPROBE_DEFER)
+			pr_err("mempool query while not ready yet\n");
+		else
+			pr_err("failed to reserve VPR memory pool\n");
+
+		return -ENOMEM;
+	}
+
+	co->base = (phys_addr_t)ivm->ipa;
+	co->peer = ivm->peer_vmid;
+	co->size = ivm->size;
+	co->vmid = (int)guestid;
+
+	if (!co->base || !co->size) {
+		ret = -EINVAL;
+		goto fail;
+	}
+
+	co->can_alloc = ivm->can_alloc;
+	co->is_ivm = true;
+	co->dma_dev = &co->dev;
+	kmemleak_no_scan(__va(co->base));
+
+	co->name = kasprintf(GFP_KERNEL, "ivmvpr%02d%02d%02d", co->vmid,
+		co->peer, co->can_alloc);
+	if (!co->name) {
+		ret = -ENOMEM;
+		goto fail;
+	}
+
+	pr_info("IVM-VPR carveout IPA:%p, size=%zu, peer vmid=%d, name=%s\n",
+		(void *)(uintptr_t)co->base, co->size, co->peer, co->name);
+
+	return 0;
+
+fail:
+	co->base = 0;
+	co->peer = 0;
+	co->size = 0;
+	co->vmid = 0;
+	tegra_hv_mempool_unreserve(ivm);
+
 	return ret;
 }
 #else
 int __init nvmap_populate_ivm_carveout(struct reserved_mem *rmem)
+{
+	return -EINVAL;
+}
+
+int __init nvmap_populate_ivm_vpr_carveout(
+		struct nvmap_platform_carveout *co)
 {
 	return -EINVAL;
 }
@@ -299,6 +386,9 @@ static int __init nvmap_co_device_init(struct reserved_mem *rmem,
 
 	if (co->usage_mask == NVMAP_HEAP_CARVEOUT_IVM)
 		return nvmap_populate_ivm_carveout(rmem);
+
+	if (co->usage_mask == NVMAP_HEAP_CARVEOUT_IVM_VPR)
+		return nvmap_populate_ivm_vpr_carveout(co);
 
 	/* if co size is 0, => co is not present. So, skip init. */
 	if (!co->size)
@@ -418,7 +508,11 @@ EXPORT_SYMBOL(nvmap_co_setup);
 RESERVEDMEM_OF_DECLARE(nvmap_co, "nvidia,generic_carveout", nvmap_co_setup);
 RESERVEDMEM_OF_DECLARE(nvmap_ivm_co, "nvidia,ivm_carveout", nvmap_co_setup);
 RESERVEDMEM_OF_DECLARE(nvmap_iram_co, "nvidia,iram-carveout", nvmap_co_setup);
+
+/* "Classic" VPR is not supported in virtualized systems. */
+#if !IS_ENABLED(CONFIG_TEGRA_VIRTUALIZATION)
 RESERVEDMEM_OF_DECLARE(nvmap_vpr_co, "nvidia,vpr-carveout", nvmap_co_setup);
+#endif
 
 /*
  * This requires proper kernel arguments to have been passed.
@@ -471,11 +565,20 @@ int __init nvmap_init(struct platform_device *pdev)
 			goto end;
 	}
 
+	/* VPR */
 	if (!nvmap_carveouts[2].init_done) {
 		rmem.priv = &nvmap_carveouts[2];
 		err = nvmap_co_device_init(&rmem, &pdev->dev);
+		if (err)
+			goto end;
 	}
 
+	/* IVM-VPR */
+	if (is_tegra_hypervisor_mode())
+		if (!nvmap_carveouts[4].init_done) {
+			rmem.priv = &nvmap_carveouts[4];
+			err = nvmap_co_device_init(&rmem, &pdev->dev);
+		}
 end:
 	return err;
 }

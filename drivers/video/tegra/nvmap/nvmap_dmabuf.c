@@ -1,7 +1,7 @@
 /*
  * dma_buf exporter for nvmap
  *
- * Copyright (c) 2012-2021, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2012-2022, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -476,7 +476,8 @@ int __nvmap_map(struct nvmap_handle *h, struct vm_area_struct *vma)
 	 * as device memory. User space shouldn't be accessing
 	 * device memory.
 	 */
-	if (h->heap_type == NVMAP_HEAP_CARVEOUT_VPR)  {
+	if (h->heap_type &
+		(NVMAP_HEAP_CARVEOUT_VPR | NVMAP_HEAP_CARVEOUT_IVM_VPR)) {
 		nvmap_handle_put(h);
 		return -EPERM;
 	}

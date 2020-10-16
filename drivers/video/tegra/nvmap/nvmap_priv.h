@@ -3,7 +3,7 @@
  *
  * GPU memory management driver for Tegra
  *
- * Copyright (c) 2009-2021, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2009-2022, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -133,20 +133,24 @@ struct nvmap_pgalloc {
 	atomic_t ndirty;	/* count number of dirty pages */
 };
 
-/* bit 31-29: IVM peer
- * bit 28-16: offset (aligned to 32K)
- * bit 15-00: len (aligned to page_size)
- */
-#define NVMAP_IVM_LENGTH_SHIFT (0)
-#define NVMAP_IVM_LENGTH_WIDTH (16)
-#define NVMAP_IVM_LENGTH_MASK  ((1 << NVMAP_IVM_LENGTH_WIDTH) - 1)
-#define NVMAP_IVM_OFFSET_SHIFT (NVMAP_IVM_LENGTH_SHIFT + NVMAP_IVM_LENGTH_WIDTH)
-#define NVMAP_IVM_OFFSET_WIDTH (14)
-#define NVMAP_IVM_OFFSET_MASK  ((1 << NVMAP_IVM_OFFSET_WIDTH) - 1)
-#define NVMAP_IVM_IVMID_SHIFT  (NVMAP_IVM_OFFSET_SHIFT + NVMAP_IVM_OFFSET_WIDTH)
-#define NVMAP_IVM_IVMID_WIDTH  (3)
-#define NVMAP_IVM_IVMID_MASK   ((1 << NVMAP_IVM_IVMID_WIDTH) - 1)
 #define NVMAP_IVM_ALIGNMENT    (SZ_32K)
+
+/*
+ * Bits     | Field
+ * --------------------------------------
+ * [32]     | isVPR
+ * [31..29] | Peer
+ * [28..16] | Offset (aligned to 32K)
+ * [15..00] | Size (aligned to page_size)
+ */
+#define NVMAP_IVM_ISVPR_SHIFT  32U
+#define NVMAP_IVM_ISVPR_MASK   GENMASK_ULL(32, 32)
+#define NVMAP_IVM_PEER_SHIFT   29U
+#define NVMAP_IVM_PEER_MASK    GENMASK_ULL(31, 29)
+#define NVMAP_IVM_OFFSET_SHIFT 16U
+#define NVMAP_IVM_OFFSET_MASK  GENMASK_ULL(28, 16)
+#define NVMAP_IVM_SIZE_SHIFT   0U
+#define NVMAP_IVM_SIZE_MASK    GENMASK_ULL(15, 0)
 
 struct nvmap_handle_dmabuf_priv {
 	void *priv;

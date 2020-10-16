@@ -3,7 +3,7 @@
  *
  * Instantiates virtualization-related resources.
  *
- * Copyright (C) 2014-2018, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (C) 2014-2022, NVIDIA CORPORATION. All rights reserved.
  *
  * This file is licensed under the terms of the GNU General Public License
  * version 2.  This program is licensed "as is" without any warranty of any
@@ -212,7 +212,8 @@ static int tegra_hv_add_ivc(struct tegra_hv_data *hvd,
 	 * through this channel.
 	 */
 	for (i = 0; i < hvd->info->nr_areas; i++) {
-		if (hvd->info->areas[i].guest == ivc->other_guestid) {
+		if (ivc_shared_area_addr(hvd->info, i)->guest ==
+				ivc->other_guestid) {
 			ivc->givci = &hvd->guest_ivc_info[i];
 			break;
 		}
@@ -396,15 +397,17 @@ static int __init tegra_hv_setup(struct tegra_hv_data *hvd)
 
 	for (i = 0; i < hvd->info->nr_areas; i++) {
 		hvd->guest_ivc_info[i].shmem = (uintptr_t)ioremap_cache(
-				hvd->info->areas[i].pa,
-				hvd->info->areas[i].size);
+				ivc_shared_area_addr(hvd->info, i)->pa,
+				ivc_shared_area_addr(hvd->info, i)->size);
 		if (hvd->guest_ivc_info[i].shmem == 0) {
 			ERR("can't map area for guest %u (%llx)\n",
-					hvd->info->areas[i].guest,
-					hvd->info->areas[i].pa);
+					ivc_shared_area_addr(
+							hvd->info, i)->guest,
+					ivc_shared_area_addr(hvd->info, i)->pa);
 			return -ENOMEM;
 		}
-		hvd->guest_ivc_info[i].length = hvd->info->areas[i].size;
+		hvd->guest_ivc_info[i].length =
+				ivc_shared_area_addr(hvd->info, i)->size;
 	}
 
 	/* Do not free this, of_add_property does not copy the structure */
@@ -483,9 +486,12 @@ static int __init tegra_hv_setup(struct tegra_hv_data *hvd)
 		ivmk->ipa = mpd->pa;
 		ivmk->size = mpd->size;
 		ivmk->peer_vmid = mpd->peer_vmid;
+		ivmk->is_vpr = mpd->is_vpr;
+		ivmk->can_alloc = mpd->can_alloc;
 
-		INFO("added mempool %u: ipa=%llx size=%llx peer=%u\n",
-				mpd->id, mpd->pa, mpd->size, mpd->peer_vmid);
+		INFO("added mempool %u: ipa=%llx size=%llx peer=%u%s\n",
+				mpd->id, mpd->pa, mpd->size, mpd->peer_vmid,
+				mpd->is_vpr ? " - VPR backed" : "");
 	}
 
 	return 0;
@@ -715,6 +721,34 @@ struct ivc *tegra_hv_ivc_convert_cookie(struct tegra_hv_ivc_cookie *ivck)
 	return &cookie_to_ivc_dev(ivck)->ivc;
 }
 EXPORT_SYMBOL(tegra_hv_ivc_convert_cookie);
+
+struct tegra_hv_ivm_cookie *tegra_hv_mempool_reserve_vpr(void)
+{
+	uint32_t i;
+	struct hv_mempool *mempool;
+	int reserved;
+
+	if (!tegra_hv_data)
+		return ERR_PTR(-EPROBE_DEFER);
+
+	/* Locate a mempool with matching VPR flag. */
+	for (i = 0; i < tegra_hv_data->info->nr_mempools; i++) {
+		mempool = &tegra_hv_data->mempools[i];
+		if (mempool->mpd->is_vpr)
+			break;
+	}
+
+	if (i == tegra_hv_data->info->nr_mempools)
+		return ERR_PTR(-ENODEV);
+
+	mutex_lock(&mempool->lock);
+	reserved = mempool->reserved;
+	mempool->reserved = 1;
+	mutex_unlock(&mempool->lock);
+
+	return reserved ? ERR_PTR(-EBUSY) : &mempool->ivmk;
+}
+EXPORT_SYMBOL(tegra_hv_mempool_reserve_vpr);
 
 struct tegra_hv_ivm_cookie *tegra_hv_mempool_reserve(unsigned id)
 {

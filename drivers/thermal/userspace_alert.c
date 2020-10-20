@@ -135,19 +135,27 @@ static ssize_t thermal_alert_block_show(struct device *dev,
 {
 	uint32_t alert_timeout_ms;
 	struct usr_alrt_strct *alert_data = dev_get_drvdata(dev);
+	int ret;
 
 	if (!alert_data)
 		return -EINVAL;
 
 	alert_timeout_ms = alert_data->alert_timeout_ms;
 	if (alert_timeout_ms > 0)
-		wait_event_interruptible_timeout(alert_data->alert_wait_queue,
+		ret = wait_event_interruptible_timeout(alert_data->alert_wait_queue,
 			alert_data->therm_alert == ALERT,
 			msecs_to_jiffies(alert_timeout_ms));
 	else
-		wait_event_interruptible(
+		ret = wait_event_interruptible(
 				alert_data->alert_wait_queue,
 				alert_data->therm_alert == ALERT);
+
+	/*
+	 *-ERESTARTSYS is returned so as to avoid false alert and to
+	 * resume the call.
+	 */
+	if (ret < 0)
+		return ret;
 
 	return sprintf(buf, "%d\n", alert_data->therm_alert);
 }

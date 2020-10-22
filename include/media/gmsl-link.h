@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2018-2020, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -15,7 +15,8 @@
  */
 
 /**
- * @file  <b>GMSL API: Gigabit Multimedia Serial Link protocol</b>
+ * @file
+ * <b>GMSL API: Gigabit Multimedia Serial Link protocol</b>
  *
  * @b Description: Defines elements used to set up and use a GMSL link.
  */

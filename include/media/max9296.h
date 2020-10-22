@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2018-2020, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -15,7 +15,8 @@
  */
 
 /**
- * @file  <b>MAX9296 API: For Maxim Integrated MAX9295 deserializer.</b>
+ * @file
+ * <b>MAX9296 API: For Maxim Integrated MAX9295 deserializer.</b>
  *
  * @b Description: Defines elements used to set up and use a
  *  Maxim Integrated MAX9296 deserializer.

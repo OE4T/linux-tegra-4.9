@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (c) 2018, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -15,7 +15,8 @@
  */
 
 /**
- * @file  <b>MAX9295 API: For Maxim Integrated MAX9295 serializer.</b>
+ * @file
+ * <b>MAX9295 API: For Maxim Integrated MAX9295 serializer.</b>
  *
  * @b Description: Defines elements used to set up and use a
  *  Maxim Integrated MAX9295 serializer.

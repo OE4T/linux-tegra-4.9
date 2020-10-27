@@ -1308,7 +1308,9 @@ const struct fb_videomode hdmi_ext_modes[HDMI_EXT_MODEDB_SIZE] = {
 };
 EXPORT_SYMBOL(hdmi_ext_modes);
 
-const struct fb_videomode vesa_modes[VESA_MODEDB_SIZE] = {
+
+
+const struct fb_videomode vesa_modes[] = {
 	/* 0 640x350-85 VESA */
 	{ NULL, 85, 640, 350, 31746, 96, 32, 60, 32, 64, 3,
 	  FB_SYNC_HOR_HIGH_ACT, FB_VMODE_NONINTERLACED, FB_MODE_IS_VESA,

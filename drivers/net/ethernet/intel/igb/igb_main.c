@@ -763,7 +763,6 @@ u32 igb_rd32(struct e1000_hw *hw, u32 reg)
 		hw->hw_addr = NULL;
 		netif_device_detach(netdev);
 		netdev_err(netdev, "PCIe link lost, device now detached\n");
-		WARN_ON_ONCE(1);
 	}
 
 	return value;
@@ -1816,9 +1815,9 @@ void igb_down(struct igb_adapter *adapter)
 	del_timer_sync(&adapter->phy_info_timer);
 
 	/* record the stats before reset*/
-	spin_lock_bh(&adapter->stats64_lock);
+	spin_lock(&adapter->stats64_lock);
 	igb_update_stats(adapter, &adapter->stats64);
-	spin_unlock_bh(&adapter->stats64_lock);
+	spin_unlock(&adapter->stats64_lock);
 
 	adapter->link_speed = 0;
 	adapter->link_duplex = 0;
@@ -2034,7 +2033,6 @@ void igb_reset(struct igb_adapter *adapter)
 	/* Re-enable PTP, where applicable. */
 	if (adapter->ptp_flags & IGB_PTP_ENABLED)
 		igb_ptp_reset(adapter);
-	schedule_work(&adapter->watchdog_task);
 
 	igb_get_phy_info(hw);
 }
@@ -3397,7 +3395,7 @@ void igb_configure_tx_ring(struct igb_adapter *adapter,
 	     tdba & 0x00000000ffffffffULL);
 	wr32(E1000_TDBAH(reg_idx), tdba >> 32);
 
-	ring->tail = adapter->io_addr + E1000_TDT(reg_idx);
+	ring->tail = hw->hw_addr + E1000_TDT(reg_idx);
 	wr32(E1000_TDH(reg_idx), 0);
 	writel(0, ring->tail);
 
@@ -3736,7 +3734,7 @@ void igb_configure_rx_ring(struct igb_adapter *adapter,
 	     ring->count * sizeof(union e1000_adv_rx_desc));
 
 	/* initialize head and tail */
-	ring->tail = adapter->io_addr + E1000_RDT(reg_idx);
+	ring->tail = hw->hw_addr + E1000_RDT(reg_idx);
 	wr32(E1000_RDH(reg_idx), 0);
 	writel(0, ring->tail);
 
@@ -4616,9 +4614,9 @@ no_wait:
 		}
 	}
 
-	spin_lock_bh(&adapter->stats64_lock);
+	spin_lock(&adapter->stats64_lock);
 	igb_update_stats(adapter, &adapter->stats64);
-	spin_unlock_bh(&adapter->stats64_lock);
+	spin_unlock(&adapter->stats64_lock);
 
 	for (i = 0; i < adapter->num_tx_queues; i++) {
 		struct igb_ring *tx_ring = adapter->tx_ring[i];
@@ -5383,10 +5381,6 @@ static void igb_reset_task(struct work_struct *work)
 	struct igb_adapter *adapter;
 	adapter = container_of(work, struct igb_adapter, reset_task);
 
-	if ((adapter->pm_status == PM_SUSPENDED) ||
-	    (adapter->pm_status == PM_SUSPENDING))
-		return;
-
 	igb_dump(adapter);
 	netdev_err(adapter->netdev, "Reset adapter\n");
 	igb_reinit_locked(adapter);
@@ -5402,10 +5396,10 @@ static struct rtnl_link_stats64 *igb_get_stats64(struct net_device *netdev,
 {
 	struct igb_adapter *adapter = netdev_priv(netdev);
 
-	spin_lock_bh(&adapter->stats64_lock);
+	spin_lock(&adapter->stats64_lock);
 	igb_update_stats(adapter, &adapter->stats64);
 	memcpy(stats, &adapter->stats64, sizeof(*stats));
-	spin_unlock_bh(&adapter->stats64_lock);
+	spin_unlock(&adapter->stats64_lock);
 
 	return stats;
 }
@@ -7563,7 +7557,6 @@ static int __igb_shutdown(struct pci_dev *pdev, bool *enable_wake,
 	if (netif_running(netdev))
 		__igb_close(netdev, true);
 
-	cancel_work_sync(&adapter->watchdog_task);
 	igb_ptp_suspend(adapter);
 
 	igb_clear_interrupt_scheme(adapter);
@@ -7668,11 +7661,8 @@ static int igb_resume(struct device *dev)
 	if (!err && netif_running(netdev))
 		err = __igb_open(netdev, true);
 
-	if (!err) {
+	if (!err)
 		netif_device_attach(netdev);
-		adapter->pm_status = PM_ACTIVE;
-	}
-
 	rtnl_unlock();
 
 	return err;

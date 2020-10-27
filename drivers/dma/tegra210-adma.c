@@ -188,9 +188,9 @@ struct tegra_adma_chan {
 struct tegra_adma {
 	struct dma_device		dma_dev;
 	struct device			*dev;
-	struct clk                      *ahub_clk;
 	void __iomem			*base_addr;
 	void __iomem			*shrd_sem_addr;
+	struct clk			*ahub_clk;
 	unsigned int			nr_channels;
 	unsigned long			rx_requests_reserved;
 	unsigned long			tx_requests_reserved;
@@ -978,6 +978,7 @@ static int tegra_adma_runtime_resume(struct device *dev)
 			tdma_ch_write(tdc, ADMA_CH_CMD, ch_reg->cmd);
 		}
 	}
+
 	return 0;
 }
 
@@ -1145,16 +1146,6 @@ static int tegra_adma_probe(struct platform_device *pdev)
 
 	spin_lock_init(&tdma->global_lock);
 
-	pm_runtime_enable(&pdev->dev);
-
-	ret = pm_runtime_get_sync(&pdev->dev);
-	if (ret < 0)
-		goto rpm_disable;
-
-	ret = tegra_adma_init(tdma);
-	if (ret)
-		goto rpm_put;
-
 	INIT_LIST_HEAD(&tdma->dma_dev.channels);
 	for (i = 0; i < tdma->nr_channels; i++) {
 		struct tegra_adma_chan *tdc = &tdma->channels[i];
@@ -1172,6 +1163,16 @@ static int tegra_adma_probe(struct platform_device *pdev)
 		tdc->vc.desc_free = tegra_adma_desc_free;
 		tdc->tdma = tdma;
 	}
+
+	pm_runtime_enable(&pdev->dev);
+
+	ret = pm_runtime_get_sync(&pdev->dev);
+	if (ret < 0)
+		goto rpm_disable;
+
+	ret = tegra_adma_init(tdma);
+	if (ret)
+		goto rpm_put;
 
 	dma_cap_set(DMA_SLAVE, tdma->dma_dev.cap_mask);
 	dma_cap_set(DMA_PRIVATE, tdma->dma_dev.cap_mask);
@@ -1215,13 +1216,13 @@ static int tegra_adma_probe(struct platform_device *pdev)
 
 dma_remove:
 	dma_async_device_unregister(&tdma->dma_dev);
-irq_dispose:
-	while (--i >= 0)
-		irq_dispose_mapping(tdma->channels[i].irq);
 rpm_put:
 	pm_runtime_put_sync(&pdev->dev);
 rpm_disable:
 	pm_runtime_disable(&pdev->dev);
+irq_dispose:
+	while (--i >= 0)
+		irq_dispose_mapping(tdma->channels[i].irq);
 
 	return ret;
 }
@@ -1230,9 +1231,8 @@ static int tegra_adma_remove(struct platform_device *pdev)
 {
 	struct tegra_adma *tdma = platform_get_drvdata(pdev);
 	int i;
-	struct device_node *node = pdev->dev.of_node;
 
-	of_dma_controller_free(node);
+	of_dma_controller_free(pdev->dev.of_node);
 	dma_async_device_unregister(&tdma->dma_dev);
 
 	for (i = 0; i < tdma->nr_channels; ++i)

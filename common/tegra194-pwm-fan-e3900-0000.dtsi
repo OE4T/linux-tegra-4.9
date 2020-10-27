@@ -44,14 +44,10 @@
 		#cooling-cells = <2>;
 		cdev-type = "pwm-fan-fpga";
 		profiles {
-			default = "quiet";
-			quiet {
-				state_cap = <2>;
-				active_pwm = <77 153 255 255 255 255 255 255 255 255>;
-			};
+			default = "cool";
 			cool {
-				state_cap = <2>;
-				active_pwm = <77 153 255 255 255 255 255 255 255 255>;
+				state_cap = <7>;
+				active_pwm = <77 85 100 125 152 190 255 255 255 255>;
 			};
 		};
 	};

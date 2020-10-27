@@ -40,18 +40,42 @@
 				};
 
 				minisas_alert2: trip-point2 {
-					temperature = <88000>;
+					temperature = <70000>;
 					hysteresis = <2000>;
 					type = "active";
 				};
 
 				minisas_alert3: trip-point3 {
-					temperature = <95000>;
+					temperature = <75000>;
 					hysteresis = <2000>;
 					type = "active";
 				};
 
 				minisas_alert4: trip-point4 {
+					temperature = <80000>;
+					hysteresis = <2000>;
+					type = "active";
+				};
+
+				minisas_alert5: trip-point5 {
+					temperature = <85000>;
+					hysteresis = <2000>;
+					type = "active";
+				};
+
+				minisas_alert6: trip-point6 {
+					temperature = <90000>;
+					hysteresis = <2000>;
+					type = "active";
+				};
+
+				minisas_alert7: trip-point7 {
+					temperature = <95000>;
+					hysteresis = <2000>;
+					type = "active";
+				};
+
+				minisas_alert8: trip-point8 {
 					temperature = <110000>;
 					hysteresis = <2000>;
 					type = "active";
@@ -81,7 +105,27 @@
 
 				map4 {
 					trip = <&minisas_alert4>;
-					cooling-device = <&pwm_fan_fpga 2 2>;
+					cooling-device = <&pwm_fan_fpga 3 3>;
+				};
+
+				map5 {
+					trip = <&minisas_alert5>;
+					cooling-device = <&pwm_fan_fpga 4 4>;
+				};
+
+				map6 {
+					trip = <&minisas_alert6>;
+					cooling-device = <&pwm_fan_fpga 5 5>;
+				};
+
+				map7 {
+					trip = <&minisas_alert7>;
+					cooling-device = <&pwm_fan_fpga 6 6>;
+				};
+
+				map8 {
+					trip = <&minisas_alert8>;
+					cooling-device = <&pwm_fan_fpga 7 7>;
 				};
 			};
 		};

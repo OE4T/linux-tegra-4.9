@@ -1920,6 +1920,7 @@ static int tegra_spi_probe(struct platform_device *pdev)
 		master->bus_num = bus_num;
 	master->auto_runtime_pm = true;
 	master->spi_cs_low  = tegra_spi_cs_low;
+	master->dev.of_node = pdev->dev.of_node;
 
 	tspi->master = master;
 	tspi->dev = &pdev->dev;
@@ -1967,6 +1968,8 @@ static int tegra_spi_probe(struct platform_device *pdev)
 
 	tspi->max_buf_size = SPI_FIFO_DEPTH << 2;
 	tspi->min_div = 0;
+
+	set_best_clk_source(tspi, master->max_speed_hz);
 
 	ret = tegra_spi_init_dma_param(tspi, true);
 	if (ret < 0)
@@ -2029,7 +2032,6 @@ static int tegra_spi_probe(struct platform_device *pdev)
 		goto exit_pm_disable;
 	}
 
-	master->dev.of_node = pdev->dev.of_node;
 	ret = devm_spi_register_master(&pdev->dev, master);
 	if (ret < 0) {
 		dev_err(&pdev->dev, "can not register to master err %d\n", ret);

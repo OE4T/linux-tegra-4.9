@@ -14,8 +14,6 @@
  * more details.
  */
 
-#include <dt-bindings/gpio/tegra194-gpio.h>
-
 / {
 	fixed-regulators {
 		hdr40_vdd_3v3: vdd_3v3: p3509_vdd_3v3_cvb: regulator@101 {

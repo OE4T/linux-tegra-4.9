@@ -3,7 +3,7 @@
  *
  * Userspace thermal alert cooling device.
  *
- * Copyright (C) 2016-2017 NVIDIA Corporation. All rights reserved.
+ * Copyright (C) 2016-2020 NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -92,6 +92,9 @@ static int userspace_alert_cdev_set_state(struct thermal_cooling_device *tcd,
 
 	if (state == alert_data->cur_state)
 		return 0;
+
+	pr_notice("%s cooling state: %ld -> %lu\n",
+		tcd->type, alert_data->cur_state, state);
 
 	mutex_lock(&alert_data->alert_lock);
 	alert_data->cur_state = state;

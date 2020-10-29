@@ -6774,7 +6774,7 @@ static int tegra_dc_probe(struct platform_device *ndev)
 						"could not register isomgr. err=%ld\n",
 						PTR_ERR(dc->isomgr_handle));
 				ret = -ENOENT;
-				goto err_put_clk;
+				goto err_disable_dc;
 			}
 			dc->reserved_bw = tegra_dc_calc_min_bandwidth(dc);
 			/*

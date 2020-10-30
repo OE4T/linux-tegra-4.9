@@ -3,7 +3,7 @@
  *
  * Driver for NCT1008, temperature monitoring device from ON Semiconductors
  *
- * Copyright (c) 2010-2018, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2010-2020, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -127,7 +127,7 @@
 
 #define MAX_STR_PRINT            50
 #define NCT_CONV_TIME_ONESHOT_US	52000
-#define TMP451_CONV_TIME_ONESHOT_US	31000
+#define TMP451_CONV_TIME_ONESHOT_US	34000
 
 #define CELSIUS_TO_MILLICELSIUS(x) ((x)*1000)
 #define MILLICELSIUS_TO_CELSIUS(x) ((x)/1000)
@@ -154,7 +154,7 @@ struct nct1008_data {
 	enum nct1008_chip chip;
 	char chip_name[I2C_NAME_SIZE];
 	struct regulator *nct_reg;
-	int oneshot_conv_period_ns;
+	int oneshot_conv_period_us;
 	int nct_disabled;
 	int stop_workqueue;
 	struct nct1008_sensor_data sensors[CNT];
@@ -914,8 +914,8 @@ static void nct1008_work_func(struct work_struct *work)
 		return;
 
 	/* Give hardware necessary time to finish conversion */
-	usleep_range(data->oneshot_conv_period_ns,
-			data->oneshot_conv_period_ns + 1000);
+	usleep_range(data->oneshot_conv_period_us,
+			data->oneshot_conv_period_us + 1000);
 
 	err = nct1008_read_reg(data, STATUS_RD);
 	if (err < 0)
@@ -1134,7 +1134,7 @@ static int nct1008_sensors_init(struct nct1008_data *data)
 		goto err;
 
 	/* Add a delay to make sure it enters into standby mode */
-	usleep_range(data->oneshot_conv_period_ns, data->oneshot_conv_period_ns
+	usleep_range(data->oneshot_conv_period_us, data->oneshot_conv_period_us
 			+ 1000);
 
 	ret = nct1008_loc_sensor_init(data);
@@ -1163,7 +1163,7 @@ static int nct1008_sensors_init(struct nct1008_data *data)
 		goto err;
 
 	/* Give hardware necessary time to finish conversion */
-	usleep_range(data->oneshot_conv_period_ns, data->oneshot_conv_period_ns
+	usleep_range(data->oneshot_conv_period_us, data->oneshot_conv_period_us
 			+ 1000);
 
 	/* read initial local temperature */
@@ -1433,9 +1433,9 @@ static int nct1008_probe(struct i2c_client *client,
 
 	/* oneshot conversion time */
 	if (data->chip == TMP451)
-		data->oneshot_conv_period_ns = TMP451_CONV_TIME_ONESHOT_US;
+		data->oneshot_conv_period_us = TMP451_CONV_TIME_ONESHOT_US;
 	else
-		data->oneshot_conv_period_ns = NCT_CONV_TIME_ONESHOT_US;
+		data->oneshot_conv_period_us = NCT_CONV_TIME_ONESHOT_US;
 
 	nct1008_power_control(data, true);
 	/* sensor is in standby */

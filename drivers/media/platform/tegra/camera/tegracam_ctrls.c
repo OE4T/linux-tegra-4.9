@@ -778,7 +778,7 @@ static int tegracam_check_ctrl_ops(
 			"ERROR: Can not mix normal and extended sensor controls\n");
 		return -EINVAL;
 	}
-	total_ops = sensor_ops + mode_ops + string_ops + default_ops;
+	total_ops = sensor_ops + mode_ops + string_ops + default_ops + compound_ops;
 	total_ops += sensor_ex_ops + default_ex_ops;
 
 	if (total_ops != (ops->numctrls + TEGRACAM_DEF_CTRLS)) {

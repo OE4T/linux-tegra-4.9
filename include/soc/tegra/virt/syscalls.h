@@ -127,8 +127,8 @@ struct ivc_info_page {
 };
 
 static inline struct ivc_shared_area *ivc_shared_area_addr(
-	const struct ivc_info_page *info, uint32_t area_num) {
-
+	const struct ivc_info_page *info, uint32_t area_num)
+{
 	return ((struct ivc_shared_area *) (((uintptr_t) info) +
 		sizeof(*info))) + area_num;
 }

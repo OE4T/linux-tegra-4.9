@@ -100,7 +100,7 @@ static struct nvmap_platform_carveout nvmap_carveouts[] = {
 		.dma_info	= &generic_dma_info,
 	},
 	/* This is the "classic" VPR from pre-virtualization days, intended to
-	 * be used by a single VM or native OS.
+	 * be used by a native OS.
 	 */
 	[2] = {
 		.name		= "vpr",

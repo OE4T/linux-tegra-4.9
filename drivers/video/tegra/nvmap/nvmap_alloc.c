@@ -666,6 +666,10 @@ static void alloc_handle(struct nvmap_client *client,
 			h->alloc = true;
 			return;
 		}
+
+		/* The following is a fallback for (non-IVM) VPR in case
+		 * allocation of a contiguous block failed.
+		 */
 		ret = nvmap_heap_pgalloc(client, h, type);
 		if (ret)
 			return;

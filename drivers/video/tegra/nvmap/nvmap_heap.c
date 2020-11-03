@@ -468,10 +468,12 @@ struct nvmap_heap *nvmap_heap_create(struct device *parent,
 	h->base = base;
 	h->can_alloc = !!co->can_alloc;
 	h->is_ivm = co->is_ivm;
+	h->is_ivm_vpr = (co->usage_mask == NVMAP_HEAP_CARVEOUT_IVM_VPR);
+	BUG_ON(h->is_ivm_vpr && !h->is_ivm);
 	h->len = len;
 	h->peer = co->peer;
 	h->vm_id = co->vmid;
-	h->is_ivm_vpr = (co->usage_mask == NVMAP_HEAP_CARVEOUT_IVM_VPR);
+
 	if (co->pm_ops.busy)
 		h->pm_ops.busy = co->pm_ops.busy;
 

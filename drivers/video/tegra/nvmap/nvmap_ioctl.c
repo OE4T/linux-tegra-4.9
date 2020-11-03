@@ -366,7 +366,8 @@ int nvmap_ioctl_rw_handle(struct file *filp, int is_read, void __user *arg,
 		return -EINVAL;
 
 	if (is_read && soc_is_tegra186_n_later() &&
-		h->heap_type == NVMAP_HEAP_CARVEOUT_VPR) {
+		(h->heap_type &
+		(NVMAP_HEAP_CARVEOUT_VPR | NVMAP_HEAP_CARVEOUT_IVM_VPR))) {
 		/* VPR memory is not readable from CPU.
 		 * Memset buffer to all 0xFF's for backward compatibility. */
 		ret = set_vpr_fail_data((void *)addr, user_stride, elem_size, count);
@@ -517,7 +518,9 @@ static ssize_t rw_handle(struct nvmap_client *client, struct nvmap_handle *h,
 			ret = copy_to_user((void *)sys_addr, addr, elem_size);
 		else {
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 9, 0)
-			if (h->heap_type == NVMAP_HEAP_CARVEOUT_VPR) {
+			if (h->heap_type &
+				(NVMAP_HEAP_CARVEOUT_VPR |
+					NVMAP_HEAP_CARVEOUT_IVM_VPR)) {
 				uaccess_enable();
 				memcpy_toio(addr, (void *)sys_addr, elem_size);
 				uaccess_disable();
@@ -574,32 +577,33 @@ int nvmap_ioctl_get_ivc_heap(struct file *filp, void __user *arg)
 	const unsigned int allowed_heaps =
 		NVMAP_HEAP_CARVEOUT_IVM | NVMAP_HEAP_CARVEOUT_IVM_VPR;
 	struct nvmap_device *dev = nvmap_dev;
-	unsigned int queried_heap;
+	struct nvmap_available_ivm_heaps op;
 	int i;
-	unsigned int heap_mask = 0;
+	unsigned int heap_mask_temp = 0;
 
-	if (copy_from_user(&queried_heap, arg, sizeof(queried_heap)))
+	if (copy_from_user(&op, arg, sizeof(op)))
 		return -EFAULT;
 
-	/* Only one heap type at a time can be queried */
-	if (hweight_long(queried_heap & allowed_heaps) != 1U)
+	/* Only one heap type at a time can be requested */
+	if (hweight_long(op.requested_heap_type & allowed_heaps) != 1U)
 		return -EINVAL;
 
 	for (i = 0; i < dev->nr_carveouts; i++) {
 		struct nvmap_carveout_node *co_heap = &dev->heaps[i];
 		int peer;
 
-		if (!(co_heap->heap_bit & queried_heap))
+		if (!(co_heap->heap_bit & op.requested_heap_type))
 			continue;
 
 		peer = nvmap_query_heap_peer(co_heap->carveout);
 		if (peer < 0)
 			return -EINVAL;
 
-		heap_mask |= BIT(peer);
+		heap_mask_temp |= BIT(peer);
 	}
 
-	if (copy_to_user(arg, &heap_mask, sizeof(heap_mask)))
+	op.heap_mask = heap_mask_temp;
+	if (copy_to_user(arg, &op, sizeof(op)))
 		return -EFAULT;
 
 	return 0;

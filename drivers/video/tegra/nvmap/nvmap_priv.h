@@ -343,8 +343,11 @@ static inline pgprot_t nvmap_pgprot(struct nvmap_handle *h, pgprot_t prot)
 {
 	if (h->flags == NVMAP_HANDLE_UNCACHEABLE) {
 #ifdef CONFIG_ARM64
-		if (h->heap_type != NVMAP_HEAP_CARVEOUT_VPR &&
-		    h->owner && !h->owner->warned) {
+		const bool heap_is_not_vpr = !(h->heap_type &
+			(NVMAP_HEAP_CARVEOUT_VPR |
+				NVMAP_HEAP_CARVEOUT_IVM_VPR));
+
+		if (heap_is_not_vpr && h->owner && !h->owner->warned) {
 			char task_comm[TASK_COMM_LEN];
 			h->owner->warned = 1;
 			get_task_comm(task_comm, h->owner->task);

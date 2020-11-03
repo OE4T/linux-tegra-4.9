@@ -254,6 +254,17 @@ struct nvmap_set_tag_label {
 	__u64 addr;		/* in: pointer to label or NULL to remove */
 };
 
+struct nvmap_available_ivm_heaps {
+	/* One is input parameter, and other is output parameter. Since it is a
+	 * union please note that input parameter will be overwritten once the
+	 * ioctl returns.
+	 */
+	union {
+		__u32 requested_heap_type;	/* Input */
+		__u32 heap_mask;		/* Output */
+	};
+};
+
 struct nvmap_available_heaps {
 	__u64 heaps;		/* heaps bitmask */
 };
@@ -369,7 +380,8 @@ struct nvmap_handle_parameters {
 
 #define NVMAP_IOC_FROM_IVC_ID _IOWR(NVMAP_IOC_MAGIC, 19, struct nvmap_create_handle)
 #define NVMAP_IOC_GET_IVC_ID _IOWR(NVMAP_IOC_MAGIC, 20, struct nvmap_create_handle)
-#define NVMAP_IOC_GET_IVM_HEAPS _IOWR(NVMAP_IOC_MAGIC, 21, unsigned int)
+#define NVMAP_IOC_GET_IVM_HEAPS \
+	_IOWR(NVMAP_IOC_MAGIC, 21, struct nvmap_available_ivm_heaps)
 
 /* Create a new memory handle from VA passed */
 #define NVMAP_IOC_FROM_VA _IOWR(NVMAP_IOC_MAGIC, 22, struct nvmap_create_handle_from_va)

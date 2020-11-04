@@ -66,14 +66,25 @@ static int fan_get_rpm_from_pwm(struct fan_dev_data *fan_data, unsigned int pwm)
 	for (i = 0; i < fan_data->active_steps; i++) {
 		if (pwm == fan_data->fan_pwm[i])
 			return fan_data->fan_rpm[i];
+	}
 
-		if (pwm < fan_data->fan_pwm[i])
+	/*
+	 * The execution comes here only when an intermittent pwm value is
+	 * requested. The separate loop for index calculation optimizes
+	 * step-wise governor.
+	 */
+	for (i = 1; i < fan_data->active_steps; i++) {
+		/* PWM table can be reverse in case of Tmargin. */
+		if (((fan_data->fan_pwm[i - 1] < pwm) &&
+				(pwm < fan_data->fan_pwm[i])) ||
+			((fan_data->fan_pwm[i - 1] > pwm) &&
+				(pwm > fan_data->fan_pwm[i])))
 			break;
 	}
 
 	/* If not an active state, use linear extrapolation y = mx + c */
 	y = (((fan_data->fan_rpm[i] - fan_data->fan_rpm[i - 1]) *
-			(pwm - fan_data->fan_pwm[i - 1])) /
+			(((int)pwm) - fan_data->fan_pwm[i - 1])) /
 		(fan_data->fan_pwm[i] - fan_data->fan_pwm[i - 1])) +
 		fan_data->fan_rpm[i - 1];
 	dev_dbg(fan_data->dev, "Requested: pwm - %d, rpm - %d\n", pwm, y);

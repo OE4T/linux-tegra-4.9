@@ -110,7 +110,8 @@
 #define STANDBY_BIT        BIT(6)
 #define ALERT_BIT          BIT(7)
 
-/* Status register trip point bits. */
+/* Status register bits */
+#define EXT_OPEN_BIT BIT(2) /* External sensor is open junction */
 #define EXT_LO_BIT BIT(3) /* External Sensor has tripped 'temp <= LOW' */
 #define EXT_HI_BIT BIT(4) /* External Sensor has tripped 'temp > HIGH' */
 #define LOC_LO_BIT BIT(5) /* Local Sensor has tripped 'temp <= LOW' */
@@ -154,6 +155,7 @@ struct nct1008_data {
 	enum nct1008_chip chip;
 	char chip_name[I2C_NAME_SIZE];
 	struct regulator *nct_reg;
+	int ext_open;
 	int oneshot_conv_period_us;
 	int nct_disabled;
 	int stop_workqueue;
@@ -1050,13 +1052,6 @@ static int nct1008_ext_sensor_init(struct nct1008_data *data)
 	int ret, val;
 	struct nct1008_platform_data *pdata = &data->plat_data;
 
-	ret = nct1008_read_reg(data, STATUS_RD);
-	if (ret & BIT(2)) {
-		/* skip configuration of EXT sensor */
-		dev_err(&data->client->dev, "EXT sensor circuit is open\n");
-		return -ENODEV;
-	}
-
 	/* External temperature h/w shutdown limit. */
 	if (data->sensors[EXT].shutdown_limit != INT_MIN) {
 		val = temperature_to_value(pdata->extended_range,
@@ -1115,10 +1110,47 @@ err:
 	return ret;
 }
 
+
+static int nct1008_sensors_oneshot(struct nct1008_data *data)
+{
+	int ret = -ENODEV;
+	int retry;
+	static const int max_poweron_settling_retries = 3;
+
+	for (retry = 0; retry < max_poweron_settling_retries; retry++) {
+
+		/* Initiate one-shot conversion  */
+		ret = nct1008_write_reg(data, ONE_SHOT, 0x1);
+		if (ret)
+			goto err;
+
+		/* Give hardware necessary time to finish conversion */
+		usleep_range(data->oneshot_conv_period_us,
+				data->oneshot_conv_period_us + 1000);
+
+		ret = nct1008_read_reg(data, STATUS_RD);
+		if (ret < 0)
+			goto err;
+
+		data->ext_open = ret & EXT_OPEN_BIT;
+
+		/* Continue initialization */
+		if (data->ext_open == 0)
+			break;
+
+		dev_info(&data->client->dev, "Status = 0x%02x. Retrying.\n", ret);
+	}
+
+	if (data->ext_open)
+		dev_err(&data->client->dev, "!!!EXT sensor open circuit!!!\n");
+
+err:
+	return ret;
+}
+
 static int nct1008_sensors_init(struct nct1008_data *data)
 {
 	int ret = -ENODEV;
-	int ext_err = 0;
 	int temp;
 	struct nct1008_platform_data *pdata = &data->plat_data;
 
@@ -1141,7 +1173,9 @@ static int nct1008_sensors_init(struct nct1008_data *data)
 	if (ret < 0)
 		goto err;
 
-	ext_err = nct1008_ext_sensor_init(data);
+	ret = nct1008_ext_sensor_init(data);
+	if (ret < 0)
+		goto err;
 
 	if (pdata->extended_range)
 		data->config |= EXTENDED_RANGE_BIT;
@@ -1157,14 +1191,10 @@ static int nct1008_sensors_init(struct nct1008_data *data)
 			goto err;
 	}
 
-	/* Initiate one-shot conversion  */
-	ret = nct1008_write_reg(data, ONE_SHOT, 0x1);
-	if (ret)
+	/* Wait for power to settle and EXT sensor to be detected */
+	ret = nct1008_sensors_oneshot(data);
+	if (ret < 0)
 		goto err;
-
-	/* Give hardware necessary time to finish conversion */
-	usleep_range(data->oneshot_conv_period_us, data->oneshot_conv_period_us
-			+ 1000);
 
 	/* read initial local temperature */
 	ret = nct1008_get_temp_common(LOC, data, &temp);
@@ -1173,7 +1203,7 @@ static int nct1008_sensors_init(struct nct1008_data *data)
 
 	dev_info(&data->client->dev, "initial LOC temp: %d ", temp);
 	/* read initial ext temperature */
-	if (ext_err == 0) {
+	if (data->ext_open == 0) {
 		ret = nct1008_get_temp_common(EXT, data, &temp);
 		if (ret < 0)
 			goto err;

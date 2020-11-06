@@ -1,7 +1,8 @@
-From 4e4e1b7adace6caaf88742e8f3a74f03ab8fb490 Mon Sep 17 00:00:00 2001
+From 1820f04b7ae3c56f7d698b167aed7958a0f771ee Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Thu, 14 Feb 2013 22:36:59 +0100
-Subject: [PATCH 049/367] timekeeping: Split jiffies seqlock
+Subject: [PATCH 049/371] timekeeping: Split jiffies seqlock
+X-NVConfidentiality: public
 
 Replace jiffies_lock seqlock with a simple seqcounter and a rawlock so
 it can be taken in atomic context on RT.

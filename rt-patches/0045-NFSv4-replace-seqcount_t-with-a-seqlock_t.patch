@@ -1,7 +1,8 @@
-From e4b20d7e61bd1343b63a90a415159c996a5ce401 Mon Sep 17 00:00:00 2001
+From e2c398f34a629100755609d977299db08708e9ec Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Fri, 28 Oct 2016 23:05:11 +0200
-Subject: [PATCH 045/367] NFSv4: replace seqcount_t with a seqlock_t
+Subject: [PATCH 045/371] NFSv4: replace seqcount_t with a seqlock_t
+X-NVConfidentiality: public
 
 The raw_write_seqcount_begin() in nfs4_reclaim_open_state() bugs me
 because it maps to preempt_disable() in -RT which I can't have at this

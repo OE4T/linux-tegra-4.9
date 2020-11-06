@@ -1,10 +1,11 @@
-From 4ffe162028a53624074ece31212b0491ca4c0ee1 Mon Sep 17 00:00:00 2001
+From 9b9a730934334bd9805ae7b6f42b18145012c48f Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Thu, 29 Aug 2013 11:48:57 +0200
-Subject: [PATCH 322/367] md: disable bcache
+Subject: [PATCH 322/371] md: disable bcache
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
+X-NVConfidentiality: public
 
 It uses anon semaphores
 |drivers/md/bcache/request.c: In function ‘cached_dev_write_complete’:

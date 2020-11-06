@@ -1,8 +1,9 @@
-From 220b4a8e5480d90c54b713e663ecf4ac45047fd3 Mon Sep 17 00:00:00 2001
+From 72fb0b8da09ff7ff7a8cdfe0f2226353fd515267 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Wed, 13 Dec 2017 12:44:14 +0100
-Subject: [PATCH 355/367] mm/slub: close possible memory-leak in
+Subject: [PATCH 355/371] mm/slub: close possible memory-leak in
  kmem_cache_alloc_bulk()
+X-NVConfidentiality: public
 
 Under certain circumstances we could leak elements which were moved to
 the local "to_free" list. The damage is limited since I can't find

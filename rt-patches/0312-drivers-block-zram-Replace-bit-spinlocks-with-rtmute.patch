@@ -1,8 +1,9 @@
-From 0f6e8be415c42e68efa9c3d8c2bdb091a13e3bf0 Mon Sep 17 00:00:00 2001
+From a1304b8936bff57732b79c913f8e27c68fd8f36d Mon Sep 17 00:00:00 2001
 From: Mike Galbraith <umgwanakikbuti@gmail.com>
 Date: Thu, 31 Mar 2016 04:08:28 +0200
-Subject: [PATCH 312/367] drivers/block/zram: Replace bit spinlocks with
+Subject: [PATCH 312/371] drivers/block/zram: Replace bit spinlocks with
  rtmutex for -rt
+X-NVConfidentiality: public
 
 They're nondeterministic, and lead to ___might_sleep() splats in -rt.
 OTOH, they're a lot less wasteful than an rtmutex per page.

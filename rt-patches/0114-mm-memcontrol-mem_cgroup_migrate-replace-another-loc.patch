@@ -1,8 +1,9 @@
-From 9042c5ce5a6de60100f9fea3a70605c818d090da Mon Sep 17 00:00:00 2001
+From 5bf70f988420a34eacf4da0aba4ddb4de3517225 Mon Sep 17 00:00:00 2001
 From: Mike Galbraith <umgwanakikbuti@gmail.com>
 Date: Sun, 5 Jun 2016 08:11:13 +0200
-Subject: [PATCH 114/367] mm/memcontrol: mem_cgroup_migrate() - replace another
+Subject: [PATCH 114/371] mm/memcontrol: mem_cgroup_migrate() - replace another
  local_irq_disable() w. local_lock_irq()
+X-NVConfidentiality: public
 
 v4.6 grew a local_irq_disable() in mm/memcontrol.c::mem_cgroup_migrate().
 Convert it to use the existing local lock (event_lock) like the others.

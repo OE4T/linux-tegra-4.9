@@ -1,7 +1,8 @@
-From c82ec971bd1855a503b6c97c29f89accadb8551d Mon Sep 17 00:00:00 2001
+From 05472d68db1e3092f9d027415824a9943eac1f31 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Mon, 18 Jul 2011 17:03:52 +0200
-Subject: [PATCH 140/367] sched: Disable CONFIG_RT_GROUP_SCHED on RT
+Subject: [PATCH 140/371] sched: Disable CONFIG_RT_GROUP_SCHED on RT
+X-NVConfidentiality: public
 
 Carsten reported problems when running:
 

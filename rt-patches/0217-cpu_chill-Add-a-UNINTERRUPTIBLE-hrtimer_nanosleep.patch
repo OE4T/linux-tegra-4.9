@@ -1,7 +1,8 @@
-From b8d01bbaa477536f3ca4d363f2b27464790cd3c3 Mon Sep 17 00:00:00 2001
+From 95d2d1b53a628f6b6bbd2fda7203b1c58f13adad Mon Sep 17 00:00:00 2001
 From: Steven Rostedt <rostedt@goodmis.org>
 Date: Tue, 4 Mar 2014 12:28:32 -0500
-Subject: [PATCH 217/367] cpu_chill: Add a UNINTERRUPTIBLE hrtimer_nanosleep
+Subject: [PATCH 217/371] cpu_chill: Add a UNINTERRUPTIBLE hrtimer_nanosleep
+X-NVConfidentiality: public
 
 We hit another bug that was caused by switching cpu_chill() from
 msleep() to hrtimer_nanosleep().
@@ -23,7 +24,6 @@ the TASK_UNINTERRUPTIBLE state.
 
 cpu_chill() only cares that the first sleep happens, and does not care
 about the state of the restart schedule (in hrtimer_nanosleep_restart).
-
 
 Reported-by: Ulrich Obergfell <uobergfe@redhat.com>
 Signed-off-by: Steven Rostedt <rostedt@goodmis.org>

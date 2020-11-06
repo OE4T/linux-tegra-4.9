@@ -1,7 +1,8 @@
-From 3e7383e342f66e1d5fa2d13f18c15c7e1fac6d19 Mon Sep 17 00:00:00 2001
+From cc87fc3192b4d868daf4a1c812b5e3dc08a67467 Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Fri, 5 Oct 2012 09:03:24 +0100
-Subject: [PATCH 292/367] crypto: Convert crypto notifier chain to SRCU
+Subject: [PATCH 292/371] crypto: Convert crypto notifier chain to SRCU
+X-NVConfidentiality: public
 
 The crypto notifier deadlocks on RT. Though this can be a real deadlock
 on mainline as well due to fifo fair rwsems.

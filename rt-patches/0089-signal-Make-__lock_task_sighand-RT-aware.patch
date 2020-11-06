@@ -1,7 +1,8 @@
-From 270b69e837924bbb9e67e1cf203871a48ab32e72 Mon Sep 17 00:00:00 2001
+From 4e7d2fb5b3f53ef52e5074f27c089448865e8184 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Fri, 22 Jul 2011 08:07:08 +0200
-Subject: [PATCH 089/367] signal: Make __lock_task_sighand() RT aware
+Subject: [PATCH 089/371] signal: Make __lock_task_sighand() RT aware
+X-NVConfidentiality: public
 
 local_irq_save() + spin_lock(&sighand->siglock) does not work on
 -RT. Use the nort variants.

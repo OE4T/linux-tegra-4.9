@@ -1,7 +1,8 @@
-From 66026f3a2b7985f31a3f45463a82968e7eaba912 Mon Sep 17 00:00:00 2001
+From b3a946b9e0fc74c673312cbb396c4a276c8daf32 Mon Sep 17 00:00:00 2001
 From: Clark Williams <williams@redhat.com>
 Date: Sat, 30 Jul 2011 21:55:53 -0500
-Subject: [PATCH 258/367] sysfs: Add /sys/kernel/realtime entry
+Subject: [PATCH 258/371] sysfs: Add /sys/kernel/realtime entry
+X-NVConfidentiality: public
 
 Add a /sys/kernel entry to indicate that the kernel is a
 realtime kernel.

@@ -1,8 +1,9 @@
-From 75b99c242298a475178d1d48d4607767c33f9d31 Mon Sep 17 00:00:00 2001
+From 566ac17905be5e8b8aeeaeb04698ada06e6d0294 Mon Sep 17 00:00:00 2001
 From: Mike Galbraith <efault@gmx.de>
 Date: Sun, 3 Sep 2017 04:48:10 +0200
-Subject: [PATCH 339/367] kernel/hrtimer/hotplug: don't wake ktimersoftd while
+Subject: [PATCH 339/371] kernel/hrtimer/hotplug: don't wake ktimersoftd while
  holding the hrtimer base lock
+X-NVConfidentiality: public
 
 kernel/hrtimer: don't wakeup a process while holding the hrtimer base lock
 missed a path, namely hrtimers_dead_cpu() -> migrate_hrtimer_list().  Defer

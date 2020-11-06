@@ -1,7 +1,8 @@
-From 864bcf1ba4de8a63fbe90a1e615d80df245cbd10 Mon Sep 17 00:00:00 2001
+From 1374b3e562ca69a07bb15b8a0e810695c9ab67b9 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Fri, 18 Mar 2011 09:18:52 +0100
-Subject: [PATCH 093/367] buffer_head: Replace bh_uptodate_lock for -rt
+Subject: [PATCH 093/371] buffer_head: Replace bh_uptodate_lock for -rt
+X-NVConfidentiality: public
 
 Wrap the bit_spin_lock calls into a separate inline and add the RT
 replacements with a real spinlock.

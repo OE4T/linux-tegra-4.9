@@ -1,8 +1,9 @@
-From edcec20009b8bd062cf03ea883ca475188339c00 Mon Sep 17 00:00:00 2001
+From 4f6a1518d7113106092773514610580b50ea61ce Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Tue, 14 Jul 2015 14:26:34 +0200
-Subject: [PATCH 118/367] panic: skip get_random_bytes for RT_FULL in
+Subject: [PATCH 118/371] panic: skip get_random_bytes for RT_FULL in
  init_oops_id
+X-NVConfidentiality: public
 
 Disable on -RT. If this is invoked from irq-context we will have problems
 to acquire the sleeping lock.

@@ -1,8 +1,9 @@
-From ecdf953b3bf797a4d33d2b2dc7377dcec7bfe75d Mon Sep 17 00:00:00 2001
+From 28b463d2246d8ea7e6405f432dfdf8bda78746a6 Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Wed, 22 Mar 2017 11:35:58 +0100
-Subject: [PATCH 015/367] futex: Rework futex_lock_pi() to use
+Subject: [PATCH 015/371] futex: Rework futex_lock_pi() to use
  rt_mutex_*_proxy_lock()
+X-NVConfidentiality: public
 
 Upstream commit cfafcd117da0216520568c195cb2f6cd1980c4bb
 
@@ -39,7 +40,6 @@ futex_lock_pi()			futex_unlock_pi()
 
   lock hb->lock
 
-
 After:
 
 futex_lock_pi()			futex_unlock_pi()
@@ -63,7 +63,6 @@ futex_lock_pi()			futex_unlock_pi()
 				    -EAGAIN
 
   unlock hb->lock
-
 
 It does however solve the earlier starvation/live-lock scenario which got
 introduced with the -EAGAIN since unlike the before scenario; where the

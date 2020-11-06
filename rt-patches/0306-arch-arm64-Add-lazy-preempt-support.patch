@@ -1,7 +1,8 @@
-From 5f032ad0a9bb9c0fd3ffe41ae556172961c82d40 Mon Sep 17 00:00:00 2001
+From f08e9d970d6790ee9ebe84b4815fa97dd4138a40 Mon Sep 17 00:00:00 2001
 From: Anders Roxell <anders.roxell@linaro.org>
 Date: Thu, 14 May 2015 17:52:17 +0200
-Subject: [PATCH 306/367] arch/arm64: Add lazy preempt support
+Subject: [PATCH 306/371] arch/arm64: Add lazy preempt support
+X-NVConfidentiality: public
 
 arm64 is missing support for PREEMPT_RT. The main feature which is
 lacking is support for lazy preemption. The arch-specific entry code,
@@ -84,7 +85,7 @@ index b2debec..2a77068 100644
  #ifdef CONFIG_ARM64_SW_TTBR0_PAN
    DEFINE(TSK_TI_TTBR0,		offsetof(struct task_struct, thread_info.ttbr0));
 diff --git a/arch/arm64/kernel/entry.S b/arch/arm64/kernel/entry.S
-index 5940740..63f107e 100644
+index 09bf87b..358027b 100644
 --- a/arch/arm64/kernel/entry.S
 +++ b/arch/arm64/kernel/entry.S
 @@ -563,12 +563,17 @@ el1_irq:

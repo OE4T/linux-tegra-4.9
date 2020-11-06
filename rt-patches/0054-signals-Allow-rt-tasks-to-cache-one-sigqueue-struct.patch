@@ -1,7 +1,8 @@
-From 4d14493f2738fd0db4a5e54ca81dba4f1cb5760e Mon Sep 17 00:00:00 2001
+From f4e9be00ff5f31120225ec7e8a1cfc585c4184c6 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Fri, 3 Jul 2009 08:44:56 -0500
-Subject: [PATCH 054/367] signals: Allow rt tasks to cache one sigqueue struct
+Subject: [PATCH 054/371] signals: Allow rt tasks to cache one sigqueue struct
+X-NVConfidentiality: public
 
 To avoid allocation allow rt tasks to cache one sigqueue struct in
 task struct.
@@ -16,7 +17,7 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  5 files changed, 69 insertions(+), 5 deletions(-)
 
 diff --git a/include/linux/sched.h b/include/linux/sched.h
-index 192e6ac..4a583b6 100644
+index 47479e6..6ea6fd9 100644
 --- a/include/linux/sched.h
 +++ b/include/linux/sched.h
 @@ -1864,6 +1864,7 @@ struct task_struct {

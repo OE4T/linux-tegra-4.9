@@ -1,7 +1,8 @@
-From dd0e7186bc7dff335cb5eb274a0ab2701e52b112 Mon Sep 17 00:00:00 2001
+From c2bdc332284d48a4cbf07cd8063bbecd0ff988c2 Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Wed, 6 Jun 2018 15:31:26 +0200
-Subject: [PATCH 345/367] futex: Fix pi_state->owner serialization
+Subject: [PATCH 345/371] futex: Fix pi_state->owner serialization
+X-NVConfidentiality: public
 
 [ Upstream commit c74aef2d06a9f59cece89093eecc552933cba72a ]
 

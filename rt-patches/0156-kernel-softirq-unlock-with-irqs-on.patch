@@ -1,7 +1,8 @@
-From 1bb16fbf9c2043f4858607e65ed92e241d9a2506 Mon Sep 17 00:00:00 2001
+From 643cc6586a2edc3dd4231764d72c74841cd4857b Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Tue, 9 Feb 2016 18:17:18 +0100
-Subject: [PATCH 156/367] kernel: softirq: unlock with irqs on
+Subject: [PATCH 156/371] kernel: softirq: unlock with irqs on
+X-NVConfidentiality: public
 
 We unlock the lock while the interrupts are off. This isn't a problem
 now but will get because the migrate_disable() + enable are not

@@ -1,8 +1,9 @@
-From 55bdd58e80934750170bc9ebe441c1b72fb5af21 Mon Sep 17 00:00:00 2001
+From 7044fd9b5ffbb45560e3e28a9513fbe73a77c60d Mon Sep 17 00:00:00 2001
 From: Steven Rostedt <rostedt@goodmis.org>
 Date: Tue, 6 Dec 2016 17:50:30 -0500
-Subject: [PATCH 241/367] net: Have __napi_schedule_irqoff() disable interrupts
+Subject: [PATCH 241/371] net: Have __napi_schedule_irqoff() disable interrupts
  on RT
+X-NVConfidentiality: public
 
 A customer hit a crash where the napi sd->poll_list became corrupted.
 The customer had the bnx2x driver, which does a

@@ -1,8 +1,9 @@
-From 922684d62d05ea62c81be2226ab78c4ea1ea5543 Mon Sep 17 00:00:00 2001
+From 5e6e04b78f6e1f0211c754614a52adedd6c3a778 Mon Sep 17 00:00:00 2001
 From: Sven-Thorsten Dietrich <sdietrich@novell.com>
 Date: Fri, 3 Jul 2009 08:30:35 -0500
-Subject: [PATCH 083/367] infiniband: Mellanox IB driver patch use _nort()
+Subject: [PATCH 083/371] infiniband: Mellanox IB driver patch use _nort()
  primitives
+X-NVConfidentiality: public
 
 Fixes in_atomic stack-dump, when Mellanox module is loaded into the RT
 Kernel.

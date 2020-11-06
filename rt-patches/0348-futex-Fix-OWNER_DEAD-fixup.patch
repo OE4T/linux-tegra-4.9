@@ -1,7 +1,8 @@
-From 19d5dceab80bc1d11a455e8f98c024bae5227d05 Mon Sep 17 00:00:00 2001
+From 35a19668cb60d99c92f4785bcd8be0eb8a382316 Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Wed, 6 Jun 2018 15:31:29 +0200
-Subject: [PATCH 348/367] futex: Fix OWNER_DEAD fixup
+Subject: [PATCH 348/371] futex: Fix OWNER_DEAD fixup
+X-NVConfidentiality: public
 
 [ Upstream commit a97cb0e7b3f4c6297fd857055ae8e895f402f501 ]
 

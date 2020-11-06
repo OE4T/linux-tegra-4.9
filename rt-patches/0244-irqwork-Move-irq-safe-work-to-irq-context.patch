@@ -1,7 +1,8 @@
-From 03791bbf62584ed3c706564b9a3b329e1962bb91 Mon Sep 17 00:00:00 2001
+From ad85cb07dbf2ccd0bb8b7571c8647b998c9b2abd Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Sun, 15 Nov 2015 18:40:17 +0100
-Subject: [PATCH 244/367] irqwork: Move irq safe work to irq context
+Subject: [PATCH 244/371] irqwork: Move irq safe work to irq context
+X-NVConfidentiality: public
 
 On architectures where arch_irq_work_has_interrupt() returns false, we
 end up running the irq safe work from the softirq context. That

@@ -1,7 +1,8 @@
-From dd3c8a6d91dffe03bd43a29196eb80825328af48 Mon Sep 17 00:00:00 2001
+From ee1e8c1f0581ac6a37275df954840728c4cc0ea7 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Fri, 26 Oct 2012 18:50:54 +0100
-Subject: [PATCH 301/367] sched: Add support for lazy preemption
+Subject: [PATCH 301/371] sched: Add support for lazy preemption
+X-NVConfidentiality: public
 
 It has become an obsession to mitigate the determinism vs. throughput
 loss of RT. Looking at the mainline semantics of preemption points
@@ -129,10 +130,10 @@ index 0c734628..f97c542 100644
  } while (0)
  
 diff --git a/include/linux/sched.h b/include/linux/sched.h
-index 7e55ce1..f61076c 100644
+index 12d4f1c..f6a118f 100644
 --- a/include/linux/sched.h
 +++ b/include/linux/sched.h
-@@ -3583,6 +3583,43 @@ static inline int test_tsk_need_resched(struct task_struct *tsk)
+@@ -3579,6 +3579,43 @@ static inline int test_tsk_need_resched(struct task_struct *tsk)
  	return unlikely(test_tsk_thread_flag(tsk,TIF_NEED_RESCHED));
  }
  

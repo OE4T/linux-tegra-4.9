@@ -1,12 +1,12 @@
-From 4b4b0af0835c1e60d454fcf57a5ed47c398edf52 Mon Sep 17 00:00:00 2001
+From 6dabb5911b93823a4ca8a823be30513c874e0b0b Mon Sep 17 00:00:00 2001
 From: Steven Rostedt <rostedt@goodmis.org>
 Date: Tue, 14 Jul 2015 14:26:34 +0200
-Subject: [PATCH 165/367] futex: Fix bug on when a requeued RT task times out
+Subject: [PATCH 165/371] futex: Fix bug on when a requeued RT task times out
+X-NVConfidentiality: public
 
 Requeue with timeout causes a bug with PREEMPT_RT_FULL.
 
 The bug comes from a timed out condition.
-
 
 	TASK 1				TASK 2
 	------				------
@@ -22,7 +22,6 @@ The bug comes from a timed out condition.
 	    current->pi_blocked_on = PI_WAKE_INPROGRESS;
 	    run_spin_unlock(pi_lock);
 	    spin_lock(hb->lock); <-- blocked!
-
 
 					plist_for_each_entry_safe(this) {
 					    rt_mutex_start_proxy_lock();
@@ -45,7 +44,6 @@ if the proxy tasks pi_blocked_on is set. If so, exit out early.
 Otherwise set it to a new flag PI_REQUEUE_INPROGRESS, which notifies
 the proxy task that it is being requeued, and will handle things
 appropriately.
-
 
 Signed-off-by: Steven Rostedt <rostedt@goodmis.org>
 Signed-off-by: Thomas Gleixner <tglx@linutronix.de>

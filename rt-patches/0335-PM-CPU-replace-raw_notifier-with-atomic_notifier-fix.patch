@@ -1,8 +1,9 @@
-From 532b3cea1dc2f7754ba001553fecee328966e787 Mon Sep 17 00:00:00 2001
+From e0d2d8764c8f8ccab50f03b33d485a4268b8d0cd Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Thu, 17 Aug 2017 11:38:51 +0200
-Subject: [PATCH 335/367] PM / CPU: replace raw_notifier with atomic_notifier
+Subject: [PATCH 335/371] PM / CPU: replace raw_notifier with atomic_notifier
  (fixup)
+X-NVConfidentiality: public
 
 The original patch changed betwen its posting and what finally went into
 Rafael's tree so here is the delta.

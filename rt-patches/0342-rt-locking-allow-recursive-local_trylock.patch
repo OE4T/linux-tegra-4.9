@@ -1,7 +1,8 @@
-From cbc46a7ab1446af8dc397313ddb3e1d56a83b4d7 Mon Sep 17 00:00:00 2001
+From fd9de7b72d690ec592126ca23dbb99a614a143ae Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Thu, 21 Sep 2017 14:39:56 +0200
-Subject: [PATCH 342/367] rt/locking: allow recursive local_trylock()
+Subject: [PATCH 342/371] rt/locking: allow recursive local_trylock()
+X-NVConfidentiality: public
 
 required for following networking patch which does recursive try-lock.
 While at it, add the !RT version of it because it did not yet exist.

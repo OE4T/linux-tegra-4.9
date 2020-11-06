@@ -1,8 +1,9 @@
-From 8449344c64517734628f043c0ce20760f17ac05b Mon Sep 17 00:00:00 2001
+From abbf368f81387ef9aa87cfebe61b5ecc059cc331 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Thu, 15 Sep 2016 17:16:44 +0200
-Subject: [PATCH 038/367] iommu/vt-d: don't disable preemption while accessing
+Subject: [PATCH 038/371] iommu/vt-d: don't disable preemption while accessing
  deferred_flush()
+X-NVConfidentiality: public
 
 get_cpu() disables preemption and returns the current CPU number. The
 CPU number is later only used once while retrieving the address of the

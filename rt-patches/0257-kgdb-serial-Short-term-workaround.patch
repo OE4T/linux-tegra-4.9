@@ -1,7 +1,8 @@
-From f96d50c93e1c8f5cfee3580ff55da43c0d1dd32c Mon Sep 17 00:00:00 2001
+From 20aa3262bf1481d984faf7dd5e6b7d12052386ac Mon Sep 17 00:00:00 2001
 From: Jason Wessel <jason.wessel@windriver.com>
 Date: Thu, 28 Jul 2011 12:42:23 -0500
-Subject: [PATCH 257/367] kgdb/serial: Short term workaround
+Subject: [PATCH 257/371] kgdb/serial: Short term workaround
+X-NVConfidentiality: public
 
 On 07/27/2011 04:37 PM, Thomas Gleixner wrote:
 >  - KGDB (not yet disabled) is reportedly unusable on -rt right now due

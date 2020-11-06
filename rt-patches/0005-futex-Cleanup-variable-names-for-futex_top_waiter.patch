@@ -1,7 +1,8 @@
-From 67cb47ee7652b7337f923f738a4b3ca88136dde9 Mon Sep 17 00:00:00 2001
+From d5b3a313b0d2eb25d77f5009029172fdd601bc4f Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Wed, 22 Mar 2017 11:35:48 +0100
-Subject: [PATCH 005/367] futex: Cleanup variable names for futex_top_waiter()
+Subject: [PATCH 005/371] futex: Cleanup variable names for futex_top_waiter()
+X-NVConfidentiality: public
 
 Upstream commit 499f5aca2cdd5e958b27e2655e7e7f82524f46b1
 

@@ -1,7 +1,8 @@
-From 15d1504b420a673f445471dc9520f183bf1eda1f Mon Sep 17 00:00:00 2001
+From 892ea2487841e103e0a4223181cb147b73b09895 Mon Sep 17 00:00:00 2001
 From: Juri Lelli <juri.lelli@gmail.com>
 Date: Tue, 13 May 2014 15:30:20 +0200
-Subject: [PATCH 124/367] sched/deadline: dl_task_timer has to be irqsafe
+Subject: [PATCH 124/371] sched/deadline: dl_task_timer has to be irqsafe
+X-NVConfidentiality: public
 
 As for rt_period_timer, dl_task_timer has to be irqsafe.
 

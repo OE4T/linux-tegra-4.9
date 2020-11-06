@@ -1,7 +1,8 @@
-From e1bb7ea8ab4a202320a9c8ca7f600319f56def9a Mon Sep 17 00:00:00 2001
+From fb7c6069432e7f04cd9124ab5ab9130d6d17a5dc Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Fri, 27 May 2016 15:11:51 +0200
-Subject: [PATCH 080/367] locallock: add local_lock_on()
+Subject: [PATCH 080/371] locallock: add local_lock_on()
+X-NVConfidentiality: public
 
 Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 ---

@@ -1,7 +1,8 @@
-From 5fabdf4470194c1033ca6dc80755b43ea4572787 Mon Sep 17 00:00:00 2001
+From 9802442df04a18ec6b55f0390bdcc1ee8a021ca5 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Wed, 1 Mar 2017 16:30:49 +0100
-Subject: [PATCH 127/367] timer/hrtimer: check properly for a running timer
+Subject: [PATCH 127/371] timer/hrtimer: check properly for a running timer
+X-NVConfidentiality: public
 
 hrtimer_callback_running() checks only whether a timmer is running on a
 CPU in hardirq-context. This is okay for !RT. For RT environment we move

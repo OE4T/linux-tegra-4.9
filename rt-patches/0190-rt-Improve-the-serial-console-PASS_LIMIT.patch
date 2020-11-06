@@ -1,10 +1,11 @@
-From 4207f67a84b6c24129181008750963f7619745fa Mon Sep 17 00:00:00 2001
+From 02ceb10fcf71ad5dbe197d479ae4e04357c9dbd0 Mon Sep 17 00:00:00 2001
 From: Ingo Molnar <mingo@elte.hu>
 Date: Wed, 14 Dec 2011 13:05:54 +0100
-Subject: [PATCH 190/367] rt: Improve the serial console PASS_LIMIT
+Subject: [PATCH 190/371] rt: Improve the serial console PASS_LIMIT
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
+X-NVConfidentiality: public
 
 Beyond the warning:
 
@@ -21,7 +22,7 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  1 file changed, 5 insertions(+), 1 deletion(-)
 
 diff --git a/drivers/tty/serial/8250/8250_core.c b/drivers/tty/serial/8250/8250_core.c
-index 1f993e4..772207b 100644
+index 3d6c285..06c35cb 100644
 --- a/drivers/tty/serial/8250/8250_core.c
 +++ b/drivers/tty/serial/8250/8250_core.c
 @@ -66,7 +66,11 @@ static unsigned int skip_txen_test; /* force skip of txen test at init time */

@@ -1,7 +1,8 @@
-From 9dde8f804d338fc8e0efb4f3e20f7e7cffaee8fb Mon Sep 17 00:00:00 2001
+From b50cc5e47706c227af24da4b4febba8e761eafa5 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Fri, 17 Jun 2011 12:39:57 +0200
-Subject: [PATCH 070/367] rt: Provide PREEMPT_RT_BASE config switch
+Subject: [PATCH 070/371] rt: Provide PREEMPT_RT_BASE config switch
+X-NVConfidentiality: public
 
 Introduce PREEMPT_RT_BASE which enables parts of
 PREEMPT_RT_FULL. Forces interrupt threading and enables some of the RT

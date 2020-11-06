@@ -1,11 +1,12 @@
-From 3809923bca68c1d81872ba3a17119ac5bc1859c3 Mon Sep 17 00:00:00 2001
+From 34a900fc68aea4c3a533f7a1fdc5ee6e6d3e52db Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Tue, 10 Jul 2018 18:53:18 +0200
-Subject: [PATCH 352/367] sched, tracing: Fix trace_sched_pi_setprio() for
+Subject: [PATCH 352/371] sched, tracing: Fix trace_sched_pi_setprio() for
  deboosting
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
+X-NVConfidentiality: public
 
 [ Upstream commit 4ff648decf4712d39f184fc2df3163f43975575a ]
 

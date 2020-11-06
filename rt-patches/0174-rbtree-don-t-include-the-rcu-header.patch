@@ -1,10 +1,11 @@
-From 8ce787679571a893c7a3f5aca267a809efd1f9bc Mon Sep 17 00:00:00 2001
+From 354da02223d49d43e7645e89e291400557e13370 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Fri, 23 Jun 2017 16:22:02 +0200
-Subject: [PATCH 174/367] rbtree: don't include the rcu header
+Subject: [PATCH 174/371] rbtree: don't include the rcu header
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
+X-NVConfidentiality: public
 
 The RCU header pulls in spinlock.h and fails due not yet defined types:
 

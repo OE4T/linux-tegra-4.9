@@ -1,7 +1,8 @@
-From 8f6d7cb808206fc6224ef743ddcf4147d756c431 Mon Sep 17 00:00:00 2001
+From ff17b99889834f9113c8cdeffb1def381b340772 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Thu, 25 Apr 2013 18:12:52 +0200
-Subject: [PATCH 314/367] drm/i915: drop trace_i915_gem_ring_dispatch on rt
+Subject: [PATCH 314/371] drm/i915: drop trace_i915_gem_ring_dispatch on rt
+X-NVConfidentiality: public
 
 This tracepoint is responsible for:
 
@@ -37,7 +38,6 @@ Chris Wilson does not like to move i915_trace_irq_get() out of the macro
 |very expensively serialised read, unconditionally.
 
 so it is gone now on RT.
-
 
 Reported-by: Joakim Hernberg <jbh@alchemy.lu>
 Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>

@@ -1,8 +1,9 @@
-From 2eb4f2da323821770f12d7894a5fe8bb4ef4ada9 Mon Sep 17 00:00:00 2001
+From bd97b449dc1c470005ca344460057f35b7f389c0 Mon Sep 17 00:00:00 2001
 From: Ingo Molnar <mingo@elte.hu>
 Date: Fri, 3 Jul 2009 08:30:27 -0500
-Subject: [PATCH 143/367] stop_machine: convert stop_machine_run() to
+Subject: [PATCH 143/371] stop_machine: convert stop_machine_run() to
  PREEMPT_RT
+X-NVConfidentiality: public
 
 Instead of playing with non-preemption, introduce explicit
 startup serialization. This is more robust and cleaner as

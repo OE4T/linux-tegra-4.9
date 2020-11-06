@@ -1,7 +1,8 @@
-From b357c0a69916a92d623f66a21e801544fff1ceae Mon Sep 17 00:00:00 2001
+From 49a69bdceceabc375f303f0ac2d51f7564fc2e36 Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Wed, 6 Jun 2018 15:31:28 +0200
-Subject: [PATCH 347/367] futex: Avoid violating the 10th rule of futex
+Subject: [PATCH 347/371] futex: Avoid violating the 10th rule of futex
+X-NVConfidentiality: public
 
 [ Upstream commit c1e2f0eaf015fb7076d51a339011f2383e6dd389 ]
 

@@ -1,7 +1,8 @@
-From 0fe6948df8ee8ce52f5d4ac0316a77890431f459 Mon Sep 17 00:00:00 2001
+From 43a73d4f3627b6c060d35e50aa555c9daccb0207 Mon Sep 17 00:00:00 2001
 From: Oleg Nesterov <oleg@redhat.com>
 Date: Tue, 14 Jul 2015 14:26:34 +0200
-Subject: [PATCH 090/367] signal/x86: Delay calling signals in atomic
+Subject: [PATCH 090/371] signal/x86: Delay calling signals in atomic
+X-NVConfidentiality: public
 
 On x86_64 we must disable preemption before we enable interrupts
 for stack faults, int3 and debugging, because the current task is using
@@ -24,7 +25,6 @@ code will send the signal when preemption is enabled.
 
 [ rostedt: Switched from #ifdef CONFIG_PREEMPT_RT_FULL to
   ARCH_RT_DELAYS_SIGNAL_SEND and added comments to the code. ]
-
 
 Signed-off-by: Oleg Nesterov <oleg@redhat.com>
 Signed-off-by: Steven Rostedt <rostedt@goodmis.org>
@@ -79,7 +79,7 @@ index 8af22be..c370fba 100644
  typedef sigset_t compat_sigset_t;
  #endif
 diff --git a/include/linux/sched.h b/include/linux/sched.h
-index 64ef0fc..0cd3f80 100644
+index 3d1d4a4..9ee4508 100644
 --- a/include/linux/sched.h
 +++ b/include/linux/sched.h
 @@ -1875,6 +1875,10 @@ struct task_struct {

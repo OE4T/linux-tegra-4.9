@@ -1,11 +1,12 @@
-From c7ba43c173765829886b9af0d88f4bc08e070a42 Mon Sep 17 00:00:00 2001
+From 751f4fad472dc802bc33f549f69eb1d65165365d Mon Sep 17 00:00:00 2001
 From: "Yadi.hu" <yadi.hu@windriver.com>
 Date: Wed, 10 Dec 2014 10:32:09 +0800
-Subject: [PATCH 253/367] ARM: enable irq in translation/section permission
+Subject: [PATCH 253/371] ARM: enable irq in translation/section permission
  fault handlers
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
+X-NVConfidentiality: public
 
 Probably happens on all ARM, with
 CONFIG_PREEMPT_RT_FULL
@@ -58,7 +59,6 @@ As this is architecture independent code, and we've not seen any other
 need for other arch to have the siglock converted to raw lock, we can
 conclude that we should enable irq for ARM translation/section
 permission exception.
-
 
 Signed-off-by: Yadi.hu <yadi.hu@windriver.com>
 Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>

@@ -1,7 +1,8 @@
-From ea6ef15ecca53eb8e03204f17d28793591954e6f Mon Sep 17 00:00:00 2001
+From e1c5d25a8b52f221060e92cb3dd67de277193001 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Mon, 21 Aug 2017 15:09:13 +0200
-Subject: [PATCH 337/367] net: take the tcp_sk_lock lock with BH disabled
+Subject: [PATCH 337/371] net: take the tcp_sk_lock lock with BH disabled
+X-NVConfidentiality: public
 
 Lockdep may complain about an unsafe locking scenario:
 |      CPU0                    CPU1

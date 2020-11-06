@@ -1,8 +1,9 @@
-From 1e42566c0a23532127fa788bfdc4837caf428575 Mon Sep 17 00:00:00 2001
+From 9fda6e9d7170ba4b2a3f2ef9a138e816b683b5b3 Mon Sep 17 00:00:00 2001
 From: John Kacur <jkacur@redhat.com>
 Date: Fri, 27 Apr 2012 12:48:46 +0200
-Subject: [PATCH 286/367] scsi: qla2xxx: Use local_irq_save_nort() in
+Subject: [PATCH 286/371] scsi: qla2xxx: Use local_irq_save_nort() in
  qla2x00_poll
+X-NVConfidentiality: public
 
 RT triggers the following:
 

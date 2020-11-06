@@ -1,7 +1,8 @@
-From 89981476ec9294cab17b05abefebc25d6396b0a8 Mon Sep 17 00:00:00 2001
+From 86fc64d58a63b76e0108fd952dd93dc6e4a310fd Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Thu, 29 Aug 2013 18:21:04 +0200
-Subject: [PATCH 183/367] ptrace: fix ptrace vs tasklist_lock race
+Subject: [PATCH 183/371] ptrace: fix ptrace vs tasklist_lock race
+X-NVConfidentiality: public
 
 As explained by Alexander Fyodorov <halcy@yandex.ru>:
 
@@ -30,7 +31,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  3 files changed, 68 insertions(+), 6 deletions(-)
 
 diff --git a/include/linux/sched.h b/include/linux/sched.h
-index 7315b7c..d4b636b 100644
+index 9a41087..921b6f4 100644
 --- a/include/linux/sched.h
 +++ b/include/linux/sched.h
 @@ -245,10 +245,7 @@ extern char ___assert_task_state[1 - 2*!!(
@@ -44,7 +45,7 @@ index 7315b7c..d4b636b 100644
  #define task_contributes_to_load(task)	\
  				((task->state & TASK_UNINTERRUPTIBLE) != 0 && \
  				 (task->flags & PF_FROZEN) == 0 && \
-@@ -3600,6 +3597,51 @@ static inline int signal_pending_state(long state, struct task_struct *p)
+@@ -3596,6 +3593,51 @@ static inline int signal_pending_state(long state, struct task_struct *p)
  	return (state & TASK_INTERRUPTIBLE) || __fatal_signal_pending(p);
  }
  

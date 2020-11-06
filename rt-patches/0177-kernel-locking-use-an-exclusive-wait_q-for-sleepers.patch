@@ -1,10 +1,11 @@
-From fb6dadb4fbb3673ddf821910bd99891538ca3319 Mon Sep 17 00:00:00 2001
+From 321af88329075cf27d06e21bdc57706ca4972e39 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Thu, 22 Jun 2017 17:53:34 +0200
-Subject: [PATCH 177/367] kernel/locking: use an exclusive wait_q for sleepers
+Subject: [PATCH 177/371] kernel/locking: use an exclusive wait_q for sleepers
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
+X-NVConfidentiality: public
 
 If a task is queued as a sleeper for a wakeup and never goes to
 schedule() (because it just obtained the lock) then it will receive a
@@ -43,7 +44,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  4 files changed, 33 insertions(+), 7 deletions(-)
 
 diff --git a/include/linux/sched.h b/include/linux/sched.h
-index 5ff9752..7315b7c 100644
+index d1e1f73..9a41087 100644
 --- a/include/linux/sched.h
 +++ b/include/linux/sched.h
 @@ -1047,8 +1047,20 @@ struct wake_q_head {

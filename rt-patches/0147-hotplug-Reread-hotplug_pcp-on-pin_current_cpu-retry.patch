@@ -1,8 +1,9 @@
-From 688369583361132f7ae3660df24d1257ca948ce5 Mon Sep 17 00:00:00 2001
+From 99c2a5a706286ecd6943b81eeee82b6f4930d01a Mon Sep 17 00:00:00 2001
 From: Yong Zhang <yong.zhang0@gmail.com>
 Date: Thu, 28 Jul 2011 11:16:00 +0800
-Subject: [PATCH 147/367] hotplug: Reread hotplug_pcp on pin_current_cpu()
+Subject: [PATCH 147/371] hotplug: Reread hotplug_pcp on pin_current_cpu()
  retry
+X-NVConfidentiality: public
 
 When retry happens, it's likely that the task has been migrated to
 another cpu (except unplug failed), but it still derefernces the

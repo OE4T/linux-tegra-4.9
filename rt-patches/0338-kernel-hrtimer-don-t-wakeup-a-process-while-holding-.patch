@@ -1,8 +1,9 @@
-From d9e874e78a1bb9731672d78b9448a17f09ddc7c1 Mon Sep 17 00:00:00 2001
+From 78dcfa3469fc3fd88819b8d82cfef41bf56ab52f Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Thu, 31 Aug 2017 18:19:06 +0200
-Subject: [PATCH 338/367] kernel/hrtimer: don't wakeup a process while holding
+Subject: [PATCH 338/371] kernel/hrtimer: don't wakeup a process while holding
  the hrtimer base lock
+X-NVConfidentiality: public
 
 We must not wake any process (and thus acquire the pi->lock) while
 holding the hrtimer's base lock. This does not happen usually because

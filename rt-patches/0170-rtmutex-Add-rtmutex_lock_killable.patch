@@ -1,7 +1,8 @@
-From 8d4f9d4f15d87dad3bb0dd0540301ea50a5d8041 Mon Sep 17 00:00:00 2001
+From 9c4ab03053d697a9febd744eae0bf5d7686c7d4a Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Thu, 9 Jun 2011 11:43:52 +0200
-Subject: [PATCH 170/367] rtmutex: Add rtmutex_lock_killable()
+Subject: [PATCH 170/371] rtmutex: Add rtmutex_lock_killable()
+X-NVConfidentiality: public
 
 Add "killable" type to rtmutex. We need this since rtmutex are used as
 "normal" mutexes which do use this type.

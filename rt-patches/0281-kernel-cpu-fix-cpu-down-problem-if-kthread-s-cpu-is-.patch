@@ -1,8 +1,9 @@
-From fb6d6d2fca216573ffa6fe23c31e61b06509779f Mon Sep 17 00:00:00 2001
+From 7ddcd0efcfa32b96668ea5ac5e1a9112598904d5 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Fri, 7 Jun 2013 22:37:06 +0200
-Subject: [PATCH 281/367] kernel/cpu: fix cpu down problem if kthread's cpu is
+Subject: [PATCH 281/371] kernel/cpu: fix cpu down problem if kthread's cpu is
  going down
+X-NVConfidentiality: public
 
 If kthread is pinned to CPUx and CPUx is going down then we get into
 trouble:

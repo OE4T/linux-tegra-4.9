@@ -1,7 +1,8 @@
-From 71128e1bd4ed597a260f02e88547aeea0ba46563 Mon Sep 17 00:00:00 2001
+From d4cd7d284eeec6e4ca14c82838d44adf7d4621d8 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Tue, 13 Mar 2018 11:31:09 +0100
-Subject: [PATCH 359/367] Revert "block: blk-mq: Use swait"
+Subject: [PATCH 359/371] Revert "block: blk-mq: Use swait"
+X-NVConfidentiality: public
 
 This reverts commit "block: blk-mq: Use swait". The issue remains but
 will be fixed differently.

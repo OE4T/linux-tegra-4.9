@@ -1,8 +1,9 @@
-From 46f5f52f7f2813c69a729f344a6633ff398d2f7e Mon Sep 17 00:00:00 2001
+From f58c521251029f822817b305b35a66b1b1d50d67 Mon Sep 17 00:00:00 2001
 From: Mike Galbraith <umgwanakikbuti@gmail.com>
 Date: Thu, 20 Oct 2016 11:15:22 +0200
-Subject: [PATCH 313/367] drivers/zram: Don't disable preemption in
+Subject: [PATCH 313/371] drivers/zram: Don't disable preemption in
  zcomp_stream_get/put()
+X-NVConfidentiality: public
 
 In v4.7, the driver switched to percpu compression streams, disabling
 preemption via get/put_cpu_ptr(). Use a per-zcomp_strm lock here. We

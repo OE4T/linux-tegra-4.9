@@ -1,7 +1,8 @@
-From bc430ee114eb91b87dd0d694c541208c3d7423f9 Mon Sep 17 00:00:00 2001
+From 46b3efb634a10e25e6290699624aad8d8dae5ab7 Mon Sep 17 00:00:00 2001
 From: Alex Shi <alex.shi@linaro.org>
 Date: Thu, 6 Jul 2017 16:47:46 +0800
-Subject: [PATCH 334/367] cpu_pm: replace raw_notifier to atomic_notifier
+Subject: [PATCH 334/371] cpu_pm: replace raw_notifier to atomic_notifier
+X-NVConfidentiality: public
 
 This patch replace a rwlock and raw notifier by atomic notifier which
 protected by spin_lock and rcu.

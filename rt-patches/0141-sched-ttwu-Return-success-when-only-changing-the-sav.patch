@@ -1,8 +1,9 @@
-From 8e156ceee740f5ee68e3d525358c4f9d07ea7ced Mon Sep 17 00:00:00 2001
+From 8e4b26f45ba9e5f21f8b0e8a216a218bff28abe6 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Tue, 13 Dec 2011 21:42:19 +0100
-Subject: [PATCH 141/367] sched: ttwu: Return success when only changing the
+Subject: [PATCH 141/371] sched: ttwu: Return success when only changing the
  saved_state value
+X-NVConfidentiality: public
 
 When a task blocks on a rt lock, it saves the current state in
 p->saved_state, so a lock related wake up will not destroy the

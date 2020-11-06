@@ -1,7 +1,8 @@
-From f79e54791bf9dbae492b9b86810ec69215f16fd1 Mon Sep 17 00:00:00 2001
+From e8b5549456ff8585fcd175efe90672f7f3b9f41c Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Wed, 14 Sep 2011 11:57:04 +0200
-Subject: [PATCH 266/367] ipc/sem: Rework semaphore wakeups
+Subject: [PATCH 266/371] ipc/sem: Rework semaphore wakeups
+X-NVConfidentiality: public
 
 Current sysv sems have a weird ass wakeup scheme that involves keeping
 preemption disabled over a potential O(n^2) loop and busy waiting on

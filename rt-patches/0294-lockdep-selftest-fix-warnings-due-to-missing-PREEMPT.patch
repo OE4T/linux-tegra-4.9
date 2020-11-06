@@ -1,8 +1,9 @@
-From f85f34e5c27ffa21e66af3018845d0fb768c59e5 Mon Sep 17 00:00:00 2001
+From 17645bee245bcc436644e871460d7a3b647acccb Mon Sep 17 00:00:00 2001
 From: Josh Cartwright <josh.cartwright@ni.com>
 Date: Wed, 28 Jan 2015 13:08:45 -0600
-Subject: [PATCH 294/367] lockdep: selftest: fix warnings due to missing
+Subject: [PATCH 294/371] lockdep: selftest: fix warnings due to missing
  PREEMPT_RT conditionals
+X-NVConfidentiality: public
 
 "lockdep: Selftest: Only do hardirq context test for raw spinlock"
 disabled the execution of certain tests with PREEMPT_RT_FULL, but did
@@ -18,7 +19,6 @@ like:
 
 Fixed by wrapping the test definitions in #ifndef CONFIG_PREEMPT_RT_FULL
 conditionals.
-
 
 Signed-off-by: Josh Cartwright <josh.cartwright@ni.com>
 Signed-off-by: Xander Huff <xander.huff@ni.com>

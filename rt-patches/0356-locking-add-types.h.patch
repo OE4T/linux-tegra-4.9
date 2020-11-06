@@ -1,7 +1,8 @@
-From d96e560a5e2db1a6fad4af2ef89f347ed59b8139 Mon Sep 17 00:00:00 2001
+From d699ba0c8834323f7f46a8c6418c9d13957c345b Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Tue, 9 Jan 2018 11:02:24 +0100
-Subject: [PATCH 356/367] locking: add types.h
+Subject: [PATCH 356/371] locking: add types.h
+X-NVConfidentiality: public
 
 During the stable update the arm architecture did not compile anymore
 due to missing definition of u16/32.

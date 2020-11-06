@@ -1,7 +1,8 @@
-From 1736e5fea320bfd2b1d54bdf15e0d9b7fbc3d1f5 Mon Sep 17 00:00:00 2001
+From 67d85f211fc3a1dd3fbf87eac682b3456c7320e0 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Wed, 13 Jan 2016 15:55:02 +0100
-Subject: [PATCH 235/367] net: move xmit_recursion to per-task variable on -RT
+Subject: [PATCH 235/371] net: move xmit_recursion to per-task variable on -RT
+X-NVConfidentiality: public
 
 A softirq on -RT can be preempted. That means one task is in
 __dev_queue_xmit(), gets preempted and another task may enter
@@ -82,7 +83,7 @@ index 3b0fa22..8325b61 100644
  struct net_device *__dev_get_by_index(struct net *net, int ifindex);
  struct net_device *dev_get_by_index_rcu(struct net *net, int ifindex);
 diff --git a/include/linux/sched.h b/include/linux/sched.h
-index d4b636b..9d1b753 100644
+index 921b6f4..2a7b24a 100644
 --- a/include/linux/sched.h
 +++ b/include/linux/sched.h
 @@ -2176,6 +2176,9 @@ struct task_struct {

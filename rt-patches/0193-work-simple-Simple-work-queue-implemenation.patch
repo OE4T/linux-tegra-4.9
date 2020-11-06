@@ -1,7 +1,8 @@
-From ec181fe2b811f91488b9abded67aaa9a263ae388 Mon Sep 17 00:00:00 2001
+From d1e858fedbf51373469aea0fe57d6a0b43602473 Mon Sep 17 00:00:00 2001
 From: Daniel Wagner <daniel.wagner@bmw-carit.de>
 Date: Fri, 11 Jul 2014 15:26:11 +0200
-Subject: [PATCH 193/367] work-simple: Simple work queue implemenation
+Subject: [PATCH 193/371] work-simple: Simple work queue implemenation
+X-NVConfidentiality: public
 
 Provides a framework for enqueuing callbacks from irq context
 PREEMPT_RT_FULL safe. The callbacks are executed in kthread context.

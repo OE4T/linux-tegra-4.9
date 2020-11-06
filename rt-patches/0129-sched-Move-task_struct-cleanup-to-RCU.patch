@@ -1,7 +1,8 @@
-From 5cb4c6035f975fa054d5e984dbac039088115876 Mon Sep 17 00:00:00 2001
+From 4048d0ea9c07da88e55338652ac018fc44b43276 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Tue, 31 May 2011 16:59:16 +0200
-Subject: [PATCH 129/367] sched: Move task_struct cleanup to RCU
+Subject: [PATCH 129/371] sched: Move task_struct cleanup to RCU
+X-NVConfidentiality: public
 
 __put_task_struct() does quite some expensive work. We don't want to
 burden random tasks with that.
@@ -13,7 +14,7 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  2 files changed, 27 insertions(+), 1 deletion(-)
 
 diff --git a/include/linux/sched.h b/include/linux/sched.h
-index 655828e..f0a7766 100644
+index ccc0221..d8e36d7 100644
 --- a/include/linux/sched.h
 +++ b/include/linux/sched.h
 @@ -2143,6 +2143,9 @@ struct task_struct {

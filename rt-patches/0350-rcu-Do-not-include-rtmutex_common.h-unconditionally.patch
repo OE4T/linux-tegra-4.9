@@ -1,7 +1,8 @@
-From 10663dff647f1ef5b1e13a7c028add7a8a44b107 Mon Sep 17 00:00:00 2001
+From 6641a5baa3bbe813e0a484f7cf20a0fcb847db89 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Mon, 9 Jul 2018 11:58:08 +0200
-Subject: [PATCH 350/367] rcu: Do not include rtmutex_common.h unconditionally
+Subject: [PATCH 350/371] rcu: Do not include rtmutex_common.h unconditionally
+X-NVConfidentiality: public
 
 [ upstream commit b88697810d7c1d102a529990f9071b0f14cfe6df ]
 

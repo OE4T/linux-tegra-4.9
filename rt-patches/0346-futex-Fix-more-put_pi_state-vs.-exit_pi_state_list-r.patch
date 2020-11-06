@@ -1,8 +1,9 @@
-From 540929d7ad637fd1d8d8417c16f34c31487a5add Mon Sep 17 00:00:00 2001
+From 4545f4efdf33bdb56b13567f9aa2b8e6a9202738 Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Wed, 6 Jun 2018 15:31:27 +0200
-Subject: [PATCH 346/367] futex: Fix more put_pi_state() vs.
+Subject: [PATCH 346/371] futex: Fix more put_pi_state() vs.
  exit_pi_state_list() races
+X-NVConfidentiality: public
 
 [ Upstream commit 51d00899f7e6ded15c89cb4e2cb11a35283bac81 ]
 

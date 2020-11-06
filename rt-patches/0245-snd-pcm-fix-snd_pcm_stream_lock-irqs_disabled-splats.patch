@@ -1,8 +1,9 @@
-From 84e9fc5851d3f7fad9b810ed306fe619f922711a Mon Sep 17 00:00:00 2001
+From 52ff350dcc5aedeaf9e0a49736025b9e22be21b5 Mon Sep 17 00:00:00 2001
 From: Mike Galbraith <umgwanakikbuti@gmail.com>
 Date: Wed, 18 Feb 2015 15:09:23 +0100
-Subject: [PATCH 245/367] snd/pcm: fix snd_pcm_stream_lock*() irqs_disabled()
+Subject: [PATCH 245/371] snd/pcm: fix snd_pcm_stream_lock*() irqs_disabled()
  splats
+X-NVConfidentiality: public
 
 Locking functions previously using read_lock_irq()/read_lock_irqsave() were
 changed to local_irq_disable/save(), leading to gripes.  Use nort variants.

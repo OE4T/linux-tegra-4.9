@@ -1,7 +1,8 @@
-From ed8091d8771d59074f2e63b7e596402853be5fbc Mon Sep 17 00:00:00 2001
+From ca98ae81e77228c3ccd34d48fec5318b1f36cd51 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Fri, 10 Jun 2011 11:04:15 +0200
-Subject: [PATCH 164/367] rtmutex: Handle the various new futex race conditions
+Subject: [PATCH 164/371] rtmutex: Handle the various new futex race conditions
+X-NVConfidentiality: public
 
 RT opens a few new interesting race conditions in the rtmutex/futex
 combo due to futex hash bucket lock being a 'sleeping' spinlock and

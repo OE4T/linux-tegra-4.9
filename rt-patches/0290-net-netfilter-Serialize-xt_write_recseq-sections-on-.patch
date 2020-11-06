@@ -1,8 +1,9 @@
-From 01e58a507cda2e8d66253ecb6ae4ef72e56a3479 Mon Sep 17 00:00:00 2001
+From 65fb170ad6161c5c8f72eab5509d16650f9c31a2 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Sun, 28 Oct 2012 11:18:08 +0100
-Subject: [PATCH 290/367] net: netfilter: Serialize xt_write_recseq sections on
+Subject: [PATCH 290/371] net: netfilter: Serialize xt_write_recseq sections on
  RT
+X-NVConfidentiality: public
 
 The netfilter code relies only on the implicit semantics of
 local_bh_disable() for serializing wt_write_recseq sections. RT breaks

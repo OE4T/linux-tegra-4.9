@@ -1,8 +1,9 @@
-From c2dd9d9788f6c09d41261d27bdef5e67c118b14f Mon Sep 17 00:00:00 2001
+From 58c16f26c87691bcf03a1e67a8986e129246b992 Mon Sep 17 00:00:00 2001
 From: Paul Gortmaker <paul.gortmaker@windriver.com>
 Date: Sun, 31 May 2015 14:44:42 -0400
-Subject: [PATCH 251/367] powerpc: ps3/device-init.c - adapt to completions
+Subject: [PATCH 251/371] powerpc: ps3/device-init.c - adapt to completions
  using swait vs wait
+X-NVConfidentiality: public
 
 To fix:
 

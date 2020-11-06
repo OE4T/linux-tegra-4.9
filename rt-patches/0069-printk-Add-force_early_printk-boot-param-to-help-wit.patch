@@ -1,8 +1,9 @@
-From dfd28e928831ffeb8c9cd13a3f40b015b2f5f03e Mon Sep 17 00:00:00 2001
+From bdc8c686d535565eb4e06820bb506a391e0897c5 Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Fri, 2 Sep 2011 14:41:29 +0200
-Subject: [PATCH 069/367] printk: Add "force_early_printk" boot param to help
+Subject: [PATCH 069/371] printk: Add "force_early_printk" boot param to help
  with debugging
+X-NVConfidentiality: public
 
 Gives me an option to screw printk and actually see what the machine
 says.

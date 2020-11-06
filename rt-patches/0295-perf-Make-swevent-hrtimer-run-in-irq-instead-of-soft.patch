@@ -1,8 +1,9 @@
-From 4ae68a06732162933d3c421d4a2cfe78d057cd80 Mon Sep 17 00:00:00 2001
+From 7a20de5adb7d153890b38b53d39b2334028ce7c5 Mon Sep 17 00:00:00 2001
 From: Yong Zhang <yong.zhang@windriver.com>
 Date: Wed, 11 Jul 2012 22:05:21 +0000
-Subject: [PATCH 295/367] perf: Make swevent hrtimer run in irq instead of
+Subject: [PATCH 295/371] perf: Make swevent hrtimer run in irq instead of
  softirq
+X-NVConfidentiality: public
 
 Otherwise we get a deadlock like below:
 

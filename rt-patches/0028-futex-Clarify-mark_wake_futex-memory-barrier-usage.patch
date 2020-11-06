@@ -1,7 +1,8 @@
-From b6a8779f8e34df4bac4d424ea6c1137dc3ab8749 Mon Sep 17 00:00:00 2001
+From e8aab4cfdf500064f7b3ac58ee18c09a98422578 Mon Sep 17 00:00:00 2001
 From: "Darren Hart (VMware)" <dvhart@infradead.org>
 Date: Fri, 14 Apr 2017 15:31:38 -0700
-Subject: [PATCH 028/367] futex: Clarify mark_wake_futex memory barrier usage
+Subject: [PATCH 028/371] futex: Clarify mark_wake_futex memory barrier usage
+X-NVConfidentiality: public
 
 Upstream commit 38fcd06e9b7f6855db1f3ebac5e18b8fdb467ffd
 

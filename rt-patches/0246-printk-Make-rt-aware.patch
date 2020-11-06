@@ -1,7 +1,8 @@
-From 90c0776c9a5df0cc851d1778154d14b3e66ddb43 Mon Sep 17 00:00:00 2001
+From ee52e135f700c71bd3ffe33cb631ee4b8ff3b913 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Wed, 19 Sep 2012 14:50:37 +0200
-Subject: [PATCH 246/367] printk: Make rt aware
+Subject: [PATCH 246/371] printk: Make rt aware
+X-NVConfidentiality: public
 
 Drop the lock before calling the console driver and do not disable
 interrupts while printing to a serial console.

@@ -1,8 +1,9 @@
-From 1816703036e5ee04219d8cabba3f241d4aa7841e Mon Sep 17 00:00:00 2001
+From f85593170475c22b9f83fc0b96d6fa3d349a8a37 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Wed, 20 Jan 2016 15:39:05 +0100
-Subject: [PATCH 236/367] net: provide a way to delegate processing a softirq
+Subject: [PATCH 236/371] net: provide a way to delegate processing a softirq
  to ksoftirqd
+X-NVConfidentiality: public
 
 If the NET_RX uses up all of his budget it moves the following NAPI
 invocations into the `ksoftirqd`. On -RT it does not do so. Instead it

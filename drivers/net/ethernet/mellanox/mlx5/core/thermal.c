@@ -40,6 +40,7 @@
 
 #define MLX5_THERMAL_POLL_INT	1000
 #define MLX5_THERMAL_NUM_TRIPS	0
+#define DEFAULT_CRIT_TEMP	105000
 
 /* Make sure all trips are writable */
 #define MLX5_THERMAL_TRIP_MASK	(BIT(MLX5_THERMAL_NUM_TRIPS) - 1)
@@ -68,6 +69,10 @@ struct mlx5_reg_host_mtmp {
 
 	u8 sensor_name_lo[4];
 };
+
+static unsigned int mlx5_crit_temp = DEFAULT_CRIT_TEMP;
+static bool mlx5_temp_sw_override;
+static unsigned int mlx5_debug_temp;
 
 static int mlx5_thermal_get_mtmp_temp(struct mlx5_core_dev *core, int *p_temp)
 {
@@ -134,16 +139,95 @@ static int mlx5_thermal_get_temp(struct thermal_zone_device *tzdev,
 	struct mlx5_core_dev *core = thermal->core;
 	int ret = 0;
 
-	ret = mlx5_thermal_get_mtmp_temp(core, p_temp);
+	if (mlx5_temp_sw_override) {
+		*p_temp = mlx5_debug_temp;
+	} else {
+		ret = mlx5_thermal_get_mtmp_temp(core, p_temp);
+		mlx5_debug_temp = *p_temp;
+	}
+
+	/* TODO: Add critical temp trip handling */
+	if (*p_temp >= mlx5_crit_temp) {
+		pr_err("%s: MLX5 temp reached critical limit.\n", __func__);
+	}
 
 	return ret;
+}
+
+static int mlx5_thermal_get_crit_temp(struct thermal_zone_device *tzdev,
+				      int *temp)
+{
+	*temp = mlx5_crit_temp;
+
+	return 0;
 }
 
 static struct thermal_zone_device_ops mlx5_thermal_ops = {
 	.get_mode = mlx5_thermal_get_mode,
 	.set_mode = mlx5_thermal_set_mode,
 	.get_temp = mlx5_thermal_get_temp,
+	.get_crit_temp = mlx5_thermal_get_crit_temp,
 };
+
+static ssize_t mlx5_crit_temp_store(struct device *dev,
+				    struct device_attribute *da,
+				    const char *buf, size_t count)
+{
+	int temp;
+
+	if (kstrtoint(buf, 0, &temp))
+		return -EINVAL;
+
+	mlx5_crit_temp = temp;
+	return count;
+}
+
+static ssize_t mlx5_crit_temp_show(struct device *dev,
+				   struct device_attribute *da,
+				   char *buf)
+{
+	return sprintf(buf, "%d\n", mlx5_crit_temp);
+}
+
+static ssize_t mlx5_temp_sw_override_store(struct device *dev,
+				    struct device_attribute *da,
+				    const char *buf, size_t count)
+{
+	if (kstrtobool(buf, &mlx5_temp_sw_override))
+		return -EINVAL;
+
+	return count;
+}
+
+static ssize_t mlx5_temp_sw_override_show(struct device *dev,
+				   struct device_attribute *da,
+				   char *buf)
+{
+	return sprintf(buf, "%d\n", mlx5_temp_sw_override);
+}
+
+static ssize_t mlx5_temp_store(struct device *dev,
+				    struct device_attribute *da,
+				    const char *buf, size_t count)
+{
+	int temp;
+
+	if (kstrtoint(buf, 0, &temp))
+		return -EINVAL;
+
+	mlx5_debug_temp = temp;
+	return count;
+}
+
+static ssize_t mlx5_temp_show(struct device *dev,
+				   struct device_attribute *da,
+				   char *buf)
+{
+	return sprintf(buf, "%d\n", mlx5_debug_temp);
+}
+DEVICE_ATTR_RW(mlx5_crit_temp);
+DEVICE_ATTR_RW(mlx5_temp_sw_override);
+DEVICE_ATTR_RW(mlx5_temp);
 
 static int mlx5_thermal_match(struct thermal_zone_device *thz, void *data)
 {
@@ -167,6 +251,7 @@ int mlx5_thermal_init(struct mlx5_core_dev *core)
 		return -ENOMEM;
 
 	thermal->core = core;
+
 	thermal->tzdev = thermal_zone_device_register("mlx5", 0,
 			MLX5_THERMAL_TRIP_MASK,
 			thermal,
@@ -175,6 +260,11 @@ int mlx5_thermal_init(struct mlx5_core_dev *core)
 	if (IS_ERR(thermal->tzdev))
 		return PTR_ERR(thermal->tzdev);
 
+	device_create_file(dev, &dev_attr_mlx5_crit_temp);
+	device_create_file(dev, &dev_attr_mlx5_temp_sw_override);
+	device_create_file(dev, &dev_attr_mlx5_temp);
+
+	mlx5_temp_sw_override = false;
 	core->thermal = thermal;
 	return 0;
 }
@@ -183,4 +273,5 @@ void mlx5_thermal_deinit(struct mlx5_core_dev *core)
 {
 	if (core->thermal)
 		thermal_zone_device_unregister(core->thermal->tzdev);
+
 }

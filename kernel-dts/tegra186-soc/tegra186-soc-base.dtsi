@@ -1363,7 +1363,7 @@
 
 	gp10b {
 		compatible = "nvidia,tegra186-gp10b", "nvidia,gp10b";
-		dma-noncont;
+		dma-noncontig;
 		reg = <0x0 0x17000000 0x0 0x1000000
 		       0x0 0x18000000 0x0 0x1000000
 		       0x0 0x03b41000 0x0 0x00001000>;

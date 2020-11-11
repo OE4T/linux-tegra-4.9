@@ -323,7 +323,6 @@ int __init nvmap_populate_ivm_vpr_carveout(
 	co->can_alloc = ivm->can_alloc;
 	co->is_ivm = true;
 	co->dma_dev = &co->dev;
-	kmemleak_no_scan(__va(co->base));
 
 	co->name = kasprintf(GFP_KERNEL, "ivmvpr%02d%02d%02d", co->vmid,
 		co->peer, co->can_alloc);

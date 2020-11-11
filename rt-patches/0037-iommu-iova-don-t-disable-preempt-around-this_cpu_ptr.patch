@@ -1,9 +1,8 @@
-From e358e51283c7a8a8397b9c384fb1b7d81744d2dd Mon Sep 17 00:00:00 2001
+From 32f47a6644317a3659aba1778b3353e607fa57d9 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Thu, 15 Sep 2016 16:58:19 +0200
-Subject: [PATCH 037/371] iommu/iova: don't disable preempt around
+Subject: [PATCH 037/367] iommu/iova: don't disable preempt around
  this_cpu_ptr()
-X-NVConfidentiality: public
 
 Commit 583248e6620a ("iommu/iova: Disable preemption around use of
 this_cpu_ptr()") disables preemption while accessing a per-CPU variable.
@@ -22,13 +21,14 @@ does) because it assumes the caller knows what he does because he might
 access the data structure from a different CPU (which means he needs
 protection against concurrent access).
 
+Change-Id: Icaa40e90958ac7ff6c29c21017560000e303b992
 Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 ---
  drivers/iommu/iova.c | 1 +
  1 file changed, 1 insertion(+)
 
 diff --git a/drivers/iommu/iova.c b/drivers/iommu/iova.c
-index 1abdd11..3ee073b 100644
+index 1abdd1173c54..3ee073bcaa85 100644
 --- a/drivers/iommu/iova.c
 +++ b/drivers/iommu/iova.c
 @@ -24,6 +24,7 @@
@@ -40,5 +40,5 @@ index 1abdd11..3ee073b 100644
  			       unsigned long pfn,
  			       unsigned long size);
 -- 
-2.7.4
+2.28.0
 

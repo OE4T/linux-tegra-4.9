@@ -1,8 +1,7 @@
-From c24708673d989c2977976aec4333947c1cdc3ac7 Mon Sep 17 00:00:00 2001
+From e2872ae3a22209ed402b435d2a1c3ff89239c13f Mon Sep 17 00:00:00 2001
 From: Mike Galbraith <efault@gmx.de>
 Date: Sun, 8 Jan 2017 09:32:25 +0100
-Subject: [PATCH 320/371] cpuset: Convert callback_lock to raw_spinlock_t
-X-NVConfidentiality: public
+Subject: [PATCH 320/367] cpuset: Convert callback_lock to raw_spinlock_t
 
 The two commits below add up to a cpuset might_sleep() splat for RT:
 
@@ -43,15 +42,16 @@ The callback_mutex is only used to synchronize reads/updates of cpusets'
 flags and cpu/node masks. These operations should always proceed fast so
 there's no reason why we can't use a spinlock instead of the mutex.
 
+Change-Id: Ia1ea1d89ad4a66574def48e899dddf678b992365
 Cc: stable-rt@vger.kernel.org
 Signed-off-by: Mike Galbraith <efault@gmx.de>
 Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 ---
- kernel/cpuset.c | 66 ++++++++++++++++++++++++++++-----------------------------
+ kernel/cpuset.c | 66 ++++++++++++++++++++++++-------------------------
  1 file changed, 33 insertions(+), 33 deletions(-)
 
 diff --git a/kernel/cpuset.c b/kernel/cpuset.c
-index 435d500..934329e 100644
+index 435d50031e69..934329e379c0 100644
 --- a/kernel/cpuset.c
 +++ b/kernel/cpuset.c
 @@ -286,7 +286,7 @@ static struct cpuset top_cpuset = {
@@ -291,5 +291,5 @@ index 435d500..934329e 100644
  }
  
 -- 
-2.7.4
+2.28.0
 

@@ -1,9 +1,8 @@
-From 5e6e04b78f6e1f0211c754614a52adedd6c3a778 Mon Sep 17 00:00:00 2001
+From 8bfd1b62285c1fbe4703f0cae83ae8e5f3579809 Mon Sep 17 00:00:00 2001
 From: Sven-Thorsten Dietrich <sdietrich@novell.com>
 Date: Fri, 3 Jul 2009 08:30:35 -0500
-Subject: [PATCH 083/371] infiniband: Mellanox IB driver patch use _nort()
+Subject: [PATCH 083/367] infiniband: Mellanox IB driver patch use _nort()
  primitives
-X-NVConfidentiality: public
 
 Fixes in_atomic stack-dump, when Mellanox module is loaded into the RT
 Kernel.
@@ -21,7 +20,7 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  1 file changed, 2 insertions(+), 2 deletions(-)
 
 diff --git a/drivers/infiniband/ulp/ipoib/ipoib_multicast.c b/drivers/infiniband/ulp/ipoib/ipoib_multicast.c
-index 8f79cae..982e97f 100644
+index 8f79caedf905..982e97f52090 100644
 --- a/drivers/infiniband/ulp/ipoib/ipoib_multicast.c
 +++ b/drivers/infiniband/ulp/ipoib/ipoib_multicast.c
 @@ -904,7 +904,7 @@ void ipoib_mcast_restart_task(struct work_struct *work)
@@ -43,5 +42,5 @@ index 8f79cae..982e97f 100644
  	/*
  	 * make sure the in-flight joins have finished before we attempt
 -- 
-2.7.4
+2.28.0
 

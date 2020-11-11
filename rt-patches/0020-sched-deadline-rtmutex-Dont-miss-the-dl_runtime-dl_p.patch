@@ -1,9 +1,8 @@
-From 717aa7ff054300f5c00a48147641eeaa3d04f1a9 Mon Sep 17 00:00:00 2001
+From 1accf8fabcd54adec15ab03c562f21570078f3ab Mon Sep 17 00:00:00 2001
 From: Xunlei Pang <xlpang@redhat.com>
 Date: Thu, 23 Mar 2017 15:56:09 +0100
-Subject: [PATCH 020/371] sched/deadline/rtmutex: Dont miss the
+Subject: [PATCH 020/367] sched/deadline/rtmutex: Dont miss the
  dl_runtime/dl_period update
-X-NVConfidentiality: public
 
 Upstream commit 85e2d4f992868ad78dc8bb2c077b652fcfb3661a
 
@@ -43,7 +42,7 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/kernel/locking/rtmutex.c b/kernel/locking/rtmutex.c
-index 1996128..03a345d 100644
+index 199612829fd6..03a345d508d2 100644
 --- a/kernel/locking/rtmutex.c
 +++ b/kernel/locking/rtmutex.c
 @@ -602,7 +602,7 @@ static int rt_mutex_adjust_prio_chain(struct task_struct *task,
@@ -56,5 +55,5 @@ index 1996128..03a345d 100644
  			goto out_unlock_pi;
  		else
 -- 
-2.7.4
+2.28.0
 

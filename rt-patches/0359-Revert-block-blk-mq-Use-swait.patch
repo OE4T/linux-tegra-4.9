@@ -1,8 +1,7 @@
-From d4cd7d284eeec6e4ca14c82838d44adf7d4621d8 Mon Sep 17 00:00:00 2001
+From 91841febacb295fb332731d66ad47a22101b7d58 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Tue, 13 Mar 2018 11:31:09 +0100
-Subject: [PATCH 359/371] Revert "block: blk-mq: Use swait"
-X-NVConfidentiality: public
+Subject: [PATCH 359/367] Revert "block: blk-mq: Use swait"
 
 This reverts commit "block: blk-mq: Use swait". The issue remains but
 will be fixed differently.
@@ -18,7 +17,7 @@ Signed-off-by: Julia Cartwright <julia@ni.com>
  3 files changed, 9 insertions(+), 9 deletions(-)
 
 diff --git a/block/blk-core.c b/block/blk-core.c
-index 16eedb0..cade8ff 100644
+index 16eedb0df53e..cade8ffb3143 100644
 --- a/block/blk-core.c
 +++ b/block/blk-core.c
 @@ -664,9 +664,9 @@ int blk_queue_enter(struct request_queue *q, bool nowait)
@@ -53,7 +52,7 @@ index 16eedb0..cade8ff 100644
  	/*
  	 * Init percpu_ref in atomic mode so that it's faster to shutdown.
 diff --git a/block/blk-mq.c b/block/blk-mq.c
-index 9835286..25c6919 100644
+index 9835286eaab8..25c6919a4f3c 100644
 --- a/block/blk-mq.c
 +++ b/block/blk-mq.c
 @@ -69,7 +69,7 @@ EXPORT_SYMBOL_GPL(blk_mq_freeze_queue_start);
@@ -84,10 +83,10 @@ index 9835286..25c6919 100644
  
  bool blk_mq_can_queue(struct blk_mq_hw_ctx *hctx)
 diff --git a/include/linux/blkdev.h b/include/linux/blkdev.h
-index 7fcbaae..7b18f20 100644
+index cd85c30af6f1..1d19ea750830 100644
 --- a/include/linux/blkdev.h
 +++ b/include/linux/blkdev.h
-@@ -471,7 +471,7 @@ struct request_queue {
+@@ -476,7 +476,7 @@ struct request_queue {
  	struct throtl_data *td;
  #endif
  	struct rcu_head		rcu_head;
@@ -97,5 +96,5 @@ index 7fcbaae..7b18f20 100644
  	struct list_head	all_q_node;
  
 -- 
-2.7.4
+2.28.0
 

@@ -1,11 +1,10 @@
-From 9b9a730934334bd9805ae7b6f42b18145012c48f Mon Sep 17 00:00:00 2001
+From 2c2ce803cc2948be3ecd3a322c1f8b81fca8b28b Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Thu, 29 Aug 2013 11:48:57 +0200
-Subject: [PATCH 322/371] md: disable bcache
+Subject: [PATCH 322/367] md: disable bcache
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
-X-NVConfidentiality: public
 
 It uses anon semaphores
 |drivers/md/bcache/request.c: In function ‘cached_dev_write_complete’:
@@ -25,7 +24,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  1 file changed, 1 insertion(+)
 
 diff --git a/drivers/md/bcache/Kconfig b/drivers/md/bcache/Kconfig
-index 4d20088..98b64ed 100644
+index 4d200883c505..98b64ed5cb81 100644
 --- a/drivers/md/bcache/Kconfig
 +++ b/drivers/md/bcache/Kconfig
 @@ -1,6 +1,7 @@
@@ -37,5 +36,5 @@ index 4d20088..98b64ed 100644
  	Allows a block device to be used as cache for other devices; uses
  	a btree for indexing and the layout is optimized for SSDs.
 -- 
-2.7.4
+2.28.0
 

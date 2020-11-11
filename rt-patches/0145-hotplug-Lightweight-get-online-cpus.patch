@@ -1,8 +1,7 @@
-From 23b74c8285f9211d29ee96fe65e3c19e474d43b9 Mon Sep 17 00:00:00 2001
+From 3ec2ea7ecf33b5ae478ad55916b811b3d0149318 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Wed, 15 Jun 2011 12:36:06 +0200
-Subject: [PATCH 145/371] hotplug: Lightweight get online cpus
-X-NVConfidentiality: public
+Subject: [PATCH 145/367] hotplug: Lightweight get online cpus
 
 get_online_cpus() is a heavy weight function which involves a global
 mutex. migrate_disable() wants a simpler construct which prevents only
@@ -14,15 +13,15 @@ tasks on the cpu which should be brought down.
 
 Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
 ---
- include/linux/cpu.h |   7 ++--
- kernel/cpu.c        | 118 ++++++++++++++++++++++++++++++++++++++++++++++++++++
+ include/linux/cpu.h |   7 +--
+ kernel/cpu.c        | 118 ++++++++++++++++++++++++++++++++++++++++++++
  2 files changed, 122 insertions(+), 3 deletions(-)
 
 diff --git a/include/linux/cpu.h b/include/linux/cpu.h
-index e52ddfd..c6c40de 100644
+index e1fe7c9460c4..25831ffea752 100644
 --- a/include/linux/cpu.h
 +++ b/include/linux/cpu.h
-@@ -186,9 +186,6 @@ static inline void cpu_notifier_register_done(void)
+@@ -191,9 +191,6 @@ static inline void cpu_notifier_register_done(void)
  #endif /* CONFIG_SMP */
  extern struct bus_type cpu_subsys;
  
@@ -32,7 +31,7 @@ index e52ddfd..c6c40de 100644
  #ifdef CONFIG_HOTPLUG_CPU
  /* Stop CPUs going up and down. */
  
-@@ -198,6 +195,8 @@ extern void get_online_cpus(void);
+@@ -203,6 +200,8 @@ extern void get_online_cpus(void);
  extern void put_online_cpus(void);
  extern void cpu_hotplug_disable(void);
  extern void cpu_hotplug_enable(void);
@@ -41,7 +40,7 @@ index e52ddfd..c6c40de 100644
  #define hotcpu_notifier(fn, pri)	cpu_notifier(fn, pri)
  #define __hotcpu_notifier(fn, pri)	__cpu_notifier(fn, pri)
  #define register_hotcpu_notifier(nb)	register_cpu_notifier(nb)
-@@ -215,6 +214,8 @@ static inline void cpu_hotplug_done(void) {}
+@@ -220,6 +219,8 @@ static inline void cpu_hotplug_done(void) {}
  #define put_online_cpus()	do { } while (0)
  #define cpu_hotplug_disable()	do { } while (0)
  #define cpu_hotplug_enable()	do { } while (0)
@@ -51,7 +50,7 @@ index e52ddfd..c6c40de 100644
  #define __hotcpu_notifier(fn, pri)	do { (void)(fn); } while (0)
  /* These aren't inline functions due to a GCC bug. */
 diff --git a/kernel/cpu.c b/kernel/cpu.c
-index 16caaf3..c05fab8 100644
+index 6b7bd2216d7f..a142a6dfb323 100644
 --- a/kernel/cpu.c
 +++ b/kernel/cpu.c
 @@ -247,6 +247,100 @@ static struct {
@@ -155,7 +154,7 @@ index 16caaf3..c05fab8 100644
  
  void get_online_cpus(void)
  {
-@@ -1015,6 +1109,8 @@ static int __ref _cpu_down(unsigned int cpu, int tasks_frozen,
+@@ -1016,6 +1110,8 @@ static int __ref _cpu_down(unsigned int cpu, int tasks_frozen,
  	struct cpuhp_cpu_state *st = per_cpu_ptr(&cpuhp_state, cpu);
  	int prev_state, ret = 0;
  	bool hasdied = false;
@@ -164,7 +163,7 @@ index 16caaf3..c05fab8 100644
  
  	if (num_online_cpus() == 1)
  		return -EBUSY;
-@@ -1022,7 +1118,27 @@ static int __ref _cpu_down(unsigned int cpu, int tasks_frozen,
+@@ -1023,7 +1119,27 @@ static int __ref _cpu_down(unsigned int cpu, int tasks_frozen,
  	if (!cpu_present(cpu))
  		return -EINVAL;
  
@@ -192,7 +191,7 @@ index 16caaf3..c05fab8 100644
  
  	cpuhp_tasks_frozen = tasks_frozen;
  
-@@ -1061,6 +1177,8 @@ static int __ref _cpu_down(unsigned int cpu, int tasks_frozen,
+@@ -1062,6 +1178,8 @@ static int __ref _cpu_down(unsigned int cpu, int tasks_frozen,
  
  	hasdied = prev_state != st->state && st->state == CPUHP_OFFLINE;
  out:
@@ -202,5 +201,5 @@ index 16caaf3..c05fab8 100644
  	/* This post dead nonsense must die */
  	if (!ret && hasdied)
 -- 
-2.7.4
+2.28.0
 

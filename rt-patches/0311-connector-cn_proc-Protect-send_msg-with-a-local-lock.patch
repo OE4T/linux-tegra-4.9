@@ -1,9 +1,8 @@
-From 271191786f7ea987c83abb40ea2cdb47a781f017 Mon Sep 17 00:00:00 2001
+From 17503c9a546fc181741be48c4b80dd745aad1197 Mon Sep 17 00:00:00 2001
 From: Mike Galbraith <umgwanakikbuti@gmail.com>
 Date: Sun, 16 Oct 2016 05:11:54 +0200
-Subject: [PATCH 311/371] connector/cn_proc: Protect send_msg() with a local
+Subject: [PATCH 311/367] connector/cn_proc: Protect send_msg() with a local
  lock on RT
-X-NVConfidentiality: public
 
 |BUG: sleeping function called from invalid context at kernel/locking/rtmutex.c:931
 |in_atomic(): 1, irqs_disabled(): 0, pid: 31807, name: sleep
@@ -36,7 +35,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  1 file changed, 4 insertions(+), 2 deletions(-)
 
 diff --git a/drivers/connector/cn_proc.c b/drivers/connector/cn_proc.c
-index a782ce8..19d2659 100644
+index a782ce87715c..19d265948526 100644
 --- a/drivers/connector/cn_proc.c
 +++ b/drivers/connector/cn_proc.c
 @@ -32,6 +32,7 @@
@@ -70,5 +69,5 @@ index a782ce8..19d2659 100644
  
  void proc_fork_connector(struct task_struct *task)
 -- 
-2.7.4
+2.28.0
 

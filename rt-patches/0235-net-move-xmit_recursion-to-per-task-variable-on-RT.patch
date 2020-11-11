@@ -1,8 +1,7 @@
-From 67d85f211fc3a1dd3fbf87eac682b3456c7320e0 Mon Sep 17 00:00:00 2001
+From 4d1c375ee873aff0c6c21210d514f4b993b7ac22 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Wed, 13 Jan 2016 15:55:02 +0100
-Subject: [PATCH 235/371] net: move xmit_recursion to per-task variable on -RT
-X-NVConfidentiality: public
+Subject: [PATCH 235/367] net: move xmit_recursion to per-task variable on -RT
 
 A softirq on -RT can be preempted. That means one task is in
 __dev_queue_xmit(), gets preempted and another task may enter
@@ -17,17 +16,17 @@ the recursion properly on -RT.
 Cc: stable-rt@vger.kernel.org
 Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 ---
- include/linux/netdevice.h | 41 ++++++++++++++++++++++++++++++++++++++++-
+ include/linux/netdevice.h | 41 ++++++++++++++++++++++++++++++++++++++-
  include/linux/sched.h     |  3 +++
  net/core/dev.c            |  9 +++++----
  net/core/filter.c         |  6 +++---
  4 files changed, 51 insertions(+), 8 deletions(-)
 
 diff --git a/include/linux/netdevice.h b/include/linux/netdevice.h
-index 3b0fa22..8325b61 100644
+index fc4c850d033e..c08d3be754fe 100644
 --- a/include/linux/netdevice.h
 +++ b/include/linux/netdevice.h
-@@ -2474,14 +2474,53 @@ void netdev_freemem(struct net_device *dev);
+@@ -2479,14 +2479,53 @@ void netdev_freemem(struct net_device *dev);
  void synchronize_net(void);
  int init_dummy_netdev(struct net_device *dev);
  
@@ -83,21 +82,21 @@ index 3b0fa22..8325b61 100644
  struct net_device *__dev_get_by_index(struct net *net, int ifindex);
  struct net_device *dev_get_by_index_rcu(struct net *net, int ifindex);
 diff --git a/include/linux/sched.h b/include/linux/sched.h
-index 921b6f4..2a7b24a 100644
+index 1c2ef7bdeee7..6cb0d66a38bd 100644
 --- a/include/linux/sched.h
 +++ b/include/linux/sched.h
-@@ -2176,6 +2176,9 @@ struct task_struct {
+@@ -2175,6 +2175,9 @@ struct task_struct {
+ #endif
  #ifdef CONFIG_DEBUG_ATOMIC_SLEEP
  	unsigned long	task_state_change;
- #endif
++#endif
 +#ifdef CONFIG_PREEMPT_RT_FULL
 +	int xmit_recursion;
-+#endif
+ #endif
  	int pagefault_disabled;
  #ifdef CONFIG_MMU
- 	struct task_struct *oom_reaper_list;
 diff --git a/net/core/dev.c b/net/core/dev.c
-index bee5ef1..5ea52ee 100644
+index 9ab0e25f3bf5..fb67da567cc8 100644
 --- a/net/core/dev.c
 +++ b/net/core/dev.c
 @@ -3225,8 +3225,10 @@ static void skb_update_prio(struct sk_buff *skb)
@@ -134,7 +133,7 @@ index bee5ef1..5ea52ee 100644
  					HARD_TX_UNLOCK(dev, txq);
  					goto out;
 diff --git a/net/core/filter.c b/net/core/filter.c
-index c385c55..feb96c2 100644
+index c385c55af653..feb96c2a69ce 100644
 --- a/net/core/filter.c
 +++ b/net/core/filter.c
 @@ -1657,7 +1657,7 @@ static inline int __bpf_tx_skb(struct net_device *dev, struct sk_buff *skb)
@@ -159,5 +158,5 @@ index c385c55..feb96c2 100644
  	return ret;
  }
 -- 
-2.7.4
+2.28.0
 

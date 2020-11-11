@@ -1,8 +1,7 @@
-From de2ab3128dd71866889303731e638a95d957fff0 Mon Sep 17 00:00:00 2001
+From 4e152560a059697d77eb1f3e9a8d380434cf82e8 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Fri, 21 Feb 2014 17:24:04 +0100
-Subject: [PATCH 272/371] crypto: Reduce preempt disabled regions, more algos
-X-NVConfidentiality: public
+Subject: [PATCH 272/367] crypto: Reduce preempt disabled regions, more algos
 
 Don Estabrook reported
 | kernel: WARNING: CPU: 2 PID: 858 at kernel/sched/core.c:2428 migrate_disable+0xed/0x100()
@@ -35,6 +34,7 @@ with preemption enabled. This might hurt the performance because we now
 enable/disable the FPU state more often but we gain lower latency and
 the bug is gone.
 
+
 Reported-by: Don Estabrook <don.estabrook@gmail.com>
 Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 ---
@@ -43,7 +43,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  2 files changed, 24 insertions(+), 28 deletions(-)
 
 diff --git a/arch/x86/crypto/cast5_avx_glue.c b/arch/x86/crypto/cast5_avx_glue.c
-index f8fe11d..1e546e3 100644
+index f8fe11d24cde..1e546e38ded9 100644
 --- a/arch/x86/crypto/cast5_avx_glue.c
 +++ b/arch/x86/crypto/cast5_avx_glue.c
 @@ -59,7 +59,7 @@ static inline void cast5_fpu_end(bool fpu_enabled)
@@ -126,7 +126,7 @@ index f8fe11d..1e546e3 100644
  		ctr_crypt_final(desc, &walk);
  		err = blkcipher_walk_done(desc, &walk, 0);
 diff --git a/arch/x86/crypto/glue_helper.c b/arch/x86/crypto/glue_helper.c
-index 6a85598..3a506ce 100644
+index 6a85598931b5..3a506ce7ed93 100644
 --- a/arch/x86/crypto/glue_helper.c
 +++ b/arch/x86/crypto/glue_helper.c
 @@ -39,7 +39,7 @@ static int __glue_ecb_crypt_128bit(const struct common_glue_ctx *gctx,
@@ -245,5 +245,5 @@ index 6a85598..3a506ce 100644
  }
  EXPORT_SYMBOL_GPL(glue_xts_crypt_128bit);
 -- 
-2.7.4
+2.28.0
 

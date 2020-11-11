@@ -1,9 +1,8 @@
-From 42e1ff2a20b6e268fbafbd66cd03c21c09afe092 Mon Sep 17 00:00:00 2001
+From c23914fdc0e2156762f3f6079fddddfac46eb9bc Mon Sep 17 00:00:00 2001
 From: Paul Gortmaker <paul.gortmaker@windriver.com>
 Date: Sat, 14 Feb 2015 11:01:16 -0500
-Subject: [PATCH 270/371] sas-ata/isci: dont't disable interrupts in qc_issue
+Subject: [PATCH 270/367] sas-ata/isci: dont't disable interrupts in qc_issue
  handler
-X-NVConfidentiality: public
 
 On 3.14-rt we see the following trace on Canoe Pass for
 SCSI_ISCI "Intel(R) C600 Series Chipset SAS Controller"
@@ -52,6 +51,7 @@ the task_state_lock -- which is clearly not a candidate for raw lock
 conversion.  As can be seen by the comment nearby, we really should
 be running the qc_issue code with interrupts enabled anyway.
 
+
 Signed-off-by: Paul Gortmaker <paul.gortmaker@windriver.com>
 Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 ---
@@ -59,7 +59,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  1 file changed, 2 insertions(+), 2 deletions(-)
 
 diff --git a/drivers/scsi/libsas/sas_ata.c b/drivers/scsi/libsas/sas_ata.c
-index 87f5e694..23c0a50 100644
+index 87f5e694dbed..23c0a50fb6aa 100644
 --- a/drivers/scsi/libsas/sas_ata.c
 +++ b/drivers/scsi/libsas/sas_ata.c
 @@ -190,7 +190,7 @@ static unsigned int sas_ata_qc_issue(struct ata_queued_cmd *qc)
@@ -81,5 +81,5 @@ index 87f5e694..23c0a50 100644
  }
  
 -- 
-2.7.4
+2.28.0
 

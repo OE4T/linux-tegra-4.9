@@ -1,9 +1,8 @@
-From 7da37fa9581d1795ef1d02d4d86b6e73212ef981 Mon Sep 17 00:00:00 2001
+From e4d2d3cf67cdbfe7b1f5a4c31a9cf15fc2cdcdca Mon Sep 17 00:00:00 2001
 From: Boqun Feng <boqun.feng@gmail.com>
 Date: Wed, 6 Jun 2018 15:31:30 +0200
-Subject: [PATCH 349/371] rtmutex: Make rt_mutex_futex_unlock() safe for
+Subject: [PATCH 349/367] rtmutex: Make rt_mutex_futex_unlock() safe for
  irq-off callsites
-X-NVConfidentiality: public
 
 [ Upstream commit 6b0ef92fee2a3189eba6d6b827b247cb4f6da7e9 ]
 
@@ -105,7 +104,7 @@ Signed-off-by: Julia Cartwright <julia@ni.com>
  1 file changed, 3 insertions(+), 2 deletions(-)
 
 diff --git a/kernel/locking/rtmutex.c b/kernel/locking/rtmutex.c
-index 7e3b7a9..af10410 100644
+index 7e3b7a99d004..af104105ff07 100644
 --- a/kernel/locking/rtmutex.c
 +++ b/kernel/locking/rtmutex.c
 @@ -2213,11 +2213,12 @@ void __sched rt_mutex_futex_unlock(struct rt_mutex *lock)
@@ -124,5 +123,5 @@ index 7e3b7a9..af10410 100644
  	if (postunlock)
  		rt_mutex_postunlock(&wake_q, &wake_sleeper_q);
 -- 
-2.7.4
+2.28.0
 

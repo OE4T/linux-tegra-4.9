@@ -1,11 +1,10 @@
-From 321af88329075cf27d06e21bdc57706ca4972e39 Mon Sep 17 00:00:00 2001
+From 4cd8a5d65729c6c2432a5cc3635abcb005d6eef6 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Thu, 22 Jun 2017 17:53:34 +0200
-Subject: [PATCH 177/371] kernel/locking: use an exclusive wait_q for sleepers
+Subject: [PATCH 177/367] kernel/locking: use an exclusive wait_q for sleepers
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
-X-NVConfidentiality: public
 
 If a task is queued as a sleeper for a wakeup and never goes to
 schedule() (because it just obtained the lock) then it will receive a
@@ -44,7 +43,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  4 files changed, 33 insertions(+), 7 deletions(-)
 
 diff --git a/include/linux/sched.h b/include/linux/sched.h
-index d1e1f73..9a41087 100644
+index e92163fb8ed6..15c2d05c6ef6 100644
 --- a/include/linux/sched.h
 +++ b/include/linux/sched.h
 @@ -1047,8 +1047,20 @@ struct wake_q_head {
@@ -79,7 +78,7 @@ index d1e1f73..9a41087 100644
  #ifdef CONFIG_RT_MUTEXES
  	/* PI waiters blocked on a rt_mutex held by this task */
 diff --git a/kernel/fork.c b/kernel/fork.c
-index 4c15731..d4a1dfb 100644
+index dcc4ab1aff38..f778e9b9c44c 100644
 --- a/kernel/fork.c
 +++ b/kernel/fork.c
 @@ -572,6 +572,7 @@ static struct task_struct *dup_task_struct(struct task_struct *orig, int node)
@@ -91,7 +90,7 @@ index 4c15731..d4a1dfb 100644
  	account_kernel_stack(tsk, 1);
  
 diff --git a/kernel/locking/rtmutex.c b/kernel/locking/rtmutex.c
-index 3fca489..f909d47 100644
+index 3fca4892ec51..f909d47c43d1 100644
 --- a/kernel/locking/rtmutex.c
 +++ b/kernel/locking/rtmutex.c
 @@ -1463,7 +1463,7 @@ static void mark_wakeup_next_waiter(struct wake_q_head *wake_q,
@@ -104,7 +103,7 @@ index 3fca489..f909d47 100644
  		wake_q_add(wake_q, waiter->task);
  	raw_spin_unlock(&current->pi_lock);
 diff --git a/kernel/sched/core.c b/kernel/sched/core.c
-index a5b124d..32dc9a0 100644
+index a5b124d936e0..32dc9a003bb7 100644
 --- a/kernel/sched/core.c
 +++ b/kernel/sched/core.c
 @@ -445,9 +445,15 @@ static bool set_nr_if_polling(struct task_struct *p)
@@ -146,5 +145,5 @@ index a5b124d..32dc9a0 100644
  		/*
  		 * wake_up_process() implies a wmb() to pair with the queueing
 -- 
-2.7.4
+2.28.0
 

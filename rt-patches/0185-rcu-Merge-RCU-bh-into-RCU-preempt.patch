@@ -1,8 +1,7 @@
-From 2305c9a1363c4dcf5bf4bca50a8da63adee8383f Mon Sep 17 00:00:00 2001
+From bb55f3723ae8704c5b98ad5534786ab48d12a527 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Wed, 5 Oct 2011 11:59:38 -0700
-Subject: [PATCH 185/371] rcu: Merge RCU-bh into RCU-preempt
-X-NVConfidentiality: public
+Subject: [PATCH 185/367] rcu: Merge RCU-bh into RCU-preempt
 
 The Linux kernel has long RCU-bh read-side critical sections that
 intolerably increase scheduling latency under mainline's RCU-bh rules,
@@ -34,7 +33,7 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  6 files changed, 76 insertions(+), 3 deletions(-)
 
 diff --git a/include/linux/rcupdate.h b/include/linux/rcupdate.h
-index 45a9732..cd0f058 100644
+index 45a97325ca2f..cd0f05890310 100644
 --- a/include/linux/rcupdate.h
 +++ b/include/linux/rcupdate.h
 @@ -179,6 +179,9 @@ void call_rcu(struct rcu_head *head,
@@ -113,7 +112,7 @@ index 45a9732..cd0f058 100644
  }
  
 diff --git a/include/linux/rcutree.h b/include/linux/rcutree.h
-index 63a4e4c..08ab12d 100644
+index 63a4e4cf40a5..08ab12df2863 100644
 --- a/include/linux/rcutree.h
 +++ b/include/linux/rcutree.h
 @@ -44,7 +44,11 @@ static inline void rcu_virt_note_context_switch(int cpu)
@@ -176,7 +175,7 @@ index 63a4e4c..08ab12d 100644
  
  /* RCUtree hotplug events */
 diff --git a/kernel/rcu/rcutorture.c b/kernel/rcu/rcutorture.c
-index 5393bbc..91a105f 100644
+index 5393bbcf3c1a..91a105f5f524 100644
 --- a/kernel/rcu/rcutorture.c
 +++ b/kernel/rcu/rcutorture.c
 @@ -404,6 +404,7 @@ static struct rcu_torture_ops rcu_ops = {
@@ -201,7 +200,7 @@ index 5393bbc..91a105f 100644
   * Don't even think about trying any of these in real life!!!
   * The names includes "busted", and they really means it!
 diff --git a/kernel/rcu/tree.c b/kernel/rcu/tree.c
-index d0b113d..f698e55 100644
+index d0b113de3316..f698e5589de3 100644
 --- a/kernel/rcu/tree.c
 +++ b/kernel/rcu/tree.c
 @@ -260,6 +260,7 @@ void rcu_sched_qs(void)
@@ -343,7 +342,7 @@ index d0b113d..f698e55 100644
  	if (dump_tree)
  		rcu_dump_rcu_node_tree(&rcu_sched_state);
 diff --git a/kernel/rcu/tree.h b/kernel/rcu/tree.h
-index e99a523..e803255 100644
+index e99a5234d9ed..e8032555649e 100644
 --- a/kernel/rcu/tree.h
 +++ b/kernel/rcu/tree.h
 @@ -588,7 +588,9 @@ extern struct list_head rcu_struct_flavors;
@@ -357,7 +356,7 @@ index e99a523..e803255 100644
  #ifdef CONFIG_PREEMPT_RCU
  extern struct rcu_state rcu_preempt_state;
 diff --git a/kernel/rcu/update.c b/kernel/rcu/update.c
-index 019b470..949714f 100644
+index 019b4708c9fa..949714f485ee 100644
 --- a/kernel/rcu/update.c
 +++ b/kernel/rcu/update.c
 @@ -296,6 +296,7 @@ int rcu_read_lock_held(void)
@@ -377,5 +376,5 @@ index 019b470..949714f 100644
  #endif /* #ifdef CONFIG_DEBUG_LOCK_ALLOC */
  
 -- 
-2.7.4
+2.28.0
 

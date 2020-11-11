@@ -1,8 +1,7 @@
-From 4048d0ea9c07da88e55338652ac018fc44b43276 Mon Sep 17 00:00:00 2001
+From 35399c2d7167bac71bb1d7c31d7cbe51e66d988c Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Tue, 31 May 2011 16:59:16 +0200
-Subject: [PATCH 129/371] sched: Move task_struct cleanup to RCU
-X-NVConfidentiality: public
+Subject: [PATCH 129/367] sched: Move task_struct cleanup to RCU
 
 __put_task_struct() does quite some expensive work. We don't want to
 burden random tasks with that.
@@ -14,7 +13,7 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  2 files changed, 27 insertions(+), 1 deletion(-)
 
 diff --git a/include/linux/sched.h b/include/linux/sched.h
-index ccc0221..d8e36d7 100644
+index 598fee87ef05..c2517c641a31 100644
 --- a/include/linux/sched.h
 +++ b/include/linux/sched.h
 @@ -2143,6 +2143,9 @@ struct task_struct {
@@ -52,7 +51,7 @@ index ccc0221..d8e36d7 100644
  struct task_struct *task_rcu_dereference(struct task_struct **ptask);
  struct task_struct *try_get_task_struct(struct task_struct **ptask);
 diff --git a/kernel/fork.c b/kernel/fork.c
-index 31db305..86296ac 100644
+index 31db30506ee5..86296ac62ef5 100644
 --- a/kernel/fork.c
 +++ b/kernel/fork.c
 @@ -386,7 +386,9 @@ static inline void put_signal_struct(struct signal_struct *sig)
@@ -86,5 +85,5 @@ index 31db305..86296ac 100644
  void __init __weak arch_task_cache_init(void) { }
  
 -- 
-2.7.4
+2.28.0
 

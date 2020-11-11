@@ -1,9 +1,8 @@
-From bdc8c686d535565eb4e06820bb506a391e0897c5 Mon Sep 17 00:00:00 2001
+From fd2d6f02b2b8e288402c2764f4540e55166b210a Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Fri, 2 Sep 2011 14:41:29 +0200
-Subject: [PATCH 069/371] printk: Add "force_early_printk" boot param to help
+Subject: [PATCH 069/367] printk: Add "force_early_printk" boot param to help
  with debugging
-X-NVConfidentiality: public
 
 Gives me an option to screw printk and actually see what the machine
 says.
@@ -17,7 +16,7 @@ Link: http://lkml.kernel.org/n/tip-ykb97nsfmobq44xketrxs977@git.kernel.org
  1 file changed, 7 insertions(+)
 
 diff --git a/kernel/printk/printk.c b/kernel/printk/printk.c
-index 72b79aa..01175e7 100644
+index 89002f01548e..08668591d78f 100644
 --- a/kernel/printk/printk.c
 +++ b/kernel/printk/printk.c
 @@ -431,6 +431,13 @@ asmlinkage void early_printk(const char *fmt, ...)
@@ -35,5 +34,5 @@ index 72b79aa..01175e7 100644
  {
  	printk_killswitch = true;
 -- 
-2.7.4
+2.28.0
 

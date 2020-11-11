@@ -1,8 +1,7 @@
-From b1aa601831110113397c81637540a2596f23c6db Mon Sep 17 00:00:00 2001
+From 6486852bd1d154e1c37af601e7972367abebb6c2 Mon Sep 17 00:00:00 2001
 From: Mike Galbraith <efault@gmx.de>
 Date: Fri, 3 Jul 2009 08:44:12 -0500
-Subject: [PATCH 202/371] fs: ntfs: disable interrupt only on !RT
-X-NVConfidentiality: public
+Subject: [PATCH 202/367] fs: ntfs: disable interrupt only on !RT
 
 On Sat, 2007-10-27 at 11:44 +0200, Ingo Molnar wrote:
 > * Nick Piggin <nickpiggin@yahoo.com.au> wrote:
@@ -41,7 +40,7 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  1 file changed, 4 insertions(+), 4 deletions(-)
 
 diff --git a/fs/ntfs/aops.c b/fs/ntfs/aops.c
-index 8bb79f5..e89da4f 100644
+index 8bb79f5fda59..e89da4fb14c2 100644
 --- a/fs/ntfs/aops.c
 +++ b/fs/ntfs/aops.c
 @@ -92,13 +92,13 @@ static void ntfs_end_buffer_async_read(struct buffer_head *bh, int uptodate)
@@ -77,5 +76,5 @@ index 8bb79f5..e89da4f 100644
  		if (likely(page_uptodate && !PageError(page)))
  			SetPageUptodate(page);
 -- 
-2.7.4
+2.28.0
 

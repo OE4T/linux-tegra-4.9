@@ -1,9 +1,8 @@
-From 8ec8c85cbfd340e0904db307adb0ca469164e61e Mon Sep 17 00:00:00 2001
+From 2bb650f536a9089e84a9da86f860b975485dd6b1 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Tue, 13 Mar 2018 13:49:16 +0100
-Subject: [PATCH 360/371] block: blk-mq: move blk_queue_usage_counter_release()
+Subject: [PATCH 360/367] block: blk-mq: move blk_queue_usage_counter_release()
  into process context
-X-NVConfidentiality: public
 
 | BUG: sleeping function called from invalid context at kernel/locking/rtmutex.c:914
 | in_atomic(): 1, irqs_disabled(): 0, pid: 255, name: kworker/u257:6
@@ -55,7 +54,7 @@ Signed-off-by: Julia Cartwright <julia@ni.com>
  2 files changed, 15 insertions(+), 1 deletion(-)
 
 diff --git a/block/blk-core.c b/block/blk-core.c
-index cade8ff..36e395c 100644
+index cade8ffb3143..36e395c93f52 100644
 --- a/block/blk-core.c
 +++ b/block/blk-core.c
 @@ -677,12 +677,21 @@ void blk_queue_exit(struct request_queue *q)
@@ -99,7 +98,7 @@ index cade8ff..36e395c 100644
  			sizeof(struct request), 0, SLAB_PANIC, NULL);
  
 diff --git a/include/linux/blkdev.h b/include/linux/blkdev.h
-index 7b18f20..30cf886 100644
+index 1d19ea750830..5e6b0dc6b6f4 100644
 --- a/include/linux/blkdev.h
 +++ b/include/linux/blkdev.h
 @@ -24,6 +24,7 @@
@@ -110,7 +109,7 @@ index 7b18f20..30cf886 100644
  
  struct module;
  struct scsi_ioctl_command;
-@@ -472,6 +473,7 @@ struct request_queue {
+@@ -477,6 +478,7 @@ struct request_queue {
  #endif
  	struct rcu_head		rcu_head;
  	wait_queue_head_t	mq_freeze_wq;
@@ -119,5 +118,5 @@ index 7b18f20..30cf886 100644
  	struct list_head	all_q_node;
  
 -- 
-2.7.4
+2.28.0
 

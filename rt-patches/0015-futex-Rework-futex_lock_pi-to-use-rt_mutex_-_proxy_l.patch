@@ -1,9 +1,8 @@
-From 28b463d2246d8ea7e6405f432dfdf8bda78746a6 Mon Sep 17 00:00:00 2001
+From f67efeff105e4129c9f99810f3fa9af31620b007 Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Wed, 22 Mar 2017 11:35:58 +0100
-Subject: [PATCH 015/371] futex: Rework futex_lock_pi() to use
+Subject: [PATCH 015/367] futex: Rework futex_lock_pi() to use
  rt_mutex_*_proxy_lock()
-X-NVConfidentiality: public
 
 Upstream commit cfafcd117da0216520568c195cb2f6cd1980c4bb
 
@@ -40,6 +39,7 @@ futex_lock_pi()			futex_unlock_pi()
 
   lock hb->lock
 
+
 After:
 
 futex_lock_pi()			futex_unlock_pi()
@@ -64,6 +64,7 @@ futex_lock_pi()			futex_unlock_pi()
 
   unlock hb->lock
 
+
 It does however solve the earlier starvation/live-lock scenario which got
 introduced with the -EAGAIN since unlike the before scenario; where the
 -EAGAIN happens while futex_unlock_pi() doesn't hold any locks; in the
@@ -83,13 +84,13 @@ Link: http://lkml.kernel.org/r/20170322104152.062785528@infradead.org
 Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
 Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 ---
- kernel/futex.c                  | 77 +++++++++++++++++++++++++++++------------
- kernel/locking/rtmutex.c        | 26 ++++----------
+ kernel/futex.c                  | 77 +++++++++++++++++++++++----------
+ kernel/locking/rtmutex.c        | 26 +++--------
  kernel/locking/rtmutex_common.h |  1 -
  3 files changed, 62 insertions(+), 42 deletions(-)
 
 diff --git a/kernel/futex.c b/kernel/futex.c
-index a1934f8..2e00874 100644
+index a1934f8f4b52..2e008748a44f 100644
 --- a/kernel/futex.c
 +++ b/kernel/futex.c
 @@ -2148,20 +2148,7 @@ queue_unlock(struct futex_hash_bucket *hb)
@@ -147,7 +148,7 @@ index a1934f8..2e00874 100644
  	struct futex_hash_bucket *hb;
  	struct futex_q q = futex_q_init;
  	int res, ret;
-@@ -2688,25 +2694,52 @@ static int futex_lock_pi(u32 __user *uaddr, unsigned int flags,
+@@ -2688,24 +2694,51 @@ static int futex_lock_pi(u32 __user *uaddr, unsigned int flags,
  		}
  	}
  
@@ -194,7 +195,7 @@ index a1934f8..2e00874 100644
 +	ret = rt_mutex_wait_proxy_lock(&q.pi_state->pi_mutex, to, &rt_waiter);
 +
  	spin_lock(q.lock_ptr);
- 	/*
++	/*
 +	 * If we failed to acquire the lock (signal/timeout), we must
 +	 * first acquire the hb->lock before removing the lock from the
 +	 * rt_mutex waitqueue, such that we can keep the hb and rt_mutex
@@ -204,18 +205,18 @@ index a1934f8..2e00874 100644
 +		ret = 0;
 +
 +no_block:
-+	/*
+ 	/*
  	 * Fixup the pi_state owner and possibly acquire the lock if we
  	 * haven't already.
- 	 */
 diff --git a/kernel/locking/rtmutex.c b/kernel/locking/rtmutex.c
-index e1896ac..ef5cdcd 100644
+index e1896ac74c37..ef5cdcd6d9ec 100644
 --- a/kernel/locking/rtmutex.c
 +++ b/kernel/locking/rtmutex.c
-@@ -1516,19 +1516,6 @@ int __sched rt_mutex_lock_interruptible(struct rt_mutex *lock)
+@@ -1515,19 +1515,6 @@ int __sched rt_mutex_lock_interruptible(struct rt_mutex *lock)
+ }
  EXPORT_SYMBOL_GPL(rt_mutex_lock_interruptible);
  
- /*
+-/*
 - * Futex variant with full deadlock detection.
 - * Futex variants must not use the fast-path, see __rt_mutex_futex_unlock().
 - */
@@ -228,10 +229,9 @@ index e1896ac..ef5cdcd 100644
 -				 timeout, RT_MUTEX_FULL_CHAINWALK);
 -}
 -
--/*
+ /*
   * Futex variant, must not use fastpath.
   */
- int __sched rt_mutex_futex_trylock(struct rt_mutex *lock)
 @@ -1797,12 +1784,6 @@ int rt_mutex_wait_proxy_lock(struct rt_mutex *lock,
  	/* sleep on the mutex */
  	ret = __rt_mutex_slowlock(lock, TASK_INTERRUPTIBLE, to, waiter);
@@ -260,7 +260,7 @@ index e1896ac..ef5cdcd 100644
  
  	return cleanup;
 diff --git a/kernel/locking/rtmutex_common.h b/kernel/locking/rtmutex_common.h
-index 8e81b17..b620aaf 100644
+index 8e81b17c0ee5..b620aafa06e1 100644
 --- a/kernel/locking/rtmutex_common.h
 +++ b/kernel/locking/rtmutex_common.h
 @@ -114,7 +114,6 @@ extern int rt_mutex_wait_proxy_lock(struct rt_mutex *lock,
@@ -272,5 +272,5 @@ index 8e81b17..b620aaf 100644
  
  extern void rt_mutex_futex_unlock(struct rt_mutex *lock);
 -- 
-2.7.4
+2.28.0
 

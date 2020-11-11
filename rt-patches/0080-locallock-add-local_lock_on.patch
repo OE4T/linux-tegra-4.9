@@ -1,8 +1,7 @@
-From fb7c6069432e7f04cd9124ab5ab9130d6d17a5dc Mon Sep 17 00:00:00 2001
+From dfdd313d3d0fd0907e358d1e303de6073d6346c7 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Fri, 27 May 2016 15:11:51 +0200
-Subject: [PATCH 080/371] locallock: add local_lock_on()
-X-NVConfidentiality: public
+Subject: [PATCH 080/367] locallock: add local_lock_on()
 
 Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 ---
@@ -10,7 +9,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  1 file changed, 6 insertions(+)
 
 diff --git a/include/linux/locallock.h b/include/linux/locallock.h
-index 218e5a4..96f22c5 100644
+index 218e5a4db343..96f22c568998 100644
 --- a/include/linux/locallock.h
 +++ b/include/linux/locallock.h
 @@ -60,6 +60,9 @@ static inline void __local_lock(struct local_irq_lock *lv)
@@ -34,5 +33,5 @@ index 218e5a4..96f22c5 100644
  {
  	spin_lock_irqsave(&lv->lock, lv->flags);
 -- 
-2.7.4
+2.28.0
 

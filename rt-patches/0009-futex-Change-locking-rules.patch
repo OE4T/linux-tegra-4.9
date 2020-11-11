@@ -1,8 +1,7 @@
-From d82becf9236f600212b5fa07464af669fe4ab417 Mon Sep 17 00:00:00 2001
+From a8acff5c1395c9687c6a4b670c68b59800fde70e Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Wed, 22 Mar 2017 11:35:52 +0100
-Subject: [PATCH 009/371] futex: Change locking rules
-X-NVConfidentiality: public
+Subject: [PATCH 009/367] futex: Change locking rules
 
 Upstream commit 734009e96d1983ad739e5b656e03430b3660c913
 
@@ -34,11 +33,11 @@ Link: http://lkml.kernel.org/r/20170322104151.751993333@infradead.org
 Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
 Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 ---
- kernel/futex.c | 165 +++++++++++++++++++++++++++++++++++++++++++++------------
+ kernel/futex.c | 165 +++++++++++++++++++++++++++++++++++++++----------
  1 file changed, 132 insertions(+), 33 deletions(-)
 
 diff --git a/kernel/futex.c b/kernel/futex.c
-index c74e9b3..c393c4a 100644
+index c74e9b344794..c393c4ac80a7 100644
 --- a/kernel/futex.c
 +++ b/kernel/futex.c
 @@ -972,6 +972,39 @@ void exit_pi_state_list(struct task_struct *curr)
@@ -95,7 +94,7 @@ index c74e9b3..c393c4a 100644
  
  	/*
  	 * Userspace might have messed up non-PI and PI futexes [3]
-@@ -990,9 +1025,34 @@ static int attach_to_pi_state(u32 uval, struct futex_pi_state *pi_state,
+@@ -990,8 +1025,33 @@ static int attach_to_pi_state(u32 uval, struct futex_pi_state *pi_state,
  	if (unlikely(!pi_state))
  		return -EINVAL;
  
@@ -108,7 +107,7 @@ index c74e9b3..c393c4a 100644
 +	 */
  	WARN_ON(!atomic_read(&pi_state->refcount));
  
- 	/*
++	/*
 +	 * Now that we have a pi_state, we can acquire wait_lock
 +	 * and do the state validation.
 +	 */
@@ -126,10 +125,9 @@ index c74e9b3..c393c4a 100644
 +	if (uval != uval2)
 +		goto out_eagain;
 +
-+	/*
+ 	/*
  	 * Handle the owner died case:
  	 */
- 	if (uval & FUTEX_OWNER_DIED) {
 @@ -1007,11 +1067,11 @@ static int attach_to_pi_state(u32 uval, struct futex_pi_state *pi_state,
  			 * is not 0. Inconsistent state. [5]
  			 */
@@ -373,5 +371,5 @@ index c74e9b3..c393c4a 100644
  
  static long futex_wait_restart(struct restart_block *restart);
 -- 
-2.7.4
+2.28.0
 

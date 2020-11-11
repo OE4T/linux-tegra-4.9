@@ -1,9 +1,8 @@
-From 9ac530cedc6a76fe5b274dc714bcb64598942fe1 Mon Sep 17 00:00:00 2001
+From 4de19647074ed609ca3d8d6bbcaaef1fa33109c0 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Fri, 18 Mar 2011 10:11:25 +0100
-Subject: [PATCH 094/371] fs: jbd/jbd2: Make state lock and journal head lock
+Subject: [PATCH 094/367] fs: jbd/jbd2: Make state lock and journal head lock
  rt safe
-X-NVConfidentiality: public
 
 bit_spin_locks break under RT.
 
@@ -19,7 +18,7 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  2 files changed, 32 insertions(+)
 
 diff --git a/include/linux/buffer_head.h b/include/linux/buffer_head.h
-index 87c4ed3..0744157 100644
+index 87c4ed37ee77..0744157a97ca 100644
 --- a/include/linux/buffer_head.h
 +++ b/include/linux/buffer_head.h
 @@ -77,6 +77,10 @@ struct buffer_head {
@@ -45,7 +44,7 @@ index 87c4ed3..0744157 100644
  }
  
 diff --git a/include/linux/jbd2.h b/include/linux/jbd2.h
-index d073470..9118fda 100644
+index 344eb873f6f5..757524c8103e 100644
 --- a/include/linux/jbd2.h
 +++ b/include/linux/jbd2.h
 @@ -347,32 +347,56 @@ static inline struct journal_head *bh2jh(struct buffer_head *bh)
@@ -106,5 +105,5 @@ index d073470..9118fda 100644
  
  #define J_ASSERT(assert)	BUG_ON(!(assert))
 -- 
-2.7.4
+2.28.0
 

@@ -1,8 +1,7 @@
-From 6f5cfe3f21fae254859992c9fb0b7162614ddc3c Mon Sep 17 00:00:00 2001
+From 7aa1f24dd1d40c53ba3610a3b00526cffa1ab4e2 Mon Sep 17 00:00:00 2001
 From: Steven Rostedt <rostedt@goodmis.org>
 Date: Thu, 5 Dec 2013 09:16:52 -0500
-Subject: [PATCH 280/371] cpu hotplug: Document why PREEMPT_RT uses a spinlock
-X-NVConfidentiality: public
+Subject: [PATCH 280/367] cpu hotplug: Document why PREEMPT_RT uses a spinlock
 
 The patch:
 
@@ -39,7 +38,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  1 file changed, 8 insertions(+)
 
 diff --git a/kernel/cpu.c b/kernel/cpu.c
-index 57c793b..bac49a7 100644
+index db9603831ead..9b9761f8309f 100644
 --- a/kernel/cpu.c
 +++ b/kernel/cpu.c
 @@ -268,6 +268,14 @@ struct hotplug_pcp {
@@ -58,5 +57,5 @@ index 57c793b..bac49a7 100644
  #else
  	struct mutex mutex;
 -- 
-2.7.4
+2.28.0
 

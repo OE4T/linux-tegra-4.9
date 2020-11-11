@@ -1,8 +1,7 @@
-From bea3e45460e177d4a728e1866a361b2c34cf8f43 Mon Sep 17 00:00:00 2001
+From ec333ef29f48553e94ada32cf2c52584727c3d24 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Thu, 15 Sep 2016 10:51:27 +0200
-Subject: [PATCH 163/371] fs/nfs: turn rmdir_sem into a semaphore
-X-NVConfidentiality: public
+Subject: [PATCH 163/367] fs/nfs: turn rmdir_sem into a semaphore
 
 The RW semaphore had a reader side which used the _non_owner version
 because it most likely took the reader lock in one thread and released it
@@ -22,10 +21,10 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  4 files changed, 43 insertions(+), 4 deletions(-)
 
 diff --git a/fs/nfs/dir.c b/fs/nfs/dir.c
-index 1e5321d..24c0a09 100644
+index c2665d920cf8..63c13acfa793 100644
 --- a/fs/nfs/dir.c
 +++ b/fs/nfs/dir.c
-@@ -1807,7 +1807,11 @@ int nfs_rmdir(struct inode *dir, struct dentry *dentry)
+@@ -1817,7 +1817,11 @@ int nfs_rmdir(struct inode *dir, struct dentry *dentry)
  
  	trace_nfs_rmdir_enter(dir, dentry);
  	if (d_really_is_positive(dentry)) {
@@ -37,7 +36,7 @@ index 1e5321d..24c0a09 100644
  		error = NFS_PROTO(dir)->rmdir(dir, &dentry->d_name);
  		/* Ensure the VFS deletes this inode */
  		switch (error) {
-@@ -1817,7 +1821,11 @@ int nfs_rmdir(struct inode *dir, struct dentry *dentry)
+@@ -1827,7 +1831,11 @@ int nfs_rmdir(struct inode *dir, struct dentry *dentry)
  		case -ENOENT:
  			nfs_dentry_handle_enoent(dentry);
  		}
@@ -50,7 +49,7 @@ index 1e5321d..24c0a09 100644
  		error = NFS_PROTO(dir)->rmdir(dir, &dentry->d_name);
  	trace_nfs_rmdir_exit(dir, dentry, error);
 diff --git a/fs/nfs/inode.c b/fs/nfs/inode.c
-index 09a1f52..fec89fe 100644
+index 09a1f52ebaef..fec89fe6953c 100644
 --- a/fs/nfs/inode.c
 +++ b/fs/nfs/inode.c
 @@ -1961,7 +1961,11 @@ static void init_once(void *foo)
@@ -66,7 +65,7 @@ index 09a1f52..fec89fe 100644
  }
  
 diff --git a/fs/nfs/unlink.c b/fs/nfs/unlink.c
-index 191aa57..0165a95 100644
+index 191aa577dd1f..0165a95823c2 100644
 --- a/fs/nfs/unlink.c
 +++ b/fs/nfs/unlink.c
 @@ -51,6 +51,29 @@ static void nfs_async_unlink_done(struct rpc_task *task, void *calldata)
@@ -131,7 +130,7 @@ index 191aa57..0165a95 100644
  		 * If we'd displaced old cached devname, free it.  At that
  		 * point dentry is definitely not a root, so we won't need
 diff --git a/include/linux/nfs_fs.h b/include/linux/nfs_fs.h
-index 810124b..d54ca43 100644
+index 810124b33327..d54ca43d571f 100644
 --- a/include/linux/nfs_fs.h
 +++ b/include/linux/nfs_fs.h
 @@ -165,7 +165,11 @@ struct nfs_inode {
@@ -147,5 +146,5 @@ index 810124b..d54ca43 100644
  #if IS_ENABLED(CONFIG_NFS_V4)
  	struct nfs4_cached_acl	*nfs4_acl;
 -- 
-2.7.4
+2.28.0
 

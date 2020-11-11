@@ -1,9 +1,8 @@
-From cdc7ca695157882641b9f77d00a592cb6fb3bcb2 Mon Sep 17 00:00:00 2001
+From b84d33ebd2e05ea51ae29801c4a293e98c2a40d4 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Thu, 23 Nov 2017 17:51:51 +0100
-Subject: [PATCH 332/371] Revert "fs: jbd2: pull your plug when waiting for
+Subject: [PATCH 332/367] Revert "fs: jbd2: pull your plug when waiting for
  space"
-X-NVConfidentiality: public
 
 This reverts commit "fs: jbd2: pull your plug when waiting for space".
 This was a duct-tape fix which shouldn't be needed since commit
@@ -17,7 +16,7 @@ Signed-off-by: Steven Rostedt (VMware) <rostedt@goodmis.org>
  1 file changed, 2 deletions(-)
 
 diff --git a/fs/jbd2/checkpoint.c b/fs/jbd2/checkpoint.c
-index b95c108..4d5a5a4 100644
+index b95c1084e499..4d5a5a4cc017 100644
 --- a/fs/jbd2/checkpoint.c
 +++ b/fs/jbd2/checkpoint.c
 @@ -116,8 +116,6 @@ void __jbd2_log_wait_for_space(journal_t *journal)
@@ -30,5 +29,5 @@ index b95c108..4d5a5a4 100644
  
  		/*
 -- 
-2.7.4
+2.28.0
 

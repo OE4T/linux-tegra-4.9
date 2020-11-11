@@ -1,8 +1,7 @@
-From 43a73d4f3627b6c060d35e50aa555c9daccb0207 Mon Sep 17 00:00:00 2001
+From 3397cb2dfa180f40a7b42c1786edf2aff4a97125 Mon Sep 17 00:00:00 2001
 From: Oleg Nesterov <oleg@redhat.com>
 Date: Tue, 14 Jul 2015 14:26:34 +0200
-Subject: [PATCH 090/371] signal/x86: Delay calling signals in atomic
-X-NVConfidentiality: public
+Subject: [PATCH 090/367] signal/x86: Delay calling signals in atomic
 
 On x86_64 we must disable preemption before we enable interrupts
 for stack faults, int3 and debugging, because the current task is using
@@ -26,18 +25,19 @@ code will send the signal when preemption is enabled.
 [ rostedt: Switched from #ifdef CONFIG_PREEMPT_RT_FULL to
   ARCH_RT_DELAYS_SIGNAL_SEND and added comments to the code. ]
 
+
 Signed-off-by: Oleg Nesterov <oleg@redhat.com>
 Signed-off-by: Steven Rostedt <rostedt@goodmis.org>
 Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
 ---
  arch/x86/entry/common.c       |  7 +++++++
- arch/x86/include/asm/signal.h | 13 +++++++++++++
+ arch/x86/include/asm/signal.h | 13 ++++++++++++
  include/linux/sched.h         |  4 ++++
- kernel/signal.c               | 37 +++++++++++++++++++++++++++++++++++--
+ kernel/signal.c               | 37 +++++++++++++++++++++++++++++++++--
  4 files changed, 59 insertions(+), 2 deletions(-)
 
 diff --git a/arch/x86/entry/common.c b/arch/x86/entry/common.c
-index 8841d01..0b8da1c 100644
+index 8841d016b4a4..0b8da1cd26ca 100644
 --- a/arch/x86/entry/common.c
 +++ b/arch/x86/entry/common.c
 @@ -150,6 +150,13 @@ static void exit_to_usermode_loop(struct pt_regs *regs, u32 cached_flags)
@@ -55,7 +55,7 @@ index 8841d01..0b8da1c 100644
  			uprobe_notify_resume(regs);
  
 diff --git a/arch/x86/include/asm/signal.h b/arch/x86/include/asm/signal.h
-index 8af22be..c370fba 100644
+index 8af22be0fe61..c370fba8c38b 100644
 --- a/arch/x86/include/asm/signal.h
 +++ b/arch/x86/include/asm/signal.h
 @@ -27,6 +27,19 @@ typedef struct {
@@ -79,7 +79,7 @@ index 8af22be..c370fba 100644
  typedef sigset_t compat_sigset_t;
  #endif
 diff --git a/include/linux/sched.h b/include/linux/sched.h
-index 3d1d4a4..9ee4508 100644
+index eabfc7e14509..8f1cd3aefb6e 100644
 --- a/include/linux/sched.h
 +++ b/include/linux/sched.h
 @@ -1875,6 +1875,10 @@ struct task_struct {
@@ -94,10 +94,10 @@ index 3d1d4a4..9ee4508 100644
  	unsigned long sas_ss_sp;
  	size_t sas_ss_size;
 diff --git a/kernel/signal.c b/kernel/signal.c
-index c0f663e..da8c424 100644
+index 5e7fe84152b3..853289530c39 100644
 --- a/kernel/signal.c
 +++ b/kernel/signal.c
-@@ -1268,8 +1268,8 @@ int do_send_sig_info(int sig, struct siginfo *info, struct task_struct *p,
+@@ -1277,8 +1277,8 @@ int do_send_sig_info(int sig, struct siginfo *info, struct task_struct *p,
   * We don't want to have recursive SIGSEGV's etc, for example,
   * that is why we also clear SIGNAL_UNKILLABLE.
   */
@@ -108,7 +108,7 @@ index c0f663e..da8c424 100644
  {
  	unsigned long int flags;
  	int ret, blocked, ignored;
-@@ -1294,6 +1294,39 @@ force_sig_info(int sig, struct siginfo *info, struct task_struct *t)
+@@ -1303,6 +1303,39 @@ force_sig_info(int sig, struct siginfo *info, struct task_struct *t)
  	return ret;
  }
  
@@ -149,5 +149,5 @@ index c0f663e..da8c424 100644
   * Nuke all other threads in the group.
   */
 -- 
-2.7.4
+2.28.0
 

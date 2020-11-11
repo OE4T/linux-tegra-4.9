@@ -1,31 +1,31 @@
-From 9bb85848f418989bf7915e42976a21b4ae7d48e7 Mon Sep 17 00:00:00 2001
+From f018457b12fa871345d2c01a1fba4b2ad7f34320 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Fri, 11 Jan 2013 11:23:51 +0100
-Subject: [PATCH 194/371] completion: Use simple wait queues
-X-NVConfidentiality: public
+Subject: [PATCH 194/367] completion: Use simple wait queues
 
 Completions have no long lasting callbacks and therefor do not need
 the complex waitqueue variant. Use simple waitqueues which reduces the
 contention on the waitqueue lock.
 
+Change-Id: I26fc122683a6f7ca84dde29d536974d9c89e71bd
 Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
 ---
- .../net/wireless/intersil/orinoco/orinoco_usb.c    |  2 +-
- drivers/usb/gadget/function/f_fs.c                 |  2 +-
- drivers/usb/gadget/legacy/inode.c                  |  4 +--
- include/linux/completion.h                         |  9 +++---
- include/linux/suspend.h                            |  6 ++++
- include/linux/swait.h                              |  1 +
- include/linux/uprobes.h                            |  1 +
- kernel/power/hibernate.c                           |  7 +++++
- kernel/power/suspend.c                             |  5 ++++
- kernel/sched/completion.c                          | 32 +++++++++++-----------
- kernel/sched/core.c                                | 10 +++++--
- kernel/sched/swait.c                               | 20 ++++++++++++++
- 12 files changed, 72 insertions(+), 27 deletions(-)
+ .../wireless/intersil/orinoco/orinoco_usb.c   |  2 +-
+ drivers/usb/gadget/function/f_fs.c            |  2 +-
+ drivers/usb/gadget/legacy/inode.c             |  4 +--
+ include/linux/completion.h                    |  9 +++---
+ include/linux/suspend.h                       |  6 ++++
+ include/linux/swait.h                         |  1 +
+ include/linux/uprobes.h                       |  1 +
+ kernel/power/hibernate.c                      |  7 ++++
+ kernel/power/suspend.c                        |  4 +++
+ kernel/sched/completion.c                     | 32 +++++++++----------
+ kernel/sched/core.c                           | 10 ++++--
+ kernel/sched/swait.c                          | 20 ++++++++++++
+ 12 files changed, 71 insertions(+), 27 deletions(-)
 
 diff --git a/drivers/net/wireless/intersil/orinoco/orinoco_usb.c b/drivers/net/wireless/intersil/orinoco/orinoco_usb.c
-index bca6935..d7a35ee 100644
+index 8244d8262951..c6ae029d819f 100644
 --- a/drivers/net/wireless/intersil/orinoco/orinoco_usb.c
 +++ b/drivers/net/wireless/intersil/orinoco/orinoco_usb.c
 @@ -697,7 +697,7 @@ static void ezusb_req_ctx_wait(struct ezusb_priv *upriv,
@@ -38,7 +38,7 @@ index bca6935..d7a35ee 100644
  		}
  		break;
 diff --git a/drivers/usb/gadget/function/f_fs.c b/drivers/usb/gadget/function/f_fs.c
-index 656f9fe..e23c886 100644
+index 656f9fe394aa..e23c886494c1 100644
 --- a/drivers/usb/gadget/function/f_fs.c
 +++ b/drivers/usb/gadget/function/f_fs.c
 @@ -1606,7 +1606,7 @@ static void ffs_data_put(struct ffs_data *ffs)
@@ -51,7 +51,7 @@ index 656f9fe..e23c886 100644
  		kfree(ffs);
  	}
 diff --git a/drivers/usb/gadget/legacy/inode.c b/drivers/usb/gadget/legacy/inode.c
-index b8534d3..8fcaf02 100644
+index b8534d3f8bb0..8fcaf02e21b0 100644
 --- a/drivers/usb/gadget/legacy/inode.c
 +++ b/drivers/usb/gadget/legacy/inode.c
 @@ -347,7 +347,7 @@ ep_io (struct ep_data *epdata, void *buf, unsigned len)
@@ -73,7 +73,7 @@ index b8534d3..8fcaf02 100644
  					epdata->status = -EINTR;
  			} else {
 diff --git a/include/linux/completion.h b/include/linux/completion.h
-index 5d5aaae..3bca159 100644
+index 5d5aaae3af43..3bca1590e29f 100644
 --- a/include/linux/completion.h
 +++ b/include/linux/completion.h
 @@ -7,8 +7,7 @@
@@ -110,7 +110,7 @@ index 5d5aaae..3bca159 100644
  
  /**
 diff --git a/include/linux/suspend.h b/include/linux/suspend.h
-index 98a4bcd..9c04639 100644
+index 98a4bcd28157..9c04639ea4b7 100644
 --- a/include/linux/suspend.h
 +++ b/include/linux/suspend.h
 @@ -193,6 +193,12 @@ struct platform_freeze_ops {
@@ -127,7 +127,7 @@ index 98a4bcd..9c04639 100644
  /**
   * suspend_set_ops - set platform dependent suspend operations
 diff --git a/include/linux/swait.h b/include/linux/swait.h
-index c1f9c62..83f004a 100644
+index c1f9c62a8a50..83f004a72320 100644
 --- a/include/linux/swait.h
 +++ b/include/linux/swait.h
 @@ -87,6 +87,7 @@ static inline int swait_active(struct swait_queue_head *q)
@@ -139,7 +139,7 @@ index c1f9c62..83f004a 100644
  extern void __prepare_to_swait(struct swait_queue_head *q, struct swait_queue *wait);
  extern void prepare_to_swait(struct swait_queue_head *q, struct swait_queue *wait, int state);
 diff --git a/include/linux/uprobes.h b/include/linux/uprobes.h
-index 4a29c75..0a294e9 100644
+index 4a29c75b146e..0a294e950df8 100644
 --- a/include/linux/uprobes.h
 +++ b/include/linux/uprobes.h
 @@ -27,6 +27,7 @@
@@ -151,7 +151,7 @@ index 4a29c75..0a294e9 100644
  struct vm_area_struct;
  struct mm_struct;
 diff --git a/kernel/power/hibernate.c b/kernel/power/hibernate.c
-index 8ea6362..fc8906a 100644
+index 8ea6362a2e8c..fc8906a42ae8 100644
 --- a/kernel/power/hibernate.c
 +++ b/kernel/power/hibernate.c
 @@ -692,6 +692,10 @@ static int load_image_and_restore(void)
@@ -183,19 +183,18 @@ index 8ea6362..fc8906a 100644
  }
  
 diff --git a/kernel/power/suspend.c b/kernel/power/suspend.c
-index 880c5a2..94f05cb 100644
+index 880c5a2d48b9..fe37a261a126 100644
 --- a/kernel/power/suspend.c
 +++ b/kernel/power/suspend.c
-@@ -560,6 +560,8 @@ static void pm_suspend_marker(char *annotation)
+@@ -559,6 +559,7 @@ static void pm_suspend_marker(char *annotation)
+ 		annotation, tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
  		tm.tm_hour, tm.tm_min, tm.tm_sec, ts.tv_nsec);
  }
- 
 +bool pm_in_action;
-+
+ 
  /**
   * pm_suspend - Externally visible function for suspending the system.
-  * @state: System sleep state to enter.
-@@ -575,6 +577,8 @@ int pm_suspend(suspend_state_t state)
+@@ -575,6 +576,8 @@ int pm_suspend(suspend_state_t state)
  		return -EINVAL;
  
  	pm_suspend_marker("entry");
@@ -204,7 +203,7 @@ index 880c5a2..94f05cb 100644
  	error = enter_state(state);
  	if (error) {
  		suspend_stats.fail++;
-@@ -583,6 +587,7 @@ int pm_suspend(suspend_state_t state)
+@@ -583,6 +586,7 @@ int pm_suspend(suspend_state_t state)
  		suspend_stats.success++;
  	}
  	pm_suspend_marker("exit");
@@ -213,7 +212,7 @@ index 880c5a2..94f05cb 100644
  }
  EXPORT_SYMBOL(pm_suspend);
 diff --git a/kernel/sched/completion.c b/kernel/sched/completion.c
-index 8d0f35d..b62cf64 100644
+index 8d0f35debf35..b62cf6400fe0 100644
 --- a/kernel/sched/completion.c
 +++ b/kernel/sched/completion.c
 @@ -30,10 +30,10 @@ void complete(struct completion *x)
@@ -307,7 +306,7 @@ index 8d0f35d..b62cf64 100644
  }
  EXPORT_SYMBOL(completion_done);
 diff --git a/kernel/sched/core.c b/kernel/sched/core.c
-index bde2864..e27f65a 100644
+index bde28646e58f..e27f65a12428 100644
 --- a/kernel/sched/core.c
 +++ b/kernel/sched/core.c
 @@ -3449,7 +3449,10 @@ void migrate_disable(void)
@@ -335,7 +334,7 @@ index bde2864..e27f65a 100644
  	WARN_ON_ONCE(p->migrate_disable <= 0);
  
 diff --git a/kernel/sched/swait.c b/kernel/sched/swait.c
-index 9c2da06..a26906f 100644
+index 9c2da06a8869..a26906faf07e 100644
 --- a/kernel/sched/swait.c
 +++ b/kernel/sched/swait.c
 @@ -1,5 +1,6 @@
@@ -372,5 +371,5 @@ index 9c2da06..a26906f 100644
  {
  	unsigned long flags;
 -- 
-2.7.4
+2.28.0
 

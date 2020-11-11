@@ -1,8 +1,7 @@
-From d1d19160795a670bb31602aad69ff7829277db32 Mon Sep 17 00:00:00 2001
+From 6f2f431303c51c08c0c89fd82077b9bae68da1c7 Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Thu, 28 Jul 2011 10:43:51 +0200
-Subject: [PATCH 261/371] mm, rt: kmap_atomic scheduling
-X-NVConfidentiality: public
+Subject: [PATCH 261/367] mm, rt: kmap_atomic scheduling
 
 In fact, with migrate_disable() existing one could play games with
 kmap_atomic. You could save/restore the kmap_atomic slots on context
@@ -31,7 +30,7 @@ Link: http://lkml.kernel.org/r/1311842631.5890.208.camel@twins
  7 files changed, 86 insertions(+), 10 deletions(-)
 
 diff --git a/arch/x86/kernel/process_32.c b/arch/x86/kernel/process_32.c
-index 4ca26fc..287d69c 100644
+index 4ca26fc7aa89..287d69c49bdc 100644
 --- a/arch/x86/kernel/process_32.c
 +++ b/arch/x86/kernel/process_32.c
 @@ -35,6 +35,7 @@
@@ -88,7 +87,7 @@ index 4ca26fc..287d69c 100644
  	 * Leave lazy mode, flushing any hypercalls made here.
  	 * This must be done before restoring TLS segments so
 diff --git a/arch/x86/mm/highmem_32.c b/arch/x86/mm/highmem_32.c
-index 6d18b70..f752724 100644
+index 6d18b70ed5a9..f752724c22e8 100644
 --- a/arch/x86/mm/highmem_32.c
 +++ b/arch/x86/mm/highmem_32.c
 @@ -32,10 +32,11 @@ EXPORT_SYMBOL(kunmap);
@@ -136,7 +135,7 @@ index 6d18b70..f752724 100644
  EXPORT_SYMBOL(__kunmap_atomic);
  
 diff --git a/arch/x86/mm/iomap_32.c b/arch/x86/mm/iomap_32.c
-index ada98b3..2620fb5 100644
+index ada98b39b8ad..2620fb55ece1 100644
 --- a/arch/x86/mm/iomap_32.c
 +++ b/arch/x86/mm/iomap_32.c
 @@ -56,6 +56,7 @@ EXPORT_SYMBOL_GPL(iomap_free);
@@ -170,7 +169,7 @@ index ada98b3..2620fb5 100644
  		kmap_atomic_idx_pop();
  	}
 diff --git a/include/linux/highmem.h b/include/linux/highmem.h
-index b76e9cc..396d5c4 100644
+index b76e9cc301b5..396d5c42272e 100644
 --- a/include/linux/highmem.h
 +++ b/include/linux/highmem.h
 @@ -86,32 +86,51 @@ static inline void __kunmap_atomic(void *addr)
@@ -230,7 +229,7 @@ index b76e9cc..396d5c4 100644
  }
  
 diff --git a/include/linux/sched.h b/include/linux/sched.h
-index 2a7b24a..7492adf 100644
+index 6cb0d66a38bd..9ddebab06c95 100644
 --- a/include/linux/sched.h
 +++ b/include/linux/sched.h
 @@ -26,6 +26,7 @@ struct sched_param {
@@ -255,7 +254,7 @@ index 2a7b24a..7492adf 100644
  	unsigned long	task_state_change;
  #endif
 diff --git a/include/linux/uaccess.h b/include/linux/uaccess.h
-index 9442423..e507cea 100644
+index 9442423979c1..e507ceae4537 100644
 --- a/include/linux/uaccess.h
 +++ b/include/linux/uaccess.h
 @@ -27,6 +27,7 @@ static __always_inline void pagefault_disabled_dec(void)
@@ -275,7 +274,7 @@ index 9442423..e507cea 100644
  
  /*
 diff --git a/mm/highmem.c b/mm/highmem.c
-index 50b4ca6..77518a3 100644
+index 50b4ca6787f0..77518a3b35a1 100644
 --- a/mm/highmem.c
 +++ b/mm/highmem.c
 @@ -29,10 +29,11 @@
@@ -303,5 +302,5 @@ index 50b4ca6..77518a3 100644
  unsigned int nr_free_highpages (void)
  {
 -- 
-2.7.4
+2.28.0
 

@@ -1,8 +1,7 @@
-From 90f046c59156e2544ac26a654c6ac95bcfc063c2 Mon Sep 17 00:00:00 2001
+From 5ee7e897cfed0f11dd033683214e7899a42a7ffb Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Wed, 8 Jul 2015 17:14:48 +0200
-Subject: [PATCH 230/371] jump-label: disable if stop_machine() is used
-X-NVConfidentiality: public
+Subject: [PATCH 230/367] jump-label: disable if stop_machine() is used
 
 Some architectures are using stop_machine() while switching the opcode which
 leads to latency spikes.
@@ -25,7 +24,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/arch/arm/Kconfig b/arch/arm/Kconfig
-index 2bddb69..2b8090f 100644
+index 2bddb69de090..2b8090f69862 100644
 --- a/arch/arm/Kconfig
 +++ b/arch/arm/Kconfig
 @@ -36,7 +36,7 @@ config ARM
@@ -38,5 +37,5 @@ index 2bddb69..2b8090f 100644
  	select HAVE_ARCH_MMAP_RND_BITS if MMU
  	select HAVE_ARCH_SECCOMP_FILTER if (AEABI && !OABI_COMPAT)
 -- 
-2.7.4
+2.28.0
 

@@ -1,8 +1,7 @@
-From c295e1f3f1b90865c2ecc3ceeb8409cf4fe56106 Mon Sep 17 00:00:00 2001
+From b210d747c46b573f0377975f74097142b49c0363 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Wed, 2 Nov 2016 16:45:58 +0100
-Subject: [PATCH 041/371] rcu: update: make RCU_EXPEDITE_BOOT default
-X-NVConfidentiality: public
+Subject: [PATCH 041/367] rcu: update: make RCU_EXPEDITE_BOOT default
 
 RCU_EXPEDITE_BOOT should speed up the boot process by enforcing
 synchronize_rcu_expedited() instead of synchronize_rcu() during the boot
@@ -17,7 +16,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  2 files changed, 2 insertions(+), 17 deletions(-)
 
 diff --git a/init/Kconfig b/init/Kconfig
-index e2568b0..e689cb3 100644
+index e2568b0d2a2f..e689cb378e2c 100644
 --- a/init/Kconfig
 +++ b/init/Kconfig
 @@ -790,19 +790,6 @@ config RCU_NOCB_CPU_ALL
@@ -41,7 +40,7 @@ index e2568b0..e689cb3 100644
  
  config BUILD_BIN2C
 diff --git a/kernel/rcu/update.c b/kernel/rcu/update.c
-index 4f6db7e..019b470 100644
+index 4f6db7e6a117..019b4708c9fa 100644
 --- a/kernel/rcu/update.c
 +++ b/kernel/rcu/update.c
 @@ -132,8 +132,7 @@ bool rcu_gp_is_normal(void)
@@ -65,5 +64,5 @@ index 4f6db7e..019b470 100644
  		WRITE_ONCE(rcu_normal, 1);
  }
 -- 
-2.7.4
+2.28.0
 

@@ -1,8 +1,7 @@
-From d66b319fe86d7c42fdff59a431005c6b2a272b6d Mon Sep 17 00:00:00 2001
+From 23623fff19cb057d6c3902799f9c4a1df8927c24 Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Thu, 23 Mar 2017 15:56:10 +0100
-Subject: [PATCH 021/371] rtmutex: Clean up
-X-NVConfidentiality: public
+Subject: [PATCH 021/367] rtmutex: Clean up
 
 Upstream commit aa2bfe55366552cb7e93e8709d66e698d79ccc47
 
@@ -26,7 +25,7 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  3 files changed, 18 insertions(+), 19 deletions(-)
 
 diff --git a/kernel/futex.c b/kernel/futex.c
-index 20e14bf..d03dcdf 100644
+index 20e14bf53dc0..d03dcdf5c310 100644
 --- a/kernel/futex.c
 +++ b/kernel/futex.c
 @@ -1393,7 +1393,7 @@ static int wake_futex_pi(u32 __user *uaddr, u32 uval, struct futex_pi_state *pi_
@@ -55,7 +54,7 @@ index 20e14bf..d03dcdf 100644
  	return ret;
  }
 diff --git a/kernel/locking/rtmutex.c b/kernel/locking/rtmutex.c
-index 03a345d..9f55d7a 100644
+index 03a345d508d2..9f55d7a7bc57 100644
 --- a/kernel/locking/rtmutex.c
 +++ b/kernel/locking/rtmutex.c
 @@ -1353,7 +1353,8 @@ static inline int rt_mutex_slowtrylock(struct rt_mutex *lock)
@@ -140,7 +139,7 @@ index 03a345d..9f55d7a 100644
  
  /**
 diff --git a/kernel/locking/rtmutex_common.h b/kernel/locking/rtmutex_common.h
-index dad9229..722e3cf 100644
+index dad9229040dc..722e3cf38acf 100644
 --- a/kernel/locking/rtmutex_common.h
 +++ b/kernel/locking/rtmutex_common.h
 @@ -123,7 +123,7 @@ extern void rt_mutex_futex_unlock(struct rt_mutex *lock);
@@ -153,5 +152,5 @@ index dad9229..722e3cf 100644
  #ifdef CONFIG_DEBUG_RT_MUTEXES
  # include "rtmutex-debug.h"
 -- 
-2.7.4
+2.28.0
 

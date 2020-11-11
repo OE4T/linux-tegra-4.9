@@ -1,8 +1,7 @@
-From 602f3db48e8ecf4fbd24ee8f0800f7a98e746ea3 Mon Sep 17 00:00:00 2001
+From e7ed94345313295aab0ae31947cb59b787724455 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Sun, 17 Jul 2011 19:35:29 +0200
-Subject: [PATCH 149/371] hotplug: Use migrate disable on unplug
-X-NVConfidentiality: public
+Subject: [PATCH 149/367] hotplug: Use migrate disable on unplug
 
 Migration needs to be disabled accross the unplug handling to make
 sure that the unplug thread is off the unplugged cpu.
@@ -13,10 +12,10 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  1 file changed, 3 insertions(+), 3 deletions(-)
 
 diff --git a/kernel/cpu.c b/kernel/cpu.c
-index 17c6519..1e05a0c 100644
+index 51f6763326d4..a5c52216769d 100644
 --- a/kernel/cpu.c
 +++ b/kernel/cpu.c
-@@ -1126,14 +1126,13 @@ static int __ref _cpu_down(unsigned int cpu, int tasks_frozen,
+@@ -1127,14 +1127,13 @@ static int __ref _cpu_down(unsigned int cpu, int tasks_frozen,
  	cpumask_andnot(cpumask, cpu_online_mask, cpumask_of(cpu));
  	set_cpus_allowed_ptr(current, cpumask);
  	free_cpumask_var(cpumask);
@@ -33,7 +32,7 @@ index 17c6519..1e05a0c 100644
  
  	cpu_hotplug_begin();
  	ret = cpu_unplug_begin(cpu);
-@@ -1182,6 +1181,7 @@ static int __ref _cpu_down(unsigned int cpu, int tasks_frozen,
+@@ -1183,6 +1182,7 @@ static int __ref _cpu_down(unsigned int cpu, int tasks_frozen,
  	cpu_unplug_done(cpu);
  out_cancel:
  	cpu_hotplug_done();
@@ -42,5 +41,5 @@ index 17c6519..1e05a0c 100644
  	if (!ret && hasdied)
  		cpu_notify_nofail(CPU_POST_DEAD, cpu);
 -- 
-2.7.4
+2.28.0
 

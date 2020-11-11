@@ -1,8 +1,7 @@
-From f243bcbc533d2adfe30001d49ecfef8af43d516c Mon Sep 17 00:00:00 2001
+From 6c6847f2dbc4cbb6f4b204467e58b2710571bd87 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Sat, 12 Nov 2011 14:00:48 +0100
-Subject: [PATCH 269/371] scsi/fcoe: Make RT aware.
-X-NVConfidentiality: public
+Subject: [PATCH 269/367] scsi/fcoe: Make RT aware.
 
 Do not disable preemption while taking sleeping locks. All user look safe
 for migrate_diable() only.
@@ -15,7 +14,7 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  3 files changed, 12 insertions(+), 12 deletions(-)
 
 diff --git a/drivers/scsi/fcoe/fcoe.c b/drivers/scsi/fcoe/fcoe.c
-index 9bd41a3..8e2d436 100644
+index 9bd41a35a78a..8e2d436c2e3f 100644
 --- a/drivers/scsi/fcoe/fcoe.c
 +++ b/drivers/scsi/fcoe/fcoe.c
 @@ -1455,11 +1455,11 @@ static int fcoe_rcv(struct sk_buff *skb, struct net_device *netdev,
@@ -73,7 +72,7 @@ index 9bd41a3..8e2d436 100644
  }
  
 diff --git a/drivers/scsi/fcoe/fcoe_ctlr.c b/drivers/scsi/fcoe/fcoe_ctlr.c
-index 3c2f34d..6cfa0fe 100644
+index 3c2f34db937b..6cfa0fed2480 100644
 --- a/drivers/scsi/fcoe/fcoe_ctlr.c
 +++ b/drivers/scsi/fcoe/fcoe_ctlr.c
 @@ -834,7 +834,7 @@ static unsigned long fcoe_ctlr_age_fcfs(struct fcoe_ctlr *fip)
@@ -95,7 +94,7 @@ index 3c2f34d..6cfa0fe 100644
  	list_for_each_entry_safe(fcf, next, &del_list, list) {
  		/* Removes fcf from current list */
 diff --git a/drivers/scsi/libfc/fc_exch.c b/drivers/scsi/libfc/fc_exch.c
-index 16ca31a..c398734 100644
+index d0a86ef80652..6b692e5802e0 100644
 --- a/drivers/scsi/libfc/fc_exch.c
 +++ b/drivers/scsi/libfc/fc_exch.c
 @@ -814,10 +814,10 @@ static struct fc_exch *fc_exch_em_alloc(struct fc_lport *lport,
@@ -112,5 +111,5 @@ index 16ca31a..c398734 100644
  	/* peek cache of free slot */
  	if (pool->left != FC_XID_UNKNOWN) {
 -- 
-2.7.4
+2.28.0
 

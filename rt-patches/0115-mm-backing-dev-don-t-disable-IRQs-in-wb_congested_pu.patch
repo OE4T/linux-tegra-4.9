@@ -1,9 +1,8 @@
-From a06c8828f64b5f830c5ad63e3ec18a06ada24fc2 Mon Sep 17 00:00:00 2001
+From 496ceab2b7e621e7577700e02c6e55abfdf86433 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Fri, 5 Feb 2016 12:17:14 +0100
-Subject: [PATCH 115/371] mm: backing-dev: don't disable IRQs in
+Subject: [PATCH 115/367] mm: backing-dev: don't disable IRQs in
  wb_congested_put()
-X-NVConfidentiality: public
 
 it triggers:
 |BUG: sleeping function called from invalid context at kernel/locking/rtmutex.c:930
@@ -29,7 +28,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  1 file changed, 2 insertions(+), 2 deletions(-)
 
 diff --git a/mm/backing-dev.c b/mm/backing-dev.c
-index 113b7d3..2f858ef 100644
+index 113b7d317079..2f858ef6211f 100644
 --- a/mm/backing-dev.c
 +++ b/mm/backing-dev.c
 @@ -457,9 +457,9 @@ void wb_congested_put(struct bdi_writeback_congested *congested)
@@ -45,5 +44,5 @@ index 113b7d3..2f858ef 100644
  	}
  
 -- 
-2.7.4
+2.28.0
 

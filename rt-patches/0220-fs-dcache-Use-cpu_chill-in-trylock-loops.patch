@@ -1,8 +1,7 @@
-From 050388e7c87e9c5279fb37bd4d16a4fd63244a2f Mon Sep 17 00:00:00 2001
+From ba78c70355861f8dd6965c7506e1fbb69b94fefd Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Wed, 7 Mar 2012 21:00:34 +0100
-Subject: [PATCH 220/371] fs: dcache: Use cpu_chill() in trylock loops
-X-NVConfidentiality: public
+Subject: [PATCH 220/367] fs: dcache: Use cpu_chill() in trylock loops
 
 Retry loops on RT might loop forever when the modifying side was
 preempted. Use cpu_chill() instead of cpu_relax() to let the system
@@ -17,7 +16,7 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  4 files changed, 20 insertions(+), 6 deletions(-)
 
 diff --git a/fs/autofs4/autofs_i.h b/fs/autofs4/autofs_i.h
-index 42f8633..e4deae2 100644
+index 42f863346409..e4deae2d9fa1 100644
 --- a/fs/autofs4/autofs_i.h
 +++ b/fs/autofs4/autofs_i.h
 @@ -32,6 +32,7 @@
@@ -29,7 +28,7 @@ index 42f8633..e4deae2 100644
  #include <linux/uaccess.h>
  
 diff --git a/fs/autofs4/expire.c b/fs/autofs4/expire.c
-index 2e1f50e..a54cb5d 100644
+index 02f0d373adbf..1454264c8c1a 100644
 --- a/fs/autofs4/expire.c
 +++ b/fs/autofs4/expire.c
 @@ -148,7 +148,7 @@ static struct dentry *get_next_positive_dentry(struct dentry *prev,
@@ -42,7 +41,7 @@ index 2e1f50e..a54cb5d 100644
  			}
  			spin_unlock(&p->d_lock);
 diff --git a/fs/dcache.c b/fs/dcache.c
-index ed0a023..f757c63 100644
+index ed0a023a0567..f757c63e36a6 100644
 --- a/fs/dcache.c
 +++ b/fs/dcache.c
 @@ -19,6 +19,7 @@
@@ -94,7 +93,7 @@ index ed0a023..f757c63 100644
  		}
  		dentry->d_flags &= ~DCACHE_CANT_MOUNT;
 diff --git a/fs/namespace.c b/fs/namespace.c
-index 1b6d18b..95a7bc8 100644
+index 1b6d18b3249e..95a7bc8628cb 100644
 --- a/fs/namespace.c
 +++ b/fs/namespace.c
 @@ -14,6 +14,7 @@
@@ -115,5 +114,5 @@ index 1b6d18b..95a7bc8 100644
  	}
  	/*
 -- 
-2.7.4
+2.28.0
 

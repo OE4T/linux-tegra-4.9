@@ -1,8 +1,7 @@
-From 76d78ba7ba8c26d6bb60bd43d38614060387f618 Mon Sep 17 00:00:00 2001
+From fdf41ae58c4d3f6e9d52e3f0543c6170404c4c6d Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Fri, 13 Feb 2015 11:01:26 +0100
-Subject: [PATCH 218/371] block: blk-mq: Use swait
-X-NVConfidentiality: public
+Subject: [PATCH 218/367] block: blk-mq: Use swait
 
 | BUG: sleeping function called from invalid context at kernel/locking/rtmutex.c:914
 | in_atomic(): 1, irqs_disabled(): 0, pid: 255, name: kworker/u257:6
@@ -46,7 +45,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  3 files changed, 9 insertions(+), 9 deletions(-)
 
 diff --git a/block/blk-core.c b/block/blk-core.c
-index cade8ff..16eedb0 100644
+index cade8ffb3143..16eedb0df53e 100644
 --- a/block/blk-core.c
 +++ b/block/blk-core.c
 @@ -664,9 +664,9 @@ int blk_queue_enter(struct request_queue *q, bool nowait)
@@ -81,7 +80,7 @@ index cade8ff..16eedb0 100644
  	/*
  	 * Init percpu_ref in atomic mode so that it's faster to shutdown.
 diff --git a/block/blk-mq.c b/block/blk-mq.c
-index 25c6919..9835286 100644
+index 25c6919a4f3c..9835286eaab8 100644
 --- a/block/blk-mq.c
 +++ b/block/blk-mq.c
 @@ -69,7 +69,7 @@ EXPORT_SYMBOL_GPL(blk_mq_freeze_queue_start);
@@ -112,10 +111,10 @@ index 25c6919..9835286 100644
  
  bool blk_mq_can_queue(struct blk_mq_hw_ctx *hctx)
 diff --git a/include/linux/blkdev.h b/include/linux/blkdev.h
-index 7b18f20..7fcbaae 100644
+index 1d19ea750830..cd85c30af6f1 100644
 --- a/include/linux/blkdev.h
 +++ b/include/linux/blkdev.h
-@@ -471,7 +471,7 @@ struct request_queue {
+@@ -476,7 +476,7 @@ struct request_queue {
  	struct throtl_data *td;
  #endif
  	struct rcu_head		rcu_head;
@@ -125,5 +124,5 @@ index 7b18f20..7fcbaae 100644
  	struct list_head	all_q_node;
  
 -- 
-2.7.4
+2.28.0
 

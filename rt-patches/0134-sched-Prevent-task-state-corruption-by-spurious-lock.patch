@@ -1,9 +1,8 @@
-From fffc3135a29635d4d40186f27d74e24a8af14a0c Mon Sep 17 00:00:00 2001
+From e3f716d88e02cb30251bcbb8805dd2876144efbf Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Tue, 6 Jun 2017 14:20:37 +0200
-Subject: [PATCH 134/371] sched: Prevent task state corruption by spurious lock
+Subject: [PATCH 134/367] sched: Prevent task state corruption by spurious lock
  wakeup
-X-NVConfidentiality: public
 
 Mathias and others reported GDB failures on RT.
 
@@ -68,7 +67,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/kernel/sched/core.c b/kernel/sched/core.c
-index 529e224..1a2226e 100644
+index 529e2249cd31..1a2226eb0e3e 100644
 --- a/kernel/sched/core.c
 +++ b/kernel/sched/core.c
 @@ -2271,7 +2271,7 @@ EXPORT_SYMBOL(wake_up_process);
@@ -81,5 +80,5 @@ index 529e224..1a2226e 100644
  
  int wake_up_state(struct task_struct *p, unsigned int state)
 -- 
-2.7.4
+2.28.0
 

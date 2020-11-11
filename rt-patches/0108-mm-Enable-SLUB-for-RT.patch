@@ -1,8 +1,7 @@
-From 6dcf6ba1272dbe552fb5143f5d14d72a97959935 Mon Sep 17 00:00:00 2001
+From 57ef1f098bcf0dba4f9d6d300bd73e167f2040bb Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Thu, 25 Oct 2012 10:32:35 +0100
-Subject: [PATCH 108/371] mm: Enable SLUB for RT
-X-NVConfidentiality: public
+Subject: [PATCH 108/367] mm: Enable SLUB for RT
 
 Make SLUB RT aware by converting locks to raw and using free lists to
 move the freeing out of the lock held region.
@@ -10,11 +9,11 @@ move the freeing out of the lock held region.
 Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
 ---
  mm/slab.h |   4 ++
- mm/slub.c | 134 ++++++++++++++++++++++++++++++++++++++++++++++++--------------
+ mm/slub.c | 134 ++++++++++++++++++++++++++++++++++++++++++------------
  2 files changed, 109 insertions(+), 29 deletions(-)
 
 diff --git a/mm/slab.h b/mm/slab.h
-index ceb7d70..dfd281e 100644
+index ceb7d70cdb76..dfd281e43fbe 100644
 --- a/mm/slab.h
 +++ b/mm/slab.h
 @@ -426,7 +426,11 @@ static inline void slab_post_alloc_hook(struct kmem_cache *s, gfp_t flags,
@@ -30,7 +29,7 @@ index ceb7d70..dfd281e 100644
  #ifdef CONFIG_SLAB
  	struct list_head slabs_partial;	/* partial list first, better asm code */
 diff --git a/mm/slub.c b/mm/slub.c
-index fa6d62d..086f712 100644
+index fa6d62d559eb..086f7123d0f0 100644
 --- a/mm/slub.c
 +++ b/mm/slub.c
 @@ -1144,7 +1144,7 @@ static noinline int free_debug_processing(
@@ -469,5 +468,5 @@ index fa6d62d..086f712 100644
  
  	for (i = 0; i < t.count; i++) {
 -- 
-2.7.4
+2.28.0
 

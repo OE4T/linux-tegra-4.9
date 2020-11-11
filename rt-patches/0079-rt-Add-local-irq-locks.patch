@@ -1,8 +1,7 @@
-From 7e388cb8374db90cc8c71ba8716b4d83506f0b07 Mon Sep 17 00:00:00 2001
+From 19c2e7ff66093867a30c61a44ed6a993d5024bf7 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Mon, 20 Jun 2011 09:03:47 +0200
-Subject: [PATCH 079/371] rt: Add local irq locks
-X-NVConfidentiality: public
+Subject: [PATCH 079/367] rt: Add local irq locks
 
 Introduce locallock. For !RT this maps to preempt_disable()/
 local_irq_disable() so there is not much that changes. For RT this will
@@ -14,14 +13,14 @@ is held and the owner is preempted.
 
 Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
 ---
- include/linux/locallock.h | 266 ++++++++++++++++++++++++++++++++++++++++++++++
+ include/linux/locallock.h | 266 ++++++++++++++++++++++++++++++++++++++
  include/linux/percpu.h    |  29 +++++
  2 files changed, 295 insertions(+)
  create mode 100644 include/linux/locallock.h
 
 diff --git a/include/linux/locallock.h b/include/linux/locallock.h
 new file mode 100644
-index 0000000..218e5a4
+index 000000000000..218e5a4db343
 --- /dev/null
 +++ b/include/linux/locallock.h
 @@ -0,0 +1,266 @@
@@ -292,7 +291,7 @@ index 0000000..218e5a4
 +
 +#endif
 diff --git a/include/linux/percpu.h b/include/linux/percpu.h
-index 491b3f5..b988bf4 100644
+index 491b3f5a5f8a..b988bf40ad3e 100644
 --- a/include/linux/percpu.h
 +++ b/include/linux/percpu.h
 @@ -18,6 +18,35 @@
@@ -332,5 +331,5 @@ index 491b3f5..b988bf4 100644
  #define PCPU_MIN_UNIT_SIZE		PFN_ALIGN(32 << 10)
  
 -- 
-2.7.4
+2.28.0
 

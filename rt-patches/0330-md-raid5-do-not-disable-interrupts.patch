@@ -1,8 +1,7 @@
-From 5927a8956672d5cece9e3b3902fb2eb07f133e93 Mon Sep 17 00:00:00 2001
+From f49661c9edd948a059d058d55aa6e626b3afd7a2 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Fri, 17 Nov 2017 16:21:00 +0100
-Subject: [PATCH 330/371] md/raid5: do not disable interrupts
-X-NVConfidentiality: public
+Subject: [PATCH 330/367] md/raid5: do not disable interrupts
 
 |BUG: sleeping function called from invalid context at kernel/locking/rtmutex.c:974
 |in_atomic(): 0, irqs_disabled(): 1, pid: 2992, name: lvm
@@ -36,7 +35,7 @@ Signed-off-by: Steven Rostedt (VMware) <rostedt@goodmis.org>
  1 file changed, 2 insertions(+), 2 deletions(-)
 
 diff --git a/drivers/md/raid5.c b/drivers/md/raid5.c
-index 33b0514..5e32cb2 100644
+index 33b05146059d..5e32cb2bcd41 100644
 --- a/drivers/md/raid5.c
 +++ b/drivers/md/raid5.c
 @@ -428,7 +428,7 @@ void raid5_release_stripe(struct stripe_head *sh)
@@ -58,5 +57,5 @@ index 33b0514..5e32cb2 100644
  
  static inline void remove_hash(struct stripe_head *sh)
 -- 
-2.7.4
+2.28.0
 

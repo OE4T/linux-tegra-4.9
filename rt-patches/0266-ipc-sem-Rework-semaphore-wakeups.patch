@@ -1,8 +1,7 @@
-From e8b5549456ff8585fcd175efe90672f7f3b9f41c Mon Sep 17 00:00:00 2001
+From c83bb3f67a9d3ed28182171e483feba81ecbe553 Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Wed, 14 Sep 2011 11:57:04 +0200
-Subject: [PATCH 266/371] ipc/sem: Rework semaphore wakeups
-X-NVConfidentiality: public
+Subject: [PATCH 266/367] ipc/sem: Rework semaphore wakeups
 
 Current sysv sems have a weird ass wakeup scheme that involves keeping
 preemption disabled over a potential O(n^2) loop and busy waiting on
@@ -30,7 +29,7 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  1 file changed, 10 insertions(+)
 
 diff --git a/ipc/sem.c b/ipc/sem.c
-index 10b94bc..b8360ea 100644
+index 10b94bc59d4a..b8360eaacc7a 100644
 --- a/ipc/sem.c
 +++ b/ipc/sem.c
 @@ -712,6 +712,13 @@ static int perform_atomic_semop(struct sem_array *sma, struct sem_queue *q)
@@ -72,5 +71,5 @@ index 10b94bc..b8360ea 100644
  
  static void unlink_queue(struct sem_array *sma, struct sem_queue *q)
 -- 
-2.7.4
+2.28.0
 

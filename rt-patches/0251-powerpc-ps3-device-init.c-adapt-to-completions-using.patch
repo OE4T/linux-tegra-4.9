@@ -1,9 +1,8 @@
-From 58c16f26c87691bcf03a1e67a8986e129246b992 Mon Sep 17 00:00:00 2001
+From 5b99e642cca51f6c12f3013dae5c9670c4286165 Mon Sep 17 00:00:00 2001
 From: Paul Gortmaker <paul.gortmaker@windriver.com>
 Date: Sun, 31 May 2015 14:44:42 -0400
-Subject: [PATCH 251/371] powerpc: ps3/device-init.c - adapt to completions
+Subject: [PATCH 251/367] powerpc: ps3/device-init.c - adapt to completions
  using swait vs wait
-X-NVConfidentiality: public
 
 To fix:
 
@@ -22,7 +21,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/arch/powerpc/platforms/ps3/device-init.c b/arch/powerpc/platforms/ps3/device-init.c
-index e484624..2670cee 100644
+index e48462447ff0..2670cee66064 100644
 --- a/arch/powerpc/platforms/ps3/device-init.c
 +++ b/arch/powerpc/platforms/ps3/device-init.c
 @@ -752,7 +752,7 @@ static int ps3_notification_read_write(struct ps3_notification_device *dev,
@@ -35,5 +34,5 @@ index e484624..2670cee 100644
  	if (kthread_should_stop())
  		res = -EINTR;
 -- 
-2.7.4
+2.28.0
 

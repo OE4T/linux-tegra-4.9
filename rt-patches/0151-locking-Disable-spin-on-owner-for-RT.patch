@@ -1,11 +1,10 @@
-From 966b2a57304e13641a480689230ddebb0e59acbd Mon Sep 17 00:00:00 2001
+From 1c34186664e35498a2da61b8684fdfdd30ef8657 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Sun, 17 Jul 2011 21:51:45 +0200
-Subject: [PATCH 151/371] locking: Disable spin on owner for RT
+Subject: [PATCH 151/367] locking: Disable spin on owner for RT
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
-X-NVConfidentiality: public
 
 Drop spin on owner for mutex / rwsem. We are most likely not using it
 but…
@@ -16,7 +15,7 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  1 file changed, 2 insertions(+), 2 deletions(-)
 
 diff --git a/kernel/Kconfig.locks b/kernel/Kconfig.locks
-index ebdb004..b9e6aa7 100644
+index ebdb0043203a..b9e6aa7e5aa6 100644
 --- a/kernel/Kconfig.locks
 +++ b/kernel/Kconfig.locks
 @@ -225,11 +225,11 @@ config ARCH_SUPPORTS_ATOMIC_RMW
@@ -34,5 +33,5 @@ index ebdb004..b9e6aa7 100644
  config LOCK_SPIN_ON_OWNER
         def_bool y
 -- 
-2.7.4
+2.28.0
 

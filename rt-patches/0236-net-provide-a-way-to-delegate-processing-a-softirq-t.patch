@@ -1,9 +1,8 @@
-From f85593170475c22b9f83fc0b96d6fa3d349a8a37 Mon Sep 17 00:00:00 2001
+From c3bcf01cd4b13bb208dad1b9447e31170fd9e75b Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Wed, 20 Jan 2016 15:39:05 +0100
-Subject: [PATCH 236/371] net: provide a way to delegate processing a softirq
+Subject: [PATCH 236/367] net: provide a way to delegate processing a softirq
  to ksoftirqd
-X-NVConfidentiality: public
 
 If the NET_RX uses up all of his budget it moves the following NAPI
 invocations into the `ksoftirqd`. On -RT it does not do so. Instead it
@@ -21,7 +20,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  3 files changed, 30 insertions(+), 1 deletion(-)
 
 diff --git a/include/linux/interrupt.h b/include/linux/interrupt.h
-index 4917b62..6e3c032 100644
+index 4917b6273f33..6e3c0328aeb5 100644
 --- a/include/linux/interrupt.h
 +++ b/include/linux/interrupt.h
 @@ -497,6 +497,14 @@ extern void thread_do_softirq(void);
@@ -40,13 +39,14 @@ index 4917b62..6e3c032 100644
  extern void raise_softirq_irqoff(unsigned int nr);
  extern void raise_softirq(unsigned int nr);
 diff --git a/kernel/softirq.c b/kernel/softirq.c
-index b5f185b..d1c9bf1 100644
+index b5f185b89857..d1c9bf11645a 100644
 --- a/kernel/softirq.c
 +++ b/kernel/softirq.c
-@@ -689,6 +689,27 @@ void __raise_softirq_irqoff(unsigned int nr)
+@@ -688,6 +688,27 @@ void __raise_softirq_irqoff(unsigned int nr)
+ 		wakeup_proper_softirq(nr);
  }
  
- /*
++/*
 + * Same as __raise_softirq_irqoff() but will process them in ksoftirqd
 + */
 +void __raise_softirq_irqoff_ksoft(unsigned int nr)
@@ -67,12 +67,11 @@ index b5f185b..d1c9bf1 100644
 +	wakeup_proper_softirq(nr);
 +}
 +
-+/*
+ /*
   * This function must run with irqs disabled!
   */
- void raise_softirq_irqoff(unsigned int nr)
 diff --git a/net/core/dev.c b/net/core/dev.c
-index 5ea52ee..f1b3cc8 100644
+index fb67da567cc8..e09cdc119b26 100644
 --- a/net/core/dev.c
 +++ b/net/core/dev.c
 @@ -5356,7 +5356,7 @@ static __latent_entropy void net_rx_action(struct softirq_action *h)
@@ -85,5 +84,5 @@ index 5ea52ee..f1b3cc8 100644
  	net_rps_action_and_irq_enable(sd);
  }
 -- 
-2.7.4
+2.28.0
 

@@ -1,8 +1,7 @@
-From 82e0392e6f92b942a638d09adbd1e9bf0e259d7c Mon Sep 17 00:00:00 2001
+From 3c2af188387ee0ed494cd0257a89e9ddb5f42fa8 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Mon, 18 Jul 2011 13:59:17 +0200
-Subject: [PATCH 154/371] softirq: Disable softirq stacks for RT
-X-NVConfidentiality: public
+Subject: [PATCH 154/367] softirq: Disable softirq stacks for RT
 
 Disable extra stacks for softirqs. We want to preempt softirqs and
 having them on special IRQ-stack does not make this easier.
@@ -20,7 +19,7 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  8 files changed, 15 insertions(+), 1 deletion(-)
 
 diff --git a/arch/powerpc/kernel/irq.c b/arch/powerpc/kernel/irq.c
-index ad713f7..f17bfa2 100644
+index eff4a336a1b4..cab3e4fe2a85 100644
 --- a/arch/powerpc/kernel/irq.c
 +++ b/arch/powerpc/kernel/irq.c
 @@ -659,6 +659,7 @@ void irq_ctx_init(void)
@@ -40,7 +39,7 @@ index ad713f7..f17bfa2 100644
  irq_hw_number_t virq_to_hw(unsigned int virq)
  {
 diff --git a/arch/powerpc/kernel/misc_32.S b/arch/powerpc/kernel/misc_32.S
-index 030d72d..b471a70 100644
+index 030d72df5dd5..b471a709e100 100644
 --- a/arch/powerpc/kernel/misc_32.S
 +++ b/arch/powerpc/kernel/misc_32.S
 @@ -41,6 +41,7 @@
@@ -60,7 +59,7 @@ index 030d72d..b471a70 100644
  /*
   * void call_do_irq(struct pt_regs *regs, struct thread_info *irqtp);
 diff --git a/arch/powerpc/kernel/misc_64.S b/arch/powerpc/kernel/misc_64.S
-index 4cefe68..cb2ee4b 100644
+index 4cefe6888b18..cb2ee4be999a 100644
 --- a/arch/powerpc/kernel/misc_64.S
 +++ b/arch/powerpc/kernel/misc_64.S
 @@ -31,6 +31,7 @@
@@ -80,7 +79,7 @@ index 4cefe68..cb2ee4b 100644
  _GLOBAL(call_do_irq)
  	mflr	r0
 diff --git a/arch/sh/kernel/irq.c b/arch/sh/kernel/irq.c
-index 6c0378c..abd58b4 100644
+index 6c0378c0b8b5..abd58b4dff97 100644
 --- a/arch/sh/kernel/irq.c
 +++ b/arch/sh/kernel/irq.c
 @@ -147,6 +147,7 @@ void irq_ctx_exit(int cpu)
@@ -100,7 +99,7 @@ index 6c0378c..abd58b4 100644
  static inline void handle_one_irq(unsigned int irq)
  {
 diff --git a/arch/sparc/kernel/irq_64.c b/arch/sparc/kernel/irq_64.c
-index 5cbf03c..6067d93 100644
+index 5cbf03c14981..6067d9379e5b 100644
 --- a/arch/sparc/kernel/irq_64.c
 +++ b/arch/sparc/kernel/irq_64.c
 @@ -854,6 +854,7 @@ void __irq_entry handler_irq(int pil, struct pt_regs *regs)
@@ -120,7 +119,7 @@ index 5cbf03c..6067d93 100644
  #ifdef CONFIG_HOTPLUG_CPU
  void fixup_irqs(void)
 diff --git a/arch/x86/entry/entry_64.S b/arch/x86/entry/entry_64.S
-index 657984f..1dcfba5 100644
+index 657984f10953..1dcfba5ec4b8 100644
 --- a/arch/x86/entry/entry_64.S
 +++ b/arch/x86/entry/entry_64.S
 @@ -838,6 +838,7 @@ bad_gs:
@@ -140,7 +139,7 @@ index 657984f..1dcfba5 100644
  #ifdef CONFIG_XEN
  idtentry xen_hypervisor_callback xen_do_hypervisor_callback has_error_code=0
 diff --git a/arch/x86/kernel/irq_32.c b/arch/x86/kernel/irq_32.c
-index 5aaa39a..51fae83 100644
+index 5aaa39a10823..51fae836d143 100644
 --- a/arch/x86/kernel/irq_32.c
 +++ b/arch/x86/kernel/irq_32.c
 @@ -129,6 +129,7 @@ void irq_ctx_init(int cpu)
@@ -160,7 +159,7 @@ index 5aaa39a..51fae83 100644
  bool handle_irq(struct irq_desc *desc, struct pt_regs *regs)
  {
 diff --git a/include/linux/interrupt.h b/include/linux/interrupt.h
-index 0aad7ca..e5f4cea 100644
+index 0aad7caee523..e5f4ceaedc2b 100644
 --- a/include/linux/interrupt.h
 +++ b/include/linux/interrupt.h
 @@ -473,7 +473,7 @@ struct softirq_action
@@ -173,5 +172,5 @@ index 0aad7ca..e5f4cea 100644
  #else
  static inline void do_softirq_own_stack(void)
 -- 
-2.7.4
+2.28.0
 

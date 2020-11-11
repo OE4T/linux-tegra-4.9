@@ -1,8 +1,7 @@
-From 46b3efb634a10e25e6290699624aad8d8dae5ab7 Mon Sep 17 00:00:00 2001
+From f2b37bcf2f17f6b04d077083f847fd75514b795d Mon Sep 17 00:00:00 2001
 From: Alex Shi <alex.shi@linaro.org>
 Date: Thu, 6 Jul 2017 16:47:46 +0800
-Subject: [PATCH 334/371] cpu_pm: replace raw_notifier to atomic_notifier
-X-NVConfidentiality: public
+Subject: [PATCH 334/367] cpu_pm: replace raw_notifier to atomic_notifier
 
 This patch replace a rwlock and raw notifier by atomic notifier which
 protected by spin_lock and rcu.
@@ -45,7 +44,7 @@ improvement.
 
 This patch passed Fengguang's 0day testing.
 
-Change-Id: If0592150b0b929858920fcec023290b5282d3c8f
+Change-Id: I004e38cd82fe77656bff908cdecd13aaffd2edb1
 Signed-off-by: Alex Shi <alex.shi@linaro.org>
 Cc: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Cc: Thomas Gleixner <tglx@linutronix.de>
@@ -61,7 +60,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  1 file changed, 6 insertions(+), 39 deletions(-)
 
 diff --git a/kernel/cpu_pm.c b/kernel/cpu_pm.c
-index b14df91..97f145d 100644
+index b14df912c0a7..97f145d6bd3f 100644
 --- a/kernel/cpu_pm.c
 +++ b/kernel/cpu_pm.c
 @@ -22,14 +22,13 @@
@@ -178,5 +177,5 @@ index b14df91..97f145d 100644
  EXPORT_SYMBOL_GPL(cpu_cluster_pm_exit);
  
 -- 
-2.7.4
+2.28.0
 

@@ -1,9 +1,8 @@
-From 566ac17905be5e8b8aeeaeb04698ada06e6d0294 Mon Sep 17 00:00:00 2001
+From 4ea5943471fa57addea875ceaec134781406a503 Mon Sep 17 00:00:00 2001
 From: Mike Galbraith <efault@gmx.de>
 Date: Sun, 3 Sep 2017 04:48:10 +0200
-Subject: [PATCH 339/371] kernel/hrtimer/hotplug: don't wake ktimersoftd while
+Subject: [PATCH 339/367] kernel/hrtimer/hotplug: don't wake ktimersoftd while
  holding the hrtimer base lock
-X-NVConfidentiality: public
 
 kernel/hrtimer: don't wakeup a process while holding the hrtimer base lock
 missed a path, namely hrtimers_dead_cpu() -> migrate_hrtimer_list().  Defer
@@ -16,10 +15,10 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  1 file changed, 13 insertions(+), 6 deletions(-)
 
 diff --git a/kernel/time/hrtimer.c b/kernel/time/hrtimer.c
-index 2158fc5..5efa37d 100644
+index bfe46fe6a700..b01e1fecdb25 100644
 --- a/kernel/time/hrtimer.c
 +++ b/kernel/time/hrtimer.c
-@@ -1845,7 +1845,7 @@ int hrtimers_prepare_cpu(unsigned int cpu)
+@@ -1848,7 +1848,7 @@ int hrtimers_prepare_cpu(unsigned int cpu)
  
  #ifdef CONFIG_HOTPLUG_CPU
  
@@ -28,7 +27,7 @@ index 2158fc5..5efa37d 100644
  				struct hrtimer_clock_base *new_base)
  {
  	struct hrtimer *timer;
-@@ -1875,15 +1875,19 @@ static void migrate_hrtimer_list(struct hrtimer_clock_base *old_base,
+@@ -1878,15 +1878,19 @@ static void migrate_hrtimer_list(struct hrtimer_clock_base *old_base,
  	}
  #ifdef CONFIG_PREEMPT_RT_BASE
  	list_splice_tail(&old_base->expired, &new_base->expired);
@@ -51,7 +50,7 @@ index 2158fc5..5efa37d 100644
  
  	BUG_ON(cpu_online(scpu));
  	tick_cancel_sched_timer(scpu);
-@@ -1899,13 +1903,16 @@ int hrtimers_dead_cpu(unsigned int scpu)
+@@ -1902,13 +1906,16 @@ int hrtimers_dead_cpu(unsigned int scpu)
  	raw_spin_lock_nested(&old_base->lock, SINGLE_DEPTH_NESTING);
  
  	for (i = 0; i < HRTIMER_MAX_CLOCK_BASES; i++) {
@@ -71,5 +70,5 @@ index 2158fc5..5efa37d 100644
  	__hrtimer_peek_ahead_timers();
  	local_irq_enable();
 -- 
-2.7.4
+2.28.0
 

@@ -1,8 +1,7 @@
-From 530be3852cd3766dae3d69cecafdf47521d4af7e Mon Sep 17 00:00:00 2001
+From 4e5d4830b4bf692e118143e3965cec56a62420fc Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Thu, 23 Mar 2017 15:56:14 +0100
-Subject: [PATCH 024/371] rtmutex: Fix more prio comparisons
-X-NVConfidentiality: public
+Subject: [PATCH 024/367] rtmutex: Fix more prio comparisons
 
 Upstream commit 19830e55247cddb3f46f1bf60b8e245593491bea
 
@@ -33,7 +32,7 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  1 file changed, 29 insertions(+), 3 deletions(-)
 
 diff --git a/kernel/locking/rtmutex.c b/kernel/locking/rtmutex.c
-index e275b81..a8202c7 100644
+index e275b8148db9..a8202c772907 100644
 --- a/kernel/locking/rtmutex.c
 +++ b/kernel/locking/rtmutex.c
 @@ -222,6 +222,12 @@ static inline bool unlock_rt_mutex_safe(struct rt_mutex *lock,
@@ -104,5 +103,5 @@ index e275b81..a8202c7 100644
  		return;
  	}
 -- 
-2.7.4
+2.28.0
 

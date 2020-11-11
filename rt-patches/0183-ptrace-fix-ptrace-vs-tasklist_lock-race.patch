@@ -1,8 +1,7 @@
-From 86fc64d58a63b76e0108fd952dd93dc6e4a310fd Mon Sep 17 00:00:00 2001
+From a730c63a64d2f2e7167877e3e8b9bb99f373e36f Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Thu, 29 Aug 2013 18:21:04 +0200
-Subject: [PATCH 183/371] ptrace: fix ptrace vs tasklist_lock race
-X-NVConfidentiality: public
+Subject: [PATCH 183/367] ptrace: fix ptrace vs tasklist_lock race
 
 As explained by Alexander Fyodorov <halcy@yandex.ru>:
 
@@ -25,13 +24,13 @@ taken in case the caller is interrupted between looking into ->state and
 
 Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 ---
- include/linux/sched.h | 48 +++++++++++++++++++++++++++++++++++++++++++++---
- kernel/ptrace.c       |  9 ++++++++-
- kernel/sched/core.c   | 17 +++++++++++++++--
+ include/linux/sched.h | 48 ++++++++++++++++++++++++++++++++++++++++---
+ kernel/ptrace.c       |  9 +++++++-
+ kernel/sched/core.c   | 17 +++++++++++++--
  3 files changed, 68 insertions(+), 6 deletions(-)
 
 diff --git a/include/linux/sched.h b/include/linux/sched.h
-index 9a41087..921b6f4 100644
+index 15c2d05c6ef6..1c2ef7bdeee7 100644
 --- a/include/linux/sched.h
 +++ b/include/linux/sched.h
 @@ -245,10 +245,7 @@ extern char ___assert_task_state[1 - 2*!!(
@@ -98,7 +97,7 @@ index 9a41087..921b6f4 100644
   * cond_resched() and cond_resched_lock(): latency reduction via
   * explicit rescheduling in places that are safe. The return
 diff --git a/kernel/ptrace.c b/kernel/ptrace.c
-index ea3370e..7245160 100644
+index ea3370e205fb..7245160f3780 100644
 --- a/kernel/ptrace.c
 +++ b/kernel/ptrace.c
 @@ -170,7 +170,14 @@ static bool ptrace_freeze_traced(struct task_struct *task)
@@ -118,7 +117,7 @@ index ea3370e..7245160 100644
  	}
  	spin_unlock_irq(&task->sighand->siglock);
 diff --git a/kernel/sched/core.c b/kernel/sched/core.c
-index 32dc9a0..bde2864 100644
+index 32dc9a003bb7..bde28646e58f 100644
 --- a/kernel/sched/core.c
 +++ b/kernel/sched/core.c
 @@ -1442,6 +1442,18 @@ int migrate_swap(struct task_struct *cur, struct task_struct *p)
@@ -160,5 +159,5 @@ index 32dc9a0..bde2864 100644
  		task_rq_unlock(rq, p, &rf);
  
 -- 
-2.7.4
+2.28.0
 

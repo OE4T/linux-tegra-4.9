@@ -1,8 +1,7 @@
-From d7b7f6539d7974a6c27af542658223c691018e43 Mon Sep 17 00:00:00 2001
+From 19d17b1eb13724ee8b461165c7c81449d11d5fed Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Fri, 13 Feb 2015 15:52:24 +0100
-Subject: [PATCH 318/371] cgroups: use simple wait in css_release()
-X-NVConfidentiality: public
+Subject: [PATCH 318/367] cgroups: use simple wait in css_release()
 
 To avoid:
 |BUG: sleeping function called from invalid context at kernel/locking/rtmutex.c:914
@@ -28,6 +27,7 @@ To avoid:
 | [<ffffffff810948d8>] kthread+0xe8/0x100
 | [<ffffffff815b9c3c>] ret_from_fork+0x7c/0xb0
 
+Change-Id: I6ecda3b1202d60901697366bb4419f18cb5da30f
 Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 ---
  include/linux/cgroup-defs.h | 2 ++
@@ -35,7 +35,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  2 files changed, 7 insertions(+), 4 deletions(-)
 
 diff --git a/include/linux/cgroup-defs.h b/include/linux/cgroup-defs.h
-index 9c72b21..0049a7e 100644
+index 9c72b21d4b39..0049a7efe98c 100644
 --- a/include/linux/cgroup-defs.h
 +++ b/include/linux/cgroup-defs.h
 @@ -17,6 +17,7 @@
@@ -55,7 +55,7 @@ index 9c72b21..0049a7e 100644
  
  /*
 diff --git a/kernel/cgroup.c b/kernel/cgroup.c
-index 215c88e..0938b8a 100644
+index 215c88eecd3f..0938b8af039c 100644
 --- a/kernel/cgroup.c
 +++ b/kernel/cgroup.c
 @@ -5046,10 +5046,10 @@ static void css_free_rcu_fn(struct rcu_head *rcu_head)
@@ -91,5 +91,5 @@ index 215c88e..0938b8a 100644
  	/*
  	 * Used to destroy pidlists and separate to serve as flush domain.
 -- 
-2.7.4
+2.28.0
 

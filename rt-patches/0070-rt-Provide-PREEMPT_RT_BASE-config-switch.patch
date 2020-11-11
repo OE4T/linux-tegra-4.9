@@ -1,8 +1,7 @@
-From b50cc5e47706c227af24da4b4febba8e761eafa5 Mon Sep 17 00:00:00 2001
+From 0380911530c936ea6c2a7bc53fe590b6c608711d Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Fri, 17 Jun 2011 12:39:57 +0200
-Subject: [PATCH 070/371] rt: Provide PREEMPT_RT_BASE config switch
-X-NVConfidentiality: public
+Subject: [PATCH 070/367] rt: Provide PREEMPT_RT_BASE config switch
 
 Introduce PREEMPT_RT_BASE which enables parts of
 PREEMPT_RT_FULL. Forces interrupt threading and enables some of the RT
@@ -14,7 +13,7 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  1 file changed, 17 insertions(+), 2 deletions(-)
 
 diff --git a/kernel/Kconfig.preempt b/kernel/Kconfig.preempt
-index 3f9c974..c669134 100644
+index 3f9c97419f02..c669134982ec 100644
 --- a/kernel/Kconfig.preempt
 +++ b/kernel/Kconfig.preempt
 @@ -1,3 +1,10 @@
@@ -56,5 +55,5 @@ index 3f9c974..c669134 100644
  
  config PREEMPT_COUNT
 -- 
-2.7.4
+2.28.0
 

@@ -1,8 +1,7 @@
-From 4e1f680a81773735e53f6b00a4df42bd4490b2b4 Mon Sep 17 00:00:00 2001
+From 843812c62210210d02920dd318129104627bc749 Mon Sep 17 00:00:00 2001
 From: Yang Shi <yang.shi@windriver.com>
 Date: Mon, 16 Sep 2013 14:09:19 -0700
-Subject: [PATCH 197/371] hrtimer: Move schedule_work call to helper thread
-X-NVConfidentiality: public
+Subject: [PATCH 197/367] hrtimer: Move schedule_work call to helper thread
 
 When run ltp leapsec_timer test, the following call trace is caught:
 
@@ -52,7 +51,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  1 file changed, 24 insertions(+)
 
 diff --git a/kernel/time/hrtimer.c b/kernel/time/hrtimer.c
-index 5493ae4..db90569 100644
+index dc21d6880bad..34c38da46ad2 100644
 --- a/kernel/time/hrtimer.c
 +++ b/kernel/time/hrtimer.c
 @@ -696,6 +696,29 @@ static void hrtimer_switch_to_hres(void)
@@ -94,5 +93,5 @@ index 5493ae4..db90569 100644
  #else
  
 -- 
-2.7.4
+2.28.0
 

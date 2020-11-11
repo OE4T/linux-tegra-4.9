@@ -1,8 +1,7 @@
-From ad7ce20389a993504bdd01ce3aa8f2d918a7ccdf Mon Sep 17 00:00:00 2001
+From 6666a8d709a543df96b1e0aa5fb2293309d4280c Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Wed, 20 Jan 2016 16:34:17 +0100
-Subject: [PATCH 159/371] softirq: split timer softirqs out of ksoftirqd
-X-NVConfidentiality: public
+Subject: [PATCH 159/367] softirq: split timer softirqs out of ksoftirqd
 
 The softirqd runs in -RT with SCHED_FIFO (prio 1) and deals mostly with
 timer wakeup which can not happen in hardirq context. The prio has been
@@ -24,11 +23,11 @@ SCHED_OTHER priority and it won't defer RCU anymore.
 Cc: stable-rt@vger.kernel.org
 Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 ---
- kernel/softirq.c | 85 ++++++++++++++++++++++++++++++++++++++++++++++++--------
+ kernel/softirq.c | 85 +++++++++++++++++++++++++++++++++++++++++-------
  1 file changed, 73 insertions(+), 12 deletions(-)
 
 diff --git a/kernel/softirq.c b/kernel/softirq.c
-index 8957a27..af0b78e 100644
+index 8957a27e45a7..af0b78e44bb0 100644
 --- a/kernel/softirq.c
 +++ b/kernel/softirq.c
 @@ -58,6 +58,10 @@ EXPORT_SYMBOL(irq_stat);
@@ -125,10 +124,11 @@ index 8957a27..af0b78e 100644
  }
  
  static inline int ksoftirqd_softirq_pending(void)
-@@ -693,22 +724,37 @@ static inline void _local_bh_enable_nort(void) { }
+@@ -692,23 +723,38 @@ static inline void local_bh_disable_nort(void) { }
+ static inline void _local_bh_enable_nort(void) { }
  
  static inline void ksoftirqd_set_sched_params(unsigned int cpu)
- {
++{
 +	/* Take over all but timer pending softirqs when starting */
 +	local_irq_disable();
 +	current->softirqs_raised = local_softirq_pending() & ~TIMER_SOFTIRQS;
@@ -136,7 +136,7 @@ index 8957a27..af0b78e 100644
 +}
 +
 +static inline void ktimer_softirqd_set_sched_params(unsigned int cpu)
-+{
+ {
  	struct sched_param param = { .sched_priority = 1 };
  
  	sched_setscheduler(current, SCHED_FIFO, &param);
@@ -210,5 +210,5 @@ index 8957a27..af0b78e 100644
  }
  early_initcall(spawn_ksoftirqd);
 -- 
-2.7.4
+2.28.0
 

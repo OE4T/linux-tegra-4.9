@@ -1,8 +1,7 @@
-From 15ce98f2cdde6b7e7c94a52373bf72e0c0033c63 Mon Sep 17 00:00:00 2001
+From 9743e4a446eef91cc8c9170ce62f60245740862e Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Wed, 22 Mar 2017 11:35:50 +0100
-Subject: [PATCH 007/371] futex: Remove rt_mutex_deadlock_account_*()
-X-NVConfidentiality: public
+Subject: [PATCH 007/367] futex: Remove rt_mutex_deadlock_account_*()
 
 Upstream commit fffa954fb528963c2fb7b0c0084eb77e2be7ab52
 
@@ -21,14 +20,14 @@ Link: http://lkml.kernel.org/r/20170322104151.652692478@infradead.org
 Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
 Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 ---
- kernel/locking/rtmutex-debug.c |  9 --------
+ kernel/locking/rtmutex-debug.c |  9 -------
  kernel/locking/rtmutex-debug.h |  3 ---
- kernel/locking/rtmutex.c       | 47 ++++++++++++++++--------------------------
+ kernel/locking/rtmutex.c       | 47 +++++++++++++---------------------
  kernel/locking/rtmutex.h       |  2 --
  4 files changed, 18 insertions(+), 43 deletions(-)
 
 diff --git a/kernel/locking/rtmutex-debug.c b/kernel/locking/rtmutex-debug.c
-index 62b6cee..0613c4b 100644
+index 62b6cee8ea7f..0613c4b1d059 100644
 --- a/kernel/locking/rtmutex-debug.c
 +++ b/kernel/locking/rtmutex-debug.c
 @@ -173,12 +173,3 @@ void debug_rt_mutex_init(struct rt_mutex *lock, const char *name)
@@ -45,7 +44,7 @@ index 62b6cee..0613c4b 100644
 -}
 -
 diff --git a/kernel/locking/rtmutex-debug.h b/kernel/locking/rtmutex-debug.h
-index d0519c3..b585af9 100644
+index d0519c3432b6..b585af9a1b50 100644
 --- a/kernel/locking/rtmutex-debug.h
 +++ b/kernel/locking/rtmutex-debug.h
 @@ -9,9 +9,6 @@
@@ -59,7 +58,7 @@ index d0519c3..b585af9 100644
  extern void debug_rt_mutex_free_waiter(struct rt_mutex_waiter *waiter);
  extern void debug_rt_mutex_init(struct rt_mutex *lock, const char *name);
 diff --git a/kernel/locking/rtmutex.c b/kernel/locking/rtmutex.c
-index 7615e77..57d99e4 100644
+index 7615e7722258..57d99e49e967 100644
 --- a/kernel/locking/rtmutex.c
 +++ b/kernel/locking/rtmutex.c
 @@ -956,8 +956,6 @@ static int try_to_take_rt_mutex(struct rt_mutex *lock, struct task_struct *task,
@@ -180,7 +179,7 @@ index 7615e77..57d99e4 100644
  
  /**
 diff --git a/kernel/locking/rtmutex.h b/kernel/locking/rtmutex.h
-index c406058..6607802 100644
+index c4060584c407..6607802efa8b 100644
 --- a/kernel/locking/rtmutex.h
 +++ b/kernel/locking/rtmutex.h
 @@ -11,8 +11,6 @@
@@ -193,5 +192,5 @@ index c406058..6607802 100644
  #define debug_rt_mutex_free_waiter(w)			do { } while (0)
  #define debug_rt_mutex_lock(l)				do { } while (0)
 -- 
-2.7.4
+2.28.0
 

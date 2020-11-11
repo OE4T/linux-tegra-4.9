@@ -1,8 +1,7 @@
-From 71880cc11228d76c12afc60ac8c0b2246df20802 Mon Sep 17 00:00:00 2001
+From c0cf048e9f2f252307ec1bf2b06630eca0aae476 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Thu, 22 Dec 2016 17:28:33 +0100
-Subject: [PATCH 168/371] arm: include definition for cpumask_t
-X-NVConfidentiality: public
+Subject: [PATCH 168/367] arm: include definition for cpumask_t
 
 This definition gets pulled in by other files. With the (later) split of
 RCU and spinlock.h it won't compile anymore.
@@ -14,7 +13,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  1 file changed, 2 insertions(+)
 
 diff --git a/arch/arm/include/asm/irq.h b/arch/arm/include/asm/irq.h
-index 61e1d08..0893b01 100644
+index 61e1d089ce1a..0893b01e5669 100644
 --- a/arch/arm/include/asm/irq.h
 +++ b/arch/arm/include/asm/irq.h
 @@ -22,6 +22,8 @@
@@ -27,5 +26,5 @@ index 61e1d08..0893b01 100644
  struct pt_regs;
  
 -- 
-2.7.4
+2.28.0
 

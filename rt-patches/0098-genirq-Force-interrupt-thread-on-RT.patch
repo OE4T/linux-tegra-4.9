@@ -1,8 +1,7 @@
-From c984a6051d3b50e94e51c036642ec4774f9a149b Mon Sep 17 00:00:00 2001
+From a349720d10fea77197a12394e1ad1a1b83c03cc5 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Sun, 3 Apr 2011 11:57:29 +0200
-Subject: [PATCH 098/371] genirq: Force interrupt thread on RT
-X-NVConfidentiality: public
+Subject: [PATCH 098/367] genirq: Force interrupt thread on RT
 
 Force threaded_irqs and optimize the code (force_irqthreads) in regard
 to this.
@@ -14,7 +13,7 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  2 files changed, 7 insertions(+), 1 deletion(-)
 
 diff --git a/include/linux/interrupt.h b/include/linux/interrupt.h
-index d28272d..75dcdf8 100644
+index d28272d1c9ad..75dcdf85cb08 100644
 --- a/include/linux/interrupt.h
 +++ b/include/linux/interrupt.h
 @@ -407,9 +407,13 @@ extern int irq_set_irqchip_state(unsigned int irq, enum irqchip_irq_state which,
@@ -33,7 +32,7 @@ index d28272d..75dcdf8 100644
  
  #ifndef __ARCH_SET_SOFTIRQ_PENDING
 diff --git a/kernel/irq/manage.c b/kernel/irq/manage.c
-index be7f489..12a6ee7 100644
+index be7f489788e2..12a6ee789d5a 100644
 --- a/kernel/irq/manage.c
 +++ b/kernel/irq/manage.c
 @@ -22,6 +22,7 @@
@@ -53,5 +52,5 @@ index be7f489..12a6ee7 100644
  
  static void __synchronize_hardirq(struct irq_desc *desc)
 -- 
-2.7.4
+2.28.0
 

@@ -1,8 +1,7 @@
-From d5b3a313b0d2eb25d77f5009029172fdd601bc4f Mon Sep 17 00:00:00 2001
+From a0c66edc54610a0c985661f6e060453d419d7e5d Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Wed, 22 Mar 2017 11:35:48 +0100
-Subject: [PATCH 005/371] futex: Cleanup variable names for futex_top_waiter()
-X-NVConfidentiality: public
+Subject: [PATCH 005/367] futex: Cleanup variable names for futex_top_waiter()
 
 Upstream commit 499f5aca2cdd5e958b27e2655e7e7f82524f46b1
 
@@ -26,7 +25,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  1 file changed, 15 insertions(+), 15 deletions(-)
 
 diff --git a/kernel/futex.c b/kernel/futex.c
-index 2e766ff..797d601 100644
+index 2e766ffff2cb..797d601b9be2 100644
 --- a/kernel/futex.c
 +++ b/kernel/futex.c
 @@ -1121,14 +1121,14 @@ static int attach_to_pi_owner(u32 uval, union futex_key *key,
@@ -120,5 +119,5 @@ index 2e766ff..797d601 100644
  		 * In case of success wake_futex_pi dropped the hash
  		 * bucket lock.
 -- 
-2.7.4
+2.28.0
 

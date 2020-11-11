@@ -1,8 +1,7 @@
-From 405911172520117e4351677ed247bf3454e39f87 Mon Sep 17 00:00:00 2001
+From 1c50ab683b377d68cc1310dc26c7a2990362efe2 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Tue, 12 Jul 2011 15:38:34 +0200
-Subject: [PATCH 233/371] net: Use skbufhead with raw lock
-X-NVConfidentiality: public
+Subject: [PATCH 233/367] net: Use skbufhead with raw lock
 
 Use the rps lock as rawlock so we can keep irq-off regions. It looks low
 latency. However we can't kfree() from this context therefore we defer this
@@ -16,10 +15,10 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  3 files changed, 32 insertions(+), 7 deletions(-)
 
 diff --git a/include/linux/netdevice.h b/include/linux/netdevice.h
-index 2ecf0f3..3b0fa22 100644
+index 81c85ba6e2b8..fc4c850d033e 100644
 --- a/include/linux/netdevice.h
 +++ b/include/linux/netdevice.h
-@@ -2866,6 +2866,7 @@ struct softnet_data {
+@@ -2871,6 +2871,7 @@ struct softnet_data {
  	unsigned int		dropped;
  	struct sk_buff_head	input_pkt_queue;
  	struct napi_struct	backlog;
@@ -28,7 +27,7 @@ index 2ecf0f3..3b0fa22 100644
  };
  
 diff --git a/include/linux/skbuff.h b/include/linux/skbuff.h
-index e37112a..b9a54b0 100644
+index e37112ac332f..b9a54b02f63d 100644
 --- a/include/linux/skbuff.h
 +++ b/include/linux/skbuff.h
 @@ -284,6 +284,7 @@ struct sk_buff_head {
@@ -53,7 +52,7 @@ index e37112a..b9a54b0 100644
  		struct lock_class_key *class)
  {
 diff --git a/net/core/dev.c b/net/core/dev.c
-index ae2f38a..b13e570 100644
+index 247149e3c85e..970ed9e635b9 100644
 --- a/net/core/dev.c
 +++ b/net/core/dev.c
 @@ -211,14 +211,14 @@ static inline struct hlist_head *dev_index_hash(struct net *net, int ifindex)
@@ -141,7 +140,7 @@ index ae2f38a..b13e570 100644
  	for (;;) {
  		struct napi_struct *n;
  
-@@ -8119,6 +8132,9 @@ static int dev_cpu_callback(struct notifier_block *nfb,
+@@ -8120,6 +8133,9 @@ static int dev_cpu_callback(struct notifier_block *nfb,
  		netif_rx_ni(skb);
  		input_queue_head_incr(oldsd);
  	}
@@ -151,7 +150,7 @@ index ae2f38a..b13e570 100644
  
  	return NOTIFY_OK;
  }
-@@ -8425,8 +8441,9 @@ static int __init net_dev_init(void)
+@@ -8426,8 +8442,9 @@ static int __init net_dev_init(void)
  
  		INIT_WORK(flush, flush_backlog);
  
@@ -164,5 +163,5 @@ index ae2f38a..b13e570 100644
  		sd->output_queue_tailp = &sd->output_queue;
  #ifdef CONFIG_RPS
 -- 
-2.7.4
+2.28.0
 

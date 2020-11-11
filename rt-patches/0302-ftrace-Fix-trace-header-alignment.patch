@@ -1,8 +1,7 @@
-From 2b52e19c4f198cf2d2d7611cb0c073f40748fa04 Mon Sep 17 00:00:00 2001
+From f8999dc26368f5073109d9950e823f5447f97ff4 Mon Sep 17 00:00:00 2001
 From: Mike Galbraith <umgwanakikbuti@gmail.com>
 Date: Sun, 16 Oct 2016 05:08:30 +0200
-Subject: [PATCH 302/371] ftrace: Fix trace header alignment
-X-NVConfidentiality: public
+Subject: [PATCH 302/367] ftrace: Fix trace header alignment
 
 Line up helper arrows to the right column.
 
@@ -15,7 +14,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  1 file changed, 16 insertions(+), 16 deletions(-)
 
 diff --git a/kernel/trace/trace.c b/kernel/trace/trace.c
-index 15112e7..b862302 100644
+index 15112e7b1a50..b86230227d44 100644
 --- a/kernel/trace/trace.c
 +++ b/kernel/trace/trace.c
 @@ -2936,17 +2936,17 @@ get_total_entries(struct trace_buffer *buf,
@@ -65,5 +64,5 @@ index 15112e7..b862302 100644
  
  static void print_func_help_header_irq_tgid(struct trace_buffer *buf, struct seq_file *m)
 -- 
-2.7.4
+2.28.0
 

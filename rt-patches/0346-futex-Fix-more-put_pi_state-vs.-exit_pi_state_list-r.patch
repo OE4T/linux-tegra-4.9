@@ -1,9 +1,8 @@
-From 4545f4efdf33bdb56b13567f9aa2b8e6a9202738 Mon Sep 17 00:00:00 2001
+From 4f41b21636d82d0816c98151f7e211822cee1e17 Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Wed, 6 Jun 2018 15:31:27 +0200
-Subject: [PATCH 346/371] futex: Fix more put_pi_state() vs.
+Subject: [PATCH 346/367] futex: Fix more put_pi_state() vs.
  exit_pi_state_list() races
-X-NVConfidentiality: public
 
 [ Upstream commit 51d00899f7e6ded15c89cb4e2cb11a35283bac81 ]
 
@@ -58,7 +57,7 @@ Signed-off-by: Julia Cartwright <julia@ni.com>
  1 file changed, 20 insertions(+), 3 deletions(-)
 
 diff --git a/kernel/futex.c b/kernel/futex.c
-index 9d46ee3..68a66e9 100644
+index 9d46ee38bf9a..68a66e9c1045 100644
 --- a/kernel/futex.c
 +++ b/kernel/futex.c
 @@ -899,11 +899,27 @@ void exit_pi_state_list(struct task_struct *curr)
@@ -115,5 +114,5 @@ index 9d46ee3..68a66e9 100644
  		spin_unlock(&hb->lock);
  
 -- 
-2.7.4
+2.28.0
 

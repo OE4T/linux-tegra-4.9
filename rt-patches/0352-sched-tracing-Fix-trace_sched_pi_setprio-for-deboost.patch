@@ -1,12 +1,11 @@
-From 34a900fc68aea4c3a533f7a1fdc5ee6e6d3e52db Mon Sep 17 00:00:00 2001
+From 4c687629e4fc5824a81820e4904823202864135a Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Tue, 10 Jul 2018 18:53:18 +0200
-Subject: [PATCH 352/371] sched, tracing: Fix trace_sched_pi_setprio() for
+Subject: [PATCH 352/367] sched, tracing: Fix trace_sched_pi_setprio() for
  deboosting
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
-X-NVConfidentiality: public
 
 [ Upstream commit 4ff648decf4712d39f184fc2df3163f43975575a ]
 
@@ -44,7 +43,7 @@ Signed-off-by: Julia Cartwright <julia@ni.com>
  1 file changed, 3 insertions(+), 1 deletion(-)
 
 diff --git a/include/trace/events/sched.h b/include/trace/events/sched.h
-index 531343ad..2d10f9d 100644
+index 9fb770212083..64f7b349e8c7 100644
 --- a/include/trace/events/sched.h
 +++ b/include/trace/events/sched.h
 @@ -453,7 +453,9 @@ TRACE_EVENT(sched_pi_setprio,
@@ -59,5 +58,5 @@ index 531343ad..2d10f9d 100644
  	),
  
 -- 
-2.7.4
+2.28.0
 

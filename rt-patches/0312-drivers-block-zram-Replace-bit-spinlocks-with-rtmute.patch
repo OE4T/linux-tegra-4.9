@@ -1,9 +1,8 @@
-From a1304b8936bff57732b79c913f8e27c68fd8f36d Mon Sep 17 00:00:00 2001
+From e662a5e25ccdf87c7362d52facd4e2ab053f2d0b Mon Sep 17 00:00:00 2001
 From: Mike Galbraith <umgwanakikbuti@gmail.com>
 Date: Thu, 31 Mar 2016 04:08:28 +0200
-Subject: [PATCH 312/371] drivers/block/zram: Replace bit spinlocks with
+Subject: [PATCH 312/367] drivers/block/zram: Replace bit spinlocks with
  rtmutex for -rt
-X-NVConfidentiality: public
 
 They're nondeterministic, and lead to ___might_sleep() splats in -rt.
 OTOH, they're a lot less wasteful than an rtmutex per page.
@@ -11,12 +10,12 @@ OTOH, they're a lot less wasteful than an rtmutex per page.
 Signed-off-by: Mike Galbraith <umgwanakikbuti@gmail.com>
 Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 ---
- drivers/block/zram/zram_drv.c | 30 ++++++++++++++++--------------
- drivers/block/zram/zram_drv.h | 41 +++++++++++++++++++++++++++++++++++++++++
+ drivers/block/zram/zram_drv.c | 30 +++++++++++++------------
+ drivers/block/zram/zram_drv.h | 41 +++++++++++++++++++++++++++++++++++
  2 files changed, 57 insertions(+), 14 deletions(-)
 
 diff --git a/drivers/block/zram/zram_drv.c b/drivers/block/zram/zram_drv.c
-index d64a53d..c864ad5 100644
+index d64a53d3270a..c864ad57348a 100644
 --- a/drivers/block/zram/zram_drv.c
 +++ b/drivers/block/zram/zram_drv.c
 @@ -528,6 +528,8 @@ static struct zram_meta *zram_meta_alloc(char *pool_name, u64 disksize)
@@ -123,7 +122,7 @@ index d64a53d..c864ad5 100644
  }
  
 diff --git a/drivers/block/zram/zram_drv.h b/drivers/block/zram/zram_drv.h
-index 74fcf10..fd4020c 100644
+index 74fcf10da374..fd4020c99b9e 100644
 --- a/drivers/block/zram/zram_drv.h
 +++ b/drivers/block/zram/zram_drv.h
 @@ -73,6 +73,9 @@ enum zram_pageflags {
@@ -180,5 +179,5 @@ index 74fcf10..fd4020c 100644
 +
  #endif
 -- 
-2.7.4
+2.28.0
 

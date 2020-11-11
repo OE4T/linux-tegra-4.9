@@ -1,8 +1,7 @@
-From eed8610f4e00908729c892761da9ee38eea213a5 Mon Sep 17 00:00:00 2001
+From 7c3a6c8a8a760f4b1b59444698641ec50c3863a8 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Mon, 12 Oct 2015 11:18:40 +0200
-Subject: [PATCH 256/371] arm64/xen: Make XEN depend on !RT
-X-NVConfidentiality: public
+Subject: [PATCH 256/367] arm64/xen: Make XEN depend on !RT
 
 It's not ready and probably never will be, unless xen folks have a
 look at it.
@@ -13,7 +12,7 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/arch/arm64/Kconfig b/arch/arm64/Kconfig
-index c049108..e403397 100644
+index c0491081c836..e40339726039 100644
 --- a/arch/arm64/Kconfig
 +++ b/arch/arm64/Kconfig
 @@ -738,7 +738,7 @@ config XEN_DOM0
@@ -26,5 +25,5 @@ index c049108..e403397 100644
  	select PARAVIRT
  	help
 -- 
-2.7.4
+2.28.0
 

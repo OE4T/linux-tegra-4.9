@@ -1,8 +1,7 @@
-From bb216156d6930ddbb87e2bd2c0d6d6a125ebdf61 Mon Sep 17 00:00:00 2001
+From d0402a9949b55c285b318e84dd6071091b447d62 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Tue, 28 Jun 2011 10:59:58 +0200
-Subject: [PATCH 060/371] net-flip-lock-dep-thingy.patch
-X-NVConfidentiality: public
+Subject: [PATCH 060/367] net-flip-lock-dep-thingy.patch
 
 =======================================================
 [ INFO: possible circular locking dependency detected ]
@@ -15,6 +14,7 @@ but task is already holding lock:
  (sk_lock-AF_INET){+.+...}, at: [<ffffffff81433308>] lock_sock+0x10/0x12
 
 which lock already depends on the new lock.
+
 
 the existing dependency chain (in reverse order) is:
 
@@ -88,13 +88,14 @@ Call Trace:
  [<ffffffff8112667a>] sys_close+0xf8/0x13d
  [<ffffffff814ae882>] system_call_fastpath+0x16/0x1b
 
+
 Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
 ---
  net/core/sock.c | 3 +--
  1 file changed, 1 insertion(+), 2 deletions(-)
 
 diff --git a/net/core/sock.c b/net/core/sock.c
-index 2d78b7c..79aaaa6 100644
+index 3e12e5059a71..d8804dbe9b0a 100644
 --- a/net/core/sock.c
 +++ b/net/core/sock.c
 @@ -2513,12 +2513,11 @@ void lock_sock_nested(struct sock *sk, int subclass)
@@ -112,5 +113,5 @@ index 2d78b7c..79aaaa6 100644
  EXPORT_SYMBOL(lock_sock_nested);
  
 -- 
-2.7.4
+2.28.0
 

@@ -1,9 +1,8 @@
-From fc6c283bd7948220d4a0c67eb53b6a36c1a9afbf Mon Sep 17 00:00:00 2001
+From 69e406efaf2f0f6d08025c8f647d3b66c376e80d Mon Sep 17 00:00:00 2001
 From: Mikulas Patocka <mpatocka@redhat.com>
 Date: Mon, 13 Nov 2017 12:56:53 -0500
-Subject: [PATCH 329/371] locking/rt-mutex: fix deadlock in device mapper /
+Subject: [PATCH 329/367] locking/rt-mutex: fix deadlock in device mapper /
  block-IO
-X-NVConfidentiality: public
 
 When some block device driver creates a bio and submits it to another
 block device driver, the bio is added to current->bio_list (in order to
@@ -40,7 +39,7 @@ Signed-off-by: Steven Rostedt (VMware) <rostedt@goodmis.org>
  1 file changed, 13 insertions(+)
 
 diff --git a/kernel/locking/rtmutex.c b/kernel/locking/rtmutex.c
-index fbe77f4..ee35702 100644
+index fbe77f43235f..ee3570235e9a 100644
 --- a/kernel/locking/rtmutex.c
 +++ b/kernel/locking/rtmutex.c
 @@ -22,6 +22,7 @@
@@ -78,5 +77,5 @@ index fbe77f4..ee35702 100644
  }
  
 -- 
-2.7.4
+2.28.0
 

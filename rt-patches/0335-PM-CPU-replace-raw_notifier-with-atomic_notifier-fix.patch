@@ -1,9 +1,8 @@
-From e0d2d8764c8f8ccab50f03b33d485a4268b8d0cd Mon Sep 17 00:00:00 2001
+From 73df540c8358b405c9967c3e5f0bf66f828a42c4 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Thu, 17 Aug 2017 11:38:51 +0200
-Subject: [PATCH 335/371] PM / CPU: replace raw_notifier with atomic_notifier
+Subject: [PATCH 335/367] PM / CPU: replace raw_notifier with atomic_notifier
  (fixup)
-X-NVConfidentiality: public
 
 The original patch changed betwen its posting and what finally went into
 Rafael's tree so here is the delta.
@@ -14,7 +13,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  1 file changed, 7 insertions(+)
 
 diff --git a/kernel/cpu_pm.c b/kernel/cpu_pm.c
-index 97f145d..7b4daf2 100644
+index 97f145d6bd3f..7b4daf29f6e0 100644
 --- a/kernel/cpu_pm.c
 +++ b/kernel/cpu_pm.c
 @@ -28,8 +28,15 @@ static int cpu_pm_notify(enum cpu_pm_event event, int nr_to_call, int *nr_calls)
@@ -34,5 +33,5 @@ index 97f145d..7b4daf2 100644
  	return notifier_to_errno(ret);
  }
 -- 
-2.7.4
+2.28.0
 

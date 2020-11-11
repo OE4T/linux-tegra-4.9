@@ -1,8 +1,7 @@
-From 9a83ff7e91b8502253c2d45667b26b1d4c727e82 Mon Sep 17 00:00:00 2001
+From 433c8332a67a00946795b59b822b0783743c2c56 Mon Sep 17 00:00:00 2001
 From: Ingo Molnar <mingo@elte.hu>
 Date: Fri, 3 Jul 2009 08:30:16 -0500
-Subject: [PATCH 082/371] ide: Do not disable interrupts for PREEMPT-RT
-X-NVConfidentiality: public
+Subject: [PATCH 082/367] ide: Do not disable interrupts for PREEMPT-RT
 
 Use the local_irq_*_nort variants.
 
@@ -19,7 +18,7 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  7 files changed, 16 insertions(+), 16 deletions(-)
 
 diff --git a/drivers/ide/alim15x3.c b/drivers/ide/alim15x3.c
-index 36f76e2..394f142f 100644
+index 36f76e28a0bf..394f142f90c7 100644
 --- a/drivers/ide/alim15x3.c
 +++ b/drivers/ide/alim15x3.c
 @@ -234,7 +234,7 @@ static int init_chipset_ali15x3(struct pci_dev *dev)
@@ -41,7 +40,7 @@ index 36f76e2..394f142f 100644
  }
  
 diff --git a/drivers/ide/hpt366.c b/drivers/ide/hpt366.c
-index 0ceae5c..c212e85 100644
+index 0ceae5cbd89a..c212e85d7f3e 100644
 --- a/drivers/ide/hpt366.c
 +++ b/drivers/ide/hpt366.c
 @@ -1236,7 +1236,7 @@ static int init_dma_hpt366(ide_hwif_t *hwif,
@@ -63,7 +62,7 @@ index 0ceae5c..c212e85 100644
  	printk(KERN_INFO "    %s: BM-DMA at 0x%04lx-0x%04lx\n",
  			 hwif->name, base, base + 7);
 diff --git a/drivers/ide/ide-io-std.c b/drivers/ide/ide-io-std.c
-index 1976397..4169433 100644
+index 19763977568c..4169433faab5 100644
 --- a/drivers/ide/ide-io-std.c
 +++ b/drivers/ide/ide-io-std.c
 @@ -175,7 +175,7 @@ void ide_input_data(ide_drive_t *drive, struct ide_cmd *cmd, void *buf,
@@ -103,7 +102,7 @@ index 1976397..4169433 100644
  		if (((len + 1) & 3) < 2)
  			return;
 diff --git a/drivers/ide/ide-io.c b/drivers/ide/ide-io.c
-index 669ea1e..e12e43e 100644
+index 669ea1e45795..e12e43e62245 100644
 --- a/drivers/ide/ide-io.c
 +++ b/drivers/ide/ide-io.c
 @@ -659,7 +659,7 @@ void ide_timer_expiry (unsigned long data)
@@ -116,7 +115,7 @@ index 669ea1e..e12e43e 100644
  			startstop = handler(drive);
  		} else if (drive_is_ready(drive)) {
 diff --git a/drivers/ide/ide-iops.c b/drivers/ide/ide-iops.c
-index 376f2dc..f014dd1 100644
+index 376f2dc410c5..f014dd1b73dc 100644
 --- a/drivers/ide/ide-iops.c
 +++ b/drivers/ide/ide-iops.c
 @@ -129,12 +129,12 @@ int __ide_wait_stat(ide_drive_t *drive, u8 good, u8 bad,
@@ -135,7 +134,7 @@ index 376f2dc..f014dd1 100644
  	/*
  	 * Allow status to settle, then read it again.
 diff --git a/drivers/ide/ide-probe.c b/drivers/ide/ide-probe.c
-index 0b63fac..4ceba37 100644
+index 0b63facd1d87..4ceba37afc0c 100644
 --- a/drivers/ide/ide-probe.c
 +++ b/drivers/ide/ide-probe.c
 @@ -196,10 +196,10 @@ static void do_identify(ide_drive_t *drive, u8 cmd, u16 *id)
@@ -152,7 +151,7 @@ index 0b63fac..4ceba37 100644
  	drive->dev_flags |= IDE_DFLAG_ID_READ;
  #ifdef DEBUG
 diff --git a/drivers/ide/ide-taskfile.c b/drivers/ide/ide-taskfile.c
-index a716693..be0568c 100644
+index a716693417a3..be0568c722d6 100644
 --- a/drivers/ide/ide-taskfile.c
 +++ b/drivers/ide/ide-taskfile.c
 @@ -250,7 +250,7 @@ void ide_pio_bytes(ide_drive_t *drive, struct ide_cmd *cmd,
@@ -183,5 +182,5 @@ index a716693..be0568c 100644
  	ide_set_handler(drive, &task_pio_intr, WAIT_WORSTCASE);
  
 -- 
-2.7.4
+2.28.0
 

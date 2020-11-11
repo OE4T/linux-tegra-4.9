@@ -1,9 +1,8 @@
-From 71c14dc8c3294642810181a05443a289d5e8f99b Mon Sep 17 00:00:00 2001
+From 72164fa4103c3fb78fdf7077673c74fac183286c Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Fri, 3 Jul 2009 08:44:31 -0500
-Subject: [PATCH 123/371] hrtimer: Fixup hrtimer callback changes for
+Subject: [PATCH 123/367] hrtimer: Fixup hrtimer callback changes for
  preempt-rt
-X-NVConfidentiality: public
 
 In preempt-rt we can not call the callbacks which take sleeping locks
 from the timer interrupt context.
@@ -14,16 +13,16 @@ delivery problem for real.
 Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
 Signed-off-by: Ingo Molnar <mingo@elte.hu>
 ---
- include/linux/hrtimer.h  |   7 +++
+ include/linux/hrtimer.h  |   7 ++
  kernel/sched/core.c      |   1 +
  kernel/sched/rt.c        |   1 +
- kernel/time/hrtimer.c    | 144 ++++++++++++++++++++++++++++++++++++++++++++---
+ kernel/time/hrtimer.c    | 144 ++++++++++++++++++++++++++++++++++++---
  kernel/time/tick-sched.c |   1 +
  kernel/watchdog.c        |   1 +
  6 files changed, 146 insertions(+), 9 deletions(-)
 
 diff --git a/include/linux/hrtimer.h b/include/linux/hrtimer.h
-index b7c2d54..65d0671 100644
+index b9a14f3ad98d..74532c59d066 100644
 --- a/include/linux/hrtimer.h
 +++ b/include/linux/hrtimer.h
 @@ -87,6 +87,8 @@ enum hrtimer_restart {
@@ -69,7 +68,7 @@ index b7c2d54..65d0671 100644
  	unsigned int			active_bases;
  	unsigned int			clock_was_set_seq;
 diff --git a/kernel/sched/core.c b/kernel/sched/core.c
-index 43529d4..25cdade 100644
+index 43529d439db7..25cdade40225 100644
 --- a/kernel/sched/core.c
 +++ b/kernel/sched/core.c
 @@ -360,6 +360,7 @@ static void init_rq_hrtick(struct rq *rq)
@@ -81,7 +80,7 @@ index 43529d4..25cdade 100644
  #else	/* CONFIG_SCHED_HRTICK */
  static inline void hrtick_clear(struct rq *rq)
 diff --git a/kernel/sched/rt.c b/kernel/sched/rt.c
-index 5b4c9b4..2dd6324 100644
+index 5b4c9b49551a..2dd632436b94 100644
 --- a/kernel/sched/rt.c
 +++ b/kernel/sched/rt.c
 @@ -49,6 +49,7 @@ void init_rt_bandwidth(struct rt_bandwidth *rt_b, u64 period, u64 runtime)
@@ -93,7 +92,7 @@ index 5b4c9b4..2dd6324 100644
  }
  
 diff --git a/kernel/time/hrtimer.c b/kernel/time/hrtimer.c
-index 7ab5110..5493ae4 100644
+index 9fe48b8a86ba..dc21d6880bad 100644
 --- a/kernel/time/hrtimer.c
 +++ b/kernel/time/hrtimer.c
 @@ -720,11 +720,8 @@ static inline int hrtimer_is_hres_enabled(void) { return 0; }
@@ -119,7 +118,7 @@ index 7ab5110..5493ae4 100644
  		wait_event(base->cpu_base->wait,
  				!(hrtimer_callback_running(timer)));
  }
-@@ -923,6 +920,11 @@ static void __remove_hrtimer(struct hrtimer *timer,
+@@ -925,6 +922,11 @@ static void __remove_hrtimer(struct hrtimer *timer,
  	if (!(state & HRTIMER_STATE_ENQUEUED))
  		return;
  
@@ -131,7 +130,7 @@ index 7ab5110..5493ae4 100644
  	if (!timerqueue_del(&base->active, &timer->node))
  		cpu_base->active_bases &= ~(1 << base->index);
  
-@@ -1180,6 +1182,7 @@ static void __hrtimer_init(struct hrtimer *timer, clockid_t clock_id,
+@@ -1183,6 +1185,7 @@ static void __hrtimer_init(struct hrtimer *timer, clockid_t clock_id,
  
  	base = hrtimer_clockid_to_base(clock_id);
  	timer->base = &cpu_base->clock_base[base];
@@ -139,7 +138,7 @@ index 7ab5110..5493ae4 100644
  	timerqueue_init(&timer->node);
  
  #ifdef CONFIG_TIMER_STATS
-@@ -1220,6 +1223,7 @@ bool hrtimer_active(const struct hrtimer *timer)
+@@ -1223,6 +1226,7 @@ bool hrtimer_active(const struct hrtimer *timer)
  		seq = raw_read_seqcount_begin(&cpu_base->seq);
  
  		if (timer->state != HRTIMER_STATE_INACTIVE ||
@@ -147,7 +146,7 @@ index 7ab5110..5493ae4 100644
  		    cpu_base->running == timer)
  			return true;
  
-@@ -1318,12 +1322,112 @@ static void __run_hrtimer(struct hrtimer_cpu_base *cpu_base,
+@@ -1321,12 +1325,112 @@ static void __run_hrtimer(struct hrtimer_cpu_base *cpu_base,
  	cpu_base->running = NULL;
  }
  
@@ -260,7 +259,7 @@ index 7ab5110..5493ae4 100644
  
  	for (; active; base++, active >>= 1) {
  		struct timerqueue_node *node;
-@@ -1363,9 +1467,14 @@ static void __hrtimer_run_queues(struct hrtimer_cpu_base *cpu_base, ktime_t now)
+@@ -1366,9 +1470,14 @@ static void __hrtimer_run_queues(struct hrtimer_cpu_base *cpu_base, ktime_t now)
  			if (basenow.tv64 < hrtimer_get_softexpires_tv64(timer))
  				break;
  
@@ -276,7 +275,7 @@ index 7ab5110..5493ae4 100644
  }
  
  #ifdef CONFIG_HIGH_RES_TIMERS
-@@ -1507,8 +1616,6 @@ void hrtimer_run_queues(void)
+@@ -1510,8 +1619,6 @@ void hrtimer_run_queues(void)
  	now = hrtimer_update_base(cpu_base);
  	__hrtimer_run_queues(cpu_base, now);
  	raw_spin_unlock(&cpu_base->lock);
@@ -285,7 +284,7 @@ index 7ab5110..5493ae4 100644
  }
  
  /*
-@@ -1530,6 +1637,7 @@ static enum hrtimer_restart hrtimer_wakeup(struct hrtimer *timer)
+@@ -1533,6 +1640,7 @@ static enum hrtimer_restart hrtimer_wakeup(struct hrtimer *timer)
  void hrtimer_init_sleeper(struct hrtimer_sleeper *sl, struct task_struct *task)
  {
  	sl->timer.function = hrtimer_wakeup;
@@ -293,7 +292,7 @@ index 7ab5110..5493ae4 100644
  	sl->task = task;
  }
  EXPORT_SYMBOL_GPL(hrtimer_init_sleeper);
-@@ -1664,6 +1772,7 @@ int hrtimers_prepare_cpu(unsigned int cpu)
+@@ -1667,6 +1775,7 @@ int hrtimers_prepare_cpu(unsigned int cpu)
  	for (i = 0; i < HRTIMER_MAX_CLOCK_BASES; i++) {
  		cpu_base->clock_base[i].cpu_base = cpu_base;
  		timerqueue_init_head(&cpu_base->clock_base[i].active);
@@ -301,7 +300,7 @@ index 7ab5110..5493ae4 100644
  	}
  
  	cpu_base->active_bases = 0;
-@@ -1741,9 +1850,26 @@ int hrtimers_dead_cpu(unsigned int scpu)
+@@ -1744,9 +1853,26 @@ int hrtimers_dead_cpu(unsigned int scpu)
  
  #endif /* CONFIG_HOTPLUG_CPU */
  
@@ -329,7 +328,7 @@ index 7ab5110..5493ae4 100644
  
  /**
 diff --git a/kernel/time/tick-sched.c b/kernel/time/tick-sched.c
-index 065f663..6a1b656 100644
+index 065f663702f2..6a1b656216b8 100644
 --- a/kernel/time/tick-sched.c
 +++ b/kernel/time/tick-sched.c
 @@ -1225,6 +1225,7 @@ void tick_setup_sched_timer(void)
@@ -341,7 +340,7 @@ index 065f663..6a1b656 100644
  
  	/* Get the next period (per-CPU) */
 diff --git a/kernel/watchdog.c b/kernel/watchdog.c
-index 395721f..953297f 100644
+index 395721ff16de..953297f50c3e 100644
 --- a/kernel/watchdog.c
 +++ b/kernel/watchdog.c
 @@ -374,6 +374,7 @@ static void watchdog_enable(unsigned int cpu)
@@ -353,5 +352,5 @@ index 395721f..953297f 100644
  	/* Enable the perf event */
  	watchdog_nmi_enable(cpu);
 -- 
-2.7.4
+2.28.0
 

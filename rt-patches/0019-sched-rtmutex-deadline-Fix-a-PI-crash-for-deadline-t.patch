@@ -1,9 +1,8 @@
-From 55773cb3e0d0eeec814782bc9b6bfd81f2821b35 Mon Sep 17 00:00:00 2001
+From 3de681823e8ffde2433f9f31b8332ad5684beddb Mon Sep 17 00:00:00 2001
 From: Xunlei Pang <xlpang@redhat.com>
 Date: Thu, 23 Mar 2017 15:56:08 +0100
-Subject: [PATCH 019/371] sched/rtmutex/deadline: Fix a PI crash for deadline
+Subject: [PATCH 019/367] sched/rtmutex/deadline: Fix a PI crash for deadline
  tasks
-X-NVConfidentiality: public
 
 Upstream commit e96a7705e7d3fef96aec9b590c63b2f6f7d2ba22
 
@@ -62,7 +61,7 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  6 files changed, 28 insertions(+), 8 deletions(-)
 
 diff --git a/include/linux/init_task.h b/include/linux/init_task.h
-index 325f649..d359b1a 100644
+index 325f649d77ff..d359b1a71610 100644
 --- a/include/linux/init_task.h
 +++ b/include/linux/init_task.h
 @@ -164,6 +164,7 @@ extern struct task_group root_task_group;
@@ -74,7 +73,7 @@ index 325f649..d359b1a 100644
  #else
  # define INIT_RT_MUTEXES(tsk)
 diff --git a/include/linux/sched.h b/include/linux/sched.h
-index dcf1490..47479e6 100644
+index dcf149006e69..47479e64ee17 100644
 --- a/include/linux/sched.h
 +++ b/include/linux/sched.h
 @@ -1898,6 +1898,8 @@ struct task_struct {
@@ -87,7 +86,7 @@ index dcf1490..47479e6 100644
  	struct rt_mutex_waiter *pi_blocked_on;
  #endif
 diff --git a/include/linux/sched/rt.h b/include/linux/sched/rt.h
-index a30b172..60d0c47 100644
+index a30b172df6e1..60d0c4740b9f 100644
 --- a/include/linux/sched/rt.h
 +++ b/include/linux/sched/rt.h
 @@ -19,6 +19,7 @@ static inline int rt_task(struct task_struct *p)
@@ -99,7 +98,7 @@ index a30b172..60d0c47 100644
  extern void rt_mutex_adjust_pi(struct task_struct *p);
  static inline bool tsk_is_pi_blocked(struct task_struct *tsk)
 diff --git a/kernel/fork.c b/kernel/fork.c
-index 3b6e868..a34d2b8 100644
+index 3b6e868b0d6e..a34d2b83e96a 100644
 --- a/kernel/fork.c
 +++ b/kernel/fork.c
 @@ -1444,6 +1444,7 @@ static void rt_mutex_init_task(struct task_struct *p)
@@ -111,13 +110,14 @@ index 3b6e868..a34d2b8 100644
  #endif
  }
 diff --git a/kernel/locking/rtmutex.c b/kernel/locking/rtmutex.c
-index a77f7ca..1996128 100644
+index a77f7cae7ca0..199612829fd6 100644
 --- a/kernel/locking/rtmutex.c
 +++ b/kernel/locking/rtmutex.c
-@@ -320,6 +320,19 @@ rt_mutex_dequeue_pi(struct task_struct *task, struct rt_mutex_waiter *waiter)
+@@ -319,6 +319,19 @@ rt_mutex_dequeue_pi(struct task_struct *task, struct rt_mutex_waiter *waiter)
+ 	RB_CLEAR_NODE(&waiter->pi_tree_entry);
  }
  
- /*
++/*
 + * Must hold both p->pi_lock and task_rq(p)->lock.
 + */
 +void rt_mutex_update_top_task(struct task_struct *p)
@@ -130,10 +130,9 @@ index a77f7ca..1996128 100644
 +	p->pi_top_task = task_top_pi_waiter(p)->task;
 +}
 +
-+/*
+ /*
   * Calculate task priority from the waiter tree priority
   *
-  * Return task->normal_prio when the waiter tree is empty or when
 @@ -334,12 +347,12 @@ int rt_mutex_getprio(struct task_struct *task)
  		   task->normal_prio);
  }
@@ -169,7 +168,7 @@ index a77f7ca..1996128 100644
  
  /*
 diff --git a/kernel/sched/core.c b/kernel/sched/core.c
-index 13c0358..69d0e8e 100644
+index 13c0358e5600..69d0e8e93740 100644
 --- a/kernel/sched/core.c
 +++ b/kernel/sched/core.c
 @@ -3792,6 +3792,8 @@ void rt_mutex_setprio(struct task_struct *p, int prio)
@@ -182,5 +181,5 @@ index 13c0358..69d0e8e 100644
  	oldprio = p->prio;
  
 -- 
-2.7.4
+2.28.0
 

@@ -1,9 +1,8 @@
-From 8f61613e57c9fd6240d123cba9fe203ccf3f8451 Mon Sep 17 00:00:00 2001
+From 102db1a850e6c30ef3f889bcb83b035aab53d796 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Mon, 6 Nov 2017 18:45:30 +0100
-Subject: [PATCH 328/371] fs: convert two more BH_Uptodate_Lock related
+Subject: [PATCH 328/367] fs: convert two more BH_Uptodate_Lock related
  bitspinlocks
-X-NVConfidentiality: public
 
 We convert all BH_Uptodate_Lock based bit-spinlocks to use
 bh_uptodate_lock_irqsave() instead. Those two were introduced after the
@@ -18,7 +17,7 @@ Signed-off-by: Steven Rostedt (VMware) <rostedt@goodmis.org>
  2 files changed, 4 insertions(+), 8 deletions(-)
 
 diff --git a/fs/ext4/page-io.c b/fs/ext4/page-io.c
-index 0718a86..4ca6cc2 100644
+index d68032bda4bf..e395a96cb2a2 100644
 --- a/fs/ext4/page-io.c
 +++ b/fs/ext4/page-io.c
 @@ -94,8 +94,7 @@ static void ext4_finish_bio(struct bio *bio)
@@ -42,7 +41,7 @@ index 0718a86..4ca6cc2 100644
  #ifdef CONFIG_EXT4_FS_ENCRYPTION
  			if (data_page)
 diff --git a/fs/xfs/xfs_aops.c b/fs/xfs/xfs_aops.c
-index f3acecf..c30dbde 100644
+index f3acecf3869d..c30dbde2a5af 100644
 --- a/fs/xfs/xfs_aops.c
 +++ b/fs/xfs/xfs_aops.c
 @@ -112,8 +112,7 @@ xfs_finish_page_writeback(
@@ -66,5 +65,5 @@ index f3acecf..c30dbde 100644
  	if (!busy)
  		end_page_writeback(bvec->bv_page);
 -- 
-2.7.4
+2.28.0
 

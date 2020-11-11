@@ -1,8 +1,7 @@
-From f08e9d970d6790ee9ebe84b4815fa97dd4138a40 Mon Sep 17 00:00:00 2001
+From b5eb045692ced68e9d40e02a079d210fd8a263db Mon Sep 17 00:00:00 2001
 From: Anders Roxell <anders.roxell@linaro.org>
 Date: Thu, 14 May 2015 17:52:17 +0200
-Subject: [PATCH 306/371] arch/arm64: Add lazy preempt support
-X-NVConfidentiality: public
+Subject: [PATCH 306/367] arch/arm64: Add lazy preempt support
 
 arm64 is missing support for PREEMPT_RT. The main feature which is
 lacking is support for lazy preemption. The arch-specific entry code,
@@ -11,14 +10,15 @@ have to be extended to provide this support. Then the Kconfig file has
 to be extended to indicate the support is available, and also to
 indicate that support for full RT preemption is now available.
 
+Change-Id: I91decbda9928eaad9ae290afd031e888a928b8a4
 Signed-off-by: Anders Roxell <anders.roxell@linaro.org>
 ---
  arch/arm64/Kconfig                   |  1 +
  arch/arm64/include/asm/thread_info.h |  8 +++++++-
- arch/arm64/kernel/asm-offsets.c      |  1 +
- arch/arm64/kernel/entry.S            | 16 +++++++++++-----
+ arch/arm64/kernel/asm-offsets.c      |  3 +++
+ arch/arm64/kernel/entry.S            | 12 +++++++++---
  arch/arm64/kernel/signal.c           |  2 +-
- 5 files changed, 21 insertions(+), 7 deletions(-)
+ 5 files changed, 21 insertions(+), 5 deletions(-)
 
 diff --git a/arch/arm64/Kconfig b/arch/arm64/Kconfig
 index e403397..1e97dd7 100644
@@ -73,33 +73,32 @@ index 5b96df6..f7c4271 100644
  #define _TIF_SYSCALL_WORK	(_TIF_SYSCALL_TRACE | _TIF_SYSCALL_AUDIT | \
  				 _TIF_SYSCALL_TRACEPOINT | _TIF_SECCOMP | \
 diff --git a/arch/arm64/kernel/asm-offsets.c b/arch/arm64/kernel/asm-offsets.c
-index b2debec..2a77068 100644
+index b2debec..fd5cc94 100644
 --- a/arch/arm64/kernel/asm-offsets.c
 +++ b/arch/arm64/kernel/asm-offsets.c
-@@ -39,6 +39,7 @@ int main(void)
-   BLANK();
-   DEFINE(TSK_TI_FLAGS,		offsetof(struct task_struct, thread_info.flags));
-   DEFINE(TSK_TI_PREEMPT,	offsetof(struct task_struct, thread_info.preempt_count));
-+  DEFINE(TI_PREEMPT_LAZY,	offsetof(struct thread_info, preempt_lazy_count));
-   DEFINE(TSK_TI_ADDR_LIMIT,	offsetof(struct task_struct, thread_info.addr_limit));
- #ifdef CONFIG_ARM64_SW_TTBR0_PAN
+@@ -44,6 +44,9 @@ int main(void)
    DEFINE(TSK_TI_TTBR0,		offsetof(struct task_struct, thread_info.ttbr0));
+ #endif
+   DEFINE(TSK_STACK,		offsetof(struct task_struct, stack));
++  DEFINE(TI_PREEMPT_LAZY,	offsetof(struct thread_info, preempt_lazy_count));
++  DEFINE(TI_ADDR_LIMIT,		offsetof(struct thread_info, addr_limit));
++  DEFINE(TI_CPU,		offsetof(struct thread_info, cpu));
+   BLANK();
+   DEFINE(THREAD_CPU_CONTEXT,	offsetof(struct task_struct, thread.cpu_context));
+   BLANK();
 diff --git a/arch/arm64/kernel/entry.S b/arch/arm64/kernel/entry.S
-index 09bf87b..358027b 100644
+index 09bf87b..f69ccdc 100644
 --- a/arch/arm64/kernel/entry.S
 +++ b/arch/arm64/kernel/entry.S
-@@ -563,12 +563,17 @@ el1_irq:
- 	irq_handler
+@@ -564,11 +564,16 @@ el1_irq:
  
  #ifdef CONFIG_PREEMPT
--	ldr	w24, [tsk, #TSK_TI_PREEMPT]	// get preempt count
+ 	ldr	w24, [tsk, #TSK_TI_PREEMPT]	// get preempt count
 -	cbnz	w24, 1f				// preempt count != 0
--	ldr	x0, [tsk, #TSK_TI_FLAGS]	// get flags
++	cbnz	w24, 2f				// preempt count != 0
+ 	ldr	x0, [tsk, #TSK_TI_FLAGS]	// get flags
 -	tbz	x0, #TIF_NEED_RESCHED, 1f	// needs rescheduling?
 -	bl	el1_preempt
-+	ldr	w24, [tsk, #TSK_TI_PREEMPT]		// get preempt count
-+	cbnz	w24, 2f				// preempt count != 0
-+	ldr	x0, [tsk, #TSK_TI_FLAGS]		// get flags
 +	tbnz	x0, #TIF_NEED_RESCHED, 1f	// needs rescheduling?
 +
 +	ldr	w24, [tsk, #TI_PREEMPT_LAZY]	// get preempt lazy count

@@ -1,8 +1,7 @@
-From bc1b7ede8ae7bcfd7dd3d051673abe7c6801a7b2 Mon Sep 17 00:00:00 2001
+From 0ec1dac18da200bce18c85a82be82350fe8f59eb Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Wed, 28 Mar 2018 11:15:19 +0200
-Subject: [PATCH 362/371] posix-timers: move the rcu head out of the union
-X-NVConfidentiality: public
+Subject: [PATCH 362/367] posix-timers: move the rcu head out of the union
 
 On RT the timer can be preempted while running and therefore we wait
 with timer_wait_for_callback() for the timer to complete (instead of
@@ -23,7 +22,7 @@ Signed-off-by: Julia Cartwright <julia@ni.com>
  2 files changed, 3 insertions(+), 3 deletions(-)
 
 diff --git a/include/linux/posix-timers.h b/include/linux/posix-timers.h
-index e4b8678..7bebe32 100644
+index e4b8678183f5..7bebe3286c4e 100644
 --- a/include/linux/posix-timers.h
 +++ b/include/linux/posix-timers.h
 @@ -92,8 +92,8 @@ struct k_itimer {
@@ -37,7 +36,7 @@ index e4b8678..7bebe32 100644
  
  struct k_clock {
 diff --git a/kernel/time/posix-timers.c b/kernel/time/posix-timers.c
-index 558e420..d6d6c19 100644
+index 558e420c352c..d6d6c1921878 100644
 --- a/kernel/time/posix-timers.c
 +++ b/kernel/time/posix-timers.c
 @@ -577,7 +577,7 @@ static struct k_itimer * alloc_posix_timer(void)
@@ -59,5 +58,5 @@ index 558e420..d6d6c19 100644
  
  static struct k_clock *clockid_to_kclock(const clockid_t id)
 -- 
-2.7.4
+2.28.0
 

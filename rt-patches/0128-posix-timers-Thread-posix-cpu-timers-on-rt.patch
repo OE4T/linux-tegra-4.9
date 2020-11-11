@@ -1,8 +1,7 @@
-From d41c7b30f2a9550c1ef583705db7d99df94327c7 Mon Sep 17 00:00:00 2001
+From e5bade53268031589143d3ae4dff48b4953407d6 Mon Sep 17 00:00:00 2001
 From: John Stultz <johnstul@us.ibm.com>
 Date: Fri, 3 Jul 2009 08:29:58 -0500
-Subject: [PATCH 128/371] posix-timers: Thread posix-cpu-timers on -rt
-X-NVConfidentiality: public
+Subject: [PATCH 128/367] posix-timers: Thread posix-cpu-timers on -rt
 
 posix-cpu-timer code takes non -rt safe locks in hard irq
 context. Move it to a thread.
@@ -15,11 +14,11 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  include/linux/init_task.h      |   7 ++
  include/linux/sched.h          |   3 +
  kernel/fork.c                  |   3 +
- kernel/time/posix-cpu-timers.c | 193 ++++++++++++++++++++++++++++++++++++++++-
+ kernel/time/posix-cpu-timers.c | 193 ++++++++++++++++++++++++++++++++-
  4 files changed, 202 insertions(+), 4 deletions(-)
 
 diff --git a/include/linux/init_task.h b/include/linux/init_task.h
-index d359b1a..a56e263 100644
+index d359b1a71610..a56e263f5005 100644
 --- a/include/linux/init_task.h
 +++ b/include/linux/init_task.h
 @@ -150,6 +150,12 @@ extern struct task_group root_task_group;
@@ -44,7 +43,7 @@ index d359b1a..a56e263 100644
  		[PIDTYPE_PID]  = INIT_PID_LINK(PIDTYPE_PID),		\
  		[PIDTYPE_PGID] = INIT_PID_LINK(PIDTYPE_PGID),		\
 diff --git a/include/linux/sched.h b/include/linux/sched.h
-index 9ee4508..ccc0221 100644
+index 8f1cd3aefb6e..598fee87ef05 100644
 --- a/include/linux/sched.h
 +++ b/include/linux/sched.h
 @@ -1839,6 +1839,9 @@ struct task_struct {
@@ -58,7 +57,7 @@ index 9ee4508..ccc0221 100644
  /* process credentials */
  	const struct cred __rcu *ptracer_cred; /* Tracer's credentials at attach */
 diff --git a/kernel/fork.c b/kernel/fork.c
-index edd682b..31db305 100644
+index edd682b743b3..31db30506ee5 100644
 --- a/kernel/fork.c
 +++ b/kernel/fork.c
 @@ -1454,6 +1454,9 @@ static void rt_mutex_init_task(struct task_struct *p)
@@ -72,7 +71,7 @@ index edd682b..31db305 100644
  	tsk->cputime_expires.virt_exp = 0;
  	tsk->cputime_expires.sched_exp = 0;
 diff --git a/kernel/time/posix-cpu-timers.c b/kernel/time/posix-cpu-timers.c
-index 21a27bb..6ee4181 100644
+index 21a27bb73587..6ee4181aaa7b 100644
 --- a/kernel/time/posix-cpu-timers.c
 +++ b/kernel/time/posix-cpu-timers.c
 @@ -3,6 +3,7 @@
@@ -309,5 +308,5 @@ index 21a27bb..6ee4181 100644
   * Set one of the process-wide special case CPU timers or RLIMIT_CPU.
   * The tsk->sighand->siglock must be held by the caller.
 -- 
-2.7.4
+2.28.0
 

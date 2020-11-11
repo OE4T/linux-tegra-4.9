@@ -1,9 +1,8 @@
-From 41d513f6299cd803151292da9cf8ebabfcdfb957 Mon Sep 17 00:00:00 2001
+From 1c509571c79c2102b39aad9054de13f4a4d294a8 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Wed, 8 Mar 2017 14:23:35 +0100
-Subject: [PATCH 078/371] futex: workaround migrate_disable/enable in different
+Subject: [PATCH 078/367] futex: workaround migrate_disable/enable in different
  context
-X-NVConfidentiality: public
 
 migrate_disable()/migrate_enable() takes a different path in atomic() vs
 !atomic() context. These little hacks ensure that we don't underflow / overflow
@@ -17,7 +16,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  1 file changed, 20 insertions(+)
 
 diff --git a/kernel/futex.c b/kernel/futex.c
-index cedff76..077d61f 100644
+index cedff765c101..077d61f758eb 100644
 --- a/kernel/futex.c
 +++ b/kernel/futex.c
 @@ -2720,9 +2720,18 @@ static int futex_lock_pi(u32 __user *uaddr, unsigned int flags,
@@ -62,5 +61,5 @@ index cedff76..077d61f 100644
  
  		/*
 -- 
-2.7.4
+2.28.0
 

@@ -1,9 +1,8 @@
-From 710cbdd6b02714d1ac829e586a3bb9c858984c46 Mon Sep 17 00:00:00 2001
+From 02cc36b39bd9b75d41477b0a47817752a284279f Mon Sep 17 00:00:00 2001
 From: Carsten Emde <C.Emde@osadl.org>
 Date: Tue, 5 Jan 2016 10:21:59 +0100
-Subject: [PATCH 066/371] trace/latency-hist: Consider new argument when
+Subject: [PATCH 066/367] trace/latency-hist: Consider new argument when
  probing the sched_switch tracer
-X-NVConfidentiality: public
 
 The sched_switch tracer has got a new argument. Fix the latency tracer
 accordingly.
@@ -18,7 +17,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  1 file changed, 2 insertions(+), 2 deletions(-)
 
 diff --git a/kernel/trace/latency_hist.c b/kernel/trace/latency_hist.c
-index b6c1d14..7f6ee70 100644
+index b6c1d14b71c4..7f6ee70dea41 100644
 --- a/kernel/trace/latency_hist.c
 +++ b/kernel/trace/latency_hist.c
 @@ -117,7 +117,7 @@ static char *wakeup_latency_hist_dir_sharedprio = "sharedprio";
@@ -40,5 +39,5 @@ index b6c1d14..7f6ee70 100644
  	unsigned long flags;
  	int cpu = task_cpu(next);
 -- 
-2.7.4
+2.28.0
 

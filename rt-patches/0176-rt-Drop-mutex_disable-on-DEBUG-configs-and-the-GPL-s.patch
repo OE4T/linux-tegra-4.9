@@ -1,9 +1,8 @@
-From a747cad77393ddfb2885c6329cf985f433bd764d Mon Sep 17 00:00:00 2001
+From 8fafeff6aafb7bdac3ea2efa79cc58f6749edda9 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Fri, 10 Feb 2017 18:21:04 +0100
-Subject: [PATCH 176/371] rt: Drop mutex_disable() on !DEBUG configs and the
+Subject: [PATCH 176/367] rt: Drop mutex_disable() on !DEBUG configs and the
  GPL suffix from export symbol
-X-NVConfidentiality: public
 
 Alex Goins reported that mutex_destroy() on RT will force a GPL only symbol
 which won't link and therefore fail on a non-GPL kernel module.
@@ -19,7 +18,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  1 file changed, 5 insertions(+)
 
 diff --git a/include/linux/mutex_rt.h b/include/linux/mutex_rt.h
-index c38a44b..e0284ed 100644
+index c38a44b14da5..e0284edec655 100644
 --- a/include/linux/mutex_rt.h
 +++ b/include/linux/mutex_rt.h
 @@ -43,7 +43,12 @@ extern void __lockfunc _mutex_unlock(struct mutex *lock);
@@ -36,5 +35,5 @@ index c38a44b..e0284ed 100644
  #ifdef CONFIG_DEBUG_LOCK_ALLOC
  # define mutex_lock_nested(l, s)	_mutex_lock_nested(l, s)
 -- 
-2.7.4
+2.28.0
 

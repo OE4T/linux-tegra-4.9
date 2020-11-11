@@ -1,8 +1,7 @@
-From 3f858d1c4f8980a3aaae37512bcb8e17bcb569d0 Mon Sep 17 00:00:00 2001
+From 025e23e7b3a0d1bea686913758596d1133c6291e Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Wed, 9 Jan 2013 10:33:09 +0100
-Subject: [PATCH 106/371] mm: bounce: Use local_irq_save_nort
-X-NVConfidentiality: public
+Subject: [PATCH 106/367] mm: bounce: Use local_irq_save_nort
 
 kmap_atomic() is preemptible on RT.
 
@@ -12,7 +11,7 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  1 file changed, 2 insertions(+), 2 deletions(-)
 
 diff --git a/block/bounce.c b/block/bounce.c
-index 1cb5dd3..2f1ec8a 100644
+index 1cb5dd3a5da1..2f1ec8a67cbe 100644
 --- a/block/bounce.c
 +++ b/block/bounce.c
 @@ -55,11 +55,11 @@ static void bounce_copy_vec(struct bio_vec *to, unsigned char *vfrom)
@@ -30,5 +29,5 @@ index 1cb5dd3..2f1ec8a 100644
  
  #else /* CONFIG_HIGHMEM */
 -- 
-2.7.4
+2.28.0
 

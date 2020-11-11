@@ -1,9 +1,8 @@
-From f382b15bbef6b46da1fb052598f8c75a1fd79659 Mon Sep 17 00:00:00 2001
+From 8c2ffe18fae1e5938efcdd1751c48c6243af7ed5 Mon Sep 17 00:00:00 2001
 From: Mike Galbraith <umgwanakikbuti@gmail.com>
 Date: Sat, 21 Jun 2014 10:09:48 +0200
-Subject: [PATCH 319/371] memcontrol: Prevent scheduling while atomic in cgroup
+Subject: [PATCH 319/367] memcontrol: Prevent scheduling while atomic in cgroup
  code
-X-NVConfidentiality: public
 
 mm, memcg: make refill_stock() use get_cpu_light()
 
@@ -44,7 +43,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  1 file changed, 7 insertions(+), 6 deletions(-)
 
 diff --git a/mm/memcontrol.c b/mm/memcontrol.c
-index 6f7b386..18587da 100644
+index 5377039e0ed3..2b85a40d2f00 100644
 --- a/mm/memcontrol.c
 +++ b/mm/memcontrol.c
 @@ -1717,6 +1717,7 @@ struct memcg_stock_pcp {
@@ -108,5 +107,5 @@ index 6f7b386..18587da 100644
  
  /*
 -- 
-2.7.4
+2.28.0
 

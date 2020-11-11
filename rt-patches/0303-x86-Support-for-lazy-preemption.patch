@@ -1,8 +1,7 @@
-From 8d8662780044b64eb72ea264d0dbf586ad0354e0 Mon Sep 17 00:00:00 2001
+From 8a9d9529981545e974cc2ab4b82a3a0925efbac3 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Thu, 1 Nov 2012 11:03:47 +0100
-Subject: [PATCH 303/371] x86: Support for lazy preemption
-X-NVConfidentiality: public
+Subject: [PATCH 303/367] x86: Support for lazy preemption
 
 Implement the x86 pieces for lazy preempt.
 
@@ -10,15 +9,15 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
 ---
  arch/x86/Kconfig                   |  1 +
  arch/x86/entry/common.c            |  4 ++--
- arch/x86/entry/entry_32.S          | 17 +++++++++++++++++
- arch/x86/entry/entry_64.S          | 16 ++++++++++++++++
- arch/x86/include/asm/preempt.h     | 31 ++++++++++++++++++++++++++++++-
+ arch/x86/entry/entry_32.S          | 17 ++++++++++++++++
+ arch/x86/entry/entry_64.S          | 16 +++++++++++++++
+ arch/x86/include/asm/preempt.h     | 31 +++++++++++++++++++++++++++++-
  arch/x86/include/asm/thread_info.h | 11 +++++++++++
  arch/x86/kernel/asm-offsets.c      |  2 ++
  7 files changed, 79 insertions(+), 3 deletions(-)
 
 diff --git a/arch/x86/Kconfig b/arch/x86/Kconfig
-index 40c0cda..fcab6ef 100644
+index 127cc26d5dfb..4cc946e6b0ea 100644
 --- a/arch/x86/Kconfig
 +++ b/arch/x86/Kconfig
 @@ -17,6 +17,7 @@ config X86_64
@@ -30,7 +29,7 @@ index 40c0cda..fcab6ef 100644
  	select ACPI_SYSTEM_POWER_STATES_SUPPORT	if ACPI
  	select ANON_INODES
 diff --git a/arch/x86/entry/common.c b/arch/x86/entry/common.c
-index 0b8da1c..ded0ae2 100644
+index 0b8da1cd26ca..ded0ae20cecf 100644
 --- a/arch/x86/entry/common.c
 +++ b/arch/x86/entry/common.c
 @@ -131,7 +131,7 @@ static long syscall_trace_enter(struct pt_regs *regs)
@@ -52,7 +51,7 @@ index 0b8da1c..ded0ae2 100644
  
  #ifdef ARCH_RT_DELAYS_SIGNAL_SEND
 diff --git a/arch/x86/entry/entry_32.S b/arch/x86/entry/entry_32.S
-index 1cf1676..4adb23a 100644
+index 1cf16760f5e3..4adb23aec576 100644
 --- a/arch/x86/entry/entry_32.S
 +++ b/arch/x86/entry/entry_32.S
 @@ -322,8 +322,25 @@ END(ret_from_exception)
@@ -82,7 +81,7 @@ index 1cf1676..4adb23a 100644
  	jz	restore_all
  	call	preempt_schedule_irq
 diff --git a/arch/x86/entry/entry_64.S b/arch/x86/entry/entry_64.S
-index 1dcfba5..dc7b6cb 100644
+index 1dcfba5ec4b8..dc7b6cb2e127 100644
 --- a/arch/x86/entry/entry_64.S
 +++ b/arch/x86/entry/entry_64.S
 @@ -493,7 +493,23 @@ retint_kernel:
@@ -110,7 +109,7 @@ index 1dcfba5..dc7b6cb 100644
  	jmp	0b
  1:
 diff --git a/arch/x86/include/asm/preempt.h b/arch/x86/include/asm/preempt.h
-index 4939f6e..92622d47 100644
+index 4939f6ed1a49..92622d47a3a8 100644
 --- a/arch/x86/include/asm/preempt.h
 +++ b/arch/x86/include/asm/preempt.h
 @@ -79,17 +79,46 @@ static __always_inline void __preempt_count_sub(int val)
@@ -162,7 +161,7 @@ index 4939f6e..92622d47 100644
  
  #ifdef CONFIG_PREEMPT
 diff --git a/arch/x86/include/asm/thread_info.h b/arch/x86/include/asm/thread_info.h
-index 0438f7f..32a8478 100644
+index 0438f7fbb383..32a8478b9232 100644
 --- a/arch/x86/include/asm/thread_info.h
 +++ b/arch/x86/include/asm/thread_info.h
 @@ -54,12 +54,15 @@ struct task_struct;
@@ -218,7 +217,7 @@ index 0438f7f..32a8478 100644
  
  /*
 diff --git a/arch/x86/kernel/asm-offsets.c b/arch/x86/kernel/asm-offsets.c
-index c62e015..0cc71257 100644
+index c62e015b126c..0cc71257fca6 100644
 --- a/arch/x86/kernel/asm-offsets.c
 +++ b/arch/x86/kernel/asm-offsets.c
 @@ -36,6 +36,7 @@ void common(void) {
@@ -236,5 +235,5 @@ index c62e015..0cc71257 100644
 +	DEFINE(_PREEMPT_ENABLED, PREEMPT_ENABLED);
  }
 -- 
-2.7.4
+2.28.0
 

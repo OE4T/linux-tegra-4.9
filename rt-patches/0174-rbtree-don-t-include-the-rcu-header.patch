@@ -1,11 +1,10 @@
-From 354da02223d49d43e7645e89e291400557e13370 Mon Sep 17 00:00:00 2001
+From 642eabc5c7d0379f0f98216af2c0841dce764994 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Fri, 23 Jun 2017 16:22:02 +0200
-Subject: [PATCH 174/371] rbtree: don't include the rcu header
+Subject: [PATCH 174/367] rbtree: don't include the rcu header
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
-X-NVConfidentiality: public
 
 The RCU header pulls in spinlock.h and fails due not yet defined types:
 
@@ -25,13 +24,13 @@ a new header file which can be included by both users.
 Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 ---
  include/linux/rbtree.h             |  2 +-
- include/linux/rcu_assign_pointer.h | 54 ++++++++++++++++++++++++++++++++++++++
- include/linux/rcupdate.h           | 49 +---------------------------------
+ include/linux/rcu_assign_pointer.h | 54 ++++++++++++++++++++++++++++++
+ include/linux/rcupdate.h           | 49 +--------------------------
  3 files changed, 56 insertions(+), 49 deletions(-)
  create mode 100644 include/linux/rcu_assign_pointer.h
 
 diff --git a/include/linux/rbtree.h b/include/linux/rbtree.h
-index e585018..25c6447 100644
+index e585018498d5..25c64474fc27 100644
 --- a/include/linux/rbtree.h
 +++ b/include/linux/rbtree.h
 @@ -31,7 +31,7 @@
@@ -45,7 +44,7 @@ index e585018..25c6447 100644
  	unsigned long  __rb_parent_color;
 diff --git a/include/linux/rcu_assign_pointer.h b/include/linux/rcu_assign_pointer.h
 new file mode 100644
-index 0000000..7066962
+index 000000000000..7066962a4379
 --- /dev/null
 +++ b/include/linux/rcu_assign_pointer.h
 @@ -0,0 +1,54 @@
@@ -104,7 +103,7 @@ index 0000000..7066962
 +
 +#endif
 diff --git a/include/linux/rcupdate.h b/include/linux/rcupdate.h
-index 67e67ea..45a9732 100644
+index 67e67ea896a5..45a97325ca2f 100644
 --- a/include/linux/rcupdate.h
 +++ b/include/linux/rcupdate.h
 @@ -46,6 +46,7 @@
@@ -115,10 +114,11 @@ index 67e67ea..45a9732 100644
  
  #include <asm/barrier.h>
  
-@@ -631,54 +632,6 @@ static inline void rcu_preempt_sleep_check(void)
+@@ -630,54 +631,6 @@ static inline void rcu_preempt_sleep_check(void)
+ 	((typeof(*p) __force __kernel *)(________p1)); \
  })
  
- /**
+-/**
 - * RCU_INITIALIZER() - statically initialize an RCU-protected global variable
 - * @v: The value to statically initialize with.
 - */
@@ -166,10 +166,9 @@ index 67e67ea..45a9732 100644
 -	_r_a_p__v;							      \
 -})
 -
--/**
+ /**
   * rcu_access_pointer() - fetch RCU pointer with no dereferencing
   * @p: The pointer to read
-  *
 -- 
-2.7.4
+2.28.0
 

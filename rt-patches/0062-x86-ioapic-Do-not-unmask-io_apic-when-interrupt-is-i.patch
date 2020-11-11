@@ -1,9 +1,8 @@
-From 032056f10b1718475abb512c2aee7ffd528be33c Mon Sep 17 00:00:00 2001
+From c28c310f3c36b67bc6579899feb3d05bb6f1b10b Mon Sep 17 00:00:00 2001
 From: Ingo Molnar <mingo@elte.hu>
 Date: Fri, 3 Jul 2009 08:29:27 -0500
-Subject: [PATCH 062/371] x86/ioapic: Do not unmask io_apic when interrupt is
+Subject: [PATCH 062/367] x86/ioapic: Do not unmask io_apic when interrupt is
  in progress
-X-NVConfidentiality: public
 
 With threaded interrupts we might see an interrupt in progress on
 migration. Do not unmask it when this is the case.
@@ -11,23 +10,28 @@ migration. Do not unmask it when this is the case.
 Signed-off-by: Ingo Molnar <mingo@elte.hu>
 Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
 ---
- arch/x86/kernel/apic/io_apic.c | 3 ++-
- 1 file changed, 2 insertions(+), 1 deletion(-)
+ arch/x86/kernel/apic/io_apic.c | 8 ++++----
+ 1 file changed, 4 insertions(+), 4 deletions(-)
 
 diff --git a/arch/x86/kernel/apic/io_apic.c b/arch/x86/kernel/apic/io_apic.c
-index 09dd95c..2dc13f5 100644
+index 3401b28f1312..4b5ae991ab9e 100644
 --- a/arch/x86/kernel/apic/io_apic.c
 +++ b/arch/x86/kernel/apic/io_apic.c
-@@ -1713,7 +1713,8 @@ static bool io_apic_level_ack_pending(struct mp_chip_data *data)
+@@ -1712,10 +1712,10 @@ static bool io_apic_level_ack_pending(struct mp_chip_data *data)
+ 
  static inline bool ioapic_irqd_mask(struct irq_data *data)
  {
- 	/* If we are moving the irq we need to mask it */
+-	/* If we are moving the IRQ we need to mask it */
 -	if (unlikely(irqd_is_setaffinity_pending(data))) {
+-		if (!irqd_irq_masked(data))
+-			mask_ioapic_irq(data);
++	/* If we are moving the irq we need to mask it */
 +	if (unlikely(irqd_is_setaffinity_pending(data) &&
 +		     !irqd_irq_inprogress(data))) {
- 		mask_ioapic_irq(data);
++		mask_ioapic_irq(data);
  		return true;
  	}
+ 	return false;
 -- 
-2.7.4
+2.28.0
 

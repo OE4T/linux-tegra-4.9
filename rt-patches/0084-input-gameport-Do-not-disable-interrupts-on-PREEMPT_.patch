@@ -1,9 +1,8 @@
-From 88a12bf87d9913e261f9bb7b1480941a0fe7787a Mon Sep 17 00:00:00 2001
+From d635c38d5253062672e1c3853ee874c7d1f35272 Mon Sep 17 00:00:00 2001
 From: Ingo Molnar <mingo@elte.hu>
 Date: Fri, 3 Jul 2009 08:30:16 -0500
-Subject: [PATCH 084/371] input: gameport: Do not disable interrupts on
+Subject: [PATCH 084/367] input: gameport: Do not disable interrupts on
  PREEMPT_RT
-X-NVConfidentiality: public
 
 Use the _nort() primitives.
 
@@ -14,7 +13,7 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  1 file changed, 6 insertions(+), 6 deletions(-)
 
 diff --git a/drivers/input/gameport/gameport.c b/drivers/input/gameport/gameport.c
-index 4a2a9e3..e970d9a 100644
+index 4a2a9e370be7..e970d9afd179 100644
 --- a/drivers/input/gameport/gameport.c
 +++ b/drivers/input/gameport/gameport.c
 @@ -91,13 +91,13 @@ static int gameport_measure_speed(struct gameport *gameport)
@@ -63,5 +62,5 @@ index 4a2a9e3..e970d9a 100644
  		if (t2 - t1 < tx) tx = t2 - t1;
  	}
 -- 
-2.7.4
+2.28.0
 

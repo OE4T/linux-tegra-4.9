@@ -1,9 +1,8 @@
-From 0acaaf7ec55f8f044909a2ee10aad8355e3569f2 Mon Sep 17 00:00:00 2001
+From b44e48053a449bab0b091383e7a0cc1141cbcf31 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Sun, 17 Jul 2011 21:42:26 +0200
-Subject: [PATCH 224/371] workqueue: Use local irq lock instead of irq disable
+Subject: [PATCH 224/367] workqueue: Use local irq lock instead of irq disable
  regions
-X-NVConfidentiality: public
 
 Use a local_irq_lock as a replacement for irq off regions. We keep the
 semantic of irq-off in regard to the pool->lock and remain preemptible.
@@ -14,7 +13,7 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  1 file changed, 19 insertions(+), 14 deletions(-)
 
 diff --git a/kernel/workqueue.c b/kernel/workqueue.c
-index 875bcede..6d82876 100644
+index 8b49d8c8295f..95d95d371b88 100644
 --- a/kernel/workqueue.c
 +++ b/kernel/workqueue.c
 @@ -48,6 +48,7 @@
@@ -118,7 +117,7 @@ index 875bcede..6d82876 100644
  	}
  
  	/* -ENOENT from try_to_grab_pending() becomes %true */
-@@ -2912,7 +2917,7 @@ static bool __cancel_work_timer(struct work_struct *work, bool is_dwork)
+@@ -2918,7 +2923,7 @@ static bool __cancel_work_timer(struct work_struct *work, bool is_dwork)
  
  	/* tell other tasks trying to grab @work to back off */
  	mark_work_canceling(work);
@@ -127,7 +126,7 @@ index 875bcede..6d82876 100644
  
  	flush_work(work);
  	clear_work_data(work);
-@@ -2967,10 +2972,10 @@ EXPORT_SYMBOL_GPL(cancel_work_sync);
+@@ -2973,10 +2978,10 @@ EXPORT_SYMBOL_GPL(cancel_work_sync);
   */
  bool flush_delayed_work(struct delayed_work *dwork)
  {
@@ -140,7 +139,7 @@ index 875bcede..6d82876 100644
  	return flush_work(&dwork->work);
  }
  EXPORT_SYMBOL(flush_delayed_work);
-@@ -2988,7 +2993,7 @@ static bool __cancel_work(struct work_struct *work, bool is_dwork)
+@@ -2994,7 +2999,7 @@ static bool __cancel_work(struct work_struct *work, bool is_dwork)
  		return false;
  
  	set_work_pool_and_clear_pending(work, get_work_pool_id(work));
@@ -150,5 +149,5 @@ index 875bcede..6d82876 100644
  }
  
 -- 
-2.7.4
+2.28.0
 

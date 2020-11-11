@@ -1,8 +1,7 @@
-From e8aab4cfdf500064f7b3ac58ee18c09a98422578 Mon Sep 17 00:00:00 2001
+From d360af439d903c05a3a54380821755a07e1d864d Mon Sep 17 00:00:00 2001
 From: "Darren Hart (VMware)" <dvhart@infradead.org>
 Date: Fri, 14 Apr 2017 15:31:38 -0700
-Subject: [PATCH 028/371] futex: Clarify mark_wake_futex memory barrier usage
-X-NVConfidentiality: public
+Subject: [PATCH 028/367] futex: Clarify mark_wake_futex memory barrier usage
 
 Upstream commit 38fcd06e9b7f6855db1f3ebac5e18b8fdb467ffd
 
@@ -20,7 +19,7 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  1 file changed, 5 insertions(+), 4 deletions(-)
 
 diff --git a/kernel/futex.c b/kernel/futex.c
-index f381007..cedff76 100644
+index f38100793934..cedff765c101 100644
 --- a/kernel/futex.c
 +++ b/kernel/futex.c
 @@ -1379,10 +1379,11 @@ static void mark_wake_futex(struct wake_q_head *wake_q, struct futex_q *q)
@@ -40,5 +39,5 @@ index f381007..cedff76 100644
  	smp_store_release(&q->lock_ptr, NULL);
  }
 -- 
-2.7.4
+2.28.0
 

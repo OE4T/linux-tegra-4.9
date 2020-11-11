@@ -1,8 +1,7 @@
-From dba9ef858dbc181149b842a8e8b79ecf78c743d3 Mon Sep 17 00:00:00 2001
+From 71e6bbede7488d663eb76d996d7306d46764279c Mon Sep 17 00:00:00 2001
 From: Ingo Molnar <mingo@elte.hu>
 Date: Fri, 3 Jul 2009 08:29:58 -0500
-Subject: [PATCH 073/371] bug: BUG_ON/WARN_ON variants dependend on RT/!RT
-X-NVConfidentiality: public
+Subject: [PATCH 073/367] bug: BUG_ON/WARN_ON variants dependend on RT/!RT
 
 Introduce RT/NON-RT WARN/BUG statements to avoid ifdefs in the code.
 
@@ -13,7 +12,7 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  1 file changed, 14 insertions(+)
 
 diff --git a/include/asm-generic/bug.h b/include/asm-generic/bug.h
-index 89f079d..56553e2 100644
+index 89f079d6b41b..56553e2f0261 100644
 --- a/include/asm-generic/bug.h
 +++ b/include/asm-generic/bug.h
 @@ -216,6 +216,20 @@ void __warn(const char *file, int line, void *caller, unsigned taint,
@@ -38,5 +37,5 @@ index 89f079d..56553e2 100644
  
  #endif
 -- 
-2.7.4
+2.28.0
 

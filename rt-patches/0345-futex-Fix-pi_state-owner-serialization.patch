@@ -1,8 +1,7 @@
-From c2bdc332284d48a4cbf07cd8063bbecd0ff988c2 Mon Sep 17 00:00:00 2001
+From 743373043ad647b0969c4490ccf37d3019aa43b2 Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Wed, 6 Jun 2018 15:31:26 +0200
-Subject: [PATCH 345/371] futex: Fix pi_state->owner serialization
-X-NVConfidentiality: public
+Subject: [PATCH 345/367] futex: Fix pi_state->owner serialization
 
 [ Upstream commit c74aef2d06a9f59cece89093eecc552933cba72a ]
 
@@ -35,7 +34,7 @@ Signed-off-by: Julia Cartwright <julia@ni.com>
  1 file changed, 22 insertions(+), 12 deletions(-)
 
 diff --git a/kernel/futex.c b/kernel/futex.c
-index 5fa9e94..9d46ee3 100644
+index 5fa9e94d7514..9d46ee38bf9a 100644
 --- a/kernel/futex.c
 +++ b/kernel/futex.c
 @@ -819,8 +819,6 @@ static void get_pi_state(struct futex_pi_state *pi_state)
@@ -119,5 +118,5 @@ index 5fa9e94..9d46ee3 100644
  	raw_spin_unlock_irq(&p->pi_lock);
  
 -- 
-2.7.4
+2.28.0
 

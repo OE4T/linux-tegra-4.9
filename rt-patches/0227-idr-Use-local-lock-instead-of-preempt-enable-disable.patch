@@ -1,8 +1,7 @@
-From 5ab54a251fdb52f3bcf217214c31d479766717ce Mon Sep 17 00:00:00 2001
+From 21305edae1c587bd3b2170157f1d11f291df0f0e Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Tue, 14 Jul 2015 14:26:34 +0200
-Subject: [PATCH 227/371] idr: Use local lock instead of preempt enable/disable
-X-NVConfidentiality: public
+Subject: [PATCH 227/367] idr: Use local lock instead of preempt enable/disable
 
 We need to protect the per cpu variable and prevent migration.
 
@@ -13,7 +12,7 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  2 files changed, 41 insertions(+), 6 deletions(-)
 
 diff --git a/include/linux/idr.h b/include/linux/idr.h
-index 083d61e..5899796 100644
+index 083d61e92706..5899796f50cb 100644
 --- a/include/linux/idr.h
 +++ b/include/linux/idr.h
 @@ -95,10 +95,14 @@ bool idr_is_empty(struct idr *idp);
@@ -32,7 +31,7 @@ index 083d61e..5899796 100644
  /**
   * idr_find - return pointer for given id
 diff --git a/lib/idr.c b/lib/idr.c
-index 6098336..9decbe9 100644
+index 6098336df267..9decbe914595 100644
 --- a/lib/idr.c
 +++ b/lib/idr.c
 @@ -30,6 +30,7 @@
@@ -128,5 +127,5 @@ index 6098336..9decbe9 100644
  			break;
  
 -- 
-2.7.4
+2.28.0
 

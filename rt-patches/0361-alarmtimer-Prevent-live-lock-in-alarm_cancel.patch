@@ -1,8 +1,7 @@
-From 6176d28ddef4e1fa92cd6e9a0e131623ddd20917 Mon Sep 17 00:00:00 2001
+From 984c84aa4642799b4d2d3c023b24efa22670f4ad Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Tue, 27 Mar 2018 15:58:16 +0200
-Subject: [PATCH 361/371] alarmtimer: Prevent live lock in alarm_cancel()
-X-NVConfidentiality: public
+Subject: [PATCH 361/367] alarmtimer: Prevent live lock in alarm_cancel()
 
 If alarm_try_to_cancel() requires a retry, then depending on the
 priority setting the retry loop might prevent timer callback completion
@@ -18,7 +17,7 @@ Signed-off-by: Julia Cartwright <julia@ni.com>
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/kernel/time/alarmtimer.c b/kernel/time/alarmtimer.c
-index be2606c..bff3f99 100644
+index be2606cd19d3..bff3f9945ac2 100644
 --- a/kernel/time/alarmtimer.c
 +++ b/kernel/time/alarmtimer.c
 @@ -417,7 +417,7 @@ int alarm_cancel(struct alarm *alarm)
@@ -31,5 +30,5 @@ index be2606c..bff3f99 100644
  }
  EXPORT_SYMBOL_GPL(alarm_cancel);
 -- 
-2.7.4
+2.28.0
 

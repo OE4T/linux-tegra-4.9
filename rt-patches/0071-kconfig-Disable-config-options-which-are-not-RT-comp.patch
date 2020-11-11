@@ -1,9 +1,8 @@
-From 620bed9c209f2c12fefdde769253a7641431a506 Mon Sep 17 00:00:00 2001
+From efb95d26df87170b0823eb548fddcadc1e8fc935 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Sun, 24 Jul 2011 12:11:43 +0200
-Subject: [PATCH 071/371] kconfig: Disable config options which are not RT
+Subject: [PATCH 071/367] kconfig: Disable config options which are not RT
  compatible
-X-NVConfidentiality: public
 
 Disable stuff which is known to have issues on RT
 
@@ -14,7 +13,7 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  2 files changed, 2 insertions(+), 1 deletion(-)
 
 diff --git a/arch/Kconfig b/arch/Kconfig
-index 391ecd5..38b14f0 100644
+index 391ecd54fffa..38b14f07cc59 100644
 --- a/arch/Kconfig
 +++ b/arch/Kconfig
 @@ -12,6 +12,7 @@ config OPROFILE
@@ -26,7 +25,7 @@ index 391ecd5..38b14f0 100644
  	select RING_BUFFER_ALLOW_SWAP
  	help
 diff --git a/mm/Kconfig b/mm/Kconfig
-index dcf860f..c09a965 100644
+index dcf860fb0707..c09a96576a2f 100644
 --- a/mm/Kconfig
 +++ b/mm/Kconfig
 @@ -437,7 +437,7 @@ config NOMMU_INITIAL_TRIM_EXCESS
@@ -39,5 +38,5 @@ index dcf860f..c09a965 100644
  	select RADIX_TREE_MULTIORDER
  	help
 -- 
-2.7.4
+2.28.0
 

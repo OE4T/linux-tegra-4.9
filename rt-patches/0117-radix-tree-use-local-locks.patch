@@ -1,8 +1,7 @@
-From 63da90c8d10a88714b86ef6022a0a8ed36c70ea4 Mon Sep 17 00:00:00 2001
+From 3ad45179c948287253b0fbfc71bc10258bf94c3a Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Wed, 25 Jan 2017 16:34:27 +0100
-Subject: [PATCH 117/371] radix-tree: use local locks
-X-NVConfidentiality: public
+Subject: [PATCH 117/367] radix-tree: use local locks
 
 The preload functionality uses per-CPU variables and preempt-disable to
 ensure that it does not switch CPUs during its usage. This patch adds
@@ -18,7 +17,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  2 files changed, 17 insertions(+), 12 deletions(-)
 
 diff --git a/include/linux/radix-tree.h b/include/linux/radix-tree.h
-index af3581b..2772950 100644
+index af3581b8a451..277295039c8f 100644
 --- a/include/linux/radix-tree.h
 +++ b/include/linux/radix-tree.h
 @@ -292,6 +292,8 @@ unsigned int radix_tree_gang_lookup_slot(struct radix_tree_root *root,
@@ -43,7 +42,7 @@ index af3581b..2772950 100644
   * struct radix_tree_iter - radix tree iterator state
   *
 diff --git a/lib/radix-tree.c b/lib/radix-tree.c
-index 8e6d552..741da5a 100644
+index 8e6d552c40dd..741da5a77fd5 100644
 --- a/lib/radix-tree.c
 +++ b/lib/radix-tree.c
 @@ -36,7 +36,7 @@
@@ -129,5 +128,5 @@ index 8e6d552..741da5a 100644
   * The maximum index which can be stored in a radix tree
   */
 -- 
-2.7.4
+2.28.0
 

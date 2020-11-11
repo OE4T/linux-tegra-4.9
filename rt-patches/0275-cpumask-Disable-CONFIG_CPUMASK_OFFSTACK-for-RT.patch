@@ -1,8 +1,7 @@
-From f2273f4ac14ef786c5bf540f0f483a8157394035 Mon Sep 17 00:00:00 2001
+From 204bf5d75de25774a745eddecfafc189db0e0020 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Wed, 14 Dec 2011 01:03:49 +0100
-Subject: [PATCH 275/371] cpumask: Disable CONFIG_CPUMASK_OFFSTACK for RT
-X-NVConfidentiality: public
+Subject: [PATCH 275/367] cpumask: Disable CONFIG_CPUMASK_OFFSTACK for RT
 
 There are "valid" GFP_ATOMIC allocations such as
 
@@ -47,7 +46,7 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  2 files changed, 2 insertions(+), 1 deletion(-)
 
 diff --git a/arch/x86/Kconfig b/arch/x86/Kconfig
-index f1c5098..40c0cda 100644
+index 26822c6600e2..127cc26d5dfb 100644
 --- a/arch/x86/Kconfig
 +++ b/arch/x86/Kconfig
 @@ -915,7 +915,7 @@ config IOMMU_HELPER
@@ -60,7 +59,7 @@ index f1c5098..40c0cda 100644
  	  Enable maximum number of CPUS and NUMA Nodes for this architecture.
  	  If unsure, say N.
 diff --git a/lib/Kconfig b/lib/Kconfig
-index 260a80e..b06becb 100644
+index 260a80e313b9..b06becb3f477 100644
 --- a/lib/Kconfig
 +++ b/lib/Kconfig
 @@ -400,6 +400,7 @@ config CHECK_SIGNATURE
@@ -72,5 +71,5 @@ index 260a80e..b06becb 100644
  	  Use dynamic allocation for cpumask_var_t, instead of putting
  	  them on the stack.  This is a bit more expensive, but avoids
 -- 
-2.7.4
+2.28.0
 

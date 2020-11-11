@@ -1,8 +1,7 @@
-From 712700f78c2dde194f13f752e040efbb18597d6e Mon Sep 17 00:00:00 2001
+From b3ce8e318152fb15d1452d5ee04b930826471644 Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Fri, 3 Jul 2009 08:44:37 -0500
-Subject: [PATCH 101/371] mm: page_alloc: Reduce lock sections further
-X-NVConfidentiality: public
+Subject: [PATCH 101/367] mm: page_alloc: Reduce lock sections further
 
 Split out the pages which are to be freed into a separate list and
 call free_pages_bulk() outside of the percpu page allocator locks.
@@ -10,11 +9,11 @@ call free_pages_bulk() outside of the percpu page allocator locks.
 Signed-off-by: Peter Zijlstra <a.p.zijlstra@chello.nl>
 Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
 ---
- mm/page_alloc.c | 94 ++++++++++++++++++++++++++++++++++++++++-----------------
+ mm/page_alloc.c | 94 ++++++++++++++++++++++++++++++++++---------------
  1 file changed, 66 insertions(+), 28 deletions(-)
 
 diff --git a/mm/page_alloc.c b/mm/page_alloc.c
-index 11fb35a..85a0c3a 100644
+index c47a5f4ca228..e2b48de2de8b 100644
 --- a/mm/page_alloc.c
 +++ b/mm/page_alloc.c
 @@ -1117,7 +1117,7 @@ static bool bulkfree_pcp_prepare(struct page *page)
@@ -191,7 +190,7 @@ index 11fb35a..85a0c3a 100644
  }
  
  /*
-@@ -2523,8 +2556,13 @@ void free_hot_cold_page(struct page *page, bool cold)
+@@ -2524,8 +2557,13 @@ void free_hot_cold_page(struct page *page, bool cold)
  	pcp->count++;
  	if (pcp->count >= pcp->high) {
  		unsigned long batch = READ_ONCE(pcp->batch);
@@ -207,5 +206,5 @@ index 11fb35a..85a0c3a 100644
  
  out:
 -- 
-2.7.4
+2.28.0
 

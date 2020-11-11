@@ -1,11 +1,10 @@
-From 5eede70cef13cc1f77c809a90fec6a3219098483 Mon Sep 17 00:00:00 2001
+From 4ece9a980f5aac8c4057b48a4adcf31cb67b0de3 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Mon, 28 Oct 2013 12:19:57 +0100
-Subject: [PATCH 192/371] wait.h: include atomic.h
+Subject: [PATCH 192/367] wait.h: include atomic.h
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
-X-NVConfidentiality: public
 
 |  CC      init/main.o
 |In file included from include/linux/mmzone.h:9:0,
@@ -26,7 +25,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  1 file changed, 1 insertion(+)
 
 diff --git a/include/linux/wait.h b/include/linux/wait.h
-index 2408e8d5..db50d66 100644
+index 2408e8d5c05c..db50d6609195 100644
 --- a/include/linux/wait.h
 +++ b/include/linux/wait.h
 @@ -8,6 +8,7 @@
@@ -38,5 +37,5 @@ index 2408e8d5..db50d66 100644
  typedef struct __wait_queue wait_queue_t;
  typedef int (*wait_queue_func_t)(wait_queue_t *wait, unsigned mode, int flags, void *key);
 -- 
-2.7.4
+2.28.0
 

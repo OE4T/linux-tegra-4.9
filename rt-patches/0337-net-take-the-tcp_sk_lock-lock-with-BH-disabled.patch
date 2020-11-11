@@ -1,8 +1,7 @@
-From e1c5d25a8b52f221060e92cb3dd67de277193001 Mon Sep 17 00:00:00 2001
+From a4ee269e9573e0b4e5a7ef00b3acd92cd2b12c8f Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Mon, 21 Aug 2017 15:09:13 +0200
-Subject: [PATCH 337/371] net: take the tcp_sk_lock lock with BH disabled
-X-NVConfidentiality: public
+Subject: [PATCH 337/367] net: take the tcp_sk_lock lock with BH disabled
 
 Lockdep may complain about an unsafe locking scenario:
 |      CPU0                    CPU1
@@ -20,6 +19,7 @@ vs
 This should not happen since local_softirq_locks is per CPU. Reversing
 the order makes lockdep happy.
 
+Change-Id: I7e9e02f5a34c5e2f0b06e9ae61603830064ffa3d
 Reported-by: Jacek Konieczny <jajcus@jajcus.net>
 Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 ---
@@ -27,7 +27,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  1 file changed, 4 insertions(+), 4 deletions(-)
 
 diff --git a/net/ipv4/tcp_ipv4.c b/net/ipv4/tcp_ipv4.c
-index e827ae3..7d1eb0e 100644
+index 74f0b7d91e61..61209b4d3edf 100644
 --- a/net/ipv4/tcp_ipv4.c
 +++ b/net/ipv4/tcp_ipv4.c
 @@ -705,8 +705,8 @@ static void tcp_v4_send_reset(const struct sock *sk, struct sk_buff *skb)
@@ -50,10 +50,10 @@ index e827ae3..7d1eb0e 100644
  
  #ifdef CONFIG_TCP_MD5SIG
  out:
-@@ -794,16 +794,16 @@ static void tcp_v4_send_ack(const struct sock *sk,
+@@ -793,16 +793,16 @@ static void tcp_v4_send_ack(const struct sock *sk,
+ 		arg.bound_dev_if = oif;
  	arg.tos = tos;
  	arg.uid = sock_net_uid(net, sk_fullsock(sk) ? sk : NULL);
- 
 -	local_lock(tcp_sk_lock);
  	local_bh_disable();
 +	local_lock(tcp_sk_lock);
@@ -70,5 +70,5 @@ index e827ae3..7d1eb0e 100644
  
  static void tcp_v4_timewait_ack(struct sock *sk, struct sk_buff *skb)
 -- 
-2.7.4
+2.28.0
 

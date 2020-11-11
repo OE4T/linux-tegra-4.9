@@ -1,8 +1,7 @@
-From 49a69bdceceabc375f303f0ac2d51f7564fc2e36 Mon Sep 17 00:00:00 2001
+From 98f7d43d8f24eb5e76de35775f7fd3383817bd52 Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Wed, 6 Jun 2018 15:31:28 +0200
-Subject: [PATCH 347/371] futex: Avoid violating the 10th rule of futex
-X-NVConfidentiality: public
+Subject: [PATCH 347/367] futex: Avoid violating the 10th rule of futex
 
 [ Upstream commit c1e2f0eaf015fb7076d51a339011f2383e6dd389 ]
 
@@ -101,13 +100,13 @@ Link: https://lkml.kernel.org/r/20171208124939.7livp7no2ov65rrc@hirez.programmin
 Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Signed-off-by: Julia Cartwright <julia@ni.com>
 ---
- kernel/futex.c                  | 83 +++++++++++++++++++++++++++++++++--------
- kernel/locking/rtmutex.c        | 26 +++++++++----
+ kernel/futex.c                  | 83 ++++++++++++++++++++++++++-------
+ kernel/locking/rtmutex.c        | 26 ++++++++---
  kernel/locking/rtmutex_common.h |  1 +
  3 files changed, 87 insertions(+), 23 deletions(-)
 
 diff --git a/kernel/futex.c b/kernel/futex.c
-index 68a66e9..613f305 100644
+index 68a66e9c1045..613f305fc80a 100644
 --- a/kernel/futex.c
 +++ b/kernel/futex.c
 @@ -2295,21 +2295,17 @@ static void unqueue_me_pi(struct futex_q *q)
@@ -202,7 +201,7 @@ index 68a66e9..613f305 100644
  	if (get_futex_value_locked(&uval, uaddr))
  		goto handle_fault;
  
-@@ -2435,9 +2473,9 @@ static int fixup_owner(u32 __user *uaddr, struct futex_q *q, int locked)
+@@ -2435,15 +2473,28 @@ static int fixup_owner(u32 __user *uaddr, struct futex_q *q, int locked)
  		 * Got the lock. We might not be the anticipated owner if we
  		 * did a lock-steal - fix up the PI-state in that case:
  		 *
@@ -215,10 +214,10 @@ index 68a66e9..613f305 100644
  		 */
  		if (q->pi_state->owner != current)
  			ret = fixup_pi_state_owner(uaddr, q, current);
-@@ -2445,6 +2483,19 @@ static int fixup_owner(u32 __user *uaddr, struct futex_q *q, int locked)
+ 		goto out;
  	}
  
- 	/*
++	/*
 +	 * If we didn't get the lock; check if anybody stole it from us. In
 +	 * that case, we need to fix up the uval to point to them instead of
 +	 * us, otherwise bad things happen. [10]
@@ -231,12 +230,11 @@ index 68a66e9..613f305 100644
 +		goto out;
 +	}
 +
-+	/*
+ 	/*
  	 * Paranoia check. If we did not take the lock, then we should not be
  	 * the owner of the rt_mutex.
- 	 */
 diff --git a/kernel/locking/rtmutex.c b/kernel/locking/rtmutex.c
-index 1f3ceaf..7e3b7a9 100644
+index 1f3ceaf15588..7e3b7a99d004 100644
 --- a/kernel/locking/rtmutex.c
 +++ b/kernel/locking/rtmutex.c
 @@ -1849,6 +1849,19 @@ rt_mutex_slowlock(struct rt_mutex *lock, int state,
@@ -287,7 +285,7 @@ index 1f3ceaf..7e3b7a9 100644
   * rt_mutex_timed_lock - lock a rt_mutex interruptible
   *			the timeout structure is provided
 diff --git a/kernel/locking/rtmutex_common.h b/kernel/locking/rtmutex_common.h
-index 64d89d7..50c0a10 100644
+index 64d89d780059..50c0a1043556 100644
 --- a/kernel/locking/rtmutex_common.h
 +++ b/kernel/locking/rtmutex_common.h
 @@ -122,6 +122,7 @@ extern bool rt_mutex_cleanup_proxy_lock(struct rt_mutex *lock,
@@ -299,5 +297,5 @@ index 64d89d7..50c0a10 100644
  extern void rt_mutex_futex_unlock(struct rt_mutex *lock);
  extern bool __rt_mutex_futex_unlock(struct rt_mutex *lock,
 -- 
-2.7.4
+2.28.0
 

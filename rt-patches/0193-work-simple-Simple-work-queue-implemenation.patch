@@ -1,27 +1,27 @@
-From d1e858fedbf51373469aea0fe57d6a0b43602473 Mon Sep 17 00:00:00 2001
+From 0a5b666e6e83e4d01a4a0cefd629ba110a106cc7 Mon Sep 17 00:00:00 2001
 From: Daniel Wagner <daniel.wagner@bmw-carit.de>
 Date: Fri, 11 Jul 2014 15:26:11 +0200
-Subject: [PATCH 193/371] work-simple: Simple work queue implemenation
-X-NVConfidentiality: public
+Subject: [PATCH 193/367] work-simple: Simple work queue implemenation
 
 Provides a framework for enqueuing callbacks from irq context
 PREEMPT_RT_FULL safe. The callbacks are executed in kthread context.
 
 Bases on wait-simple.
 
+Change-Id: Ia9a2ddc66e8f3b339bf57e354860eb6a9762026c
 Cc: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Signed-off-by: Daniel Wagner <daniel.wagner@bmw-carit.de>
 ---
- include/linux/swork.h |  24 +++++++
+ include/linux/swork.h |  24 ++++++
  kernel/sched/Makefile |   2 +-
- kernel/sched/swork.c  | 173 ++++++++++++++++++++++++++++++++++++++++++++++++++
+ kernel/sched/swork.c  | 173 ++++++++++++++++++++++++++++++++++++++++++
  3 files changed, 198 insertions(+), 1 deletion(-)
  create mode 100644 include/linux/swork.h
  create mode 100644 kernel/sched/swork.c
 
 diff --git a/include/linux/swork.h b/include/linux/swork.h
 new file mode 100644
-index 0000000..f175fa9
+index 000000000000..f175fa9a6016
 --- /dev/null
 +++ b/include/linux/swork.h
 @@ -0,0 +1,24 @@
@@ -50,7 +50,7 @@ index 0000000..f175fa9
 +
 +#endif /* _LINUX_SWORK_H */
 diff --git a/kernel/sched/Makefile b/kernel/sched/Makefile
-index fb49951..fe2cca0 100644
+index fb499510fcec..9708dd34b7e1 100644
 --- a/kernel/sched/Makefile
 +++ b/kernel/sched/Makefile
 @@ -19,7 +19,7 @@ endif
@@ -58,13 +58,13 @@ index fb49951..fe2cca0 100644
  obj-y += core.o loadavg.o clock.o cputime.o
  obj-y += idle_task.o fair.o rt.o deadline.o stop_task.o
 -obj-y += wait.o swait.o completion.o idle.o
-+obj-y += wait.o swait.o completion.o idle.o swork.o
++obj-y += wait.o swait.o swork.o completion.o idle.o
  obj-$(CONFIG_SMP) += cpupri.o cpudeadline.o energy.o
  obj-$(CONFIG_SCHED_WALT) += walt.o
  obj-$(CONFIG_SCHED_AUTOGROUP) += auto_group.o
 diff --git a/kernel/sched/swork.c b/kernel/sched/swork.c
 new file mode 100644
-index 0000000..1950f40
+index 000000000000..1950f40ca725
 --- /dev/null
 +++ b/kernel/sched/swork.c
 @@ -0,0 +1,173 @@
@@ -242,5 +242,5 @@ index 0000000..1950f40
 +}
 +EXPORT_SYMBOL_GPL(swork_put);
 -- 
-2.7.4
+2.28.0
 

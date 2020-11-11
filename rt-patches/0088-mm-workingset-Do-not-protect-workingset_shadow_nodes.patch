@@ -1,9 +1,8 @@
-From 4b3b50ab968f8a713e1870444a7e36be6ad9476a Mon Sep 17 00:00:00 2001
+From f63e7c26136f1fcc630306ca2c0a77901fb1692a Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Thu, 29 Jan 2015 17:19:44 +0100
-Subject: [PATCH 088/371] mm/workingset: Do not protect workingset_shadow_nodes
+Subject: [PATCH 088/367] mm/workingset: Do not protect workingset_shadow_nodes
  with irq off
-X-NVConfidentiality: public
 
 workingset_shadow_nodes is protected by local_irq_disable(). Some users
 use spin_lock_irq().
@@ -19,7 +18,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  4 files changed, 29 insertions(+), 18 deletions(-)
 
 diff --git a/include/linux/swap.h b/include/linux/swap.h
-index df910e2..ebec399 100644
+index 07a0fc9a11de..d4ecdf7f894a 100644
 --- a/include/linux/swap.h
 +++ b/include/linux/swap.h
 @@ -11,6 +11,7 @@
@@ -41,7 +40,7 @@ index df910e2..ebec399 100644
  static inline unsigned int workingset_node_pages(struct radix_tree_node *node)
  {
 diff --git a/mm/filemap.c b/mm/filemap.c
-index 0ab3b2a..101c829 100644
+index 0ab3b2a8ff5c..101c8290688b 100644
 --- a/mm/filemap.c
 +++ b/mm/filemap.c
 @@ -159,9 +159,12 @@ static int page_cache_tree_insert(struct address_space *mapping,
@@ -73,7 +72,7 @@ index 0ab3b2a..101c829 100644
  	}
  
 diff --git a/mm/truncate.c b/mm/truncate.c
-index befdc6f..813baac 100644
+index befdc6f575d2..813baac75c66 100644
 --- a/mm/truncate.c
 +++ b/mm/truncate.c
 @@ -62,9 +62,12 @@ static void clear_exceptional_entry(struct address_space *mapping,
@@ -92,7 +91,7 @@ index befdc6f..813baac 100644
  unlock:
  	spin_unlock_irq(&mapping->tree_lock);
 diff --git a/mm/workingset.c b/mm/workingset.c
-index 4c4f056..b97b1e8 100644
+index 4c4f05655e6e..b97b1e87b54c 100644
 --- a/mm/workingset.c
 +++ b/mm/workingset.c
 @@ -334,7 +334,8 @@ void workingset_activation(struct page *page)
@@ -163,5 +162,5 @@ index 4c4f056..b97b1e8 100644
  	return ret;
  }
 -- 
-2.7.4
+2.28.0
 

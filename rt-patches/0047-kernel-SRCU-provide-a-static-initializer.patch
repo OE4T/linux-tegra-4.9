@@ -1,8 +1,7 @@
-From cdd8ede54748b6e619ad73f9d2ba4c08d976d3a2 Mon Sep 17 00:00:00 2001
+From 5a4b996bd19f4f6a79fc452d75a8e5bb0a3b6f17 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Tue, 19 Mar 2013 14:44:30 +0100
-Subject: [PATCH 047/371] kernel/SRCU: provide a static initializer
-X-NVConfidentiality: public
+Subject: [PATCH 047/367] kernel/SRCU: provide a static initializer
 
 There are macros for static initializer for the three out of four
 possible notifier types, that are:
@@ -20,7 +19,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  2 files changed, 28 insertions(+), 12 deletions(-)
 
 diff --git a/include/linux/notifier.h b/include/linux/notifier.h
-index 4149868..babe5b9 100644
+index 4149868de4e6..babe5b9bcb91 100644
 --- a/include/linux/notifier.h
 +++ b/include/linux/notifier.h
 @@ -6,7 +6,7 @@
@@ -103,7 +102,7 @@ index 4149868..babe5b9 100644
  
  /* netdevice notifiers are defined in include/linux/netdevice.h */
 diff --git a/include/linux/srcu.h b/include/linux/srcu.h
-index dc8eb63..e793d3a 100644
+index dc8eb63c6568..e793d3a257da 100644
 --- a/include/linux/srcu.h
 +++ b/include/linux/srcu.h
 @@ -84,10 +84,10 @@ int init_srcu_struct(struct srcu_struct *sp);
@@ -129,5 +128,5 @@ index dc8eb63..e793d3a 100644
  #define DEFINE_STATIC_SRCU(name)	__DEFINE_SRCU(name, static)
  
 -- 
-2.7.4
+2.28.0
 

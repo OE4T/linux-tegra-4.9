@@ -1,8 +1,7 @@
-From fe18854bb8773f3fab198fce88bdd9aea3e02749 Mon Sep 17 00:00:00 2001
+From 803abdf629617ab2a652b9cf3146b21759f4baa3 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Wed, 7 Mar 2012 21:10:04 +0100
-Subject: [PATCH 221/371] net: Use cpu_chill() instead of cpu_relax()
-X-NVConfidentiality: public
+Subject: [PATCH 221/367] net: Use cpu_chill() instead of cpu_relax()
 
 Retry loops on RT might loop forever when the modifying side was
 preempted. Use cpu_chill() instead of cpu_relax() to let the system
@@ -15,7 +14,7 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  2 files changed, 5 insertions(+), 3 deletions(-)
 
 diff --git a/net/packet/af_packet.c b/net/packet/af_packet.c
-index b1dbea5..b11477a 100644
+index fb643945e424..f38276c53ae8 100644
 --- a/net/packet/af_packet.c
 +++ b/net/packet/af_packet.c
 @@ -63,6 +63,7 @@
@@ -26,7 +25,7 @@ index b1dbea5..b11477a 100644
  #include <linux/kmod.h>
  #include <linux/slab.h>
  #include <linux/vmalloc.h>
-@@ -701,7 +702,7 @@ static void prb_retire_rx_blk_timer_expired(unsigned long data)
+@@ -702,7 +703,7 @@ static void prb_retire_rx_blk_timer_expired(unsigned long data)
  	if (BLOCK_NUM_PKTS(pbd)) {
  		while (atomic_read(&pkc->blk_fill_in_prog)) {
  			/* Waiting for skb_copy_bits to finish... */
@@ -35,7 +34,7 @@ index b1dbea5..b11477a 100644
  		}
  	}
  
-@@ -963,7 +964,7 @@ static void prb_retire_current_block(struct tpacket_kbdq_core *pkc,
+@@ -964,7 +965,7 @@ static void prb_retire_current_block(struct tpacket_kbdq_core *pkc,
  		if (!(status & TP_STATUS_BLK_TMO)) {
  			while (atomic_read(&pkc->blk_fill_in_prog)) {
  				/* Waiting for skb_copy_bits to finish... */
@@ -45,7 +44,7 @@ index b1dbea5..b11477a 100644
  		}
  		prb_close_block(pkc, pbd, po, status);
 diff --git a/net/rds/ib_rdma.c b/net/rds/ib_rdma.c
-index 78d5d68..9f75849 100644
+index 78d5d68cbbce..9f758494b337 100644
 --- a/net/rds/ib_rdma.c
 +++ b/net/rds/ib_rdma.c
 @@ -34,6 +34,7 @@
@@ -66,5 +65,5 @@ index 78d5d68..9f75849 100644
  }
  
 -- 
-2.7.4
+2.28.0
 

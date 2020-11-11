@@ -1,12 +1,12 @@
-From 6dabb5911b93823a4ca8a823be30513c874e0b0b Mon Sep 17 00:00:00 2001
+From f283635d77e6e61aef09400d2b0fcd1276974f96 Mon Sep 17 00:00:00 2001
 From: Steven Rostedt <rostedt@goodmis.org>
 Date: Tue, 14 Jul 2015 14:26:34 +0200
-Subject: [PATCH 165/371] futex: Fix bug on when a requeued RT task times out
-X-NVConfidentiality: public
+Subject: [PATCH 165/367] futex: Fix bug on when a requeued RT task times out
 
 Requeue with timeout causes a bug with PREEMPT_RT_FULL.
 
 The bug comes from a timed out condition.
+
 
 	TASK 1				TASK 2
 	------				------
@@ -22,6 +22,7 @@ The bug comes from a timed out condition.
 	    current->pi_blocked_on = PI_WAKE_INPROGRESS;
 	    run_spin_unlock(pi_lock);
 	    spin_lock(hb->lock); <-- blocked!
+
 
 					plist_for_each_entry_safe(this) {
 					    rt_mutex_start_proxy_lock();
@@ -45,6 +46,7 @@ Otherwise set it to a new flag PI_REQUEUE_INPROGRESS, which notifies
 the proxy task that it is being requeued, and will handle things
 appropriately.
 
+
 Signed-off-by: Steven Rostedt <rostedt@goodmis.org>
 Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
 ---
@@ -53,7 +55,7 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  2 files changed, 32 insertions(+), 1 deletion(-)
 
 diff --git a/kernel/locking/rtmutex.c b/kernel/locking/rtmutex.c
-index b1ad592..d1392ed 100644
+index b1ad592cdbef..d1392ed41a8c 100644
 --- a/kernel/locking/rtmutex.c
 +++ b/kernel/locking/rtmutex.c
 @@ -135,7 +135,8 @@ static void fixup_rt_mutex_waiters(struct rt_mutex *lock)
@@ -103,7 +105,7 @@ index b1ad592..d1392ed 100644
  	ret = task_blocks_on_rt_mutex(lock, waiter, task,
  				      RT_MUTEX_FULL_CHAINWALK);
 diff --git a/kernel/locking/rtmutex_common.h b/kernel/locking/rtmutex_common.h
-index be1c017..0bb2a07 100644
+index be1c0171f647..0bb2a07c0566 100644
 --- a/kernel/locking/rtmutex_common.h
 +++ b/kernel/locking/rtmutex_common.h
 @@ -100,6 +100,7 @@ enum rtmutex_chainwalk {
@@ -115,5 +117,5 @@ index be1c017..0bb2a07 100644
  extern struct task_struct *rt_mutex_next_owner(struct rt_mutex *lock);
  extern void rt_mutex_init_proxy_locked(struct rt_mutex *lock,
 -- 
-2.7.4
+2.28.0
 

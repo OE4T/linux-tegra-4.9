@@ -1,8 +1,7 @@
-From 314dc0c402f78abbd0665c1d2c4d34f8a473c34e Mon Sep 17 00:00:00 2001
+From ee39708f85e17d6466b515e89552cb714210be4b Mon Sep 17 00:00:00 2001
 From: Steven Rostedt <srostedt@redhat.com>
 Date: Mon, 16 Jul 2012 08:07:43 +0000
-Subject: [PATCH 279/371] cpu/rt: Rework cpu down for PREEMPT_RT
-X-NVConfidentiality: public
+Subject: [PATCH 279/367] cpu/rt: Rework cpu down for PREEMPT_RT
 
 Bringing a CPU down is a pain with the PREEMPT_RT kernel because
 tasks can be preempted in many more places than in non-RT. In
@@ -51,12 +50,12 @@ Signed-off-by: Steven Rostedt <rostedt@goodmis.org>
 Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
 ---
  include/linux/sched.h |   7 ++
- kernel/cpu.c          | 236 +++++++++++++++++++++++++++++++++++++++++---------
- kernel/sched/core.c   |  78 +++++++++++++++++
+ kernel/cpu.c          | 236 ++++++++++++++++++++++++++++++++++--------
+ kernel/sched/core.c   |  78 ++++++++++++++
  3 files changed, 280 insertions(+), 41 deletions(-)
 
 diff --git a/include/linux/sched.h b/include/linux/sched.h
-index 7492adf..12d4f1c 100644
+index 9ddebab06c95..bdfcafb07f29 100644
 --- a/include/linux/sched.h
 +++ b/include/linux/sched.h
 @@ -2689,6 +2689,10 @@ extern void do_set_cpus_allowed(struct task_struct *p,
@@ -81,7 +80,7 @@ index 7492adf..12d4f1c 100644
  
  #ifdef CONFIG_NO_HZ_COMMON
 diff --git a/kernel/cpu.c b/kernel/cpu.c
-index 1982fc6..57c793b 100644
+index e15fd259c52b..db9603831ead 100644
 --- a/kernel/cpu.c
 +++ b/kernel/cpu.c
 @@ -218,16 +218,10 @@ static int cpu_hotplug_disabled;
@@ -431,7 +430,7 @@ index 1982fc6..57c793b 100644
  	cpuhp_lock_release();
  }
  
-@@ -1045,6 +1196,9 @@ static int takedown_cpu(unsigned int cpu)
+@@ -1046,6 +1197,9 @@ static int takedown_cpu(unsigned int cpu)
  	/* Park the smpboot threads */
  	kthread_park(per_cpu_ptr(&cpuhp_state, cpu)->thread);
  
@@ -442,7 +441,7 @@ index 1982fc6..57c793b 100644
  	 * Prevent irq alloc/free while the dying cpu reorganizes the
  	 * interrupt affinities.
 diff --git a/kernel/sched/core.c b/kernel/sched/core.c
-index 425b237..394af5a 100644
+index 3f54d685950d..2a834fc9b16c 100644
 --- a/kernel/sched/core.c
 +++ b/kernel/sched/core.c
 @@ -1193,6 +1193,84 @@ void do_set_cpus_allowed(struct task_struct *p, const struct cpumask *new_mask)
@@ -531,5 +530,5 @@ index 425b237..394af5a 100644
   * Change a given task's CPU affinity. Migrate the thread to a
   * proper CPU and schedule it away if the CPU it's executing on
 -- 
-2.7.4
+2.28.0
 

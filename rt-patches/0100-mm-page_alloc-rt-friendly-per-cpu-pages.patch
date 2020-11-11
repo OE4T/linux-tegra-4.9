@@ -1,8 +1,7 @@
-From 67ee3c8c20a38c3a1771601de3e05b085f9ffd87 Mon Sep 17 00:00:00 2001
+From df42343c2b4bd974a0af7d378e585281d6538145 Mon Sep 17 00:00:00 2001
 From: Ingo Molnar <mingo@elte.hu>
 Date: Fri, 3 Jul 2009 08:29:37 -0500
-Subject: [PATCH 100/371] mm: page_alloc: rt-friendly per-cpu pages
-X-NVConfidentiality: public
+Subject: [PATCH 100/367] mm: page_alloc: rt-friendly per-cpu pages
 
 rt-friendly per-cpu pages: convert the irqs-off per-cpu locking
 method into a preemptible, explicit-per-cpu-locks method.
@@ -11,15 +10,15 @@ Contains fixes from:
 	 Peter Zijlstra <a.p.zijlstra@chello.nl>
 	 Thomas Gleixner <tglx@linutronix.de>
 
-Change-Id: Ieb45a90e58ad4f681542880ff2b0ef7b853d594a
+Change-Id: I608b17508a63a47da34966cb7567745c3d7a7247
 Signed-off-by: Ingo Molnar <mingo@elte.hu>
 Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
 ---
- mm/page_alloc.c | 57 +++++++++++++++++++++++++++++++++++++++++----------------
- 1 file changed, 41 insertions(+), 16 deletions(-)
+ mm/page_alloc.c | 60 +++++++++++++++++++++++++++++++++++--------------
+ 1 file changed, 43 insertions(+), 17 deletions(-)
 
 diff --git a/mm/page_alloc.c b/mm/page_alloc.c
-index 014b8dd..11fb35a 100644
+index 014b8dd5744e..c47a5f4ca228 100644
 --- a/mm/page_alloc.c
 +++ b/mm/page_alloc.c
 @@ -61,6 +61,7 @@
@@ -97,12 +96,14 @@ index 014b8dd..11fb35a 100644
  }
  
  /*
-@@ -2415,7 +2428,16 @@ void drain_all_pages(struct zone *zone)
+@@ -2415,7 +2428,17 @@ void drain_all_pages(struct zone *zone)
  		else
  			cpumask_clear_cpu(cpu, &cpus_with_pcps);
  	}
+-	on_each_cpu_mask(&cpus_with_pcps, drain_local_pages, zone, 1);
 +#ifndef CONFIG_PREEMPT_RT_BASE
- 	on_each_cpu_mask(&cpus_with_pcps, drain_local_pages, zone, 1);
++	on_each_cpu_mask(&cpus_with_pcps, (smp_call_func_t) drain_local_pages,
++								zone, 1);
 +#else
 +	for_each_cpu(cpu, &cpus_with_pcps) {
 +		if (zone)
@@ -114,7 +115,7 @@ index 014b8dd..11fb35a 100644
  }
  
  #ifdef CONFIG_HIBERNATION
-@@ -2475,7 +2497,7 @@ void free_hot_cold_page(struct page *page, bool cold)
+@@ -2475,7 +2498,7 @@ void free_hot_cold_page(struct page *page, bool cold)
  
  	migratetype = get_pfnblock_migratetype(page, pfn);
  	set_pcppage_migratetype(page, migratetype);
@@ -123,7 +124,7 @@ index 014b8dd..11fb35a 100644
  	__count_vm_event(PGFREE);
  
  	/*
-@@ -2506,7 +2528,7 @@ void free_hot_cold_page(struct page *page, bool cold)
+@@ -2506,7 +2529,7 @@ void free_hot_cold_page(struct page *page, bool cold)
  	}
  
  out:
@@ -132,7 +133,7 @@ index 014b8dd..11fb35a 100644
  }
  
  /*
-@@ -2641,7 +2663,7 @@ struct page *buffered_rmqueue(struct zone *preferred_zone,
+@@ -2641,7 +2664,7 @@ struct page *buffered_rmqueue(struct zone *preferred_zone,
  		struct per_cpu_pages *pcp;
  		struct list_head *list;
  
@@ -141,7 +142,7 @@ index 014b8dd..11fb35a 100644
  		do {
  			pcp = &this_cpu_ptr(zone->pageset)->pcp;
  			list = &pcp->lists[migratetype];
-@@ -2668,7 +2690,7 @@ struct page *buffered_rmqueue(struct zone *preferred_zone,
+@@ -2668,7 +2691,7 @@ struct page *buffered_rmqueue(struct zone *preferred_zone,
  		 * allocate greater than order-1 page units with __GFP_NOFAIL.
  		 */
  		WARN_ON_ONCE((gfp_flags & __GFP_NOFAIL) && (order > 1));
@@ -150,7 +151,7 @@ index 014b8dd..11fb35a 100644
  
  		do {
  			page = NULL;
-@@ -2680,22 +2702,24 @@ struct page *buffered_rmqueue(struct zone *preferred_zone,
+@@ -2680,22 +2703,24 @@ struct page *buffered_rmqueue(struct zone *preferred_zone,
  			if (!page)
  				page = __rmqueue(zone, order, migratetype);
  		} while (page && check_new_pages(page, order));
@@ -179,7 +180,7 @@ index 014b8dd..11fb35a 100644
  	return NULL;
  }
  
-@@ -6594,6 +6618,7 @@ static int page_alloc_cpu_notify(struct notifier_block *self,
+@@ -6594,6 +6619,7 @@ static int page_alloc_cpu_notify(struct notifier_block *self,
  void __init page_alloc_init(void)
  {
  	hotcpu_notifier(page_alloc_cpu_notify, 0);
@@ -187,7 +188,7 @@ index 014b8dd..11fb35a 100644
  }
  
  /*
-@@ -7435,7 +7460,7 @@ void zone_pcp_reset(struct zone *zone)
+@@ -7435,7 +7461,7 @@ void zone_pcp_reset(struct zone *zone)
  	struct per_cpu_pageset *pset;
  
  	/* avoid races with drain_pages()  */
@@ -196,7 +197,7 @@ index 014b8dd..11fb35a 100644
  	if (zone->pageset != &boot_pageset) {
  		for_each_online_cpu(cpu) {
  			pset = per_cpu_ptr(zone->pageset, cpu);
-@@ -7444,7 +7469,7 @@ void zone_pcp_reset(struct zone *zone)
+@@ -7444,7 +7470,7 @@ void zone_pcp_reset(struct zone *zone)
  		free_percpu(zone->pageset);
  		zone->pageset = &boot_pageset;
  	}
@@ -206,5 +207,5 @@ index 014b8dd..11fb35a 100644
  
  #ifdef CONFIG_MEMORY_HOTREMOVE
 -- 
-2.7.4
+2.28.0
 

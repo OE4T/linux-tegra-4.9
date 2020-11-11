@@ -1,8 +1,7 @@
-From b3a946b9e0fc74c673312cbb396c4a276c8daf32 Mon Sep 17 00:00:00 2001
+From 6699ae8da5d660dc4c780c16357a874542afe716 Mon Sep 17 00:00:00 2001
 From: Clark Williams <williams@redhat.com>
 Date: Sat, 30 Jul 2011 21:55:53 -0500
-Subject: [PATCH 258/371] sysfs: Add /sys/kernel/realtime entry
-X-NVConfidentiality: public
+Subject: [PATCH 258/367] sysfs: Add /sys/kernel/realtime entry
 
 Add a /sys/kernel entry to indicate that the kernel is a
 realtime kernel.
@@ -20,7 +19,7 @@ Signed-off-by: Peter Zijlstra <a.p.zijlstra@chello.nl>
  1 file changed, 12 insertions(+)
 
 diff --git a/kernel/ksysfs.c b/kernel/ksysfs.c
-index ee1bc1b..ddef079 100644
+index ee1bc1bb8feb..ddef07958840 100644
 --- a/kernel/ksysfs.c
 +++ b/kernel/ksysfs.c
 @@ -136,6 +136,15 @@ KERNEL_ATTR_RO(vmcoreinfo);
@@ -39,16 +38,16 @@ index ee1bc1b..ddef079 100644
  /* whether file capabilities are enabled */
  static ssize_t fscaps_show(struct kobject *kobj,
  				  struct kobj_attribute *attr, char *buf)
-@@ -225,6 +234,9 @@ static struct attribute * kernel_attrs[] = {
+@@ -224,6 +233,9 @@ static struct attribute * kernel_attrs[] = {
+ #ifndef CONFIG_TINY_RCU
  	&rcu_expedited_attr.attr,
  	&rcu_normal_attr.attr,
- #endif
++#endif
 +#ifdef CONFIG_PREEMPT_RT_FULL
 +	&realtime_attr.attr,
-+#endif
+ #endif
  	NULL
  };
- 
 -- 
-2.7.4
+2.28.0
 

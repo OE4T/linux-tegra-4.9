@@ -46,6 +46,7 @@
 #include <linux/completion.h>
 #include <linux/interrupt.h>
 #include <linux/kthread.h>
+#include <linux/mempool.h>
 
 #define TEGRA_HV_VSE_SHA_MAX_LL_NUM 26
 #define TEGRA_HV_VSE_SHA_MAX_LL_NUM_1 24
@@ -60,6 +61,7 @@
 #define TEGRA_HV_VSE_NUM_SERVER_REQ 4
 #define TEGRA_VIRTUAL_SE_RNG1_SIZE 300
 #define TEGRA_HV_VSE_SHA_MAX_BLOCK_SIZE 128
+#define TEGRA_HV_VSE_MEMPOOL_SIZE 16
 
 static struct task_struct *tegra_vse_task;
 static bool vse_thread_start;
@@ -131,6 +133,9 @@ struct tegra_virtual_se_dev {
 	struct mutex server_lock;
 	/* Disable a keyslot label as a key */
 	bool disable_keyslot_label;
+	/* Memory pool used for AES1 crypto operation */
+	mempool_t *priv_pool;
+	mempool_t *req_pool;
 };
 
 struct tegra_virtual_se_addr {
@@ -1781,18 +1786,18 @@ static int tegra_hv_vse_aes_set_keyiv(struct tegra_virtual_se_dev *se_dev,
 	struct tegra_vse_tag *priv_data_ptr;
 	int ret;
 
-	priv = devm_kzalloc(se_dev->dev, sizeof(*priv), GFP_KERNEL);
+	priv = mempool_alloc(se_dev->priv_pool, GFP_NOFS);
 	if (!priv)
 		return -ENOMEM;
+	memset(priv, 0, sizeof(*priv));
 
-	ivc_req_msg = devm_kzalloc(se_dev->dev,
-			sizeof(*ivc_req_msg),
-			GFP_KERNEL);
+	ivc_req_msg = mempool_alloc(se_dev->req_pool, GFP_NOFS);
 	if (!ivc_req_msg) {
-		devm_kfree(se_dev->dev, priv);
+		mempool_free(priv, se_dev->priv_pool);
 		dev_err(se_dev->dev, "\n Memory allocation failed\n");
 		return -ENOMEM;
 	}
+	memset(ivc_req_msg, 0, sizeof(*ivc_req_msg));
 
 	ivc_req_msg->hdr.num_reqs = 1;
 	ivc_tx = &ivc_req_msg->d[0].tx;
@@ -1825,7 +1830,7 @@ static int tegra_hv_vse_aes_set_keyiv(struct tegra_virtual_se_dev *se_dev,
 	/* Return error if engine is in suspended state */
 	if (atomic_read(&se_dev->se_suspended)) {
 		mutex_unlock(&se_dev->server_lock);
-		devm_kfree(se_dev->dev, priv);
+		mempool_free(priv, se_dev->priv_pool);
 		err = -ENODEV;
 		goto end;
 	}
@@ -1835,7 +1840,7 @@ static int tegra_hv_vse_aes_set_keyiv(struct tegra_virtual_se_dev *se_dev,
 			sizeof(struct tegra_virtual_se_ivc_msg_t));
 	if (err) {
 		mutex_unlock(&se_dev->server_lock);
-		devm_kfree(se_dev->dev, priv);
+		mempool_free(priv, se_dev->priv_pool);
 		goto end;
 	}
 
@@ -1846,10 +1851,10 @@ static int tegra_hv_vse_aes_set_keyiv(struct tegra_virtual_se_dev *se_dev,
 		dev_err(se_dev->dev, "%s timeout\n", __func__);
 		err = -ETIMEDOUT;
 	}
-	devm_kfree(se_dev->dev, priv);
+	mempool_free(priv, se_dev->priv_pool);
 
 end:
-	devm_kfree(se_dev->dev, ivc_req_msg);
+	mempool_free(ivc_req_msg, se_dev->req_pool);
 	return err;
 }
 
@@ -1944,7 +1949,7 @@ static int tegra_hv_se_setup_ablk_req(struct tegra_virtual_se_dev *se_dev,
 	int i = 0;
 	u32 num_sgs;
 
-	priv->buf = kmalloc(se_dev->gather_buf_sz, GFP_KERNEL);
+	priv->buf = kmalloc(se_dev->gather_buf_sz, GFP_NOFS);
 	if (!priv->buf)
 		return -ENOMEM;
 
@@ -1982,19 +1987,24 @@ static void tegra_hv_vse_process_new_req(struct tegra_virtual_se_dev *se_dev)
 	struct tegra_vse_priv_data *priv = NULL;
 	struct tegra_vse_tag *priv_data_ptr;
 
-
-	priv = devm_kzalloc(se_dev->dev, sizeof(*priv), GFP_KERNEL);
-	if (!priv) {
+	priv = mempool_alloc(se_dev->priv_pool, GFP_NOFS);
+	if (unlikely(!priv)) {
+		dev_err(se_dev->dev, "%s failed in mempool_alloc for priv\n",
+			__func__);
 		err = -ENOMEM;
 		goto err_exit;
 	}
+	memset(priv, 0, sizeof(*priv));
 
-	ivc_req_msg =
-		devm_kzalloc(se_dev->dev, sizeof(*ivc_req_msg), GFP_KERNEL);
-	if (!ivc_req_msg) {
+	ivc_req_msg = mempool_alloc(se_dev->req_pool, GFP_NOFS);
+	if (unlikely(!ivc_req_msg)) {
+		dev_err(se_dev->dev,
+			"%s failed in mempool_alloc for ivc_req\n",
+			__func__);
 		err = -ENOMEM;
 		goto err_exit;
 	}
+	memset(ivc_req_msg, 0, sizeof(*ivc_req_msg));
 
 	err = tegra_hv_se_setup_ablk_req(se_dev, priv);
 	if (err) {
@@ -2058,7 +2068,7 @@ exit:
 err_exit:
 	if (priv) {
 		kfree(priv->buf);
-		devm_kfree(se_dev->dev, priv);
+		mempool_free(priv, se_dev->priv_pool);
 	}
 	for (k = 0; k < se_dev->req_cnt; k++) {
 		req = se_dev->reqs[k];
@@ -2067,7 +2077,7 @@ err_exit:
 	}
 exit_return:
 	if (ivc_req_msg)
-		devm_kfree(se_dev->dev, ivc_req_msg);
+		mempool_free(ivc_req_msg, se_dev->req_pool);
 	se_dev->req_cnt = 0;
 	se_dev->gather_buf_sz = 0;
 }
@@ -2177,17 +2187,17 @@ static void tegra_hv_vse_aes_cra_exit(struct crypto_tfm *tfm)
 	if (ctx->is_keyslot_label)
 		return;
 
-	ivc_req_msg =
-		devm_kzalloc(se_dev->dev,
-			sizeof(*ivc_req_msg), GFP_KERNEL);
+	ivc_req_msg = mempool_alloc(se_dev->req_pool, GFP_NOFS);
 	if (!ivc_req_msg) {
 		dev_err(se_dev->dev, "\n Memory allocation failed\n");
 		return;
 	}
+	memset(ivc_req_msg, 0, sizeof(*ivc_req_msg));
 
-	priv = devm_kzalloc(se_dev->dev, sizeof(*priv), GFP_KERNEL);
+	priv = mempool_alloc(se_dev->priv_pool, GFP_NOFS);
 	if (!priv)
 		goto free_mem;
+	memset(priv, 0, sizeof(*priv));
 
 	ivc_req_msg->hdr.num_reqs = 1;
 	ivc_tx = &ivc_req_msg->d[0].tx;
@@ -2206,7 +2216,7 @@ static void tegra_hv_vse_aes_cra_exit(struct crypto_tfm *tfm)
 	/* Return error if engine is in suspended state */
 	if (atomic_read(&se_dev->se_suspended)) {
 		mutex_unlock(&se_dev->server_lock);
-		devm_kfree(se_dev->dev, priv);
+		mempool_free(priv, se_dev->priv_pool);
 		err = -ENODEV;
 		goto free_mem;
 	}
@@ -2214,7 +2224,7 @@ static void tegra_hv_vse_aes_cra_exit(struct crypto_tfm *tfm)
 			sizeof(struct tegra_virtual_se_ivc_msg_t));
 	if (err) {
 		mutex_unlock(&se_dev->server_lock);
-		devm_kfree(se_dev->dev, priv);
+		mempool_free(priv, se_dev->priv_pool);
 		goto free_mem;
 	}
 
@@ -2223,10 +2233,10 @@ static void tegra_hv_vse_aes_cra_exit(struct crypto_tfm *tfm)
 	mutex_unlock(&se_dev->server_lock);
 	if (err == 0)
 		dev_err(se_dev->dev, "%s timeout\n", __func__);
-	devm_kfree(se_dev->dev, priv);
+	mempool_free(priv, se_dev->priv_pool);
 
 free_mem:
-	devm_kfree(se_dev->dev, ivc_req_msg);
+	mempool_free(ivc_req_msg, se_dev->req_pool);
 }
 
 static int tegra_hv_vse_aes_cbc_encrypt(struct ablkcipher_request *req)
@@ -3159,19 +3169,19 @@ static int tegra_hv_vse_aes_setkey(struct crypto_ablkcipher *tfm,
 		}
 	}
 
-	priv = devm_kzalloc(se_dev->dev, sizeof(*priv), GFP_KERNEL);
+	priv = mempool_alloc(se_dev->priv_pool, GFP_NOFS);
 	if (!priv)
 		return -ENOMEM;
+	memset(priv, 0, sizeof(*priv));
 
 	if (!ctx->is_key_slot_allocated) {
-		ivc_req_msg = devm_kzalloc(se_dev->dev,
-				sizeof(struct tegra_virtual_se_ivc_msg_t),
-				GFP_KERNEL);
+		ivc_req_msg = mempool_alloc(se_dev->req_pool, GFP_NOFS);
 		if (!ivc_req_msg) {
 			dev_err(se_dev->dev, "\n Memory allocation failed\n");
-			devm_kfree(se_dev->dev, priv);
+			mempool_free(priv, se_dev->priv_pool);
 			return -ENOMEM;
 		}
+		memset(ivc_req_msg, 0, sizeof(*ivc_req_msg));
 
 		/* Allocate AES key slot */
 		ivc_req_msg->hdr.num_reqs = 1;
@@ -3191,7 +3201,7 @@ static int tegra_hv_vse_aes_setkey(struct crypto_ablkcipher *tfm,
 		/* Return error if engine is in suspended state */
 		if (atomic_read(&se_dev->se_suspended)) {
 			mutex_unlock(&se_dev->server_lock);
-			devm_kfree(se_dev->dev, priv);
+			mempool_free(priv, se_dev->priv_pool);
 			err = -ENODEV;
 			goto free_mem;
 		}
@@ -3199,7 +3209,7 @@ static int tegra_hv_vse_aes_setkey(struct crypto_ablkcipher *tfm,
 				sizeof(struct tegra_virtual_se_ivc_msg_t));
 		if (err) {
 			mutex_unlock(&se_dev->server_lock);
-			devm_kfree(se_dev->dev, priv);
+			mempool_free(priv, se_dev->priv_pool);
 			goto free_mem;
 		}
 
@@ -3207,7 +3217,7 @@ static int tegra_hv_vse_aes_setkey(struct crypto_ablkcipher *tfm,
 				TEGRA_HV_VSE_TIMEOUT);
 		if (err == 0) {
 			mutex_unlock(&se_dev->server_lock);
-			devm_kfree(se_dev->dev, priv);
+			mempool_free(priv, se_dev->priv_pool);
 			dev_err(se_dev->dev, "%s timeout\n", __func__);
 			err = -ETIMEDOUT;
 			goto free_mem;
@@ -3216,7 +3226,7 @@ static int tegra_hv_vse_aes_setkey(struct crypto_ablkcipher *tfm,
 		ctx->aes_keyslot = priv->slot_num;
 		ctx->is_key_slot_allocated = true;
 	}
-	devm_kfree(se_dev->dev, priv);
+	mempool_free(priv, se_dev->priv_pool);
 
 	ctx->keylen = keylen;
 	err = tegra_hv_vse_aes_set_keyiv(se_dev, (u8 *)key, keylen,
@@ -3224,7 +3234,7 @@ static int tegra_hv_vse_aes_setkey(struct crypto_ablkcipher *tfm,
 
 free_mem:
 	if (ivc_req_msg)
-		devm_kfree(se_dev->dev, ivc_req_msg);
+		mempool_free(ivc_req_msg, se_dev->req_pool);
 	return err;
 }
 
@@ -3668,7 +3678,7 @@ static int tegra_vse_kthread(void *unused)
 					(s8)ivc_resp_msg->d[0].rx.status;
 				priv->call_back_vse(priv);
 				atomic_sub(1, &se_dev->ivc_count);
-				devm_kfree(se_dev->dev, priv);
+				mempool_free(priv, se_dev->priv_pool);
 				break;
 			case VIRTUAL_SE_KEY_SLOT:
 				ivc_rx = &ivc_resp_msg->d[0].rx;
@@ -3818,6 +3828,17 @@ static int tegra_hv_vse_probe(struct platform_device *pdev)
 			goto exit;
 		}
 		atomic_set(&se_dev->ivc_count, 0);
+		se_dev->priv_pool = mempool_create_kmalloc_pool(
+			TEGRA_HV_VSE_MEMPOOL_SIZE,
+			sizeof(struct tegra_vse_priv_data));
+		se_dev->req_pool = mempool_create_kmalloc_pool(
+			TEGRA_HV_VSE_MEMPOOL_SIZE,
+			sizeof(struct tegra_virtual_se_ivc_msg_t));
+		if (!se_dev->priv_pool || !se_dev->req_pool) {
+			dev_err(&pdev->dev,
+				"mempool_create failed for priv or req struct\n");
+			goto exit;
+		}
 	}
 
 	if (engine_id == VIRTUAL_SE_SHA) {
@@ -3882,6 +3903,7 @@ static void tegra_hv_vse_shutdown(struct platform_device *pdev)
 static int tegra_hv_vse_remove(struct platform_device *pdev)
 {
 	int i;
+	struct tegra_virtual_se_dev *se_dev = platform_get_drvdata(pdev);
 
 	for (i = 0; i < ARRAY_SIZE(sha_algs); i++)
 		crypto_unregister_ahash(&sha_algs[i]);
@@ -3891,6 +3913,10 @@ static int tegra_hv_vse_remove(struct platform_device *pdev)
 
 	if (is_rng1_registered)
 		crypto_unregister_rng(&rng1_trng_alg[0]);
+
+	mempool_destroy(se_dev->priv_pool);
+	mempool_destroy(se_dev->req_pool);
+	kfree(se_dev);
 
 	return 0;
 }

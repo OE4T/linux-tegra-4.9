@@ -2687,7 +2687,7 @@ static int tegra_pcie_dw_host_init(struct pcie_port *pp)
 	}
 
 	dw_pcie_read(pci->dbi_base + PCI_IO_BASE, 4, &tmp);
-	tmp &= ~(IO_BASE_IO_DECODE | IO_BASE_IO_DECODE);
+	tmp &= ~(IO_BASE_IO_DECODE | IO_BASE_IO_DECODE_BIT8);
 	dw_pcie_write(pci->dbi_base + PCI_IO_BASE, 4, tmp);
 
 	dw_pcie_read(pci->dbi_base + CFG_PREF_MEM_LIMIT_BASE, 4, &tmp);

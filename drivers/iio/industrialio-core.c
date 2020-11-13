@@ -926,7 +926,7 @@ int __iio_device_attr_init(struct device_attribute *dev_attr,
 	dev_attr->attr.name = name;
 
 	if (readfunc) {
-		dev_attr->attr.mode |= S_IRUGO;
+		dev_attr->attr.mode |= S_IRUSR;
 		dev_attr->show = readfunc;
 	}
 

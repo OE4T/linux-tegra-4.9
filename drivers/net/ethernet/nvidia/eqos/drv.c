@@ -29,7 +29,7 @@
  * DAMAGE.
  * ========================================================================= */
 /*
- * Copyright (c) 2015-2020, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2021, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -1219,7 +1219,7 @@ static int eqos_close(struct net_device *dev)
 		phy_stop(pdata->phydev);
 		phy_disconnect(pdata->phydev);
 		if (gpio_is_valid(pdata->phy_reset_gpio) &&
-				 (pdata->mac_ver > EQOS_MAC_CORE_4_10))
+				 (pdata->dt_cfg.phyrst_lpmode == 1U))
 			gpio_set_value(pdata->phy_reset_gpio, 0);
 		pdata->phydev = NULL;
 	}

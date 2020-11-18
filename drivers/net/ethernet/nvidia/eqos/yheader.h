@@ -29,7 +29,7 @@
  * DAMAGE.
  * ========================================================================= */
 /*
- * Copyright (c) 2015-2020, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2021, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -1360,6 +1360,7 @@ struct eqos_cfg {
 	uint		eth_iso_enable;
 	bool		phy_apd_mode;	/* Represents PHY AUTO POWER DOWN mode */
 	uint		reg_auto_cal_config_0_val; /* EQOS_AUTO_CAL_CONFIG_0 REG */
+	u8		phyrst_lpmode; /* Phy in rst for low power mode */
 	u32		slot_intvl_val; /* Slot Interval Value*/
 };
 

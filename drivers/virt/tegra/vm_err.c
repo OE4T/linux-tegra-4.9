@@ -146,8 +146,7 @@ static irqreturn_t async_err_handler(int irq, void *context)
 			handler = fn_peer;
 
 		if (handler) {
-			if (handler(err_data) == true)
-				enter_bad_mode = true;
+			enter_bad_mode = handler(err_data);
 		}
 
 		local_rd_idx = next_rd_idx;
@@ -187,8 +186,7 @@ static int sync_err_handler(struct pt_regs *regs, int reason,
 	const unsigned int vcpu_id = hyp_read_vcpu_id();
 
 	/* Check sync error */
-	if (check_sync_err(vcpu_id, ctrl, &send_sync_err_ack) == true)
-		enter_bad_mode = true;
+	enter_bad_mode = check_sync_err(vcpu_id, ctrl, &send_sync_err_ack);
 
 	/* Send ack for error to HV. */
 	if (send_sync_err_ack) {
@@ -199,6 +197,12 @@ static int sync_err_handler(struct pt_regs *regs, int reason,
 			/* Unexpected */
 			enter_bad_mode = true;
 		}
+	}
+
+	/* bad_mode() will call die(). Force the latter to panic. */
+	if (enter_bad_mode) {
+		panic_on_oops = 1;
+		wmb();
 	}
 
 	/* Caller expects 0 to enter bad mode */

@@ -195,6 +195,7 @@ struct fan_dev_data {
 
 	bool   continuous_gov;
 	bool is_tmargin;
+	bool is_always_on;
 };
 
 #define DEBUG 0

@@ -58,6 +58,14 @@
 /* Based off of max device tree node name length */
 #define MAX_PROFILE_NAME_LENGTH	31
 
+bool is_fan_always_on(struct thermal_cooling_device *cdev)
+{
+	struct fan_dev_data *fan_data = cdev->devdata;
+
+	return fan_data->is_always_on;
+}
+EXPORT_SYMBOL(is_fan_always_on);
+
 static int fan_get_rpm_from_pwm(struct fan_dev_data *fan_data, unsigned int pwm)
 {
 	int i;
@@ -1563,6 +1571,7 @@ static int pwm_fan_probe(struct platform_device *pdev)
 	fan_data->fan_kickstart = false;
 
 	fan_data->continuous_gov = of_property_read_bool(node, "continuous_gov_boot_on");
+	fan_data->is_always_on = of_property_read_bool(node, "is_always_on");
 
 	INIT_DELAYED_WORK(&(fan_data->fan_ramp_pwm_work),
 			fan_ramping_pwm_work_func);

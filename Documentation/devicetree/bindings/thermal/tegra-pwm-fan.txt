@@ -44,6 +44,7 @@ Properties details:
   - use_tmargin		: If Tmargin algorithm is being used in therm_fan_est
     			  driver. This node needs to be enabled for the pwm fan
 			  driver to work properly.
+  - is_always_on	: Enable if the fan is always on.
 
 Example:
 

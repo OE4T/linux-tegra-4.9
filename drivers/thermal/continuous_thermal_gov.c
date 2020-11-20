@@ -513,6 +513,12 @@ continuous_thermal_gov_get_target(struct thermal_zone_device *tz,
 			gov->is_fan_on = false;
 	}
 
+#if IS_BUILTIN(CONFIG_PWM_FAN)
+	if (is_fan_always_on(cdev)) {
+		gov->is_fan_on = true;
+	}
+#endif
+
 	//check if doing step based fan control, or smooth ramp
 	if (gov->is_fan_on) {
 		//fan table lookup

@@ -33,6 +33,7 @@
 #include "tegra186-p3636-0001-a00-audio.dtsi"
 #include "tegra186-p3636-0001-a00-thermal.dtsi"
 #include "tegra186-p3636-plugin-manager.dtsi"
+#include "tegra186-p3636-0001-a00-comms.dtsi"
 
 #define EXTCON_NONE		0
 #define EXTCON_USB		1

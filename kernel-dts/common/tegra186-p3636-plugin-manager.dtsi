@@ -52,4 +52,19 @@
 			};
 		};
 	};
+
+	plugin-manager {
+		ina3221_current_limit {
+			ids = ">=3636-0002-000";
+			override@0 {
+				target = <&ina3221x_40>;
+				_overlay_ {
+					channel@0 {
+						ti,current-warning-limit-ma = <3600>;
+						ti,current-critical-limit-ma = <3600>;
+					};
+				};
+			};
+		};
+	};
 };

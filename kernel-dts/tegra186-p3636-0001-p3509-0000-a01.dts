@@ -18,7 +18,6 @@
 #include "common/tegra186-p3636-0001-a00-prod.dtsi"
 
 /* plugin manager */
-#include "common/tegra186-p3636-plugin-manager.dtsi"
 #include "common/tegra186-super-module-e2614-p3509-0000-a00.dtsi"
 
 / {

@@ -17,9 +17,6 @@
 #include "common/tegra186-p3509-0000-a00-fixed-regulator.dtsi"
 #include "common/tegra186-p3636-0001-a00-prod.dtsi"
 
-/* plugin manager */
-#include "common/tegra186-p3636-plugin-manager.dtsi"
-
 / {
 	compatible = "nvidia,lanai", "nvidia,p3509-0000+p3636-0002", "nvidia,tegra186";
 

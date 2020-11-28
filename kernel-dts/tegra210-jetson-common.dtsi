@@ -473,7 +473,7 @@
 	gpio@6000d000 {
 		/* gpio-name for 40-pin header, gpio-name given as COL(10) x ROW(20) */
 		gpio-line-names = "",   "",     "",     "",     "",     "",     "",     "",     "I2S0_LRCLK",     "I2S0_SDIN",
-		"I2S0_SDOUT",     "I2S0_CLK",     "",    "",    "",     "",     "SPI1_MOSI",    "SPI1_MISO",    "SPI1_SCK",     "SPI1_CS0",
+		"I2S0_SDOUT",     "I2S0_CLK",     "",    "",    "",     "",     "SPI1_MOSI",    "SPI1_MISO",    "SPI1_CLK",     "SPI1_CS0",
 		"SPI1_CS1",     "",     "",     "",     "",     "",     "",     "",     "",     "",
 		"",     "",     "",     "",     "",     "",     "AO_DMIC_IN_CLK",     "AO_DMIC_IN_DAT",     "GPIO20_AUD_INT",      "",
 		"",     "",     "",     "",     "",     "",     "",     "",     "",     "",
@@ -488,7 +488,7 @@
 		"",     "",     "",     "",     "",     "",     "",     "",     "",     "",
 		"",     "",     "",     "",     "",     "",     "",     "",     "",     "",
 		"",     "",     "",     "",     "",     "",     "",     "",     "",     "",
-		"",     "",     "UART0_RTS",     "UART1_CTS",     "",     "",     "",     "",     "",   "",
+		"",     "",     "UART0_RTS",     "UART0_CTS",     "",     "",     "",     "",     "",   "",
 		"",     "",     "",     "",     "",     "",     "",     "",     "",     "",
 		"",     "",     "",     "",     "GPIO16_MDM_WAKE_AP",     "",     "GPIO9_MOTION_INT",     "GPIO8_ALS_PROX_INT",     "",     "",
 		"",     "",     "",     "",     "",       "",     "",     "",     "",     "",

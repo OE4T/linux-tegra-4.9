@@ -485,14 +485,6 @@ static int nvhost_ioctl_ctrl_poll_fd_create (
 
 	snprintf(name, sizeof(name), "nvhost-event-poll-fd");
 
-	file = anon_inode_getfile(name, &nvhost_event_poll_fd_ops,
-				  NULL, O_RDWR);
-	if (IS_ERR(file)) {
-		nvhost_err(&ctx->dev->dev->dev, "failed to get file");
-		err = PTR_ERR(file);
-		goto fail_file;
-	}
-
 	private_data = kzalloc(sizeof(*private_data), GFP_KERNEL);
 	if (!private_data) {
 		nvhost_err(&ctx->dev->dev->dev,
@@ -506,15 +498,21 @@ static int nvhost_ioctl_ctrl_poll_fd_create (
 	private_data->event_posted = false;
 	kref_init(&private_data->ref);
 
+	file = anon_inode_getfile(name, &nvhost_event_poll_fd_ops,
+				  private_data, O_RDWR);
+	if (IS_ERR(file)) {
+		nvhost_err(&ctx->dev->dev->dev, "failed to get file");
+		err = PTR_ERR(file);
+		goto fail_file;
+	}
 	fd_install(fd, file);
-	file->private_data = private_data;
 
 	args->fd = fd;
 	return 0;
 
-fail_alloc:
-	fput(file);
 fail_file:
+	kfree(private_data);
+fail_alloc:
 	put_unused_fd(fd);
 	return err;
 }

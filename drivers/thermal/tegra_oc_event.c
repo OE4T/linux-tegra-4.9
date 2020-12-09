@@ -386,7 +386,8 @@ static int tegra_oc_event_remove(struct platform_device *pdev)
 
 	return 0;
 }
-
+#define BPMP_NOC_SOC_THERM_BLF_CONTROL_REGISTER_0 0x0d640164
+#define CPU_ACCESS_MASK 0x00000002
 static int tegra_oc_event_probe(struct platform_device *pdev)
 {
 	int ret;
@@ -394,6 +395,16 @@ static int tegra_oc_event_probe(struct platform_device *pdev)
 	const struct of_device_id *match;
 	struct device_node *np = pdev->dev.of_node;
 	unsigned int oc_status;
+	void __iomem *blf;
+
+	if (tegra_get_chip_id() == TEGRA194) {
+		blf = devm_ioremap(&pdev->dev, BPMP_NOC_SOC_THERM_BLF_CONTROL_REGISTER_0, sizeof(u32));
+		if (blf == NULL)
+			return -ENOMEM;
+
+		if (!((readl(blf) & CPU_ACCESS_MASK) >> 1))
+			return -EPERM;
+	}
 
 	match = of_match_node(tegra_oc_event_of_match, np);
 	if (!match)

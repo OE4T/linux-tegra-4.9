@@ -14,6 +14,29 @@
 #include <dt-bindings/pwm/pwm.h>
 
 / {
+	pwm_fan_shared_data: pfsd {
+		/delete-property/ rpm_diff_tolerance;
+		/* reverse active_rpm, active_rru, active_rrd table for Tmargin */
+		active_rpm = <2150 1650 1150 1150 1150 1150 1150 1150 1150 1150>;
+		active_rru = <1 2 40 40 40 40 40 40 40 40>;
+		active_rrd = <1 2 40 40 40 40 40 40 40 40>;
+	};
+
+	pwm-fan {
+		shared_data = <&pwm_fan_shared_data>;
+		is_always_on = "true";
+		use_tmargin;
+		profiles {
+			default = "cool";
+			/delete-node/ quiet;
+			cool {
+				state_cap = <0>;
+				/* reverse pwm table for Tmargin */
+				active_pwm = <255 140 64 64 64 64 64 64 64 64>;
+			};
+		};
+	};
+
 	pwm_fan_shared_data_fpga: pfsd-fpga {
 		num_resources = <0>;
 		secret = <47>;

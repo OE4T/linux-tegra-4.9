@@ -1739,6 +1739,7 @@ static void tegra_channel_populate_dev_info(struct tegra_camera_dev_info *cdev,
 	cdev->bpp = chan->fmtinfo->bpp.numerator;
 	/* BW in kBps */
 	cdev->bw = cdev->pixel_rate * cdev->bpp / 1024;
+	cdev->bw /= 8;
 }
 
 void tegra_channel_remove_subdevices(struct tegra_channel *chan)

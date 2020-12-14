@@ -421,10 +421,11 @@ static void print_errlog1_2(struct seq_file *file,
  *    only if there is error in any AXI2APB slave.
  *  - There is still no way to disambiguate a DEC error from SLV error type.
  */
-static void print_errlog0(struct seq_file *file,
-		struct tegra_cbb_errlog_record *errlog)
+static bool print_errlog0(struct seq_file *file,
+			  struct tegra_cbb_errlog_record *errlog)
 {
 	struct tegra_noc_packet_header hdr;
+	bool is_fatal = true;
 
 	hdr.lock    = errlog->errlog0 & 0x1;
 	hdr.opc     = get_noc_errlog_subfield(errlog->errlog0, 4, 1);
@@ -441,7 +442,13 @@ static void print_errlog0(struct seq_file *file,
 	print_cbb_err(file, "\t  Error Description\t: %s\n",
 			noc_errors[hdr.errcode].type);
 
-	if (!strcmp(noc_errors[hdr.errcode].errcode, "SLV")
+	if (!strcmp(noc_errors[hdr.errcode].errcode, "SEC") ||
+	    !strcmp(noc_errors[hdr.errcode].errcode, "DEC") ||
+	    !strcmp(noc_errors[hdr.errcode].errcode, "UNS") ||
+	    !strcmp(noc_errors[hdr.errcode].errcode, "DISC")
+	)
+		is_fatal = false;
+	else if (!strcmp(noc_errors[hdr.errcode].errcode, "SLV")
 			&& (errlog->is_ax2apb_bridge_connected)) {
 		int i = 0, j = 0;
 		int max_axi2apb_err = ARRAY_SIZE(tegra_axi2apb_errors);
@@ -460,14 +467,21 @@ static void print_errlog0(struct seq_file *file,
 
 			if (bus_status) {
 				for(j = 0; j < max_axi2apb_err; j++) {
-					if ( bus_status & (1<<j) )
+					if (bus_status & (1 << j)) {
 						print_cbb_err(file, "\t  "
 						"AXI2APB_%d bridge error: %s"
 						, i, tegra_axi2apb_errors[j]);
+
+						if (strstr
+						    (tegra_axi2apb_errors[j],
+						     "Firewall"))
+							is_fatal = false;
+					}
 				}
 			}
 		}
 	}
+
 	print_cbb_err(file, "\t  Packet header Lock\t: %d\n", hdr.lock);
 	print_cbb_err(file, "\t  Packet header Len1\t: %d\n", hdr.len1);
 	if (hdr.format)
@@ -476,18 +490,19 @@ static void print_errlog0(struct seq_file *file,
 	else
 		print_cbb_err(file, "\t  NOC protocol version\t: %s\n",
 				"version < 2.7");
+	return is_fatal;
 }
-
 
 /*
  * Print debug information about failed transaction using
  * ErrLog registers of error loggger having ErrVld set
  */
-static void print_errloggerX_info(
+static bool print_errloggerX_info(
 			struct seq_file *file,
 			struct tegra_cbb_errlog_record *errlog, int errloggerX)
 {
 	struct tegra_lookup_noc_aperture noc_trans_info = {0,};
+	bool is_fatal = true;
 
 	print_cbb_err(file, "\tError Logger\t\t: %d\n", errloggerX);
 	if (errloggerX == 0) {
@@ -514,7 +529,7 @@ static void print_errloggerX_info(
 	}
 
 	print_cbb_err(file, "\tErrLog0\t\t\t: 0x%x\n", errlog->errlog0);
-	print_errlog0(file, errlog);
+	is_fatal = print_errlog0(file, errlog);
 
 	print_cbb_err(file, "\tErrLog1\t\t\t: 0x%x\n", errlog->errlog1);
 	print_cbb_err(file, "\tErrLog2\t\t\t: 0x%x\n", errlog->errlog2);
@@ -529,13 +544,17 @@ static void print_errloggerX_info(
 	print_cbb_err(file, "\tErrLog5\t\t\t: 0x%x\n", errlog->errlog5);
 	if(errlog->errlog5)
 		print_errlog5(file, errlog);
+
+	return is_fatal;
 }
 
 
-static void print_errlog(struct seq_file *file,
-			struct tegra_cbb_errlog_record *errlog,
-			int errvld_status)
+static bool print_errlog(struct seq_file *file,
+			 struct tegra_cbb_errlog_record *errlog,
+			 int errvld_status)
 {
+	bool is_fatal = true;
+
 	pr_crit("**************************************\n");
 	pr_crit("* For more Internal Decode Help\n");
 	pr_crit("*     http://nv/cbberr\n");
@@ -544,14 +563,16 @@ static void print_errlog(struct seq_file *file,
 	pr_crit("CPU:%d, Error:%s\n", smp_processor_id(), errlog->name);
 
 	if (errvld_status & 0x1)
-		print_errloggerX_info(file, errlog, 0);
+		is_fatal = print_errloggerX_info(file, errlog, 0);
 	else if (errvld_status & 0x2)
-		print_errloggerX_info(file, errlog, 1);
+		is_fatal = print_errloggerX_info(file, errlog, 1);
 	else if (errvld_status & 0x4)
-		print_errloggerX_info(file, errlog, 2);
+		is_fatal = print_errloggerX_info(file, errlog, 2);
 
 	errlog->errclr(errlog->vaddr);
 	print_cbb_err(file, "\t**************************************\n");
+
+	return is_fatal;
 }
 
 
@@ -780,9 +801,9 @@ static int cbb_noc_dbgfs_init(void) { return 0; }
 static irqreturn_t tegra_cbb_error_isr(int irq, void *dev_id)
 {
 	struct tegra_cbb_errlog_record *errlog;
+	bool is_inband_err = false, is_fatal = false;
 	unsigned int errvld_status = 0;
 	unsigned long flags;
-	bool is_inband_err = 0;
 	u8 mstr_id = 0;
 
 	raw_spin_lock_irqsave(&cbb_noc_lock, flags);
@@ -799,7 +820,8 @@ static irqreturn_t tegra_cbb_error_isr(int irq, void *dev_id)
 				"irq=%d\n", smp_processor_id(), errlog->name,
 				errlog->start, irq);
 
-				print_errlog(NULL, errlog, errvld_status);
+				is_fatal = print_errlog(NULL, errlog,
+							errvld_status);
 
 				mstr_id = get_mstr_id(errlog->errlog5);
 				/* If illegal request is from CCPLEX(id:0x1)
@@ -812,8 +834,12 @@ static irqreturn_t tegra_cbb_error_isr(int irq, void *dev_id)
 	}
 	raw_spin_unlock_irqrestore(&cbb_noc_lock, flags);
 
-	if(is_inband_err)
-		BUG();
+	if (is_inband_err) {
+		if (is_fatal)
+			BUG();
+		else
+			WARN(true, "Warning due to CBB Error\n");
+	}
 
 	return IRQ_HANDLED;
 }

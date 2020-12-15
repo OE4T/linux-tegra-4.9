@@ -40,6 +40,16 @@
 		#pwm-cells = <1>;
 		pwms = <&tegra_pwm4 0 45334>;
 		shared_data = <&pwm_fan_shared_data>;
-		active_pwm = <0 80 120 160 255 255 255 255 255 255>;
+		profiles {
+			default = "quiet";
+			quiet {
+				state_cap = <4>;
+				active_pwm = <0 130 160 200 255 255 255 255 255 255>;
+			};
+			cool {
+				state_cap = <4>;
+				active_pwm = <0 140 170 200 255 255 255 255 255 255>;
+			};
+		};
 	};
 };

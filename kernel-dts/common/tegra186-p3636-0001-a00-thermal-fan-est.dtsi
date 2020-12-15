@@ -42,9 +42,20 @@
 		num_resources = <0>;
 		shared_data = <&thermal_fan_est_shared_data>;
 		trip_length = <10>;
-		active_trip_temps = <0 51000 61000 71000 82000
-				140000 150000 160000 170000 180000>;
-		active_hysteresis = <0 15000 9000 9000 10000
-				0 0 0 0 0>;
+		profiles {
+			default = "quiet";
+			quiet {
+				active_trip_temps = <0 46000 60000 68000 76000
+					140000 150000 160000 170000 180000>;
+				active_hysteresis = <0 8000 8000 7000 7000
+					0 0 0 0 0>;
+			};
+			cool {
+				active_trip_temps = <0 35000 45000 53000 61000
+					140000 150000 160000 170000 180000>;
+				active_hysteresis = <0 8000 8000 7000 7000
+					0 0 0 0 0>;
+			};
+		};
 	};
 };

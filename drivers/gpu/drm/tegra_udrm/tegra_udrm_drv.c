@@ -200,6 +200,14 @@ static void tegra_udrm_preclose(struct drm_device *drm, struct drm_file *file)
 	}
 }
 
+static void tegra_udrm_postclose(struct drm_device *drm, struct drm_file *file)
+{
+	if (file->driver_priv) {
+		kfree(file->driver_priv);
+		file->driver_priv = NULL;
+	}
+}
+
 static int tegra_udrm_close_notify_ioctl(struct drm_device *drm,
 	void *data, struct drm_file *file)
 {
@@ -451,6 +459,7 @@ static struct drm_driver tegra_udrm_driver = {
 	.driver_features   = DRIVER_RENDER,
 	.open              = tegra_udrm_open,
 	.preclose          = tegra_udrm_preclose,
+	.postclose         = tegra_udrm_postclose,
 	.ioctls            = tegra_udrm_ioctls,
 	.num_ioctls        = ARRAY_SIZE(tegra_udrm_ioctls),
 	.fops              = &tegra_udrm_fops,

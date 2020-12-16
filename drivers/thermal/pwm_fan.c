@@ -500,9 +500,15 @@ static int fan_get_rpm_rru(int rpm, struct fan_dev_data *fan_data)
 	int pwm_delta = (fan_data->fan_cur_pwm * rpm_delta) /
 				fan_data->next_target_rpm;
 
-	while ((fan_data->fan_rpm_ramp_index < fan_data->active_steps - 1) &&
-		rpm > fan_data->fan_rpm[fan_data->fan_rpm_ramp_index + 1])
-		fan_data->fan_rpm_ramp_index++;
+	if (fan_data->is_tmargin) {
+		while ((fan_data->fan_rpm_ramp_index > 1) &&
+			(rpm < fan_data->fan_rpm[fan_data->fan_rpm_ramp_index - 1]))
+			fan_data->fan_rpm_ramp_index--;
+	} else {
+		while ((fan_data->fan_rpm_ramp_index < fan_data->active_steps - 1) &&
+			(rpm > fan_data->fan_rpm[fan_data->fan_rpm_ramp_index + 1]))
+			fan_data->fan_rpm_ramp_index++;
+	}
 
 	return min(pwm_delta, fan_data->fan_rru[fan_data->fan_rpm_ramp_index]);
 }
@@ -513,10 +519,15 @@ static int fan_get_rpm_rrd(int rpm, struct fan_dev_data *fan_data)
 	int pwm_delta = (fan_data->fan_cur_pwm * rpm_delta) /
 				fan_data->next_target_rpm;
 
-	while (fan_data->fan_rpm_ramp_index > 1 &&
-		rpm < fan_data->fan_rpm[fan_data->fan_rpm_ramp_index - 1])
-		fan_data->fan_rpm_ramp_index--;
-
+	if (fan_data->is_tmargin) {
+		while ((fan_data->fan_rpm_ramp_index < fan_data->active_steps) &&
+			(rpm < fan_data->fan_rpm[fan_data->fan_rpm_ramp_index + 1]))
+			fan_data->fan_rpm_ramp_index++;
+	} else {
+		while ((fan_data->fan_rpm_ramp_index > 1) &&
+			(rpm < fan_data->fan_rpm[fan_data->fan_rpm_ramp_index - 1]))
+			fan_data->fan_rpm_ramp_index--;
+	}
 	return min(pwm_delta, fan_data->fan_rru[fan_data->fan_rpm_ramp_index]);
 }
 
@@ -524,26 +535,42 @@ static int fan_get_pwm_rru(int pwm, struct fan_dev_data *fan_data)
 {
 	int i;
 
-	for (i = 0; i < fan_data->active_steps - 1 ; i++) {
-		if ((pwm >= fan_data->fan_pwm[i]) &&
-				(pwm < fan_data->fan_pwm[i + 1])) {
-			return fan_data->fan_rru[i];
+	if (fan_data->is_tmargin) {
+		for (i = fan_data->active_steps - 1; i > 0; i--) {
+			if ((fan_data->fan_pwm[i] <= pwm) &&
+					(pwm < fan_data->fan_pwm[i - 1]))
+				return fan_data->fan_rru[i - 1];
 		}
+		return fan_data->fan_rru[0];
+	} else {
+		for (i = 0; i < fan_data->active_steps - 1 ; i++) {
+			if ((fan_data->fan_pwm[i] <= pwm) &&
+					(pwm < fan_data->fan_pwm[i + 1]))
+				return fan_data->fan_rru[i];
+		}
+		return fan_data->fan_rru[fan_data->active_steps - 1];
 	}
-	return fan_data->fan_rru[fan_data->active_steps - 1];
 }
 
 static int fan_get_pwm_rrd(int pwm, struct fan_dev_data *fan_data)
 {
 	int i;
 
-	for (i = 0; i < fan_data->active_steps - 1 ; i++) {
-		if ((pwm >= fan_data->fan_pwm[i]) &&
-				(pwm < fan_data->fan_pwm[i + 1])) {
-			return fan_data->fan_rrd[i];
+	if (fan_data->is_tmargin) {
+		for (i = fan_data->active_steps - 1; i > 0; i--) {
+			if ((fan_data->fan_pwm[i] <= pwm) &&
+					(pwm < fan_data->fan_pwm[i - 1]))
+				return fan_data->fan_rrd[i - 1];
 		}
+		return fan_data->fan_rrd[0];
+	} else {
+		for (i = 0; i < fan_data->active_steps - 1 ; i++) {
+			if ((fan_data->fan_pwm[i] <= pwm) &&
+					(pwm < fan_data->fan_pwm[i + 1]))
+				return fan_data->fan_rrd[i];
+		}
+		return fan_data->fan_rrd[fan_data->active_steps - 1];
 	}
-	return fan_data->fan_rrd[fan_data->active_steps - 1];
 }
 
 static void set_pwm_duty_cycle(int pwm, struct fan_dev_data *fan_data)
@@ -1268,6 +1295,8 @@ static int pwm_fan_probe(struct platform_device *pdev)
 		devm_kfree(&pdev->dev, (void *)fan_data);
 		return -ENODEV;
 	}
+
+	fan_data->is_tmargin = of_property_read_bool(node, "use_tmargin");
 
 	of_err |= of_property_read_string(node, "name", &fan_data->name);
 	pr_info("FAN dev name: %s\n", fan_data->name);

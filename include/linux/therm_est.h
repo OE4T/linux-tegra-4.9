@@ -194,6 +194,7 @@ struct fan_dev_data {
 	int rpm_valid_retry_count;
 
 	bool   continuous_gov;
+	bool is_tmargin;
 };
 
 #define DEBUG 0

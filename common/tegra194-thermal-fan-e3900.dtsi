@@ -13,6 +13,7 @@
 
 / {
 	thermal_fan_est_shared_data: tfesd {
+		tzp_governor_name = "continuous_therm_gov";
 		ndevs = <4>;
 		dev4 {
 			dev_data = "mlx5";
@@ -24,6 +25,15 @@
 	thermal-fan-est {
 		shared_data = <&thermal_fan_est_shared_data>;
 		use_tmargin;
+		thermal-zone-params {
+			governor-name = "continuous_therm_gov";
+			iir_power = <7>;
+			iir_min = <10>;
+			iir_max = <1000>;
+			iir_gain_qp = <1000>;
+			iir_upper_width = <1000>;
+			iir_lower_width = <1000>;
+		};
 		profiles {
 			default = "cool";
 			/delete-node/ quiet;

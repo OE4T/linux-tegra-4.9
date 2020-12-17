@@ -26,6 +26,12 @@
 		shared_data = <&pwm_fan_shared_data>;
 		is_always_on = "true";
 		use_tmargin;
+		use_tach_feedback;
+		rpm_ramp_time_ms= <1000>;
+		rpm_valid_retry_count = <8>;
+		rpm_valid_retry_delay = <250>;
+		rpm_invalid_retry_delay = <500>;
+		rpm_diff_tolerance = <100>;
 		profiles {
 			default = "cool";
 			/delete-node/ quiet;

@@ -24,6 +24,7 @@
 
 	pwm-fan {
 		shared_data = <&pwm_fan_shared_data>;
+		continuous_gov_boot_on;
 		is_always_on = "true";
 		use_tmargin;
 		use_tach_feedback;

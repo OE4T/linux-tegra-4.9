@@ -353,11 +353,21 @@ static int fan_est_get_crit_temp(struct therm_fan_estimator *est)
 	int crit_temp;
 	int i;
 
+	/* Purge the existing values and calculate again */
+	memset(est->crit_temp, 0, sizeof(est->crit_temp));
+
 	for (i = 0; i < est->ndevs; i++) {
 		thz = thermal_zone_device_find((void *)est->devs[i].dev_data,
 			fan_est_match);
 
-		if (thz && thz->ops && thz->ops->get_crit_temp) {
+		if (!thz) {
+			pr_info("Failed to get thermal zone %s, deferring probe\n",
+					est->devs[i].dev_data);
+			/* Retry if the thermal zone is not found */
+			return -EPROBE_DEFER;
+		}
+
+		if (thz->ops && thz->ops->get_crit_temp) {
 			thz->ops->get_crit_temp(thz, &crit_temp);
 			if (crit_temp <= 0) {
 				pr_err("THERMAL EST: Failed to get crit temp of %s\n",
@@ -379,7 +389,7 @@ static int fan_est_get_crit_temp(struct therm_fan_estimator *est)
 			pr_err("THERMAL EST: Group %d has no crit temp\n", i);
 			return -EINVAL;
 		} else {
-			pr_info("THERMAL EST: Group %d crit temp - %ld", i,
+			pr_info("THERMAL EST: Group %d crit temp - %ld\n", i,
 				est->crit_temp[i]);
 		}
 	}
@@ -655,6 +665,22 @@ static ssize_t set_temps(struct device *dev,
 }
 #endif
 
+static ssize_t set_update_subdevs_crit_temps(struct device *dev,
+				struct device_attribute *da,
+				const char *buf, size_t count)
+{
+	struct therm_fan_estimator *est_data = dev_get_drvdata(dev);
+	int err;
+
+	if (est_data->use_tmargin) {
+		err = fan_est_get_crit_temp(est_data);
+		if (err)
+			return -EINVAL;
+	}
+
+	return count;
+}
+
 static struct sensor_device_attribute therm_fan_est_nodes[] = {
 	SENSOR_ATTR(coeff, S_IRUGO | S_IWUSR, show_coeff, set_coeff, 0),
 	SENSOR_ATTR(offset, S_IRUGO | S_IWUSR, show_offset, set_offset, 0),
@@ -664,6 +690,8 @@ static struct sensor_device_attribute therm_fan_est_nodes[] = {
 				show_sleep_mode, set_sleep_mode, 0),
 	SENSOR_ATTR(zone_map, S_IRUGO, show_zone_map, 0, 0),
 	SENSOR_ATTR(crit_temps, S_IRUGO, show_crit_temps, 0, 0),
+	SENSOR_ATTR(update_subdevs_crit_temps, S_IWUSR, 0,
+			set_update_subdevs_crit_temps, 0),
 #if DEBUG
 	SENSOR_ATTR(temps, S_IRUGO | S_IWUSR, show_temps, set_temps, 0),
 #else
@@ -964,7 +992,6 @@ static int therm_fan_est_probe(struct platform_device *pdev)
 	if (est_data->use_tmargin) {
 		err = fan_est_get_crit_temp(est_data);
 		if (err) {
-			err = -EINVAL;
 			goto free_subdevs;
 		}
 	}

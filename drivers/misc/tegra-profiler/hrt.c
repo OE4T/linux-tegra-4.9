@@ -170,6 +170,8 @@ __put_sample(struct quadd_record_data *data,
 	ssize_t err;
 	struct quadd_comm_data_interface *comm = hrt.quadd_ctx->comm;
 
+	data->seqid = atomic_inc_return(&hrt.seqid);
+
 	err = comm->put_sample(data, vec, vec_count, cpu_id);
 	if (err < 0)
 		atomic64_inc(&hrt.skipped_samples);
@@ -983,6 +985,7 @@ int quadd_hrt_start(void)
 
 	atomic64_set(&hrt.counter_samples, 0);
 	atomic64_set(&hrt.skipped_samples, 0);
+	atomic_set(&hrt.seqid, 0);
 
 	reset_cpu_ctx();
 
@@ -1047,9 +1050,6 @@ void quadd_hrt_stop(void)
 
 	atomic_set(&hrt.active, 0);
 	atomic_set(&hrt.mmap_active, 0);
-
-	atomic64_set(&hrt.counter_samples, 0);
-	atomic64_set(&hrt.skipped_samples, 0);
 
 	pid_list_clear();
 
@@ -1116,6 +1116,9 @@ struct quadd_hrt_ctx *quadd_hrt_init(struct quadd_ctx *ctx)
 		hrt.ma_period = 0;
 
 	atomic64_set(&hrt.counter_samples, 0);
+	atomic64_set(&hrt.skipped_samples, 0);
+	atomic_set(&hrt.seqid, 0);
+
 	init_arch_timer();
 
 	hrt.cpu_ctx = alloc_percpu(struct quadd_cpu_context);

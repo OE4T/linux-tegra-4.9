@@ -258,4 +258,15 @@ static inline struct device *pwm_get_tach_dev(void)
 }
 #endif
 
+#if IS_ENABLED(CONFIG_THERMAL_GOV_CONTINUOUS)
+int continuous_thermal_gov_update_params(struct thermal_zone_params *tzp,
+		struct device_node *np);
+#else
+static inline int continuous_thermal_gov_update_params(
+		struct thermal_zone_params *tzp, struct device_node *np)
+{
+	return 0;
+}
+#endif
+
 #endif /* _LINUX_THERM_EST_H */

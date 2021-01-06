@@ -271,7 +271,14 @@ int mlx5_thermal_init(struct mlx5_core_dev *core)
 
 void mlx5_thermal_deinit(struct mlx5_core_dev *core)
 {
-	if (core->thermal)
-		thermal_zone_device_unregister(core->thermal->tzdev);
+	struct device *dev = &core->pdev->dev;
 
+	if (!core->thermal)
+		return;
+
+	thermal_zone_device_unregister(core->thermal->tzdev);
+
+	device_remove_file(dev, &dev_attr_mlx5_crit_temp);
+	device_remove_file(dev, &dev_attr_mlx5_temp_sw_override);
+	device_remove_file(dev, &dev_attr_mlx5_temp);
 }

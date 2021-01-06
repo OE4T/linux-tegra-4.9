@@ -1,7 +1,7 @@
 /*
  * NVDLA OS Interface
  *
- * Copyright (c) 2016-2019, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2016-2021, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -138,6 +138,11 @@
 #define DLA_MSG_UNUSED			6U
 #define DLA_MSG_DEBUG_PRINT		7U
 #define DLA_MSG_TASK_TIMEOUT		8U
+/**
+ * Magic number expected to be written to mailbox0 after
+ * interuppt handling is complete
+ */
+#define DLA_MSG_INTERRUPT_HANDLING_COMPLETE 0xD1A0CAFE
 
 /**
  * Task descriptor for DLA_CMD_SUBMIT_TASK

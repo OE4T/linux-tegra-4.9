@@ -1,7 +1,7 @@
 /*
  * NVDLA driver for T194
  *
- * Copyright (c) 2016-2019, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2016-2021, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -111,6 +111,8 @@ clear_interrupt:
 	host1x_writel(pdev, flcn_thi_int_stat_r(), flcn_thi_int_stat_clr_f());
 	host1x_readl(pdev, flcn_thi_int_stat_r());
 	host1x_writel(pdev, flcn_irqsclr_r(), flcn_irqsclr_swgen1_set_f());
+	/* Notify FW that interuppt handling is complete */
+	host1x_writel(pdev, flcn_mailbox0_r(), DLA_MSG_INTERRUPT_HANDLING_COMPLETE);
 
 	return 0;
 }

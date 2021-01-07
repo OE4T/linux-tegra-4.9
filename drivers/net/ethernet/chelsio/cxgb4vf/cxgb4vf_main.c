@@ -2902,6 +2902,9 @@ static int cxgb4vf_pci_probe(struct pci_dev *pdev,
 	if (err)
 		goto err_unmap_bar;
 
+	/* Initialize hash mac addr list */
+	INIT_LIST_HEAD(&adapter->mac_hlist);
+
 	/*
 	 * Allocate our "adapter ports" and stitch everything together.
 	 */

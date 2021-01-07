@@ -80,6 +80,11 @@ void clear_selection(void)
 	}
 }
 
+bool vc_is_sel(struct vc_data *vc)
+{
+	return vc == sel_cons;
+}
+
 /*
  * User settable table: what characters are to be considered alphabetic?
  * 256 bits. Locked by the console lock.
@@ -158,7 +163,7 @@ static int store_utf8(u16 c, char *p)
  *	The entire selection process is managed under the console_lock. It's
  *	 a lot under the lock but its hardly a performance path
  */
-int set_selection(const struct tiocl_selection __user *sel, struct tty_struct *tty)
+static int __set_selection(const struct tiocl_selection __user *sel, struct tty_struct *tty)
 {
 	struct vc_data *vc = vc_cons[fg_console].d;
 	int sel_mode, new_sel_start, new_sel_end, spc;
@@ -334,6 +339,19 @@ int set_selection(const struct tiocl_selection __user *sel, struct tty_struct *t
 		return ret;
 }
 
+int set_selection(const struct tiocl_selection __user *v, struct tty_struct *tty)
+{
+	int ret;
+
+	mutex_lock(&sel_lock);
+	console_lock();
+	ret = __set_selection(v, tty);
+	console_unlock();
+	mutex_unlock(&sel_lock);
+
+	return ret;
+}
+
 /* Insert the contents of the selection buffer into the
  * queue of the tty associated with the current console.
  * Invoked by ioctl().
@@ -348,6 +366,7 @@ int paste_selection(struct tty_struct *tty)
 	unsigned int count;
 	struct  tty_ldisc *ld;
 	DECLARE_WAITQUEUE(wait, current);
+	int ret = 0;
 
 	console_lock();
 	poke_blanked_console();
@@ -362,6 +381,10 @@ int paste_selection(struct tty_struct *tty)
 	mutex_lock(&sel_lock);
 	while (sel_buffer && sel_buffer_lth > pasted) {
 		set_current_state(TASK_INTERRUPTIBLE);
+		if (signal_pending(current)) {
+			ret = -EINTR;
+			break;
+		}
 		if (tty_throttled(tty)) {
 			mutex_unlock(&sel_lock);
 			schedule();
@@ -380,5 +403,5 @@ int paste_selection(struct tty_struct *tty)
 
 	tty_buffer_unlock_exclusive(&vc->port);
 	tty_ldisc_deref(ld);
-	return 0;
+	return ret;
 }

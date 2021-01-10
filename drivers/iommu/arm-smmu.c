@@ -1616,7 +1616,7 @@ static void *arm_smmu_alloc_pgtable_page(struct arm_smmu_domain *domain, int lvl
 		pud_t *pud;
 
 		if (!pgd_none(*pgd)) {
-			ret = pud_offset(pgd, adr);
+			ret = pud_offset(pgd, addr);
 			goto unlock_ret;
 		}
 

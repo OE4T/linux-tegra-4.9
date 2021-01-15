@@ -56,7 +56,7 @@
 		};
 	};
 	spi@3300000 {
-		spi-max-frequency = <136000000>;
+		spi-max-frequency = <120000000>;
 		status = "okay";
 		prod-settings {
 			#prod-cells = <3>;
@@ -70,16 +70,16 @@
 			#size-cells = <1>;
 			compatible = "mx75u25690f";
 			reg = <0>;
-			spi-max-frequency = <136000000>;
+			spi-max-frequency = <120000000>;
 			partition@0 {
 				label = "Secure_ROM";
 				reg = <0x00000000 0x2000000>;	/* size of QSPI-NOR 32MB == 256Mb */
 			};
 			controller-data {
 				nvidia,x1-len-limit = <16>;
-				nvidia,x1-bus-speed = <136000000>; /* In Mhz */
+				nvidia,x1-bus-speed = <120000000>; /* In Mhz */
 				nvidia,x1-dymmy-cycle = <8>;
-				nvidia,x4-bus-speed = <136000000>;
+				nvidia,x4-bus-speed = <120000000>;
 				nvidia,x4-dymmy-cycle = <8>;
 				nvidia,x4-is-ddr=<0>;
 				nvidia,ctrl-bus-clk-ratio = <1>;

@@ -280,7 +280,7 @@ static int tegra_fuse_pre_burn_process(struct tegra_fuse_burn_dev *fuse_dev)
 	u32 off_0_val, off_1_val, reg;
 	int ret;
 
-	if (fuse_dev->tz) {
+	if (fuse_dev->tz && !IS_ERR(fuse_dev->tz)) {
 		ret = tegra_fuse_is_temp_under_range(fuse_dev);
 		if (ret)
 			return ret;

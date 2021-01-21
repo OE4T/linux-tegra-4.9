@@ -1,7 +1,7 @@
-From 8183d2fdf6c0a770390212586507b46fc33d338b Mon Sep 17 00:00:00 2001
+From 720d7b188c26820b52a0f432761cf95b1145c793 Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Wed, 22 Mar 2017 11:35:49 +0100
-Subject: [PATCH 006/367] futex: Use smp_store_release() in mark_wake_futex()
+Subject: [PATCH 006/365] futex: Use smp_store_release() in mark_wake_futex()
 
 Upstream commit  1b367ece0d7e696cab1c8501bab282cc6a538b3f
 
@@ -26,10 +26,10 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  1 file changed, 1 insertion(+), 2 deletions(-)
 
 diff --git a/kernel/futex.c b/kernel/futex.c
-index 797d601b9be2..2bcd1d2d657d 100644
+index 8466f16..b4cba6d 100644
 --- a/kernel/futex.c
 +++ b/kernel/futex.c
-@@ -1289,8 +1289,7 @@ static void mark_wake_futex(struct wake_q_head *wake_q, struct futex_q *q)
+@@ -1306,8 +1306,7 @@ static void mark_wake_futex(struct wake_q_head *wake_q, struct futex_q *q)
  	 * memory barrier is required here to prevent the following
  	 * store to lock_ptr from getting ahead of the plist_del.
  	 */
@@ -40,5 +40,5 @@ index 797d601b9be2..2bcd1d2d657d 100644
  
  static int wake_futex_pi(u32 __user *uaddr, u32 uval, struct futex_q *top_waiter,
 -- 
-2.28.0
+2.7.4
 

@@ -1,7 +1,7 @@
-From d412d83bed0edfac6622dcd1736626d76f9a9a10 Mon Sep 17 00:00:00 2001
+From 9c24a9ffc6c50c7dbdb3b0f82af1b7aa8063f95f Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Fri, 28 Oct 2016 23:05:11 +0200
-Subject: [PATCH 045/367] NFSv4: replace seqcount_t with a seqlock_t
+Subject: [PATCH 045/365] NFSv4: replace seqcount_t with a seqlock_t
 
 The raw_write_seqcount_begin() in nfs4_reclaim_open_state() bugs me
 because it maps to preempt_disable() in -RT which I can't have at this
@@ -16,7 +16,6 @@ write_seqlock() does not work on !RT because it disables preemption and it the
 writer side is preemptible (has to remain so despite the fact that it will
 block readers).
 
-Change-Id: Ia4a15bfd12e42be585fc83b757becc41c0544ddf
 Reported-by: kernel test robot <xiaolong.ye@intel.com>
 Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 ---
@@ -27,7 +26,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  4 files changed, 21 insertions(+), 11 deletions(-)
 
 diff --git a/fs/nfs/delegation.c b/fs/nfs/delegation.c
-index 014039618cff..aeb3f014852a 100644
+index 0140396..d688f89 100644
 --- a/fs/nfs/delegation.c
 +++ b/fs/nfs/delegation.c
 @@ -160,11 +160,11 @@ static int nfs_delegation_claim_opens(struct inode *inode,
@@ -40,12 +39,12 @@ index 014039618cff..aeb3f014852a 100644
  		if (!err)
  			err = nfs_delegation_claim_locks(state, stateid);
 -		if (!err && read_seqcount_retry(&sp->so_reclaim_seqcount, seq))
-+		if (!err && read_seqretry(&sp->so_reclaim_seqlock, seq) )
++		if (!err && read_seqretry(&sp->so_reclaim_seqlock, seq))
  			err = -EAGAIN;
  		mutex_unlock(&sp->so_delegreturn_mutex);
  		put_nfs_open_context(ctx);
 diff --git a/fs/nfs/nfs4_fs.h b/fs/nfs/nfs4_fs.h
-index c719389381dc..5dcaae387902 100644
+index c719389..5dcaae3 100644
 --- a/fs/nfs/nfs4_fs.h
 +++ b/fs/nfs/nfs4_fs.h
 @@ -111,7 +111,7 @@ struct nfs4_state_owner {
@@ -58,7 +57,7 @@ index c719389381dc..5dcaae387902 100644
  };
  
 diff --git a/fs/nfs/nfs4proc.c b/fs/nfs/nfs4proc.c
-index 632d3c3f8dfb..26eb6382bb1b 100644
+index c189722..d1a7495 100644
 --- a/fs/nfs/nfs4proc.c
 +++ b/fs/nfs/nfs4proc.c
 @@ -2705,7 +2705,7 @@ static int _nfs4_open_and_get_state(struct nfs4_opendata *opendata,
@@ -80,7 +79,7 @@ index 632d3c3f8dfb..26eb6382bb1b 100644
  	}
  out:
 diff --git a/fs/nfs/nfs4state.c b/fs/nfs/nfs4state.c
-index 4e63daeef633..57facf9519b8 100644
+index 4e63dae..57facf9 100644
 --- a/fs/nfs/nfs4state.c
 +++ b/fs/nfs/nfs4state.c
 @@ -492,7 +492,7 @@ nfs4_alloc_state_owner(struct nfs_server *server,
@@ -132,5 +131,5 @@ index 4e63daeef633..57facf9519b8 100644
  }
  
 -- 
-2.28.0
+2.7.4
 

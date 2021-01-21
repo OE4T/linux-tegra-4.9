@@ -1,7 +1,7 @@
-From 18c9f3c98bd86261bcf5c35a0eec262bf4d4f0ea Mon Sep 17 00:00:00 2001
+From e1c07c40aa22ceca15dcb9d7321f3c7fdc0c4124 Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Wed, 22 Mar 2017 11:35:54 +0100
-Subject: [PATCH 011/367] futex: Rework inconsistent rt_mutex/futex_q state
+Subject: [PATCH 011/365] futex: Rework inconsistent rt_mutex/futex_q state
 
 Upstream commit 73d786bd043ebc855f349c81ea805f6b11cbf2aa
 
@@ -58,10 +58,10 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  1 file changed, 14 insertions(+), 36 deletions(-)
 
 diff --git a/kernel/futex.c b/kernel/futex.c
-index d3b305fcc53c..50e145ca0e71 100644
+index 629db2c..10468883 100644
 --- a/kernel/futex.c
 +++ b/kernel/futex.c
-@@ -1403,12 +1403,19 @@ static int wake_futex_pi(u32 __user *uaddr, u32 uval, struct futex_q *top_waiter
+@@ -1420,12 +1420,19 @@ static int wake_futex_pi(u32 __user *uaddr, u32 uval, struct futex_q *top_waiter
  	new_owner = rt_mutex_next_owner(&pi_state->pi_mutex);
  
  	/*
@@ -86,7 +86,7 @@ index d3b305fcc53c..50e145ca0e71 100644
  
  	/*
  	 * We pass it to the next owner. The WAITERS bit is always
-@@ -2381,7 +2388,6 @@ static long futex_wait_restart(struct restart_block *restart);
+@@ -2398,7 +2405,6 @@ static long futex_wait_restart(struct restart_block *restart);
   */
  static int fixup_owner(u32 __user *uaddr, struct futex_q *q, int locked)
  {
@@ -94,11 +94,10 @@ index d3b305fcc53c..50e145ca0e71 100644
  	int ret = 0;
  
  	if (locked) {
-@@ -2394,44 +2400,16 @@ static int fixup_owner(u32 __user *uaddr, struct futex_q *q, int locked)
- 		goto out;
+@@ -2412,43 +2418,15 @@ static int fixup_owner(u32 __user *uaddr, struct futex_q *q, int locked)
  	}
  
--	/*
+ 	/*
 -	 * Catch the rare case, where the lock was released when we were on the
 -	 * way back before we locked the hash bucket.
 -	 */
@@ -127,7 +126,7 @@ index d3b305fcc53c..50e145ca0e71 100644
 -		goto out;
 -	}
 -
- 	/*
+-	/*
  	 * Paranoia check. If we did not take the lock, then we should not be
  	 * the owner of the rt_mutex.
  	 */
@@ -142,5 +141,5 @@ index d3b305fcc53c..50e145ca0e71 100644
  out:
  	return ret ? ret : locked;
 -- 
-2.28.0
+2.7.4
 

@@ -1,7 +1,7 @@
-From cdba268214c72e2f61dccddad15fa7473634a734 Mon Sep 17 00:00:00 2001
+From 3937effd12c56c373a6b6a6a8b70efd6890088be Mon Sep 17 00:00:00 2001
 From: Benedikt Spranger <b.spranger@linutronix.de>
 Date: Sat, 6 Mar 2010 17:47:10 +0100
-Subject: [PATCH 056/367] ARM: AT91: PIT: Remove irq handler when clock event
+Subject: [PATCH 056/365] ARM: AT91: PIT: Remove irq handler when clock event
  is unused
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
@@ -18,12 +18,12 @@ commit 8fe82a55 ("ARM: at91: sparse irq support") which is included since v3.6.
 Patch based on what Sami Pietikäinen <Sami.Pietikainen@wapice.com> suggested].
 Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 ---
- drivers/clocksource/timer-atmel-pit.c | 18 +++++++-------
- drivers/clocksource/timer-atmel-st.c  | 34 +++++++++++++++++----------
+ drivers/clocksource/timer-atmel-pit.c | 18 +++++++++---------
+ drivers/clocksource/timer-atmel-st.c  | 34 ++++++++++++++++++++++------------
  2 files changed, 31 insertions(+), 21 deletions(-)
 
 diff --git a/drivers/clocksource/timer-atmel-pit.c b/drivers/clocksource/timer-atmel-pit.c
-index 6555821bbdae..2c66bb3e595b 100644
+index 6555821..2c66bb3 100644
 --- a/drivers/clocksource/timer-atmel-pit.c
 +++ b/drivers/clocksource/timer-atmel-pit.c
 @@ -96,15 +96,24 @@ static int pit_clkevt_shutdown(struct clock_event_device *dev)
@@ -68,7 +68,7 @@ index 6555821bbdae..2c66bb3e595b 100644
  	data->clkevt.name = "pit";
  	data->clkevt.features = CLOCK_EVT_FEAT_PERIODIC;
 diff --git a/drivers/clocksource/timer-atmel-st.c b/drivers/clocksource/timer-atmel-st.c
-index e90ab5b63a90..9e124087c55f 100644
+index e90ab5b..9e12408 100644
 --- a/drivers/clocksource/timer-atmel-st.c
 +++ b/drivers/clocksource/timer-atmel-st.c
 @@ -115,18 +115,29 @@ static void clkdev32k_disable_and_flush_irq(void)
@@ -152,5 +152,5 @@ index e90ab5b63a90..9e124087c55f 100644
  	if (IS_ERR(sclk)) {
  		pr_err("Unable to get slow clock\n");
 -- 
-2.28.0
+2.7.4
 

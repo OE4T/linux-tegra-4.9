@@ -1,7 +1,7 @@
-From f8e1c5aa7dd63ee0bae0bdc60331e07bccdce6c3 Mon Sep 17 00:00:00 2001
+From 65cb91968952f8ab187f91ac5f162ef077029ab9 Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Wed, 22 Mar 2017 11:35:53 +0100
-Subject: [PATCH 010/367] futex: Cleanup refcounting
+Subject: [PATCH 010/365] futex: Cleanup refcounting
 
 Upstream commit bf92cf3a5100f5a0d5f9834787b130159397cb22
 
@@ -25,10 +25,10 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  1 file changed, 9 insertions(+), 4 deletions(-)
 
 diff --git a/kernel/futex.c b/kernel/futex.c
-index c393c4ac80a7..d3b305fcc53c 100644
+index c0d5e64..629db2c 100644
 --- a/kernel/futex.c
 +++ b/kernel/futex.c
-@@ -801,7 +801,7 @@ static int refill_pi_state_cache(void)
+@@ -818,7 +818,7 @@ static int refill_pi_state_cache(void)
  	return 0;
  }
  
@@ -37,7 +37,7 @@ index c393c4ac80a7..d3b305fcc53c 100644
  {
  	struct futex_pi_state *pi_state = current->pi_state_cache;
  
-@@ -811,6 +811,11 @@ static struct futex_pi_state * alloc_pi_state(void)
+@@ -828,6 +828,11 @@ static struct futex_pi_state * alloc_pi_state(void)
  	return pi_state;
  }
  
@@ -49,7 +49,7 @@ index c393c4ac80a7..d3b305fcc53c 100644
  /*
   * Drops a reference to the pi_state object and frees or caches it
   * when the last reference is gone.
-@@ -855,7 +860,7 @@ static void put_pi_state(struct futex_pi_state *pi_state)
+@@ -872,7 +877,7 @@ static void put_pi_state(struct futex_pi_state *pi_state)
   * Look up the task based on what TID userspace gave us.
   * We dont trust it.
   */
@@ -58,7 +58,7 @@ index c393c4ac80a7..d3b305fcc53c 100644
  {
  	struct task_struct *p;
  
-@@ -1102,7 +1107,7 @@ static int attach_to_pi_state(u32 __user *uaddr, u32 uval,
+@@ -1119,7 +1124,7 @@ static int attach_to_pi_state(u32 __user *uaddr, u32 uval,
  		goto out_einval;
  
  out_attach:
@@ -67,7 +67,7 @@ index c393c4ac80a7..d3b305fcc53c 100644
  	raw_spin_unlock_irq(&pi_state->pi_mutex.wait_lock);
  	*ps = pi_state;
  	return 0;
-@@ -2039,7 +2044,7 @@ static int futex_requeue(u32 __user *uaddr1, unsigned int flags,
+@@ -2056,7 +2061,7 @@ static int futex_requeue(u32 __user *uaddr1, unsigned int flags,
  			 * refcount on the pi_state and store the pointer in
  			 * the futex_q object of the waiter.
  			 */
@@ -77,5 +77,5 @@ index c393c4ac80a7..d3b305fcc53c 100644
  			ret = rt_mutex_start_proxy_lock(&pi_state->pi_mutex,
  							this->rt_waiter,
 -- 
-2.28.0
+2.7.4
 

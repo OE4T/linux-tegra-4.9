@@ -1,7 +1,7 @@
-From 243e1a2accd4884169498c5bcb88276078b23674 Mon Sep 17 00:00:00 2001
+From 144a0220a9e4a91154846340c550cbdfbf50fc95 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Wed, 22 Jun 2011 19:47:02 +0200
-Subject: [PATCH 048/367] block: Shorten interrupt disabled regions
+Subject: [PATCH 048/365] block: Shorten interrupt disabled regions
 
 Moving the blk_sched_flush_plug() call out of the interrupt/preempt
 disabled region in the scheduler allows us to replace
@@ -47,10 +47,10 @@ Link: http://lkml.kernel.org/r/20110622174919.025446432@linutronix.de
  1 file changed, 2 insertions(+), 10 deletions(-)
 
 diff --git a/block/blk-core.c b/block/blk-core.c
-index 0ce29cd42ab3..10b8316cca00 100644
+index 27621cd..9fa6457 100644
 --- a/block/blk-core.c
 +++ b/block/blk-core.c
-@@ -3202,7 +3202,7 @@ static void queue_unplugged(struct request_queue *q, unsigned int depth,
+@@ -3205,7 +3205,7 @@ static void queue_unplugged(struct request_queue *q, unsigned int depth,
  		blk_run_queue_async(q);
  	else
  		__blk_run_queue(q);
@@ -59,7 +59,7 @@ index 0ce29cd42ab3..10b8316cca00 100644
  }
  
  static void flush_plug_callbacks(struct blk_plug *plug, bool from_schedule)
-@@ -3250,7 +3250,6 @@ EXPORT_SYMBOL(blk_check_plugged);
+@@ -3253,7 +3253,6 @@ EXPORT_SYMBOL(blk_check_plugged);
  void blk_flush_plug_list(struct blk_plug *plug, bool from_schedule)
  {
  	struct request_queue *q;
@@ -67,7 +67,7 @@ index 0ce29cd42ab3..10b8316cca00 100644
  	struct request *rq;
  	LIST_HEAD(list);
  	unsigned int depth;
-@@ -3270,11 +3269,6 @@ void blk_flush_plug_list(struct blk_plug *plug, bool from_schedule)
+@@ -3273,11 +3272,6 @@ void blk_flush_plug_list(struct blk_plug *plug, bool from_schedule)
  	q = NULL;
  	depth = 0;
  
@@ -79,7 +79,7 @@ index 0ce29cd42ab3..10b8316cca00 100644
  	while (!list_empty(&list)) {
  		rq = list_entry_rq(list.next);
  		list_del_init(&rq->queuelist);
-@@ -3287,7 +3281,7 @@ void blk_flush_plug_list(struct blk_plug *plug, bool from_schedule)
+@@ -3290,7 +3284,7 @@ void blk_flush_plug_list(struct blk_plug *plug, bool from_schedule)
  				queue_unplugged(q, depth, from_schedule);
  			q = rq->q;
  			depth = 0;
@@ -88,7 +88,7 @@ index 0ce29cd42ab3..10b8316cca00 100644
  		}
  
  		/*
-@@ -3314,8 +3308,6 @@ void blk_flush_plug_list(struct blk_plug *plug, bool from_schedule)
+@@ -3317,8 +3311,6 @@ void blk_flush_plug_list(struct blk_plug *plug, bool from_schedule)
  	 */
  	if (q)
  		queue_unplugged(q, depth, from_schedule);
@@ -98,5 +98,5 @@ index 0ce29cd42ab3..10b8316cca00 100644
  
  void blk_finish_plug(struct blk_plug *plug)
 -- 
-2.28.0
+2.7.4
 

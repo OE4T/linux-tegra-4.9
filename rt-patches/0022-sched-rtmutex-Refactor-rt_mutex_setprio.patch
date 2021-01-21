@@ -1,7 +1,7 @@
-From 941af94165fd142f4067aa4f1aa48a15b8a52e6a Mon Sep 17 00:00:00 2001
+From 8b066592a8ce1d4f6db6ca61d19cbdf52a3b9de6 Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Thu, 23 Mar 2017 15:56:11 +0100
-Subject: [PATCH 022/367] sched/rtmutex: Refactor rt_mutex_setprio()
+Subject: [PATCH 022/365] sched/rtmutex: Refactor rt_mutex_setprio()
 
 Upstream commit acd58620e415aee4a43a808d7d2fd87259ee0001
 
@@ -18,7 +18,7 @@ priority didn't change, this could lead to a stale pointer.
 As for the XXX, I think its fine to use pi_task->prio, because if it
 differs from waiter->prio, a PI chain update is immenent.
 
-Change-Id: Ic7f06113c31cfe527ee2a89140bcd4d19b653628
+Change-Id: I5273ada808d50bf5839fb33179d806636ee83bea
 Signed-off-by: Peter Zijlstra (Intel) <peterz@infradead.org>
 Cc: juri.lelli@arm.com
 Cc: bigeasy@linutronix.de
@@ -30,13 +30,13 @@ Cc: bristot@redhat.com
 Link: http://lkml.kernel.org/r/20170323150216.303827095@infradead.org
 Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
 ---
- include/linux/sched/rt.h |  24 +++------
- kernel/locking/rtmutex.c | 112 +++++++++++----------------------------
- kernel/sched/core.c      |  66 ++++++++++++++++++-----
+ include/linux/sched/rt.h |  24 ++++------
+ kernel/locking/rtmutex.c | 112 +++++++++++++----------------------------------
+ kernel/sched/core.c      |  66 ++++++++++++++++++++++------
  3 files changed, 91 insertions(+), 111 deletions(-)
 
 diff --git a/include/linux/sched/rt.h b/include/linux/sched/rt.h
-index 60d0c4740b9f..db3e91f2bc03 100644
+index 60d0c47..db3e91f 100644
 --- a/include/linux/sched/rt.h
 +++ b/include/linux/sched/rt.h
 @@ -16,28 +16,20 @@ static inline int rt_task(struct task_struct *p)
@@ -77,7 +77,7 @@ index 60d0c4740b9f..db3e91f2bc03 100644
  {
  	return NULL;
 diff --git a/kernel/locking/rtmutex.c b/kernel/locking/rtmutex.c
-index 9f55d7a7bc57..e275b8148db9 100644
+index 9f55d7a..e275b81 100644
 --- a/kernel/locking/rtmutex.c
 +++ b/kernel/locking/rtmutex.c
 @@ -319,67 +319,16 @@ rt_mutex_dequeue_pi(struct task_struct *task, struct rt_mutex_waiter *waiter)
@@ -270,7 +270,7 @@ index 9f55d7a7bc57..e275b8148db9 100644
  
  	return true; /* call rt_mutex_postunlock() */
 diff --git a/kernel/sched/core.c b/kernel/sched/core.c
-index 69d0e8e93740..91e5aeafa0d9 100644
+index 79bbf59..680d715 100644
 --- a/kernel/sched/core.c
 +++ b/kernel/sched/core.c
 @@ -3751,10 +3751,25 @@ EXPORT_SYMBOL(default_wake_function);
@@ -363,9 +363,9 @@ index 69d0e8e93740..91e5aeafa0d9 100644
  	if (dl_prio(prio)) {
 -		struct task_struct *pi_task = rt_mutex_get_top_task(p);
  		if (!dl_prio(p->normal_prio) ||
- 		    (pi_task && dl_entity_preempt(&pi_task->dl, &p->dl))) {
- 			p->dl.dl_boosted = 1;
-@@ -3855,6 +3891,11 @@ void rt_mutex_setprio(struct task_struct *p, int prio)
+ 		    (pi_task && dl_prio(pi_task->prio) &&
+ 		     dl_entity_preempt(&pi_task->dl, &p->dl))) {
+@@ -3856,6 +3892,11 @@ void rt_mutex_setprio(struct task_struct *p, int prio)
  	balance_callback(rq);
  	preempt_enable();
  }
@@ -377,7 +377,7 @@ index 69d0e8e93740..91e5aeafa0d9 100644
  #endif
  
  void set_user_nice(struct task_struct *p, long nice)
-@@ -4102,10 +4143,9 @@ static void __setscheduler(struct rq *rq, struct task_struct *p,
+@@ -4103,10 +4144,9 @@ static void __setscheduler(struct rq *rq, struct task_struct *p,
  	 * Keep a potential priority boosting if called from
  	 * sched_setscheduler().
  	 */
@@ -390,7 +390,7 @@ index 69d0e8e93740..91e5aeafa0d9 100644
  
  	if (dl_prio(p->prio))
  		p->sched_class = &dl_sched_class;
-@@ -4393,7 +4433,7 @@ static int __sched_setscheduler(struct task_struct *p,
+@@ -4394,7 +4434,7 @@ static int __sched_setscheduler(struct task_struct *p,
  		 * the runqueue. This will be done when the task deboost
  		 * itself.
  		 */
@@ -400,5 +400,5 @@ index 69d0e8e93740..91e5aeafa0d9 100644
  			queue_flags &= ~DEQUEUE_MOVE;
  	}
 -- 
-2.28.0
+2.7.4
 

@@ -1,7 +1,7 @@
-From fd27ce3814c6e8fcf47c7c9532d3a9a25f26a43d Mon Sep 17 00:00:00 2001
+From cae65cda03f8f49dd7de7b3070f547fde26e1046 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Wed, 9 Mar 2016 10:51:06 +0100
-Subject: [PATCH 031/367] arm: at91: do not disable/enable clocks in a row
+Subject: [PATCH 031/365] arm: at91: do not disable/enable clocks in a row
 
 Currently the driver will disable the clock and enable it one line later
 if it is switching from periodic mode into one shot.
@@ -9,11 +9,11 @@ This can be avoided and causes a needless warning on -RT.
 
 Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 ---
- drivers/clocksource/tcb_clksrc.c | 33 ++++++++++++++++++++++++++++----
+ drivers/clocksource/tcb_clksrc.c | 33 +++++++++++++++++++++++++++++----
  1 file changed, 29 insertions(+), 4 deletions(-)
 
 diff --git a/drivers/clocksource/tcb_clksrc.c b/drivers/clocksource/tcb_clksrc.c
-index 4da2af9694a2..ed1ae4445e8d 100644
+index 4da2af9..ed1ae44 100644
 --- a/drivers/clocksource/tcb_clksrc.c
 +++ b/drivers/clocksource/tcb_clksrc.c
 @@ -74,6 +74,7 @@ static struct clocksource clksrc = {
@@ -93,5 +93,5 @@ index 4da2af9694a2..ed1ae4445e8d 100644
  		.set_state_oneshot	= tc_set_oneshot,
  	},
 -- 
-2.28.0
+2.7.4
 

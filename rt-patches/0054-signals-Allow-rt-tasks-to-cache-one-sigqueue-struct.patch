@@ -1,7 +1,7 @@
-From bc5cd8459b69c375af7d9a340c12a7a8ce019181 Mon Sep 17 00:00:00 2001
+From eca956e232d0c88b77d7c0c34151fd15a8d070fb Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Fri, 3 Jul 2009 08:44:56 -0500
-Subject: [PATCH 054/367] signals: Allow rt tasks to cache one sigqueue struct
+Subject: [PATCH 054/365] signals: Allow rt tasks to cache one sigqueue struct
 
 To avoid allocation allow rt tasks to cache one sigqueue struct in
 task struct.
@@ -12,11 +12,11 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  include/linux/signal.h |  1 +
  kernel/exit.c          |  2 +-
  kernel/fork.c          |  1 +
- kernel/signal.c        | 69 +++++++++++++++++++++++++++++++++++++++---
- 5 files changed, 69 insertions(+), 5 deletions(-)
+ kernel/signal.c        | 81 ++++++++++++++++++++++++++++++++++++++++++++------
+ 5 files changed, 76 insertions(+), 10 deletions(-)
 
 diff --git a/include/linux/sched.h b/include/linux/sched.h
-index 47479e64ee17..6ea6fd94fe20 100644
+index ce44ed2..a7f5c594 100644
 --- a/include/linux/sched.h
 +++ b/include/linux/sched.h
 @@ -1864,6 +1864,7 @@ struct task_struct {
@@ -28,7 +28,7 @@ index 47479e64ee17..6ea6fd94fe20 100644
  	sigset_t blocked, real_blocked;
  	sigset_t saved_sigmask;	/* restored if set_restore_sigmask() was used */
 diff --git a/include/linux/signal.h b/include/linux/signal.h
-index ffa58ff53e22..0d7faf67a464 100644
+index ffa58ff..0d7faf6 100644
 --- a/include/linux/signal.h
 +++ b/include/linux/signal.h
 @@ -250,6 +250,7 @@ static inline void init_sigpending(struct sigpending *sig)
@@ -40,7 +40,7 @@ index ffa58ff53e22..0d7faf67a464 100644
  /* Test if 'sig' is valid signal. Use this instead of testing _NSIG directly */
  static inline int valid_signal(unsigned long sig)
 diff --git a/kernel/exit.c b/kernel/exit.c
-index 145aba72f160..71ceb783345e 100644
+index 069a61f..f3d708e 100644
 --- a/kernel/exit.c
 +++ b/kernel/exit.c
 @@ -146,7 +146,7 @@ static void __exit_signal(struct task_struct *tsk)
@@ -53,7 +53,7 @@ index 145aba72f160..71ceb783345e 100644
  	spin_unlock(&sighand->siglock);
  
 diff --git a/kernel/fork.c b/kernel/fork.c
-index a34d2b83e96a..edd682b743b3 100644
+index a34d2b8..edd682b 100644
 --- a/kernel/fork.c
 +++ b/kernel/fork.c
 @@ -1594,6 +1594,7 @@ static __latent_entropy struct task_struct *copy_process(
@@ -65,7 +65,7 @@ index a34d2b83e96a..edd682b743b3 100644
  	p->utime = p->stime = p->gtime = 0;
  	p->utimescaled = p->stimescaled = 0;
 diff --git a/kernel/signal.c b/kernel/signal.c
-index 36f03c7ec3cc..3221f5444bc9 100644
+index d2edbc3..09c0f64 100644
 --- a/kernel/signal.c
 +++ b/kernel/signal.c
 @@ -14,6 +14,7 @@
@@ -108,11 +108,15 @@ index 36f03c7ec3cc..3221f5444bc9 100644
  {
  	struct sigqueue *q = NULL;
  	struct user_struct *user;
-@@ -386,7 +404,10 @@ __sigqueue_alloc(int sig, struct task_struct *t, gfp_t flags, int override_rlimi
- 	if (override_rlimit ||
- 	    atomic_read(&user->sigpending) <=
- 			task_rlimit(t, RLIMIT_SIGPENDING)) {
+@@ -390,8 +408,13 @@ __sigqueue_alloc(int sig, struct task_struct *t, gfp_t flags, int override_rlimi
+ 		get_uid(user);
+ 	rcu_read_unlock();
+ 
+-	if (override_rlimit || likely(sigpending <= task_rlimit(t, RLIMIT_SIGPENDING))) {
 -		q = kmem_cache_alloc(sigqueue_cachep, flags);
++	if (override_rlimit ||
++	    atomic_read(&user->sigpending) <=
++			task_rlimit(t, RLIMIT_SIGPENDING)) {
 +		if (!fromslab)
 +			q = get_task_cache(t);
 +		if (!q)
@@ -120,7 +124,7 @@ index 36f03c7ec3cc..3221f5444bc9 100644
  	} else {
  		print_dropped_signal(sig);
  	}
-@@ -403,6 +424,13 @@ __sigqueue_alloc(int sig, struct task_struct *t, gfp_t flags, int override_rlimi
+@@ -408,6 +431,13 @@ __sigqueue_alloc(int sig, struct task_struct *t, gfp_t flags, int override_rlimi
  	return q;
  }
  
@@ -134,7 +138,7 @@ index 36f03c7ec3cc..3221f5444bc9 100644
  static void __sigqueue_free(struct sigqueue *q)
  {
  	if (q->flags & SIGQUEUE_PREALLOC)
-@@ -412,6 +440,21 @@ static void __sigqueue_free(struct sigqueue *q)
+@@ -417,6 +447,21 @@ static void __sigqueue_free(struct sigqueue *q)
  	kmem_cache_free(sigqueue_cachep, q);
  }
  
@@ -156,11 +160,10 @@ index 36f03c7ec3cc..3221f5444bc9 100644
  void flush_sigqueue(struct sigpending *queue)
  {
  	struct sigqueue *q;
-@@ -424,6 +467,21 @@ void flush_sigqueue(struct sigpending *queue)
- 	}
+@@ -430,6 +475,21 @@ void flush_sigqueue(struct sigpending *queue)
  }
  
-+/*
+ /*
 + * Called from __exit_signal. Flush tsk->pending and
 + * tsk->sigqueue_cache
 + */
@@ -175,10 +178,11 @@ index 36f03c7ec3cc..3221f5444bc9 100644
 +		kmem_cache_free(sigqueue_cachep, q);
 +}
 +
- /*
++/*
   * Flush all pending signals for this kthread.
   */
-@@ -543,7 +601,7 @@ static void collect_signal(int sig, struct sigpending *list, siginfo_t *info,
+ void flush_signals(struct task_struct *t)
+@@ -548,7 +608,7 @@ static void collect_signal(int sig, struct sigpending *list, siginfo_t *info,
  			(info->si_code == SI_TIMER) &&
  			(info->si_sys_private);
  
@@ -187,7 +191,7 @@ index 36f03c7ec3cc..3221f5444bc9 100644
  	} else {
  		/*
  		 * Ok, it wasn't in the queue.  This must be
-@@ -579,6 +637,8 @@ int dequeue_signal(struct task_struct *tsk, sigset_t *mask, siginfo_t *info)
+@@ -584,6 +644,8 @@ int dequeue_signal(struct task_struct *tsk, sigset_t *mask, siginfo_t *info)
  	bool resched_timer = false;
  	int signr;
  
@@ -196,7 +200,7 @@ index 36f03c7ec3cc..3221f5444bc9 100644
  	/* We only dequeue private signals from ourselves, we don't let
  	 * signalfd steal them
  	 */
-@@ -1550,7 +1610,8 @@ EXPORT_SYMBOL(kill_pid);
+@@ -1555,7 +1617,8 @@ EXPORT_SYMBOL(kill_pid);
   */
  struct sigqueue *sigqueue_alloc(void)
  {
@@ -206,6 +210,42 @@ index 36f03c7ec3cc..3221f5444bc9 100644
  
  	if (q)
  		q->flags |= SIGQUEUE_PREALLOC;
+@@ -2395,7 +2458,7 @@ int get_signal(struct ksignal *ksig)
+ }
+ 
+ /**
+- * signal_delivered - 
++ * signal_delivered -
+  * @ksig:		kernel signal struct
+  * @stepping:		nonzero if debugger single-step or block-step in use
+  *
+@@ -3339,7 +3402,7 @@ int __compat_save_altstack(compat_stack_t __user *uss, unsigned long sp)
+  */
+ SYSCALL_DEFINE1(sigpending, old_sigset_t __user *, set)
+ {
+-	return sys_rt_sigpending((sigset_t __user *)set, sizeof(old_sigset_t)); 
++	return sys_rt_sigpending((sigset_t __user *)set, sizeof(old_sigset_t));
+ }
+ 
+ #endif
+@@ -3464,7 +3527,7 @@ COMPAT_SYSCALL_DEFINE4(rt_sigaction, int, sig,
+ 	ret = do_sigaction(sig, act ? &new_ka : NULL, oact ? &old_ka : NULL);
+ 	if (!ret && oact) {
+ 		sigset_to_compat(&mask, &old_ka.sa.sa_mask);
+-		ret = put_user(ptr_to_compat(old_ka.sa.sa_handler), 
++		ret = put_user(ptr_to_compat(old_ka.sa.sa_handler),
+ 			       &oact->sa_handler);
+ 		ret |= copy_to_user(&oact->sa_mask, &mask, sizeof(mask));
+ 		ret |= put_user(old_ka.sa.sa_flags, &oact->sa_flags);
+@@ -3642,7 +3705,7 @@ SYSCALL_DEFINE2(rt_sigsuspend, sigset_t __user *, unewset, size_t, sigsetsize)
+ 		return -EFAULT;
+ 	return sigsuspend(&newset);
+ }
+- 
++
+ #ifdef CONFIG_COMPAT
+ COMPAT_SYSCALL_DEFINE2(rt_sigsuspend, compat_sigset_t __user *, unewset, compat_size_t, sigsetsize)
+ {
 -- 
-2.28.0
+2.7.4
 

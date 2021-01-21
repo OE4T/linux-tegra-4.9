@@ -1,7 +1,7 @@
-From 79e58906ce0a6620610f778f6d80891cb531716a Mon Sep 17 00:00:00 2001
+From 7a6d3f8e23bf32b0047349522d970dedbd688b94 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Mon, 21 Nov 2016 19:26:15 +0100
-Subject: [PATCH 042/367] locking/percpu-rwsem: use swait for the wating writer
+Subject: [PATCH 042/365] locking/percpu-rwsem: use swait for the wating writer
 
 Use struct swait_queue_head instead of wait_queue_head_t for the waiting
 writer. The swait implementation is smaller and lightweight compared to
@@ -14,7 +14,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  2 files changed, 6 insertions(+), 6 deletions(-)
 
 diff --git a/include/linux/percpu-rwsem.h b/include/linux/percpu-rwsem.h
-index 5b2e6159b744..82d54a4b9988 100644
+index 5b2e615..82d54a4 100644
 --- a/include/linux/percpu-rwsem.h
 +++ b/include/linux/percpu-rwsem.h
 @@ -4,7 +4,7 @@
@@ -45,7 +45,7 @@ index 5b2e6159b744..82d54a4b9988 100644
  
  extern int __percpu_down_read(struct percpu_rw_semaphore *, int);
 diff --git a/kernel/locking/percpu-rwsem.c b/kernel/locking/percpu-rwsem.c
-index ce182599cf2e..2ad3a1e8344c 100644
+index ce18259..2ad3a1e 100644
 --- a/kernel/locking/percpu-rwsem.c
 +++ b/kernel/locking/percpu-rwsem.c
 @@ -18,7 +18,7 @@ int __percpu_init_rwsem(struct percpu_rw_semaphore *sem,
@@ -76,5 +76,5 @@ index ce182599cf2e..2ad3a1e8344c 100644
  EXPORT_SYMBOL_GPL(percpu_down_write);
  
 -- 
-2.28.0
+2.7.4
 

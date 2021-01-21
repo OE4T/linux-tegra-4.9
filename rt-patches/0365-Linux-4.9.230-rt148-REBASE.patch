@@ -1,0 +1,20 @@
+From 8b5f78cdb45db784223f4367ebb54a58c8e8b956 Mon Sep 17 00:00:00 2001
+From: Clark Williams <williams@redhat.com>
+Date: Sat, 11 Jul 2020 14:43:38 -0500
+Subject: [PATCH 365/365] Linux 4.9.230-rt148 REBASE
+
+Signed-off-by: Clark Williams <williams@redhat.com>
+---
+ localversion-rt | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/localversion-rt b/localversion-rt
+index 9a218ca..857407b 100644
+--- a/localversion-rt
++++ b/localversion-rt
+@@ -1 +1 @@
+--rt23
++-rt148
+-- 
+2.7.4
+

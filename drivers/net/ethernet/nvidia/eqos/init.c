@@ -30,7 +30,7 @@
  * =========================================================================
  */
 /*
- * Copyright (c) 2015-2020, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2021, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -952,7 +952,7 @@ static int eqos_read_coalesc_params(struct platform_device *pdev,
 	/* RIWT value to be set */
 	ret = of_property_read_u32(np, "nvidia,rx_riwt", &rx_riwt);
 	if (ret < 0) {
-		use_riwt = EQOS_COAELSCING_ENABLE;
+		use_riwt = EQOS_COAELSCING_DISABLE;
 	} else {
 		if ((rx_riwt > EQOS_MAX_RX_COALESCE_USEC) ||
 		    (rx_riwt < EQOS_MIN_RX_COALESCE_USEC)) {

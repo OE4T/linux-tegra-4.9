@@ -3135,7 +3135,7 @@
 			compatible = "nvidia,tegra186-efuse-burn";
 			clocks = <&tegra_car TEGRA186_CLK_CLK_M>;
 			clock-names = "clk_m";
-			nvidia,tz = <&aotag>;
+			nvidia,tz = <&{/thermal-zones/GPU-therm}>;
 			nvidia,temp-range = <4000 101000>;
 			status = "disabled";
 		};

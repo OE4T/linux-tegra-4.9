@@ -1,7 +1,7 @@
 /*
  * hdmihdcp.c: hdmi hdcp functions.
  *
- * Copyright (c) 2014-2021, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2014-2022, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -121,8 +121,6 @@ static DECLARE_WAIT_QUEUE_HEAD(wq_worker);
 #define HDCP_PORT_NAME	"com.nvidia.tos.13f616f9-8572-4a6f-a1f104aa9b05f9ff"
 #define HDCP_SERVICE_UUID		{0x13F616F9, 0x4A6F8572,\
 				 0xAA04F1A1, 0xFFF9059B}
-static u8 g_seq_num_m_retries;
-static u8 g_fallback;
 
 #ifdef CONFIG_TRUSTED_LITTLE_KERNEL
 static uint32_t hdcp_uuid[4] = HDCP_SERVICE_UUID;
@@ -1220,6 +1218,7 @@ static int tsec_hdcp_authentication(struct tegra_nvhdcp *nvhdcp,
 	uint64_t *pkt = NULL;
 	unsigned char nonce[HDCP_NONCE_SIZE];
 	int cert_retry_count;
+	s8 seq_num_m_retries = 0;
 
 	pkt = kzalloc(PKT_SIZE, GFP_KERNEL);
 
@@ -1430,7 +1429,7 @@ static int tsec_hdcp_authentication(struct tegra_nvhdcp *nvhdcp,
 
 		if (hdcp_context->msg.rxinfo & HDCP_NON_22_RX) {
 			err = HDCP_FALLBACK_1X;
-			g_fallback = 1;
+			nvhdcp->fallback = true;
 			goto exit;
 		}
 		err = get_srm_signature(hdcp_context, nonce, pkt,
@@ -1469,10 +1468,10 @@ stream_manage_send:
 		err = nvhdcp_poll_ready(nvhdcp, 100);
 		if (err) {
 			/* HDCP 2.2 analyzer expects to retry atleast once */
-			if (g_seq_num_m_retries >= SEQ_NUM_M_MAX_RETRIES)
+			if (seq_num_m_retries >= SEQ_NUM_M_MAX_RETRIES)
 				goto exit;
 			else {
-				g_seq_num_m_retries++;
+				seq_num_m_retries++;
 				goto stream_manage_send;
 			}
 		}
@@ -1490,10 +1489,10 @@ stream_manage_send:
 		err =  tsec_hdcp_rptr_stream_ready(hdcp_context);
 		if (err) {
 			/* HDCP 2.2 analyzer expects to retry atleast once */
-			if (g_seq_num_m_retries >= SEQ_NUM_M_MAX_RETRIES)
+			if (seq_num_m_retries >= SEQ_NUM_M_MAX_RETRIES)
 				goto exit;
 			else {
-				g_seq_num_m_retries++;
+				seq_num_m_retries++;
 				goto stream_manage_send;
 			}
 		}
@@ -1511,7 +1510,7 @@ exit:
 
 void tegra_nvhdcp_clear_fallback(struct tegra_nvhdcp *nvhdcp)
 {
-	g_fallback = 0;
+	nvhdcp->fallback = false;
 }
 
 static void nvhdcp_fallback_worker(struct work_struct *work)
@@ -1903,7 +1902,7 @@ failure:
 
 	/* Failed because of lack of memory */
 	if (alloc_err == -ENOMEM) {
-		g_fallback = 0;
+		nvhdcp->fallback = false;
 		/* No need to unlock the mutex, memory failure
 		 * only happens when the mutex is not held.
 		 */
@@ -1979,7 +1978,7 @@ static int link_integrity_check(struct tegra_nvhdcp *nvhdcp,
 			goto exit;
 		}
 		if (hdcp_context->msg.rxinfo & HDCP_NON_22_RX) {
-			g_fallback = 1;
+			nvhdcp->fallback = true;
 			cancel_delayed_work(&nvhdcp->fallback_work);
 			queue_delayed_work(nvhdcp->fallback_wq, &nvhdcp->fallback_work,
 							msecs_to_jiffies(10));
@@ -2030,8 +2029,6 @@ static void nvhdcp2_downstream_worker(struct work_struct *work)
 		e = -ENOMEM;
 		goto failure;
 	}
-
-	g_seq_num_m_retries = 0;
 
 	e = tsec_hdcp_create_context(hdcp_context);
 	if (e) {
@@ -2165,7 +2162,8 @@ static void nvhdcp_downstream_worker(struct work_struct *work)
 		nvhdcp_err("nvhdcp i2c HDCP22 version read failed\n");
 	/* Do not stop nauthentication if i2c version reads fail as  */
 	/* HDCP 1.x test 1A-04 expects reading HDCP regs */
-	if ((hdcp2version & HDCP_HDCP2_VERSION_HDCP22_YES) && !g_fallback) {
+	if ((hdcp2version & HDCP_HDCP2_VERSION_HDCP22_YES) &&
+	    !nvhdcp->fallback) {
 		val = HDCP_EESS_ENABLE<<31|
 			HDCP22_EESS_START<<16|
 			HDCP22_EESS_END;
@@ -2487,6 +2485,7 @@ struct tegra_nvhdcp *tegra_nvhdcp_create(struct tegra_hdmi *hdmi,
 	nvhdcp->fail_count = 0;
 	nvhdcp->max_retries = HDCP_INFINITE_RETRIES;
 	atomic_set(&nvhdcp->policy, hdmi->dc->pdata->default_out->hdcp_policy);
+	nvhdcp->fallback = false;
 
 	adapter = i2c_get_adapter(bus);
 	if (!adapter) {

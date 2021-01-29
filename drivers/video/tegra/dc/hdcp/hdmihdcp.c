@@ -1,7 +1,7 @@
 /*
  * hdmihdcp.c: hdmi hdcp functions.
  *
- * Copyright (c) 2014-2020, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2014-2021, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -1962,9 +1962,7 @@ static int link_integrity_check(struct tegra_nvhdcp *nvhdcp,
 	u16 rx_status = 0;
 	uint64_t *pkt = NULL;
 	int err = 0;
-#ifdef CONFIG_TRUSTED_LITTLE_KERNEL
 	unsigned char nonce[HDCP_NONCE_SIZE];
-#endif
 
 	pkt = kzalloc(PKT_SIZE, GFP_KERNEL);
 
@@ -1996,9 +1994,6 @@ static int link_integrity_check(struct tegra_nvhdcp *nvhdcp,
 							msecs_to_jiffies(10));
 			goto exit;
 		}
-/* If CONFIG_TUSTED_LITTLE_KERNEL flag is disabled, TSEC wil be sent a garbage SRM signature
- * resulting in HDCP authentication failure
- */
 #ifdef CONFIG_TRUSTED_LITTLE_KERNEL
 		/* differentiate between TLK and trusty */
 		if (te_is_secos_dev_enabled()) {
@@ -2009,6 +2004,11 @@ static int link_integrity_check(struct tegra_nvhdcp *nvhdcp,
 			/* Open a trusted sesion with HDCP TA */
 			err = te_open_trusted_session(HDCP_PORT_NAME, &nvhdcp->ta_ctx);
 		}
+#else
+		nvhdcp->ta_ctx = NULL;
+		/* Open a trusted sesion with HDCP TA */
+		err = te_open_trusted_session(HDCP_PORT_NAME, &nvhdcp->ta_ctx);
+#endif
 		if (err) {
 			nvhdcp_err("Error opening trusted session\n");
 			goto exit;
@@ -2019,7 +2019,6 @@ static int link_integrity_check(struct tegra_nvhdcp *nvhdcp,
 			nvhdcp_err("Error getting srm signature!\n");
 			goto exit;
 		}
-#endif
 		err =  tsec_hdcp_verify_vprime(hdcp_context,
 				(char *)(pkt + HDCP_CMAC_OFFSET),
 				*((unsigned int *)(pkt + HDCP_TSEC_ADDR_OFFSET)),

@@ -1,7 +1,7 @@
 /*
  * GK20A Graphics FIFO (gr host)
  *
- * Copyright (c) 2011-2020, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2021, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -2196,9 +2196,9 @@ int gk20a_fifo_tsg_unbind_channel_verify_status(struct channel_gk20a *ch)
 	struct gk20a *g = ch->g;
 
 	if (gk20a_fifo_channel_status_is_next(g, ch->chid)) {
-		nvgpu_err(g, "Channel %d to be removed from TSG %d has NEXT set!",
+		nvgpu_log_info(g, "Channel %d to be removed from TSG %d has NEXT set!",
 			ch->chid, ch->tsgid);
-		return -EINVAL;
+		return -EAGAIN;
 	}
 
 	if (g->ops.fifo.tsg_verify_status_ctx_reload) {

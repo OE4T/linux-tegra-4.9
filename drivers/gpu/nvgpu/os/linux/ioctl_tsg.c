@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2020, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2021, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -134,7 +134,10 @@ static int gk20a_tsg_unbind_channel_fd(struct tsg_gk20a *tsg, int ch_fd)
 		goto out;
 	}
 
-	err = gk20a_tsg_unbind_channel(ch);
+	err = gk20a_tsg_unbind_channel(ch, false);
+	if (err == -EAGAIN) {
+		goto out;
+	}
 
 	/*
 	 * Mark the channel timedout since channel unbound from TSG

@@ -922,13 +922,11 @@ static int verify_vprime(struct tegra_nvhdcp *nvhdcp, u8 repeater)
 	if (!pkt || !hdcp_context)
 		goto exit;
 
-	if (tegra_dc_is_nvdisplay()) {
-		e = get_srm_signature(hdcp_context, nonce, pkt, nvhdcp->ta_ctx,
-					HDCP_1x);
-		if (e) {
-			nvhdcp_err("Error getting srm signature!\n");
-			goto exit;
-		}
+	e = get_srm_signature(hdcp_context, nonce, pkt, nvhdcp->ta_ctx,
+				HDCP_1x);
+	if (e) {
+		nvhdcp_err("Error getting srm signature!\n");
+		goto exit;
 	}
 
 	memset(&verify_vprime_param, 0x0,
@@ -1595,14 +1593,14 @@ static void nvhdcp1_downstream_worker(struct work_struct *work)
 
 	nvhdcp_vdbg("read Bcaps = 0x%02x\n", b_caps);
 
-	if (tegra_dc_is_nvdisplay()) {
-		nvhdcp->ta_ctx = NULL;
-		e = te_open_trusted_session(HDCP_PORT_NAME, &nvhdcp->ta_ctx);
-		if (e) {
-			nvhdcp_err("Error opening trusted session\n");
-			goto failure;
-		}
+	nvhdcp->ta_ctx = NULL;
+	e = te_open_trusted_session(HDCP_PORT_NAME, &nvhdcp->ta_ctx);
+	if (e) {
+		nvhdcp_err("Error opening trusted session\n");
+		goto failure;
+	}
 
+	if (tegra_dc_is_nvdisplay()) {
 		/* if session successfully opened, launch operations
 		 * repeater flag in Bskv must be configured before loading fuses
 		 */
@@ -1851,18 +1849,16 @@ static void nvhdcp1_downstream_worker(struct work_struct *work)
 	     * is connected */
 	    reset_repeater_info(nvhdcp);
 	}
-	/* T210/T210B01 vprime verification is handled in the upstream lib */
-	if (tegra_dc_is_nvdisplay()) {
-		/* perform vprime verification for repeater or SRM
-		 * revocation check for receiver
-		 */
-		e = verify_vprime(nvhdcp, b_caps & BCAPS_REPEATER);
-		if (e) {
-			nvhdcp_err("get vprime params failed\n");
-			goto failure;
-		} else
-			nvhdcp_vdbg("vprime verification passed\n");
-	}
+
+	/* perform vprime verification for repeater or SRM
+	 * revocation check for receiver
+	 */
+	e = verify_vprime(nvhdcp, b_caps & BCAPS_REPEATER);
+	if (e) {
+		nvhdcp_err("get vprime params failed\n");
+		goto failure;
+	} else
+		nvhdcp_vdbg("vprime verification passed\n");
 
 	mutex_lock(&nvhdcp->lock);
 	nvhdcp->state = STATE_LINK_VERIFY;
@@ -1932,23 +1928,19 @@ lost_hdmi:
 	}
 err:
 	mutex_unlock(&nvhdcp->lock);
-	if (tegra_dc_is_nvdisplay()) {
-		kfree(pkt);
-		if (nvhdcp->ta_ctx) {
-			te_close_trusted_session(nvhdcp->ta_ctx);
-			nvhdcp->ta_ctx = NULL;
-		}
+	kfree(pkt);
+	if (nvhdcp->ta_ctx) {
+		te_close_trusted_session(nvhdcp->ta_ctx);
+		nvhdcp->ta_ctx = NULL;
 	}
 	tegra_dc_io_end(dc);
 	return;
 disable:
 	nvhdcp->state = STATE_OFF;
-	if (tegra_dc_is_nvdisplay()) {
-		kfree(pkt);
-		if (nvhdcp->ta_ctx) {
-			te_close_trusted_session(nvhdcp->ta_ctx);
-			nvhdcp->ta_ctx = NULL;
-		}
+	kfree(pkt);
+	if (nvhdcp->ta_ctx) {
+		te_close_trusted_session(nvhdcp->ta_ctx);
+		nvhdcp->ta_ctx = NULL;
 	}
 	nvhdcp_set_plugged(nvhdcp, false);
 	mutex_unlock(&nvhdcp->lock);

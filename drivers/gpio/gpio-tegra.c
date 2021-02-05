@@ -2,7 +2,7 @@
  * arch/arm/mach-tegra/gpio.c
  *
  * Copyright (c) 2010 Google, Inc
- * Copyright (c) 2011-2020, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2021, NVIDIA CORPORATION.  All rights reserved.
  *
  * Author:
  *	Erik Gilling <konkers@google.com>
@@ -419,12 +419,6 @@ static int tegra_gpio_irq_set_type(struct irq_data *d, unsigned int type)
 
 	spin_unlock_irqrestore(&bank->gpio_lock[port], flags);
 
-	ret = tegra_gpio_direction_input(&tgi->gc, gpio);
-	if (ret) {
-		gpiochip_unlock_as_irq(&tgi->gc, gpio);
-		return ret;
-	}
-
 	if (type & (IRQ_TYPE_LEVEL_LOW | IRQ_TYPE_LEVEL_HIGH))
 		irq_set_handler_locked(d, handle_level_irq);
 	else if (type & (IRQ_TYPE_EDGE_FALLING | IRQ_TYPE_EDGE_RISING))
@@ -588,6 +582,13 @@ static struct syscore_ops tegra_gpio_syscore_ops = {
 	.restore = tegra_gpio_resume,
 };
 
+static int tegra_gpio_irq_request_resources(struct irq_data *d)
+{
+	struct tegra_gpio_bank *bank = irq_data_get_irq_chip_data(d);
+
+	return tegra_gpio_direction_input(&bank->tgi->gc, d->hwirq);
+}
+
 #ifdef	CONFIG_DEBUG_FS
 
 #include <linux/debugfs.h>
@@ -724,6 +725,7 @@ static int tegra_gpio_probe(struct platform_device *pdev)
 #ifdef CONFIG_PM_SLEEP
 	tgi->ic.irq_set_wake		= tegra_gpio_irq_set_wake;
 #endif
+	tgi->ic.irq_request_resources   = tegra_gpio_irq_request_resources;
 
 	platform_set_drvdata(pdev, tgi);
 

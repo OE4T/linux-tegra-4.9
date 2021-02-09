@@ -113,6 +113,8 @@ static inline s64 get_ts_adjustment(u64 tsc_res)
 	#define _MAX_ADJUSTMENT_TRIES (5)
 	#define _DELTA_DIFF_THRESHOLD (5000)
 
+	preempt_disable();
+
 	do {
 		tsc = (s64)(arch_counter_get_cntvct() * tsc_res);
 
@@ -126,6 +128,8 @@ static inline s64 get_ts_adjustment(u64 tsc_res)
 		tries++;
 	} while ((tries < _MAX_ADJUSTMENT_TRIES) &&
 		    (abs(delta2 - delta1) > _DELTA_DIFF_THRESHOLD));
+
+	preempt_enable();
 
 	WARN_ON(tries == _MAX_ADJUSTMENT_TRIES);
 	#undef _MAX_ADJUSTMENT_TRIES

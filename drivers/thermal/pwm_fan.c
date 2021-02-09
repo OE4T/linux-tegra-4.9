@@ -1,7 +1,7 @@
 /*
  * pwm_fan.c fan driver that is controlled by pwm
  *
- * Copyright (c) 2013-2020, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013-2021, NVIDIA CORPORATION.  All rights reserved.
  *
  * Author: Anshul Jain <anshulj@nvidia.com>
  *
@@ -658,9 +658,6 @@ static void fan_ramping_rpm_work_func(struct work_struct *work)
 	struct fan_dev_data *fan_data = container_of(dwork,
 			struct fan_dev_data,
 			fan_ramp_rpm_work);
-
-	if (!fan_data)
-		return;
 
 	/*
 	 * If mutex is locked, preempt. Only after pwm work function is done

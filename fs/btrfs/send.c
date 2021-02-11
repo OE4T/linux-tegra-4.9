@@ -46,14 +46,6 @@
 #define SEND_MAX_EXTENT_REFS	64
 
 /*
- * Maximum number of references an extent can have in order for us to attempt to
- * issue clone operations instead of write operations. This currently exists to
- * avoid hitting limitations of the backreference walking code (taking a lot of
- * time and using too much memory for extents with large number of references).
- */
-#define SEND_MAX_EXTENT_REFS	64
-
-/*
  * A fs_path is a helper to dynamically build path names with unknown size.
  * It reallocates the internal buffer on demand.
  * It allows fast adding of path elements on the right side (normal path) and

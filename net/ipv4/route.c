@@ -271,6 +271,7 @@ static void *rt_cpu_seq_next(struct seq_file *seq, void *v, loff_t *pos)
 		*pos = cpu+1;
 		return &per_cpu(rt_cache_stat, cpu);
 	}
+	(*pos)++;
 	return NULL;
 
 }
@@ -991,9 +992,10 @@ out:	kfree_skb(skb);
 static void __ip_rt_update_pmtu(struct rtable *rt, struct flowi4 *fl4, u32 mtu)
 {
 	struct dst_entry *dst = &rt->dst;
-	struct fib_result res = { 0 };
 	u32 old_mtu = ipv4_mtu(dst);
 	bool lock = false;
+	struct fib_result res = { 0 };
+
 
 	if (ip_mtu_locked(dst))
 		return;

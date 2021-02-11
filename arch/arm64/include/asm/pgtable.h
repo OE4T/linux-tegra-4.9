@@ -95,9 +95,12 @@ extern unsigned long empty_zero_page[PAGE_SIZE / sizeof(unsigned long)];
  * Could the pte be present in the TLB? We must check mm_tlb_flush_pending
  * so that we don't erroneously return false for pages that have been
  * remapped as PROT_NONE but are yet to be flushed from the TLB.
+ * Note that we can't make any assumptions based on the state of the access
+ * flag, since ptep_clear_flush_young() elides a DSB when invalidating the
+ * TLB.
  */
 #define pte_accessible(mm, pte)	\
-	(mm_tlb_flush_pending(mm) ? pte_present(pte) : pte_valid_young(pte))
+	(mm_tlb_flush_pending(mm) ? pte_present(pte) : pte_valid(pte))
 
 /*
  * p??_access_permitted() is true for valid user mappings (subject to the

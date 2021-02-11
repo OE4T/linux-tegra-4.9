@@ -583,6 +583,9 @@ int nfs_readdir_page_filler(nfs_readdir_descriptor_t *desc, struct nfs_entry *en
 	xdr_set_scratch_buffer(&stream, page_address(scratch), PAGE_SIZE);
 
 	do {
+		if (entry->label)
+			entry->label->len = NFS4_MAXLABELLEN;
+
 		status = xdr_decode(desc, entry, &stream);
 		if (status != 0) {
 			if (status == -EAGAIN)
@@ -677,8 +680,6 @@ int nfs_readdir_xdr_to_array(nfs_readdir_descriptor_t *desc, struct page *page, 
 		status = PTR_ERR(array);
 		goto out_label_free;
 	}
-
-	array = kmap(page);
 
 	status = nfs_readdir_alloc_pages(pages, array_size);
 	if (status < 0)

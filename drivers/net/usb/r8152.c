@@ -6233,7 +6233,6 @@ static void r8153_init(struct r8152 *tp)
 			break;
 	}
 
-	data = r8153_phy_status(tp, 0);
 
 	if (tp->version == RTL_VER_03 || tp->version == RTL_VER_04 ||
 	    tp->version == RTL_VER_05)
@@ -6245,7 +6244,15 @@ static void r8153_init(struct r8152 *tp)
 		r8152_mdio_write(tp, MII_BMCR, data);
 	}
 
-	data = r8153_phy_status(tp, PHY_STAT_LAN_ON);
+	for (i = 0; i < 500; i++) {
+		ocp_data = ocp_reg_read(tp, OCP_PHY_STATUS) & PHY_STAT_MASK;
+		if (ocp_data == PHY_STAT_LAN_ON)
+			break;
+
+		msleep(20);
+		if (test_bit(RTL8152_UNPLUG, &tp->flags))
+			break;
+	}
 
 	r8153_u2p3en(tp, false);
 

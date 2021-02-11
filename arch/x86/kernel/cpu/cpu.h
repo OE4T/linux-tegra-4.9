@@ -70,6 +70,4 @@ extern void update_srbds_msr(void);
 
 extern u64 x86_read_arch_cap_msr(void);
 
-extern u64 x86_read_arch_cap_msr(void);
-
 #endif /* ARCH_X86_CPU_H */

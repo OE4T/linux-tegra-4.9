@@ -393,8 +393,11 @@ int usb_function_deactivate(struct usb_function *function)
 
 	spin_lock_irqsave(&cdev->lock, flags);
 
-	if (cdev->deactivations == 0)
+	if (cdev->deactivations == 0) {
+		spin_unlock_irqrestore(&cdev->lock, flags);
 		status = usb_gadget_deactivate(cdev->gadget);
+		spin_lock_irqsave(&cdev->lock, flags);
+	}
 	if (status == 0)
 		cdev->deactivations++;
 
@@ -425,8 +428,11 @@ int usb_function_activate(struct usb_function *function)
 		status = -EINVAL;
 	else {
 		cdev->deactivations--;
-		if (cdev->deactivations == 0)
+		if (cdev->deactivations == 0) {
+			spin_unlock_irqrestore(&cdev->lock, flags);
 			status = usb_gadget_activate(cdev->gadget);
+			spin_lock_irqsave(&cdev->lock, flags);
+		}
 	}
 
 	spin_unlock_irqrestore(&cdev->lock, flags);
@@ -475,7 +481,6 @@ static u8 encode_bMaxPower(enum usb_device_speed speed,
 		struct usb_configuration *c)
 {
 	unsigned val;
-	u8 bMaxPower;
 
 	if (c->MaxPower)
 		val = c->MaxPower;
@@ -483,17 +488,14 @@ static u8 encode_bMaxPower(enum usb_device_speed speed,
 		val = CONFIG_USB_GADGET_VBUS_DRAW;
 	if (!val)
 		return 0;
-	switch (speed) {
-	case USB_SPEED_SUPER:
-		/* USB 3.0 max power <= 900 mA: 0x70 * 8 mA = 896 mA */
-		bMaxPower = min(DIV_ROUND_UP(val, 8), (u32)0x70);
-		break;
-	default:
-		/* USB 2.0 max power <= 500 mA: 0xfa * 2 mA = 500 mA */
-		bMaxPower = min(DIV_ROUND_UP(val, 2), (u32)0xfa);
-	}
-
-	return bMaxPower;
+	if (speed < USB_SPEED_SUPER)
+		return min(val, 500U) / 2;
+	else
+		/*
+		 * USB 3.x supports up to 900mA, but since 900 isn't divisible
+		 * by 8 the integral division will effectively cap to 896mA.
+		 */
+		return min(val, 900U) / 8;
 }
 
 static int config_buf(struct usb_configuration *config,
@@ -886,15 +888,10 @@ static int set_config(struct usb_composite_dev *cdev,
 
 	/* when we return, be sure our power usage is valid */
 	power = c->MaxPower ? c->MaxPower : CONFIG_USB_GADGET_VBUS_DRAW;
-	if (gadget->speed <= USB_SPEED_HIGH && power > USB_HS_VBUS_MAX_DRAW)
-		power = USB_HS_VBUS_MAX_DRAW;
-
-	/* set as self-powered if peripheral draws less than 100 mA */
-	if (power <= USB_SELF_POWER_VBUS_MAX_DRAW)
-		usb_gadget_set_selfpowered(gadget);
+	if (gadget->speed < USB_SPEED_SUPER)
+		power = min(power, 500U);
 	else
-		usb_gadget_clear_selfpowered(gadget);
-
+		power = min(power, 900U);
 done:
 	if (power <= USB_SELF_POWER_VBUS_MAX_DRAW)
 		usb_gadget_set_selfpowered(gadget);

@@ -719,9 +719,6 @@ static int adapter_up(struct adapter *adapter)
 		if (adapter->flags & USING_MSIX)
 			name_msix_vecs(adapter);
 
-		/* Initialize hash mac addr list*/
-		INIT_LIST_HEAD(&adapter->mac_hlist);
-
 		adapter->flags |= FULL_INIT_DONE;
 	}
 

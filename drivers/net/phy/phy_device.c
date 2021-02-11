@@ -96,7 +96,7 @@ static bool mdio_bus_phy_may_suspend(struct phy_device *phydev, bool suspend)
 	 * PHY is not attached.
 	 */
 	if (!netdev)
-		return suspend ? !phydev->suspended : phydev->suspended;
+		goto out;
 
 	/* Don't suspend PHY if the attached netdev parent may wakeup.
 	 * The parent may point to a PCI device, as in tg3 driver.
@@ -111,7 +111,8 @@ static bool mdio_bus_phy_may_suspend(struct phy_device *phydev, bool suspend)
 	if (device_may_wakeup(&netdev->dev))
 		return false;
 
-	return true;
+out:
+	return !phydev->suspended;
 }
 
 static int mdio_bus_phy_suspend(struct device *dev)
@@ -139,7 +140,7 @@ static int mdio_bus_phy_resume(struct device *dev)
 	struct phy_device *phydev = to_phy_device(dev);
 	int ret;
 
-	if (!mdio_bus_phy_may_suspend(phydev, false))
+	if (!phydev->suspended_by_mdio_bus)
 		goto no_resume;
 
 	phydev->suspended_by_mdio_bus = false;
@@ -1013,7 +1014,8 @@ void phy_detach(struct phy_device *phydev)
 	phydev->attached_dev = NULL;
 	phy_suspend(phydev);
 
-	module_put(phydev->mdio.dev.driver->owner);
+	if (phydev->mdio.dev.driver)
+		module_put(phydev->mdio.dev.driver->owner);
 
 	/* If the device had no specific driver before (i.e. - it
 	 * was using the generic driver), we unbind the device

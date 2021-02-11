@@ -1,4 +1,4 @@
-From 129b7d5ac24c04490a9e61dbe7ead90507f2e9f9 Mon Sep 17 00:00:00 2001
+From 3dc115ac6d93561730456d579c53d24a6e4e9804 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Wed, 21 Feb 2018 10:39:54 +0100
 Subject: [PATCH 355/365] net: use task_struct instead of CPU number as the
@@ -17,12 +17,12 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 (cherry picked from commit d3a66ffd1c4f0253076069b10a8223e7b6e80e38)
 Signed-off-by: Julia Cartwright <julia@ni.com>
 ---
- include/linux/netdevice.h | 54 +++++++++++++++++++++++++++++++++++++++++------
- net/core/dev.c            |  6 +++++-
+ include/linux/netdevice.h | 54 ++++++++++++++++++++++++++++++++++-----
+ net/core/dev.c            |  6 ++++-
  2 files changed, 53 insertions(+), 7 deletions(-)
 
 diff --git a/include/linux/netdevice.h b/include/linux/netdevice.h
-index f915492..5decbf0 100644
+index f91549292fdc..5decbf0980b0 100644
 --- a/include/linux/netdevice.h
 +++ b/include/linux/netdevice.h
 @@ -594,7 +594,11 @@ struct netdev_queue {
@@ -124,7 +124,7 @@ index f915492..5decbf0 100644
  }
  
 diff --git a/net/core/dev.c b/net/core/dev.c
-index a588888..ccb1fc8 100644
+index 2db59a992414..51da1bac90c1 100644
 --- a/net/core/dev.c
 +++ b/net/core/dev.c
 @@ -3461,7 +3461,11 @@ static int __dev_queue_xmit(struct sk_buff *skb, void *accel_priv)
@@ -139,7 +139,7 @@ index a588888..ccb1fc8 100644
  			if (unlikely(xmit_rec_read() > XMIT_RECURSION_LIMIT))
  				goto recursion_alert;
  
-@@ -7192,7 +7196,7 @@ static void netdev_init_one_queue(struct net_device *dev,
+@@ -7193,7 +7197,7 @@ static void netdev_init_one_queue(struct net_device *dev,
  	/* Initialize queue lock */
  	spin_lock_init(&queue->_xmit_lock);
  	netdev_set_xmit_lockdep_class(&queue->_xmit_lock, dev->type);
@@ -149,5 +149,5 @@ index a588888..ccb1fc8 100644
  	queue->dev = dev;
  #ifdef CONFIG_BQL
 -- 
-2.7.4
+2.28.0
 

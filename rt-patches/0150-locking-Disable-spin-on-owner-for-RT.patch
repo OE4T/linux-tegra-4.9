@@ -1,4 +1,4 @@
-From 42c2d95a20fde43ee9c80bfcef86f8495ba78e1b Mon Sep 17 00:00:00 2001
+From 88172e02c238bc5d5a8406fe74f672bc8646b898 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Sun, 17 Jul 2011 21:51:45 +0200
 Subject: [PATCH 150/365] locking: Disable spin on owner for RT
@@ -15,7 +15,7 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  1 file changed, 2 insertions(+), 2 deletions(-)
 
 diff --git a/kernel/Kconfig.locks b/kernel/Kconfig.locks
-index ebdb004..b9e6aa7 100644
+index ebdb0043203a..b9e6aa7e5aa6 100644
 --- a/kernel/Kconfig.locks
 +++ b/kernel/Kconfig.locks
 @@ -225,11 +225,11 @@ config ARCH_SUPPORTS_ATOMIC_RMW
@@ -33,5 +33,5 @@ index ebdb004..b9e6aa7 100644
  config LOCK_SPIN_ON_OWNER
         def_bool y
 -- 
-2.7.4
+2.28.0
 

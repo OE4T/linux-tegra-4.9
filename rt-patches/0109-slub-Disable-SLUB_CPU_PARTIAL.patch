@@ -1,4 +1,4 @@
-From e6e6179dc95d1b5304430359068e994520d436ba Mon Sep 17 00:00:00 2001
+From 915cb6e6750e6a4674cc485e8bcd87d0cd5e40ed Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Wed, 15 Apr 2015 19:00:47 +0200
 Subject: [PATCH 109/365] slub: Disable SLUB_CPU_PARTIAL
@@ -36,10 +36,10 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/init/Kconfig b/init/Kconfig
-index a1408c3..538e78c 100644
+index 945d1aa74ce5..43dc481d2d5c 100644
 --- a/init/Kconfig
 +++ b/init/Kconfig
-@@ -1955,7 +1955,7 @@ config SLAB_FREELIST_RANDOM
+@@ -1956,7 +1956,7 @@ config SLAB_FREELIST_RANDOM
  
  config SLUB_CPU_PARTIAL
  	default y
@@ -49,5 +49,5 @@ index a1408c3..538e78c 100644
  	help
  	  Per cpu partial caches accellerate objects allocation and freeing
 -- 
-2.7.4
+2.28.0
 

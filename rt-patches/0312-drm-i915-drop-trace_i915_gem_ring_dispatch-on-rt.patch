@@ -1,4 +1,4 @@
-From 1940cf85b678410d629fa6058b3626e44dbd6ed2 Mon Sep 17 00:00:00 2001
+From 5addb9bd211bbae4a87dae4a287d7c3c3b78b83b Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Thu, 25 Apr 2013 18:12:52 +0200
 Subject: [PATCH 312/365] drm/i915: drop trace_i915_gem_ring_dispatch on rt
@@ -46,7 +46,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  1 file changed, 2 insertions(+)
 
 diff --git a/drivers/gpu/drm/i915/i915_gem_execbuffer.c b/drivers/gpu/drm/i915/i915_gem_execbuffer.c
-index 4548d89..4a7df7d 100644
+index ff8168c60b35..f5f7416797a8 100644
 --- a/drivers/gpu/drm/i915/i915_gem_execbuffer.c
 +++ b/drivers/gpu/drm/i915/i915_gem_execbuffer.c
 @@ -1531,7 +1531,9 @@ execbuf_submit(struct i915_execbuffer_params *params,
@@ -60,5 +60,5 @@ index 4548d89..4a7df7d 100644
  	i915_gem_execbuffer_move_to_active(vmas, params->request);
  
 -- 
-2.7.4
+2.28.0
 

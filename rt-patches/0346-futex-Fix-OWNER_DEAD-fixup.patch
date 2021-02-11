@@ -1,4 +1,4 @@
-From 54be1f720a040278f32d81ec761ff764a01344d4 Mon Sep 17 00:00:00 2001
+From ad3a4959139317221f6e72f3d69da320ccc218be Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Wed, 6 Jun 2018 15:31:29 +0200
 Subject: [PATCH 346/365] futex: Fix OWNER_DEAD fixup
@@ -33,7 +33,7 @@ Signed-off-by: Julia Cartwright <julia@ni.com>
  1 file changed, 3 insertions(+), 3 deletions(-)
 
 diff --git a/kernel/futex.c b/kernel/futex.c
-index 498a298..0279bf7 100644
+index 498a2980e0d7..0279bf7c69b4 100644
 --- a/kernel/futex.c
 +++ b/kernel/futex.c
 @@ -2326,9 +2326,6 @@ static int fixup_pi_state_owner(u32 __user *uaddr, struct futex_q *q,
@@ -57,5 +57,5 @@ index 498a298..0279bf7 100644
  	if (get_futex_value_locked(&uval, uaddr))
  		goto handle_fault;
 -- 
-2.7.4
+2.28.0
 

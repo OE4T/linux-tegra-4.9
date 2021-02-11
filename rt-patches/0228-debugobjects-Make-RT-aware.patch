@@ -1,4 +1,4 @@
-From 312273d8ed9d9e029530fcb544fd2a13254b8df1 Mon Sep 17 00:00:00 2001
+From c1af725c59f02e2ccf4a92b45acd1ea3ddd5e90d Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Sun, 17 Jul 2011 21:41:35 +0200
 Subject: [PATCH 228/365] debugobjects: Make RT aware
@@ -11,7 +11,7 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  1 file changed, 4 insertions(+), 1 deletion(-)
 
 diff --git a/lib/debugobjects.c b/lib/debugobjects.c
-index 1c43d4c..43872a0 100644
+index 1c43d4c5d2ab..43872a0a1e96 100644
 --- a/lib/debugobjects.c
 +++ b/lib/debugobjects.c
 @@ -311,7 +311,10 @@ __debug_object_init(void *addr, struct debug_obj_descr *descr, int onstack)
@@ -27,5 +27,5 @@ index 1c43d4c..43872a0 100644
  	db = get_bucket((unsigned long) addr);
  
 -- 
-2.7.4
+2.28.0
 

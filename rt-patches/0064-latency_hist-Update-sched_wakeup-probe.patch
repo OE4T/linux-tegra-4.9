@@ -1,4 +1,4 @@
-From 450bae6d5b7831872e1b56036c9b73815188d3dd Mon Sep 17 00:00:00 2001
+From 1cdb0f85d7d0627baea15eace08cce4ec0afba01 Mon Sep 17 00:00:00 2001
 From: Mathieu Desnoyers <mathieu.desnoyers@efficios.com>
 Date: Sun, 25 Oct 2015 18:06:05 -0400
 Subject: [PATCH 064/365] latency_hist: Update sched_wakeup probe
@@ -20,7 +20,7 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  1 file changed, 2 insertions(+), 2 deletions(-)
 
 diff --git a/kernel/trace/latency_hist.c b/kernel/trace/latency_hist.c
-index 66a69eb..b6c1d14 100644
+index 66a69eb5329c..b6c1d14b71c4 100644
 --- a/kernel/trace/latency_hist.c
 +++ b/kernel/trace/latency_hist.c
 @@ -115,7 +115,7 @@ static DEFINE_PER_CPU(struct hist_data, wakeup_latency_hist_sharedprio);
@@ -42,5 +42,5 @@ index 66a69eb..b6c1d14 100644
  	unsigned long flags;
  	struct task_struct *curr = current;
 -- 
-2.7.4
+2.28.0
 

@@ -1,4 +1,4 @@
-From 75fa3b7d029bf804017a50e9d7f7addce0215a8d Mon Sep 17 00:00:00 2001
+From 346f883cb191c675c447fac5ab3180d7e44fd825 Mon Sep 17 00:00:00 2001
 From: Yang Shi <yang.shi@linaro.org>
 Date: Thu, 10 Dec 2015 10:58:51 -0800
 Subject: [PATCH 090/365] x86/signal: delay calling signals on 32bit
@@ -31,7 +31,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/arch/x86/include/asm/signal.h b/arch/x86/include/asm/signal.h
-index c370fba..d132878 100644
+index c370fba8c38b..d1328789b759 100644
 --- a/arch/x86/include/asm/signal.h
 +++ b/arch/x86/include/asm/signal.h
 @@ -36,7 +36,7 @@ typedef struct {
@@ -44,5 +44,5 @@ index c370fba..d132878 100644
  #endif
  
 -- 
-2.7.4
+2.28.0
 

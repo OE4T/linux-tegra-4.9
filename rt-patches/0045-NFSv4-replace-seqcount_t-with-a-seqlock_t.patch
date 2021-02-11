@@ -1,4 +1,4 @@
-From 9c24a9ffc6c50c7dbdb3b0f82af1b7aa8063f95f Mon Sep 17 00:00:00 2001
+From b8677f6bf5a4b6b2ed8f8d43f7ad37d40ba02139 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Fri, 28 Oct 2016 23:05:11 +0200
 Subject: [PATCH 045/365] NFSv4: replace seqcount_t with a seqlock_t
@@ -26,7 +26,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  4 files changed, 21 insertions(+), 11 deletions(-)
 
 diff --git a/fs/nfs/delegation.c b/fs/nfs/delegation.c
-index 0140396..d688f89 100644
+index 014039618cff..d688f89c9bc8 100644
 --- a/fs/nfs/delegation.c
 +++ b/fs/nfs/delegation.c
 @@ -160,11 +160,11 @@ static int nfs_delegation_claim_opens(struct inode *inode,
@@ -44,7 +44,7 @@ index 0140396..d688f89 100644
  		mutex_unlock(&sp->so_delegreturn_mutex);
  		put_nfs_open_context(ctx);
 diff --git a/fs/nfs/nfs4_fs.h b/fs/nfs/nfs4_fs.h
-index c719389..5dcaae3 100644
+index c719389381dc..5dcaae387902 100644
 --- a/fs/nfs/nfs4_fs.h
 +++ b/fs/nfs/nfs4_fs.h
 @@ -111,7 +111,7 @@ struct nfs4_state_owner {
@@ -57,7 +57,7 @@ index c719389..5dcaae3 100644
  };
  
 diff --git a/fs/nfs/nfs4proc.c b/fs/nfs/nfs4proc.c
-index c189722..d1a7495 100644
+index 2abdb2070c87..157741fff261 100644
 --- a/fs/nfs/nfs4proc.c
 +++ b/fs/nfs/nfs4proc.c
 @@ -2705,7 +2705,7 @@ static int _nfs4_open_and_get_state(struct nfs4_opendata *opendata,
@@ -79,7 +79,7 @@ index c189722..d1a7495 100644
  	}
  out:
 diff --git a/fs/nfs/nfs4state.c b/fs/nfs/nfs4state.c
-index 4e63dae..57facf9 100644
+index 4e63daeef633..57facf9519b8 100644
 --- a/fs/nfs/nfs4state.c
 +++ b/fs/nfs/nfs4state.c
 @@ -492,7 +492,7 @@ nfs4_alloc_state_owner(struct nfs_server *server,
@@ -131,5 +131,5 @@ index 4e63dae..57facf9 100644
  }
  
 -- 
-2.7.4
+2.28.0
 

@@ -1,4 +1,4 @@
-From 08ecda284669ea252c5257d73d0b06cca10c200f Mon Sep 17 00:00:00 2001
+From cd4338213f1bf8c900a9fa4c00555ef48034fd13 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Mon, 19 Jun 2017 09:55:47 +0200
 Subject: [PATCH 305/365] sched/migrate disable: handle updated task-mask
@@ -18,11 +18,11 @@ Cc: stable-rt@vger.kernel.org
 Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 ---
  include/linux/sched.h |  1 +
- kernel/sched/core.c   | 59 +++++++++++++++++++++++++++++++++++++++++++++------
+ kernel/sched/core.c   | 59 ++++++++++++++++++++++++++++++++++++++-----
  2 files changed, 54 insertions(+), 6 deletions(-)
 
 diff --git a/include/linux/sched.h b/include/linux/sched.h
-index d92212f..4b25870 100644
+index d92212f33e25..4b258706f687 100644
 --- a/include/linux/sched.h
 +++ b/include/linux/sched.h
 @@ -1718,6 +1718,7 @@ struct task_struct {
@@ -34,7 +34,7 @@ index d92212f..4b25870 100644
  	int migrate_disable_atomic;
  # endif
 diff --git a/kernel/sched/core.c b/kernel/sched/core.c
-index 47584a9..42b2cb4 100644
+index bff8350da2fd..874658e9d15a 100644
 --- a/kernel/sched/core.c
 +++ b/kernel/sched/core.c
 @@ -1191,18 +1191,14 @@ void set_cpus_allowed_common(struct task_struct *p, const struct cpumask *new_ma
@@ -79,7 +79,7 @@ index 47584a9..42b2cb4 100644
  static DEFINE_PER_CPU(struct cpumask, sched_cpumasks);
  static DEFINE_MUTEX(sched_down_mutex);
  static cpumask_t sched_down_cpumask;
-@@ -3556,6 +3566,43 @@ void migrate_enable(void)
+@@ -3608,6 +3618,43 @@ void migrate_enable(void)
  	 */
  	p->migrate_disable = 0;
  
@@ -124,5 +124,5 @@ index 47584a9..42b2cb4 100644
  	preempt_enable();
  	preempt_lazy_enable();
 -- 
-2.7.4
+2.28.0
 

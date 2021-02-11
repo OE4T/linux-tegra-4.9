@@ -1,4 +1,4 @@
-From fa05e5a34d0ed8b95aa2436e6171e984b99e7075 Mon Sep 17 00:00:00 2001
+From 8ea41a9363743646c5016a61e0e83bca36033ab9 Mon Sep 17 00:00:00 2001
 From: Ingo Molnar <mingo@elte.hu>
 Date: Fri, 3 Jul 2009 08:29:34 -0500
 Subject: [PATCH 120/365] hrtimers: Prepare full preemption
@@ -16,19 +16,19 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  4 files changed, 77 insertions(+), 2 deletions(-)
 
 diff --git a/include/linux/hrtimer.h b/include/linux/hrtimer.h
-index 8d129e9..10f7d43 100644
+index 8d129e969b3b..10f7d43e6d7e 100644
 --- a/include/linux/hrtimer.h
 +++ b/include/linux/hrtimer.h
-@@ -207,6 +207,9 @@ struct hrtimer_cpu_base {
+@@ -206,6 +206,9 @@ struct hrtimer_cpu_base {
+ 	unsigned int			nr_retries;
  	unsigned int			nr_hangs;
  	unsigned int			max_hang_time;
- #endif
++#endif
 +#ifdef CONFIG_PREEMPT_RT_BASE
 +	wait_queue_head_t		wait;
-+#endif
+ #endif
  	struct hrtimer_clock_base	clock_base[HRTIMER_MAX_CLOCK_BASES];
  } ____cacheline_aligned;
- 
 @@ -416,6 +419,13 @@ static inline void hrtimer_restart(struct hrtimer *timer)
  	hrtimer_start_expires(timer, HRTIMER_MODE_ABS);
  }
@@ -53,7 +53,7 @@ index 8d129e9..10f7d43 100644
  	return timer->base->cpu_base->running == timer;
  }
 diff --git a/kernel/time/hrtimer.c b/kernel/time/hrtimer.c
-index 1d48b7d..9fe48b8 100644
+index 1d48b7d5c546..9fe48b8a86ba 100644
 --- a/kernel/time/hrtimer.c
 +++ b/kernel/time/hrtimer.c
 @@ -856,6 +856,32 @@ u64 hrtimer_forward(struct hrtimer *timer, ktime_t now, ktime_t interval)
@@ -118,7 +118,7 @@ index 1d48b7d..9fe48b8 100644
  }
  
 diff --git a/kernel/time/itimer.c b/kernel/time/itimer.c
-index 1d5c720..184de67 100644
+index 1d5c7204ddc9..184de6751180 100644
 --- a/kernel/time/itimer.c
 +++ b/kernel/time/itimer.c
 @@ -213,6 +213,7 @@ int do_setitimer(int which, struct itimerval *value, struct itimerval *ovalue)
@@ -130,7 +130,7 @@ index 1d5c720..184de67 100644
  		}
  		expires = timeval_to_ktime(value->it_value);
 diff --git a/kernel/time/posix-timers.c b/kernel/time/posix-timers.c
-index 06ef7e4..558e420 100644
+index 06ef7e413209..558e420c352c 100644
 --- a/kernel/time/posix-timers.c
 +++ b/kernel/time/posix-timers.c
 @@ -842,6 +842,20 @@ SYSCALL_DEFINE1(timer_getoverrun, timer_t, timer_id)
@@ -211,5 +211,5 @@ index 06ef7e4..558e420 100644
  	}
  	list_del(&timer->list);
 -- 
-2.7.4
+2.28.0
 

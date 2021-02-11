@@ -1,4 +1,4 @@
-From f96bc50fda04e4cf6800996fbf06f00a8ca65800 Mon Sep 17 00:00:00 2001
+From 7841067f294d39711a999e3bdce0eadf2671c7a8 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Tue, 23 Jun 2015 15:32:51 +0200
 Subject: [PATCH 242/365] irqwork: push most work into softirq context
@@ -21,14 +21,14 @@ Mike Galbraith,
 Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 ---
  include/linux/irq_work.h |  1 +
- kernel/irq_work.c        | 47 ++++++++++++++++++++++++++++++++++-------------
+ kernel/irq_work.c        | 47 +++++++++++++++++++++++++++++-----------
  kernel/sched/core.c      |  1 +
  kernel/time/tick-sched.c |  1 +
- kernel/time/timer.c      |  6 +++++-
+ kernel/time/timer.c      |  6 ++++-
  5 files changed, 42 insertions(+), 14 deletions(-)
 
 diff --git a/include/linux/irq_work.h b/include/linux/irq_work.h
-index 47b9ebd..0e427a9 100644
+index 47b9ebd4a74f..0e427a9997f3 100644
 --- a/include/linux/irq_work.h
 +++ b/include/linux/irq_work.h
 @@ -16,6 +16,7 @@
@@ -40,7 +40,7 @@ index 47b9ebd..0e427a9 100644
  struct irq_work {
  	unsigned long flags;
 diff --git a/kernel/irq_work.c b/kernel/irq_work.c
-index bcf107c..0ddaf1e 100644
+index bcf107ce0854..0ddaf1e66d8c 100644
 --- a/kernel/irq_work.c
 +++ b/kernel/irq_work.c
 @@ -17,6 +17,7 @@
@@ -147,10 +147,10 @@ index bcf107c..0ddaf1e 100644
  EXPORT_SYMBOL_GPL(irq_work_run);
  
 diff --git a/kernel/sched/core.c b/kernel/sched/core.c
-index 8c777eb..69ffb7f 100644
+index 1d273ab5bb0b..9bfb19c3f295 100644
 --- a/kernel/sched/core.c
 +++ b/kernel/sched/core.c
-@@ -6173,6 +6173,7 @@ static int init_rootdomain(struct root_domain *rd)
+@@ -6225,6 +6225,7 @@ static int init_rootdomain(struct root_domain *rd)
  	rd->rto_cpu = -1;
  	raw_spin_lock_init(&rd->rto_lock);
  	init_irq_work(&rd->rto_push_work, rto_push_irq_work_func);
@@ -159,7 +159,7 @@ index 8c777eb..69ffb7f 100644
  
  	init_dl_bw(&rd->dl_bw);
 diff --git a/kernel/time/tick-sched.c b/kernel/time/tick-sched.c
-index 943d0f77..c82ddc7 100644
+index 943d0f7772e8..c82ddc780350 100644
 --- a/kernel/time/tick-sched.c
 +++ b/kernel/time/tick-sched.c
 @@ -220,6 +220,7 @@ static void nohz_full_kick_func(struct irq_work *work)
@@ -171,10 +171,10 @@ index 943d0f77..c82ddc7 100644
  
  /*
 diff --git a/kernel/time/timer.c b/kernel/time/timer.c
-index 019a332..5ea51b6 100644
+index 4686736fc986..b742e84cbe1c 100644
 --- a/kernel/time/timer.c
 +++ b/kernel/time/timer.c
-@@ -1663,7 +1663,7 @@ void update_process_times(int user_tick)
+@@ -1664,7 +1664,7 @@ void update_process_times(int user_tick)
  	scheduler_tick();
  	run_local_timers();
  	rcu_check_callbacks(user_tick);
@@ -183,7 +183,7 @@ index 019a332..5ea51b6 100644
  	if (in_irq())
  		irq_work_tick();
  #endif
-@@ -1719,6 +1719,10 @@ static __latent_entropy void run_timer_softirq(struct softirq_action *h)
+@@ -1720,6 +1720,10 @@ static __latent_entropy void run_timer_softirq(struct softirq_action *h)
  {
  	struct timer_base *base = this_cpu_ptr(&timer_bases[BASE_STD]);
  
@@ -195,5 +195,5 @@ index 019a332..5ea51b6 100644
  	if (IS_ENABLED(CONFIG_NO_HZ_COMMON))
  		__run_timers(this_cpu_ptr(&timer_bases[BASE_DEF]));
 -- 
-2.7.4
+2.28.0
 

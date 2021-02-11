@@ -1,4 +1,4 @@
-From 5c444601b1b456c1433cffe77205735cf7ba20ca Mon Sep 17 00:00:00 2001
+From 41f4bfc9a30c57c74895265ae4966a9b5eb4f5f2 Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Wed, 6 Jun 2018 15:31:27 +0200
 Subject: [PATCH 344/365] futex: Fix more put_pi_state() vs.
@@ -57,7 +57,7 @@ Signed-off-by: Julia Cartwright <julia@ni.com>
  1 file changed, 20 insertions(+), 3 deletions(-)
 
 diff --git a/kernel/futex.c b/kernel/futex.c
-index 8b01a19..87719a5 100644
+index 8b01a19e3260..87719a5721f5 100644
 --- a/kernel/futex.c
 +++ b/kernel/futex.c
 @@ -916,11 +916,27 @@ void exit_pi_state_list(struct task_struct *curr)
@@ -114,5 +114,5 @@ index 8b01a19..87719a5 100644
  		spin_unlock(&hb->lock);
  
 -- 
-2.7.4
+2.28.0
 

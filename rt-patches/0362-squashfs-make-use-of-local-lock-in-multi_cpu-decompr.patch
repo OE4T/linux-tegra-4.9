@@ -1,4 +1,4 @@
-From f0a0426d964cb33cc3253ddba822569d3f9d03fa Mon Sep 17 00:00:00 2001
+From b45c9007babdc5c082b8e186fd5de4faec8c3530 Mon Sep 17 00:00:00 2001
 From: Julia Cartwright <julia@ni.com>
 Date: Mon, 7 May 2018 08:58:57 -0500
 Subject: [PATCH 362/365] squashfs: make use of local lock in multi_cpu
@@ -28,7 +28,7 @@ Signed-off-by: Julia Cartwright <julia@ni.com>
  1 file changed, 12 insertions(+), 4 deletions(-)
 
 diff --git a/fs/squashfs/decompressor_multi_percpu.c b/fs/squashfs/decompressor_multi_percpu.c
-index ee0702a..8c9858d 100644
+index ee0702ae4d04..8c9858d5a71e 100644
 --- a/fs/squashfs/decompressor_multi_percpu.c
 +++ b/fs/squashfs/decompressor_multi_percpu.c
 @@ -10,6 +10,7 @@
@@ -69,5 +69,5 @@ index ee0702a..8c9858d 100644
  	if (res < 0)
  		ERROR("%s decompression failed, data probably corrupt\n",
 -- 
-2.7.4
+2.28.0
 

@@ -1,4 +1,4 @@
-From ab96c53f48e0a838ffa2ca34a84d84deb01944d8 Mon Sep 17 00:00:00 2001
+From 6e46398f112d408ed77886643bd882722c228aa7 Mon Sep 17 00:00:00 2001
 From: Ingo Molnar <mingo@elte.hu>
 Date: Tue, 29 Nov 2011 20:18:22 -0500
 Subject: [PATCH 151/365] tasklet: Prevent tasklets from going into infinite
@@ -38,12 +38,12 @@ Signed-off-by: Ingo Molnar <mingo@elte.hu>
 Signed-off-by: Steven Rostedt <rostedt@goodmis.org>
 Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
 ---
- include/linux/interrupt.h |  33 ++++----
- kernel/softirq.c          | 201 +++++++++++++++++++++++++++++++++-------------
+ include/linux/interrupt.h |  33 ++++---
+ kernel/softirq.c          | 201 +++++++++++++++++++++++++++-----------
  2 files changed, 162 insertions(+), 72 deletions(-)
 
 diff --git a/include/linux/interrupt.h b/include/linux/interrupt.h
-index 75dcdf8..0aad7ca 100644
+index 75dcdf85cb08..0aad7caee523 100644
 --- a/include/linux/interrupt.h
 +++ b/include/linux/interrupt.h
 @@ -509,8 +509,9 @@ static inline struct task_struct *this_cpu_ksoftirqd(void)
@@ -116,7 +116,7 @@ index 75dcdf8..0aad7ca 100644
  extern void tasklet_kill_immediate(struct tasklet_struct *t, unsigned int cpu);
  extern void tasklet_init(struct tasklet_struct *t,
 diff --git a/kernel/softirq.c b/kernel/softirq.c
-index d257e62..02d1106 100644
+index d257e624be25..02d1106adeea 100644
 --- a/kernel/softirq.c
 +++ b/kernel/softirq.c
 @@ -21,6 +21,7 @@
@@ -395,5 +395,5 @@ index d257e62..02d1106 100644
  {
  	return local_softirq_pending();
 -- 
-2.7.4
+2.28.0
 

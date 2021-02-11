@@ -1,4 +1,4 @@
-From e250afa42ed79927eea6d88f848fb1662bfdef2d Mon Sep 17 00:00:00 2001
+From b53f51adfae3ca67324304f2a52698acf9f1467f Mon Sep 17 00:00:00 2001
 From: Jason Wessel <jason.wessel@windriver.com>
 Date: Thu, 28 Jul 2011 12:42:23 -0500
 Subject: [PATCH 256/365] kgdb/serial: Short term workaround
@@ -24,7 +24,7 @@ Jason.
  3 files changed, 7 insertions(+), 4 deletions(-)
 
 diff --git a/drivers/tty/serial/8250/8250_port.c b/drivers/tty/serial/8250/8250_port.c
-index 11b9ada..1fb5e5a 100644
+index 0178434a2a55..fea0274106b2 100644
 --- a/drivers/tty/serial/8250/8250_port.c
 +++ b/drivers/tty/serial/8250/8250_port.c
 @@ -35,6 +35,7 @@
@@ -35,7 +35,7 @@ index 11b9ada..1fb5e5a 100644
  #include <linux/uaccess.h>
  #include <linux/pm_runtime.h>
  #include <linux/timer.h>
-@@ -3149,6 +3150,8 @@ void serial8250_console_write(struct uart_8250_port *up, const char *s,
+@@ -3166,6 +3167,8 @@ void serial8250_console_write(struct uart_8250_port *up, const char *s,
  
  	if (port->sysrq || oops_in_progress)
  		locked = 0;
@@ -45,7 +45,7 @@ index 11b9ada..1fb5e5a 100644
  		spin_lock_irqsave(&port->lock, flags);
  
 diff --git a/include/linux/kdb.h b/include/linux/kdb.h
-index 410deca..0861beb 100644
+index 410decacff8f..0861bebfc188 100644
 --- a/include/linux/kdb.h
 +++ b/include/linux/kdb.h
 @@ -167,6 +167,7 @@ extern __printf(2, 0) int vkdb_printf(enum kdb_msgsrc src, const char *fmt,
@@ -65,7 +65,7 @@ index 410deca..0861beb 100644
  static inline int kdb_register(char *cmd, kdb_func_t func, char *usage,
  			       char *help, short minlen) { return 0; }
 diff --git a/kernel/debug/kdb/kdb_io.c b/kernel/debug/kdb/kdb_io.c
-index d3c5b15..40e19b0 100644
+index 4b537520432a..dec419209f8d 100644
 --- a/kernel/debug/kdb/kdb_io.c
 +++ b/kernel/debug/kdb/kdb_io.c
 @@ -565,7 +565,6 @@ int vkdb_printf(enum kdb_msgsrc src, const char *fmt, va_list ap)
@@ -85,7 +85,7 @@ index d3c5b15..40e19b0 100644
  
  	/* Serialize kdb_printf if multiple cpus try to write at once.
  	 * But if any cpu goes recursive in kdb, just print the output,
-@@ -866,7 +863,6 @@ int vkdb_printf(enum kdb_msgsrc src, const char *fmt, va_list ap)
+@@ -870,7 +867,6 @@ int vkdb_printf(enum kdb_msgsrc src, const char *fmt, va_list ap)
  	} else {
  		__release(kdb_printf_lock);
  	}
@@ -93,7 +93,7 @@ index d3c5b15..40e19b0 100644
  	preempt_enable();
  	return retlen;
  }
-@@ -876,9 +872,11 @@ int kdb_printf(const char *fmt, ...)
+@@ -880,9 +876,11 @@ int kdb_printf(const char *fmt, ...)
  	va_list ap;
  	int r;
  
@@ -106,5 +106,5 @@ index d3c5b15..40e19b0 100644
  	return r;
  }
 -- 
-2.7.4
+2.28.0
 

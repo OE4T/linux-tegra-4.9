@@ -1,4 +1,4 @@
-From e641298feb0eefdeea3454e46fc3cae58a26ddfd Mon Sep 17 00:00:00 2001
+From 660c8a8fecfb47c43c5a17c2e35f3a1ef613331e Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Thu, 23 Nov 2017 17:51:51 +0100
 Subject: [PATCH 330/365] Revert "fs: jbd2: pull your plug when waiting for
@@ -16,7 +16,7 @@ Signed-off-by: Steven Rostedt (VMware) <rostedt@goodmis.org>
  1 file changed, 2 deletions(-)
 
 diff --git a/fs/jbd2/checkpoint.c b/fs/jbd2/checkpoint.c
-index bd8ab9c..addb078 100644
+index bd8ab9c28869..addb0784dd1c 100644
 --- a/fs/jbd2/checkpoint.c
 +++ b/fs/jbd2/checkpoint.c
 @@ -116,8 +116,6 @@ void __jbd2_log_wait_for_space(journal_t *journal)
@@ -29,5 +29,5 @@ index bd8ab9c..addb078 100644
  
  		/*
 -- 
-2.7.4
+2.28.0
 

@@ -1,4 +1,4 @@
-From 202df385a90036449ef858f1e53035c610848d80 Mon Sep 17 00:00:00 2001
+From d7d8af1b1fe1167e41c86d724c117cf18448d692 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Fri, 1 Dec 2017 10:42:03 +0100
 Subject: [PATCH 352/365] arm*: disable NEON in kernel mode
@@ -21,10 +21,10 @@ Signed-off-by: Julia Cartwright <julia@ni.com>
  2 files changed, 8 insertions(+), 8 deletions(-)
 
 diff --git a/arch/arm/Kconfig b/arch/arm/Kconfig
-index 1153729..693a4a1 100644
+index 8c66dbdf819c..1d08ebc43953 100644
 --- a/arch/arm/Kconfig
 +++ b/arch/arm/Kconfig
-@@ -2183,7 +2183,7 @@ config NEON
+@@ -2185,7 +2185,7 @@ config NEON
  
  config KERNEL_MODE_NEON
  	bool "Support for NEON in kernel mode"
@@ -34,7 +34,7 @@ index 1153729..693a4a1 100644
  	  Say Y to include support for NEON in kernel mode.
  
 diff --git a/arch/arm64/crypto/Kconfig b/arch/arm64/crypto/Kconfig
-index 2b10984..b85a3b0 100644
+index 2b10984ee58c..b85a3b0fa4bf 100644
 --- a/arch/arm64/crypto/Kconfig
 +++ b/arch/arm64/crypto/Kconfig
 @@ -10,41 +10,41 @@ if ARM64_CRYPTO
@@ -87,5 +87,5 @@ index 2b10984..b85a3b0 100644
  	select CRYPTO_AES
  	select CRYPTO_ABLK_HELPER
 -- 
-2.7.4
+2.28.0
 

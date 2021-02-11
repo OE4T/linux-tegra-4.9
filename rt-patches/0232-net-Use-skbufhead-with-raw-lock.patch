@@ -1,4 +1,4 @@
-From 447ed791907e08a7ea73b0c478066af15f7c6593 Mon Sep 17 00:00:00 2001
+From c4bb68c217a76fa2527d81cd524a71312ea7e829 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Tue, 12 Jul 2011 15:38:34 +0200
 Subject: [PATCH 232/365] net: Use skbufhead with raw lock
@@ -11,11 +11,11 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
 ---
  include/linux/netdevice.h |  1 +
  include/linux/skbuff.h    |  7 +++++++
- net/core/dev.c            | 31 ++++++++++++++++++++++++-------
- 3 files changed, 32 insertions(+), 7 deletions(-)
+ net/core/dev.c            | 29 +++++++++++++++++++++++------
+ 3 files changed, 31 insertions(+), 6 deletions(-)
 
 diff --git a/include/linux/netdevice.h b/include/linux/netdevice.h
-index 4d1b105..6108dd6 100644
+index 4d1b1056ac97..6108dd6baaec 100644
 --- a/include/linux/netdevice.h
 +++ b/include/linux/netdevice.h
 @@ -2871,6 +2871,7 @@ struct softnet_data {
@@ -27,7 +27,7 @@ index 4d1b105..6108dd6 100644
  };
  
 diff --git a/include/linux/skbuff.h b/include/linux/skbuff.h
-index e37112a..b9a54b0 100644
+index 67b798b7115d..4e78fd08cc61 100644
 --- a/include/linux/skbuff.h
 +++ b/include/linux/skbuff.h
 @@ -284,6 +284,7 @@ struct sk_buff_head {
@@ -38,7 +38,7 @@ index e37112a..b9a54b0 100644
  };
  
  struct sk_buff;
-@@ -1579,6 +1580,12 @@ static inline void skb_queue_head_init(struct sk_buff_head *list)
+@@ -1591,6 +1592,12 @@ static inline void skb_queue_head_init(struct sk_buff_head *list)
  	__skb_queue_head_init(list);
  }
  
@@ -52,7 +52,7 @@ index e37112a..b9a54b0 100644
  		struct lock_class_key *class)
  {
 diff --git a/net/core/dev.c b/net/core/dev.c
-index e0dc562..19a96ea 100644
+index 1864b75415b2..cc62279c2e1a 100644
 --- a/net/core/dev.c
 +++ b/net/core/dev.c
 @@ -212,14 +212,14 @@ static inline struct hlist_head *dev_index_hash(struct net *net, int ifindex)
@@ -72,15 +72,6 @@ index e0dc562..19a96ea 100644
  #endif
  }
  
-@@ -4393,7 +4393,7 @@ static void flush_backlog(struct work_struct *work)
- 	skb_queue_walk_safe(&sd->input_pkt_queue, skb, tmp) {
- 		if (skb->dev->reg_state == NETREG_UNREGISTERING) {
- 			__skb_unlink(skb, &sd->input_pkt_queue);
--			kfree_skb(skb);
-+			__skb_queue_tail(&sd->tofree_queue, skb);
- 			input_queue_head_incr(sd);
- 		}
- 	}
 @@ -4403,11 +4403,14 @@ static void flush_backlog(struct work_struct *work)
  	skb_queue_walk_safe(&sd->process_queue, skb, tmp) {
  		if (skb->dev->reg_state == NETREG_UNREGISTERING) {
@@ -118,7 +109,7 @@ index e0dc562..19a96ea 100644
  		rps_lock(sd);
  		if (skb_queue_empty(&sd->input_pkt_queue)) {
  			/*
-@@ -5301,13 +5306,21 @@ static __latent_entropy void net_rx_action(struct softirq_action *h)
+@@ -5302,13 +5307,21 @@ static __latent_entropy void net_rx_action(struct softirq_action *h)
  	struct softnet_data *sd = this_cpu_ptr(&softnet_data);
  	unsigned long time_limit = jiffies + 2;
  	int budget = netdev_budget;
@@ -140,7 +131,7 @@ index e0dc562..19a96ea 100644
  	for (;;) {
  		struct napi_struct *n;
  
-@@ -8125,6 +8138,9 @@ static int dev_cpu_callback(struct notifier_block *nfb,
+@@ -8126,6 +8139,9 @@ static int dev_cpu_callback(struct notifier_block *nfb,
  		netif_rx_ni(skb);
  		input_queue_head_incr(oldsd);
  	}
@@ -150,7 +141,7 @@ index e0dc562..19a96ea 100644
  
  	return NOTIFY_OK;
  }
-@@ -8431,8 +8447,9 @@ static int __init net_dev_init(void)
+@@ -8432,8 +8448,9 @@ static int __init net_dev_init(void)
  
  		INIT_WORK(flush, flush_backlog);
  
@@ -163,5 +154,5 @@ index e0dc562..19a96ea 100644
  		sd->output_queue_tailp = &sd->output_queue;
  #ifdef CONFIG_RPS
 -- 
-2.7.4
+2.28.0
 

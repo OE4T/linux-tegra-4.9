@@ -1,4 +1,4 @@
-From 53e8600f1a768079d077ab7841708a5b420cfb43 Mon Sep 17 00:00:00 2001
+From 4245feef21a9dc5a307044424faf7a542b3cfbb0 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Fri, 10 Feb 2017 18:21:04 +0100
 Subject: [PATCH 175/365] rt: Drop mutex_disable() on !DEBUG configs and the
@@ -18,7 +18,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  1 file changed, 5 insertions(+)
 
 diff --git a/include/linux/mutex_rt.h b/include/linux/mutex_rt.h
-index c38a44b..e0284ed 100644
+index c38a44b14da5..e0284edec655 100644
 --- a/include/linux/mutex_rt.h
 +++ b/include/linux/mutex_rt.h
 @@ -43,7 +43,12 @@ extern void __lockfunc _mutex_unlock(struct mutex *lock);
@@ -35,5 +35,5 @@ index c38a44b..e0284ed 100644
  #ifdef CONFIG_DEBUG_LOCK_ALLOC
  # define mutex_lock_nested(l, s)	_mutex_lock_nested(l, s)
 -- 
-2.7.4
+2.28.0
 

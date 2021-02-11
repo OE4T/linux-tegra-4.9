@@ -1,4 +1,4 @@
-From 7d0d8af8c425fb09f9d7e04395e3dde1662bc72a Mon Sep 17 00:00:00 2001
+From f436441c6cc873a361f328808bc6afe0406df5b7 Mon Sep 17 00:00:00 2001
 From: Xunlei Pang <xlpang@redhat.com>
 Date: Thu, 23 Mar 2017 15:56:09 +0100
 Subject: [PATCH 020/365] sched/deadline/rtmutex: Dont miss the
@@ -42,7 +42,7 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/kernel/locking/rtmutex.c b/kernel/locking/rtmutex.c
-index 1996128..03a345d 100644
+index 199612829fd6..03a345d508d2 100644
 --- a/kernel/locking/rtmutex.c
 +++ b/kernel/locking/rtmutex.c
 @@ -602,7 +602,7 @@ static int rt_mutex_adjust_prio_chain(struct task_struct *task,
@@ -55,5 +55,5 @@ index 1996128..03a345d 100644
  			goto out_unlock_pi;
  		else
 -- 
-2.7.4
+2.28.0
 

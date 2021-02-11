@@ -1,4 +1,4 @@
-From ea8626be2662cf96af732900517ded99a4e6244d Mon Sep 17 00:00:00 2001
+From 16208cc431f27694df9fd0347c3360b169aa7c2a Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Tue, 21 Jul 2009 23:06:05 +0200
 Subject: [PATCH 084/365] core: Do not disable interrupts on RT in
@@ -13,7 +13,7 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  1 file changed, 2 insertions(+), 2 deletions(-)
 
 diff --git a/kernel/user.c b/kernel/user.c
-index 41e94e4..8780af7 100644
+index 41e94e453836..8780af77ee7e 100644
 --- a/kernel/user.c
 +++ b/kernel/user.c
 @@ -162,11 +162,11 @@ void free_uid(struct user_struct *up)
@@ -31,5 +31,5 @@ index 41e94e4..8780af7 100644
  
  struct user_struct *alloc_uid(kuid_t uid)
 -- 
-2.7.4
+2.28.0
 

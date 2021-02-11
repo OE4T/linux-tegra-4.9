@@ -1,4 +1,4 @@
-From e3e8dc0d4c4c5a16678c3644ad2e517e6ddbd9c1 Mon Sep 17 00:00:00 2001
+From 8eaee6cb30849b486f0548a2f091ef603d0375d9 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Tue, 9 Feb 2016 18:17:18 +0100
 Subject: [PATCH 155/365] kernel: softirq: unlock with irqs on
@@ -13,7 +13,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  1 file changed, 3 insertions(+), 1 deletion(-)
 
 diff --git a/kernel/softirq.c b/kernel/softirq.c
-index 9fb267a..654cebf 100644
+index 9fb267aff2b2..654cebf7b736 100644
 --- a/kernel/softirq.c
 +++ b/kernel/softirq.c
 @@ -564,8 +564,10 @@ static void do_current_softirqs(void)
@@ -29,5 +29,5 @@ index 9fb267a..654cebf 100644
  }
  
 -- 
-2.7.4
+2.28.0
 

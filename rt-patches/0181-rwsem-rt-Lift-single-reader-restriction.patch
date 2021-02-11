@@ -1,4 +1,4 @@
-From 9b8b99ff9f2f53a9ba5fc8e103f9a4cc97602cba Mon Sep 17 00:00:00 2001
+From d9dc66b5ecce9a19481774d238209bd658b81713 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Sat, 1 Apr 2017 12:51:02 +0200
 Subject: [PATCH 181/365] rwsem/rt: Lift single reader restriction
@@ -43,15 +43,15 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
 Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 ---
  include/linux/rwsem.h     |   9 +-
- include/linux/rwsem_rt.h  | 166 ++++++----------------------
+ include/linux/rwsem_rt.h  | 166 +++++------------------
  kernel/locking/Makefile   |   4 +-
- kernel/locking/rt.c       | 167 -----------------------------
- kernel/locking/rwsem-rt.c | 268 ++++++++++++++++++++++++++++++++++++++++++++++
+ kernel/locking/rt.c       | 167 ------------------------
+ kernel/locking/rwsem-rt.c | 268 ++++++++++++++++++++++++++++++++++++++
  5 files changed, 310 insertions(+), 304 deletions(-)
  create mode 100644 kernel/locking/rwsem-rt.c
 
 diff --git a/include/linux/rwsem.h b/include/linux/rwsem.h
-index 8e1f44f..aa2ac1f 100644
+index 8e1f44ff1f2f..aa2ac1f65c2d 100644
 --- a/include/linux/rwsem.h
 +++ b/include/linux/rwsem.h
 @@ -110,6 +110,13 @@ static inline int rwsem_is_contended(struct rw_semaphore *sem)
@@ -76,7 +76,7 @@ index 8e1f44f..aa2ac1f 100644
 -
  #endif /* _LINUX_RWSEM_H */
 diff --git a/include/linux/rwsem_rt.h b/include/linux/rwsem_rt.h
-index e26bd95..2ffbf09 100644
+index e26bd95a57c3..2ffbf093ae92 100644
 --- a/include/linux/rwsem_rt.h
 +++ b/include/linux/rwsem_rt.h
 @@ -5,163 +5,63 @@
@@ -277,7 +277,7 @@ index e26bd95..2ffbf09 100644
 -#endif
  #endif
 diff --git a/kernel/locking/Makefile b/kernel/locking/Makefile
-index 5e27fb1..6ff9e80 100644
+index 5e27fb1079e7..6ff9e8011dd0 100644
 --- a/kernel/locking/Makefile
 +++ b/kernel/locking/Makefile
 @@ -14,8 +14,8 @@ endif
@@ -299,7 +299,7 @@ index 5e27fb1..6ff9e80 100644
  obj-$(CONFIG_QUEUED_RWLOCKS) += qrwlock.o
  obj-$(CONFIG_LOCK_TORTURE_TEST) += locktorture.o
 diff --git a/kernel/locking/rt.c b/kernel/locking/rt.c
-index 665754c..6284e3b1 100644
+index 665754c00e1e..6284e3b15091 100644
 --- a/kernel/locking/rt.c
 +++ b/kernel/locking/rt.c
 @@ -306,173 +306,6 @@ void __rt_rwlock_init(rwlock_t *rwlock, char *name, struct lock_class_key *key)
@@ -478,7 +478,7 @@ index 665754c..6284e3b1 100644
   * @cnt: the atomic which we are to dec
 diff --git a/kernel/locking/rwsem-rt.c b/kernel/locking/rwsem-rt.c
 new file mode 100644
-index 00000000..4a708ffc
+index 000000000000..4a708ffcded6
 --- /dev/null
 +++ b/kernel/locking/rwsem-rt.c
 @@ -0,0 +1,268 @@
@@ -751,5 +751,5 @@ index 00000000..4a708ffc
 +	__up_write_unlock(sem, WRITER_BIAS - 1, flags);
 +}
 -- 
-2.7.4
+2.28.0
 

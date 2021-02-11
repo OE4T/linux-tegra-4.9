@@ -1,4 +1,4 @@
-From 3a3ef847247e984afec07b38d7899bd186e6bd67 Mon Sep 17 00:00:00 2001
+From f0d035135d17c835aeaf8a250a2b00f04e11e761 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Sat, 1 Apr 2017 12:50:59 +0200
 Subject: [PATCH 170/365] rtmutex: Make lock_killable work
@@ -16,7 +16,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  1 file changed, 7 insertions(+), 12 deletions(-)
 
 diff --git a/kernel/locking/rtmutex.c b/kernel/locking/rtmutex.c
-index a019a25..f7eb3c8 100644
+index a019a258aa84..f7eb3c86acdf 100644
 --- a/kernel/locking/rtmutex.c
 +++ b/kernel/locking/rtmutex.c
 @@ -1213,18 +1213,13 @@ __rt_mutex_slowlock(struct rt_mutex *lock, int state,
@@ -46,5 +46,5 @@ index a019a25..f7eb3c8 100644
  
  		raw_spin_unlock_irq(&lock->wait_lock);
 -- 
-2.7.4
+2.28.0
 

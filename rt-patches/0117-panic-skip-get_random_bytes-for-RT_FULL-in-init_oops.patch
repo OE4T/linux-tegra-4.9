@@ -1,4 +1,4 @@
-From d3d9c32d6585896cad156c5cd3201fdb75498469 Mon Sep 17 00:00:00 2001
+From d056a1ddb6fa120ac67ed097159d001994456b8e Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Tue, 14 Jul 2015 14:26:34 +0200
 Subject: [PATCH 117/365] panic: skip get_random_bytes for RT_FULL in
@@ -13,7 +13,7 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  1 file changed, 2 insertions(+)
 
 diff --git a/kernel/panic.c b/kernel/panic.c
-index 427b057..455b578 100644
+index 427b0570131d..455b5787f504 100644
 --- a/kernel/panic.c
 +++ b/kernel/panic.c
 @@ -487,9 +487,11 @@ static u64 oops_id;
@@ -29,5 +29,5 @@ index 427b057..455b578 100644
  
  	return 0;
 -- 
-2.7.4
+2.28.0
 

@@ -1,4 +1,4 @@
-From c98c2c6fab6a4dcf44095bd7e7fa35a425b48162 Mon Sep 17 00:00:00 2001
+From c07f325700496f69d09b17356014b35c3aa5c12e Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Tue, 5 Sep 2017 14:11:41 +0200
 Subject: [PATCH 339/365] iommu/amd: Use raw_cpu_ptr() instead of get_cpu_ptr()
@@ -23,7 +23,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  1 file changed, 1 insertion(+), 3 deletions(-)
 
 diff --git a/drivers/iommu/amd_iommu.c b/drivers/iommu/amd_iommu.c
-index 5d6b181..4d84385 100644
+index e5693cbc0e3b..573e9279289e 100644
 --- a/drivers/iommu/amd_iommu.c
 +++ b/drivers/iommu/amd_iommu.c
 @@ -2315,7 +2315,7 @@ static void queue_add(struct dma_ops_domain *dma_dom,
@@ -45,5 +45,5 @@ index 5d6b181..4d84385 100644
  
  
 -- 
-2.7.4
+2.28.0
 

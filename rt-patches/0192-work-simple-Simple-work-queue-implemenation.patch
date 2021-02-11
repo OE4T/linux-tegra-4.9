@@ -1,4 +1,4 @@
-From 91e91c84fa6422a60692c3c09046055902d1b5ce Mon Sep 17 00:00:00 2001
+From 889dc38b6d3b18e4d0b4572915959756497be397 Mon Sep 17 00:00:00 2001
 From: Daniel Wagner <daniel.wagner@bmw-carit.de>
 Date: Fri, 11 Jul 2014 15:26:11 +0200
 Subject: [PATCH 192/365] work-simple: Simple work queue implemenation
@@ -8,20 +8,20 @@ PREEMPT_RT_FULL safe. The callbacks are executed in kthread context.
 
 Bases on wait-simple.
 
-Change-Id: I6c56ee31ececa9345429e4b1aa320cbc33ab6ab2
+Change-Id: I5198cf8ace7d923b2e2ce5e2a43994e7af33e035
 Cc: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Signed-off-by: Daniel Wagner <daniel.wagner@bmw-carit.de>
 ---
- include/linux/swork.h |  24 +++++++
+ include/linux/swork.h |  24 ++++++
  kernel/sched/Makefile |   2 +-
- kernel/sched/swork.c  | 173 ++++++++++++++++++++++++++++++++++++++++++++++++++
+ kernel/sched/swork.c  | 173 ++++++++++++++++++++++++++++++++++++++++++
  3 files changed, 198 insertions(+), 1 deletion(-)
  create mode 100644 include/linux/swork.h
  create mode 100644 kernel/sched/swork.c
 
 diff --git a/include/linux/swork.h b/include/linux/swork.h
 new file mode 100644
-index 00000000..f175fa9
+index 000000000000..f175fa9a6016
 --- /dev/null
 +++ b/include/linux/swork.h
 @@ -0,0 +1,24 @@
@@ -50,7 +50,7 @@ index 00000000..f175fa9
 +
 +#endif /* _LINUX_SWORK_H */
 diff --git a/kernel/sched/Makefile b/kernel/sched/Makefile
-index fb49951..9708dd3 100644
+index fb499510fcec..9708dd34b7e1 100644
 --- a/kernel/sched/Makefile
 +++ b/kernel/sched/Makefile
 @@ -19,7 +19,7 @@ endif
@@ -64,7 +64,7 @@ index fb49951..9708dd3 100644
  obj-$(CONFIG_SCHED_AUTOGROUP) += auto_group.o
 diff --git a/kernel/sched/swork.c b/kernel/sched/swork.c
 new file mode 100644
-index 00000000..1950f40
+index 000000000000..1950f40ca725
 --- /dev/null
 +++ b/kernel/sched/swork.c
 @@ -0,0 +1,173 @@
@@ -242,5 +242,5 @@ index 00000000..1950f40
 +}
 +EXPORT_SYMBOL_GPL(swork_put);
 -- 
-2.7.4
+2.28.0
 

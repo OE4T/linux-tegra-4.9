@@ -1,4 +1,4 @@
-From 578850556a901379c90d3f6adb85fe1c57aed668 Mon Sep 17 00:00:00 2001
+From e7d847b6072de6e143d699112cacb64dba8f0b77 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Sat, 25 Jun 2011 09:21:04 +0200
 Subject: [PATCH 132/365] sched: Add saved_state for tasks blocked on sleeping
@@ -18,7 +18,7 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  3 files changed, 33 insertions(+), 1 deletion(-)
 
 diff --git a/include/linux/sched.h b/include/linux/sched.h
-index aaf6f2c..6bee197 100644
+index aaf6f2cf5190..6bee197934fb 100644
 --- a/include/linux/sched.h
 +++ b/include/linux/sched.h
 @@ -1642,6 +1642,7 @@ struct task_struct {
@@ -38,7 +38,7 @@ index aaf6f2c..6bee197 100644
  #ifdef CONFIG_SMP
   extern void kick_process(struct task_struct *tsk);
 diff --git a/kernel/sched/core.c b/kernel/sched/core.c
-index c8a9503..944fff7 100644
+index c8a950356547..944fff726b1f 100644
 --- a/kernel/sched/core.c
 +++ b/kernel/sched/core.c
 @@ -2082,8 +2082,25 @@ try_to_wake_up(struct task_struct *p, unsigned int state, int wake_flags)
@@ -88,7 +88,7 @@ index c8a9503..944fff7 100644
  {
  	return try_to_wake_up(p, state, 0);
 diff --git a/kernel/sched/sched.h b/kernel/sched/sched.h
-index 1dd63b3..78a3aca 100644
+index 1dd63b369ce3..78a3aca4d14a 100644
 --- a/kernel/sched/sched.h
 +++ b/kernel/sched/sched.h
 @@ -1230,6 +1230,7 @@ static inline void finish_lock_switch(struct rq *rq, struct task_struct *prev)
@@ -100,5 +100,5 @@ index 1dd63b3..78a3aca 100644
  /*
   * To aid in avoiding the subversion of "niceness" due to uneven distribution
 -- 
-2.7.4
+2.28.0
 

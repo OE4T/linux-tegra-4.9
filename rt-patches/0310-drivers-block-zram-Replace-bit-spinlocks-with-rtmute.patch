@@ -1,4 +1,4 @@
-From 3e7683426acd718e276a47b15283d17061deeafd Mon Sep 17 00:00:00 2001
+From 3f418f28c07c66351c686f78cb455cfda3ffcb69 Mon Sep 17 00:00:00 2001
 From: Mike Galbraith <umgwanakikbuti@gmail.com>
 Date: Thu, 31 Mar 2016 04:08:28 +0200
 Subject: [PATCH 310/365] drivers/block/zram: Replace bit spinlocks with
@@ -10,12 +10,12 @@ OTOH, they're a lot less wasteful than an rtmutex per page.
 Signed-off-by: Mike Galbraith <umgwanakikbuti@gmail.com>
 Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 ---
- drivers/block/zram/zram_drv.c | 30 ++++++++++++++++--------------
- drivers/block/zram/zram_drv.h | 41 +++++++++++++++++++++++++++++++++++++++++
+ drivers/block/zram/zram_drv.c | 30 +++++++++++++------------
+ drivers/block/zram/zram_drv.h | 41 +++++++++++++++++++++++++++++++++++
  2 files changed, 57 insertions(+), 14 deletions(-)
 
 diff --git a/drivers/block/zram/zram_drv.c b/drivers/block/zram/zram_drv.c
-index d64a53d..c864ad5 100644
+index d64a53d3270a..c864ad57348a 100644
 --- a/drivers/block/zram/zram_drv.c
 +++ b/drivers/block/zram/zram_drv.c
 @@ -528,6 +528,8 @@ static struct zram_meta *zram_meta_alloc(char *pool_name, u64 disksize)
@@ -122,10 +122,10 @@ index d64a53d..c864ad5 100644
  }
  
 diff --git a/drivers/block/zram/zram_drv.h b/drivers/block/zram/zram_drv.h
-index 74fcf10..fd4020c 100644
+index 6d2475a39e84..87278e8aa61e 100644
 --- a/drivers/block/zram/zram_drv.h
 +++ b/drivers/block/zram/zram_drv.h
-@@ -73,6 +73,9 @@ enum zram_pageflags {
+@@ -72,6 +72,9 @@ enum zram_pageflags {
  struct zram_table_entry {
  	unsigned long handle;
  	unsigned long value;
@@ -135,7 +135,7 @@ index 74fcf10..fd4020c 100644
  };
  
  struct zram_stats {
-@@ -120,4 +123,42 @@ struct zram {
+@@ -119,4 +122,42 @@ struct zram {
  	 */
  	bool claim; /* Protected by bdev->bd_mutex */
  };
@@ -179,5 +179,5 @@ index 74fcf10..fd4020c 100644
 +
  #endif
 -- 
-2.7.4
+2.28.0
 

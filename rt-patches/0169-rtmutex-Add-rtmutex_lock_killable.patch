@@ -1,4 +1,4 @@
-From 8858506a14a12f8bda73b444e8b243b91a786dd0 Mon Sep 17 00:00:00 2001
+From 63728e86f09a7a034dbf4c5aaed804fb75213938 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Thu, 9 Jun 2011 11:43:52 +0200
 Subject: [PATCH 169/365] rtmutex: Add rtmutex_lock_killable()
@@ -13,7 +13,7 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  2 files changed, 20 insertions(+)
 
 diff --git a/include/linux/rtmutex.h b/include/linux/rtmutex.h
-index 1abba5c..51dc12e 100644
+index 1abba5ce2a2f..51dc12e3860c 100644
 --- a/include/linux/rtmutex.h
 +++ b/include/linux/rtmutex.h
 @@ -91,6 +91,7 @@ extern void rt_mutex_destroy(struct rt_mutex *lock);
@@ -25,13 +25,14 @@ index 1abba5c..51dc12e 100644
  			       struct hrtimer_sleeper *timeout);
  
 diff --git a/kernel/locking/rtmutex.c b/kernel/locking/rtmutex.c
-index d1392ed..a019a25 100644
+index d1392ed41a8c..a019a258aa84 100644
 --- a/kernel/locking/rtmutex.c
 +++ b/kernel/locking/rtmutex.c
-@@ -1535,6 +1535,25 @@ int __sched rt_mutex_futex_trylock(struct rt_mutex *lock)
+@@ -1534,6 +1534,25 @@ int __sched rt_mutex_futex_trylock(struct rt_mutex *lock)
+ 	return rt_mutex_slowtrylock(lock);
  }
  
- /**
++/**
 + * rt_mutex_lock_killable - lock a rt_mutex killable
 + *
 + * @lock:              the rt_mutex to be locked
@@ -50,10 +51,9 @@ index d1392ed..a019a25 100644
 +}
 +EXPORT_SYMBOL_GPL(rt_mutex_lock_killable);
 +
-+/**
+ /**
   * rt_mutex_timed_lock - lock a rt_mutex interruptible
   *			the timeout structure is provided
-  *			by the caller
 -- 
-2.7.4
+2.28.0
 

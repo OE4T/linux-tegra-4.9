@@ -1,4 +1,4 @@
-From 24deae8a9ebf26c926aa182551cc1a55f6f2ff80 Mon Sep 17 00:00:00 2001
+From 9c4a0cb61a936e00636155bfc7ed4b2212c3f972 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Tue, 10 Jul 2018 18:53:18 +0200
 Subject: [PATCH 350/365] sched, tracing: Fix trace_sched_pi_setprio() for
@@ -43,7 +43,7 @@ Signed-off-by: Julia Cartwright <julia@ni.com>
  1 file changed, 3 insertions(+), 1 deletion(-)
 
 diff --git a/include/trace/events/sched.h b/include/trace/events/sched.h
-index 9fb7702..64f7b34 100644
+index 9fb770212083..64f7b349e8c7 100644
 --- a/include/trace/events/sched.h
 +++ b/include/trace/events/sched.h
 @@ -453,7 +453,9 @@ TRACE_EVENT(sched_pi_setprio,
@@ -58,5 +58,5 @@ index 9fb7702..64f7b34 100644
  	),
  
 -- 
-2.7.4
+2.28.0
 

@@ -1,4 +1,4 @@
-From 68df91c4a1717686ea65ba33eaa1789c1559b8ec Mon Sep 17 00:00:00 2001
+From ad270499721f7cf325fc995397b3e1520d22eed1 Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Thu, 23 Mar 2017 15:56:12 +0100
 Subject: [PATCH 023/365] sched,tracing: Update trace_sched_pi_setprio()
@@ -29,7 +29,7 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  2 files changed, 10 insertions(+), 8 deletions(-)
 
 diff --git a/include/trace/events/sched.h b/include/trace/events/sched.h
-index 5660b43..9fb7702 100644
+index 5660b43e3d64..9fb770212083 100644
 --- a/include/trace/events/sched.h
 +++ b/include/trace/events/sched.h
 @@ -70,7 +70,7 @@ DECLARE_EVENT_CLASS(sched_wakeup_template,
@@ -99,7 +99,7 @@ index 5660b43..9fb7702 100644
  
  	TP_printk("comm=%s pid=%d oldprio=%d newprio=%d",
 diff --git a/kernel/sched/core.c b/kernel/sched/core.c
-index 680d715..4a97a25 100644
+index 680d715a8eaf..4a97a2562ca2 100644
 --- a/kernel/sched/core.c
 +++ b/kernel/sched/core.c
 @@ -3831,7 +3831,7 @@ void rt_mutex_setprio(struct task_struct *p, struct task_struct *pi_task)
@@ -112,5 +112,5 @@ index 680d715..4a97a25 100644
  
  	if (oldprio == prio)
 -- 
-2.7.4
+2.28.0
 

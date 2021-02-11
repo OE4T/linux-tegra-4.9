@@ -1,4 +1,4 @@
-From a0404790ddba5d3cbfb9710afc1424388ff09299 Mon Sep 17 00:00:00 2001
+From 3bd0ccc9ec1a0dd33ff565450414e9b3c8d0a3cd Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Wed, 22 Mar 2017 11:35:56 +0100
 Subject: [PATCH 013/365] futex,rt_mutex: Introduce rt_mutex_init_waiter()
@@ -27,7 +27,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  3 files changed, 11 insertions(+), 7 deletions(-)
 
 diff --git a/kernel/futex.c b/kernel/futex.c
-index 8187c8a..1b696ea 100644
+index 8187c8a1acd2..1b696ea03735 100644
 --- a/kernel/futex.c
 +++ b/kernel/futex.c
 @@ -3022,10 +3022,7 @@ static int futex_wait_requeue_pi(u32 __user *uaddr, unsigned int flags,
@@ -43,7 +43,7 @@ index 8187c8a..1b696ea 100644
  	ret = get_futex_key(uaddr2, flags & FLAGS_SHARED, &key2, VERIFY_WRITE);
  	if (unlikely(ret != 0))
 diff --git a/kernel/locking/rtmutex.c b/kernel/locking/rtmutex.c
-index de302c5..e1896ac 100644
+index de302c580d65..e1896ac74c37 100644
 --- a/kernel/locking/rtmutex.c
 +++ b/kernel/locking/rtmutex.c
 @@ -1176,6 +1176,14 @@ void rt_mutex_adjust_pi(struct task_struct *task)
@@ -73,7 +73,7 @@ index de302c5..e1896ac 100644
  	/*
  	 * Technically we could use raw_spin_[un]lock_irq() here, but this can
 diff --git a/kernel/locking/rtmutex_common.h b/kernel/locking/rtmutex_common.h
-index 882d84e..b550e9d 100644
+index 882d84eda50a..b550e9d86b1f 100644
 --- a/kernel/locking/rtmutex_common.h
 +++ b/kernel/locking/rtmutex_common.h
 @@ -104,6 +104,7 @@ extern void rt_mutex_init_proxy_locked(struct rt_mutex *lock,
@@ -85,5 +85,5 @@ index 882d84e..b550e9d 100644
  				     struct rt_mutex_waiter *waiter,
  				     struct task_struct *task);
 -- 
-2.7.4
+2.28.0
 

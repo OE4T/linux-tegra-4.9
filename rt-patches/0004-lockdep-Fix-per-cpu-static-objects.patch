@@ -1,4 +1,4 @@
-From 66e428b3a099414194dd2d461eee55b388376fa9 Mon Sep 17 00:00:00 2001
+From 73351c9e7f3de7f398e6257ffbd46c886aca1bc4 Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Mon, 20 Mar 2017 12:26:55 +0100
 Subject: [PATCH 004/365] lockdep: Fix per-cpu static objects
@@ -42,7 +42,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  4 files changed, 27 insertions(+), 2 deletions(-)
 
 diff --git a/include/linux/smp.h b/include/linux/smp.h
-index 8e0cb7a..68123c1 100644
+index 8e0cb7a0f836..68123c1fe549 100644
 --- a/include/linux/smp.h
 +++ b/include/linux/smp.h
 @@ -120,6 +120,13 @@ extern unsigned int setup_max_cpus;
@@ -72,10 +72,10 @@ index 8e0cb7a..68123c1 100644
  
  /*
 diff --git a/kernel/cpu.c b/kernel/cpu.c
-index 534cc49..ad23026 100644
+index 41dd49aa526d..c135d54a50bb 100644
 --- a/kernel/cpu.c
 +++ b/kernel/cpu.c
-@@ -1392,6 +1392,8 @@ core_initcall(cpu_hotplug_pm_sync_init);
+@@ -1396,6 +1396,8 @@ core_initcall(cpu_hotplug_pm_sync_init);
  
  #endif /* CONFIG_PM_SLEEP_SMP */
  
@@ -84,7 +84,7 @@ index 534cc49..ad23026 100644
  #endif /* CONFIG_SMP */
  
  /* Boot processor state steps */
-@@ -2241,6 +2243,10 @@ void __init boot_cpu_init(void)
+@@ -2245,6 +2247,10 @@ void __init boot_cpu_init(void)
  	set_cpu_active(cpu, true);
  	set_cpu_present(cpu, true);
  	set_cpu_possible(cpu, true);
@@ -96,7 +96,7 @@ index 534cc49..ad23026 100644
  
  /*
 diff --git a/kernel/module.c b/kernel/module.c
-index 5e015d5..866ad1d 100644
+index a7da7fae0c70..3d9df85fece8 100644
 --- a/kernel/module.c
 +++ b/kernel/module.c
 @@ -677,8 +677,12 @@ bool __is_module_percpu_address(unsigned long addr, unsigned long *can_addr)
@@ -114,7 +114,7 @@ index 5e015d5..866ad1d 100644
  				return true;
  			}
 diff --git a/mm/percpu.c b/mm/percpu.c
-index 16bb5f5..39b3298 100644
+index 16bb5f561e53..39b329891d27 100644
 --- a/mm/percpu.c
 +++ b/mm/percpu.c
 @@ -1296,8 +1296,11 @@ bool __is_kernel_percpu_address(unsigned long addr, unsigned long *can_addr)
@@ -131,5 +131,5 @@ index 16bb5f5..39b3298 100644
  		}
  	}
 -- 
-2.7.4
+2.28.0
 

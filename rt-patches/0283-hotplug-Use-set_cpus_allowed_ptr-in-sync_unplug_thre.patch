@@ -1,4 +1,4 @@
-From 2a2ca3cfe8ea34a7e31f8e3f16e7805b67b8316b Mon Sep 17 00:00:00 2001
+From 4b4de6c68728606d203bd5bf4882728ff9f0dfb7 Mon Sep 17 00:00:00 2001
 From: Mike Galbraith <umgwanakikbuti@gmail.com>
 Date: Tue, 24 Mar 2015 08:14:49 +0100
 Subject: [PATCH 283/365] hotplug: Use set_cpus_allowed_ptr() in
@@ -36,7 +36,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/kernel/cpu.c b/kernel/cpu.c
-index a987f22..62f8aee 100644
+index f4bb4e76e13f..2d5c15f96d17 100644
 --- a/kernel/cpu.c
 +++ b/kernel/cpu.c
 @@ -426,7 +426,7 @@ static int sync_unplug_thread(void *data)
@@ -49,5 +49,5 @@ index a987f22..62f8aee 100644
  	return 0;
  }
 -- 
-2.7.4
+2.28.0
 

@@ -1,4 +1,4 @@
-From 158dfb3ace0cbb83de9ac2411e5ea516f41a2beb Mon Sep 17 00:00:00 2001
+From f2aff55d0bc51db7e541fa5a753d1e6e4ee07fde Mon Sep 17 00:00:00 2001
 From: Steven Rostedt <rostedt@goodmis.org>
 Date: Wed, 13 Feb 2013 09:26:05 -0500
 Subject: [PATCH 273/365] acpi/rt: Convert acpi_gbl_hardware lock back to a
@@ -73,7 +73,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  5 files changed, 22 insertions(+), 7 deletions(-)
 
 diff --git a/drivers/acpi/acpica/acglobal.h b/drivers/acpi/acpica/acglobal.h
-index 750fa82..441edf5 100644
+index 750fa824d42c..441edf51484a 100644
 --- a/drivers/acpi/acpica/acglobal.h
 +++ b/drivers/acpi/acpica/acglobal.h
 @@ -116,7 +116,7 @@ ACPI_GLOBAL(u8, acpi_gbl_global_lock_pending);
@@ -86,7 +86,7 @@ index 750fa82..441edf5 100644
  
  /* Mutex for _OSI support */
 diff --git a/drivers/acpi/acpica/hwregs.c b/drivers/acpi/acpica/hwregs.c
-index 3b7fb99..696bf8e 100644
+index 3b7fb99362b6..696bf8e62afb 100644
 --- a/drivers/acpi/acpica/hwregs.c
 +++ b/drivers/acpi/acpica/hwregs.c
 @@ -363,14 +363,14 @@ acpi_status acpi_hw_clear_acpi_status(void)
@@ -107,7 +107,7 @@ index 3b7fb99..696bf8e 100644
  	if (ACPI_FAILURE(status)) {
  		goto exit;
 diff --git a/drivers/acpi/acpica/hwxface.c b/drivers/acpi/acpica/hwxface.c
-index 98c26ff..6e236f2 100644
+index 98c26ff39409..6e236f2ea791 100644
 --- a/drivers/acpi/acpica/hwxface.c
 +++ b/drivers/acpi/acpica/hwxface.c
 @@ -373,7 +373,7 @@ acpi_status acpi_write_bit_register(u32 register_id, u32 value)
@@ -129,7 +129,7 @@ index 98c26ff..6e236f2 100644
  }
  
 diff --git a/drivers/acpi/acpica/utmutex.c b/drivers/acpi/acpica/utmutex.c
-index 15073375..357e7ca 100644
+index 15073375bd00..357e7ca5a587 100644
 --- a/drivers/acpi/acpica/utmutex.c
 +++ b/drivers/acpi/acpica/utmutex.c
 @@ -88,7 +88,7 @@ acpi_status acpi_ut_mutex_initialize(void)
@@ -151,7 +151,7 @@ index 15073375..357e7ca 100644
  
  	/* Delete the reader/writer lock */
 diff --git a/include/acpi/platform/aclinux.h b/include/acpi/platform/aclinux.h
-index e861a24..b5c97d3 100644
+index e861a24f06f2..b5c97d3059c7 100644
 --- a/include/acpi/platform/aclinux.h
 +++ b/include/acpi/platform/aclinux.h
 @@ -133,6 +133,7 @@
@@ -184,5 +184,5 @@ index e861a24..b5c97d3 100644
   * OSL interfaces used by debugger/disassembler
   */
 -- 
-2.7.4
+2.28.0
 

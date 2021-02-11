@@ -1,4 +1,4 @@
-From 0279ebe7d4e2a756a5ead1520f93d54310817d8d Mon Sep 17 00:00:00 2001
+From 831b7275afcaf948576b177185eb43be282a9249 Mon Sep 17 00:00:00 2001
 From: Ingo Molnar <mingo@elte.hu>
 Date: Fri, 3 Jul 2009 08:30:16 -0500
 Subject: [PATCH 083/365] input: gameport: Do not disable interrupts on
@@ -13,7 +13,7 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  1 file changed, 6 insertions(+), 6 deletions(-)
 
 diff --git a/drivers/input/gameport/gameport.c b/drivers/input/gameport/gameport.c
-index 4a2a9e3..e970d9a 100644
+index 4a2a9e370be7..e970d9afd179 100644
 --- a/drivers/input/gameport/gameport.c
 +++ b/drivers/input/gameport/gameport.c
 @@ -91,13 +91,13 @@ static int gameport_measure_speed(struct gameport *gameport)
@@ -62,5 +62,5 @@ index 4a2a9e3..e970d9a 100644
  		if (t2 - t1 < tx) tx = t2 - t1;
  	}
 -- 
-2.7.4
+2.28.0
 

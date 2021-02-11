@@ -1,4 +1,4 @@
-From 0f58a9ccdd979f241a2bc8734ecef6fad3eff05b Mon Sep 17 00:00:00 2001
+From ef3a1b8427bbbed18f8bebde5d665835af10c4ae Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Sun, 17 Jul 2011 21:42:26 +0200
 Subject: [PATCH 223/365] workqueue: Use local irq lock instead of irq disable
@@ -13,7 +13,7 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  1 file changed, 19 insertions(+), 14 deletions(-)
 
 diff --git a/kernel/workqueue.c b/kernel/workqueue.c
-index 59b5103..d364f50 100644
+index 8aa997b9220a..132c78009b49 100644
 --- a/kernel/workqueue.c
 +++ b/kernel/workqueue.c
 @@ -48,6 +48,7 @@
@@ -149,5 +149,5 @@ index 59b5103..d364f50 100644
  }
  
 -- 
-2.7.4
+2.28.0
 

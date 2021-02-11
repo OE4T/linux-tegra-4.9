@@ -1,4 +1,4 @@
-From d818096b89eb408264617134e30fe06846bdd035 Mon Sep 17 00:00:00 2001
+From 1de2b9a54477a93c4c1d762eb9481aa8e958ae24 Mon Sep 17 00:00:00 2001
 From: Yang Shi <yang.shi@windriver.com>
 Date: Tue, 23 Feb 2016 13:23:23 -0800
 Subject: [PATCH 066/365] trace: Use rcuidle version for preemptoff_hist trace
@@ -52,7 +52,7 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  1 file changed, 4 insertions(+), 4 deletions(-)
 
 diff --git a/kernel/trace/trace_irqsoff.c b/kernel/trace/trace_irqsoff.c
-index 3a03bf08..609a4fb 100644
+index 3a03bf08f2b7..609a4fbcebfd 100644
 --- a/kernel/trace/trace_irqsoff.c
 +++ b/kernel/trace/trace_irqsoff.c
 @@ -429,13 +429,13 @@ void start_critical_timings(void)
@@ -90,5 +90,5 @@ index 3a03bf08..609a4fb 100644
  
  #else /* !CONFIG_PROVE_LOCKING */
 -- 
-2.7.4
+2.28.0
 

@@ -1,4 +1,4 @@
-From 6253acfe0f9ad55c6f4d3263a97b77deae2a9335 Mon Sep 17 00:00:00 2001
+From 7f110092fc2b685e27c8f6af72f56ae73f8bf452 Mon Sep 17 00:00:00 2001
 From: Mike Galbraith <umgwanakikbuti@gmail.com>
 Date: Sun, 2 Nov 2014 08:31:37 +0100
 Subject: [PATCH 207/365] x86: UV: raw_spinlock conversion
@@ -15,7 +15,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  3 files changed, 33 insertions(+), 28 deletions(-)
 
 diff --git a/arch/x86/include/asm/uv/uv_bau.h b/arch/x86/include/asm/uv/uv_bau.h
-index 57ab86d..35d25e2 100644
+index 57ab86d94d64..35d25e27180f 100644
 --- a/arch/x86/include/asm/uv/uv_bau.h
 +++ b/arch/x86/include/asm/uv/uv_bau.h
 @@ -624,9 +624,9 @@ struct bau_control {
@@ -52,7 +52,7 @@ index 57ab86d..35d25e2 100644
  }
  
 diff --git a/arch/x86/platform/uv/tlb_uv.c b/arch/x86/platform/uv/tlb_uv.c
-index 16d4967..cb5382b 100644
+index 16d4967d59ea..cb5382be4681 100644
 --- a/arch/x86/platform/uv/tlb_uv.c
 +++ b/arch/x86/platform/uv/tlb_uv.c
 @@ -748,9 +748,9 @@ static void destination_plugged(struct bau_desc *bau_desc,
@@ -142,7 +142,7 @@ index 16d4967..cb5382b 100644
  }
  
 diff --git a/arch/x86/platform/uv/uv_time.c b/arch/x86/platform/uv/uv_time.c
-index b333fc4..8b85916 100644
+index b333fc45f9ec..8b85916e6986 100644
 --- a/arch/x86/platform/uv/uv_time.c
 +++ b/arch/x86/platform/uv/uv_time.c
 @@ -57,7 +57,7 @@ static DEFINE_PER_CPU(struct clock_event_device, cpu_ced);
@@ -226,5 +226,5 @@ index b333fc4..8b85916 100644
  
  /*
 -- 
-2.7.4
+2.28.0
 

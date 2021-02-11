@@ -1,4 +1,4 @@
-From 38e61da5e6100a1473d91e155e9855c3140013d0 Mon Sep 17 00:00:00 2001
+From 68026d4505c17ce86ee21feb4096b3318ad95db0 Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Wed, 14 Sep 2011 11:57:04 +0200
 Subject: [PATCH 265/365] ipc/sem: Rework semaphore wakeups
@@ -29,7 +29,7 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  1 file changed, 10 insertions(+)
 
 diff --git a/ipc/sem.c b/ipc/sem.c
-index 5cd9d80..c987efc 100644
+index 5cd9d802592f..c987efce266f 100644
 --- a/ipc/sem.c
 +++ b/ipc/sem.c
 @@ -712,6 +712,13 @@ static int perform_atomic_semop(struct sem_array *sma, struct sem_queue *q)
@@ -71,5 +71,5 @@ index 5cd9d80..c987efc 100644
  
  static void unlink_queue(struct sem_array *sma, struct sem_queue *q)
 -- 
-2.7.4
+2.28.0
 

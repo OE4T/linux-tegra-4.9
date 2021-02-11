@@ -1,4 +1,4 @@
-From 42191a60affcd16954b82e4965d981907d877e2c Mon Sep 17 00:00:00 2001
+From 515dbfcc0ada82f09c173da496b20b9c1bc58d40 Mon Sep 17 00:00:00 2001
 From: Tiejun Chen <tiejun.chen@windriver.com>
 Date: Thu, 7 Nov 2013 10:06:07 +0800
 Subject: [PATCH 282/365] cpu_down: move migrate_enable() back
@@ -34,10 +34,10 @@ Signed-off-by: Tiejun Chen <tiejun.chen@windriver.com>
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/kernel/cpu.c b/kernel/cpu.c
-index ba398c5..a987f22 100644
+index 072e296c1c12..f4bb4e76e13f 100644
 --- a/kernel/cpu.c
 +++ b/kernel/cpu.c
-@@ -1333,6 +1333,7 @@ static int __ref _cpu_down(unsigned int cpu, int tasks_frozen,
+@@ -1337,6 +1337,7 @@ static int __ref _cpu_down(unsigned int cpu, int tasks_frozen,
  		goto restore_cpus;
  	}
  
@@ -45,7 +45,7 @@ index ba398c5..a987f22 100644
  	cpu_hotplug_begin();
  	ret = cpu_unplug_begin(cpu);
  	if (ret) {
-@@ -1380,7 +1381,6 @@ static int __ref _cpu_down(unsigned int cpu, int tasks_frozen,
+@@ -1384,7 +1385,6 @@ static int __ref _cpu_down(unsigned int cpu, int tasks_frozen,
  	cpu_unplug_done(cpu);
  out_cancel:
  	cpu_hotplug_done();
@@ -54,5 +54,5 @@ index ba398c5..a987f22 100644
  	if (!ret && hasdied)
  		cpu_notify_nofail(CPU_POST_DEAD, cpu);
 -- 
-2.7.4
+2.28.0
 

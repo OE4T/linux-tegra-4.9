@@ -1,4 +1,4 @@
-From a06e4a546cd2ad96db1559b74b837819a7464027 Mon Sep 17 00:00:00 2001
+From 14b226192919fa49e5ec1fe582db505fa5ef87a0 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Wed, 29 Jun 2011 19:34:01 +0200
 Subject: [PATCH 171/365] spinlock: Split the lock types header
@@ -10,15 +10,15 @@ spinlocks.
 Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
 ---
  include/linux/rwlock_types.h        |  4 ++
- include/linux/spinlock_types.h      | 74 +------------------------------------
- include/linux/spinlock_types_nort.h | 33 +++++++++++++++++
- include/linux/spinlock_types_raw.h  | 56 ++++++++++++++++++++++++++++
+ include/linux/spinlock_types.h      | 74 +----------------------------
+ include/linux/spinlock_types_nort.h | 33 +++++++++++++
+ include/linux/spinlock_types_raw.h  | 56 ++++++++++++++++++++++
  4 files changed, 95 insertions(+), 72 deletions(-)
  create mode 100644 include/linux/spinlock_types_nort.h
  create mode 100644 include/linux/spinlock_types_raw.h
 
 diff --git a/include/linux/rwlock_types.h b/include/linux/rwlock_types.h
-index cc0072e..5317cd9 100644
+index cc0072e93e36..5317cd957292 100644
 --- a/include/linux/rwlock_types.h
 +++ b/include/linux/rwlock_types.h
 @@ -1,6 +1,10 @@
@@ -33,7 +33,7 @@ index cc0072e..5317cd9 100644
   * include/linux/rwlock_types.h - generic rwlock type definitions
   *				  and initializers
 diff --git a/include/linux/spinlock_types.h b/include/linux/spinlock_types.h
-index 73548eb..5c8664d 100644
+index 73548eb13a5d..5c8664d57fb8 100644
 --- a/include/linux/spinlock_types.h
 +++ b/include/linux/spinlock_types.h
 @@ -9,79 +9,9 @@
@@ -120,7 +120,7 @@ index 73548eb..5c8664d 100644
  
 diff --git a/include/linux/spinlock_types_nort.h b/include/linux/spinlock_types_nort.h
 new file mode 100644
-index 00000000..f1dac1f
+index 000000000000..f1dac1fb1d6a
 --- /dev/null
 +++ b/include/linux/spinlock_types_nort.h
 @@ -0,0 +1,33 @@
@@ -159,7 +159,7 @@ index 00000000..f1dac1f
 +#endif
 diff --git a/include/linux/spinlock_types_raw.h b/include/linux/spinlock_types_raw.h
 new file mode 100644
-index 00000000..edffc4d
+index 000000000000..edffc4d53fc9
 --- /dev/null
 +++ b/include/linux/spinlock_types_raw.h
 @@ -0,0 +1,56 @@
@@ -220,5 +220,5 @@ index 00000000..edffc4d
 +
 +#endif
 -- 
-2.7.4
+2.28.0
 

@@ -1,4 +1,4 @@
-From daa192f9ffb468d9616df3d8234d08371a0e1fc7 Mon Sep 17 00:00:00 2001
+From 94e931fc709a2f22a45f47c28f8fc376485be146 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Mon, 8 Feb 2016 16:15:28 +0100
 Subject: [PATCH 284/365] rt/locking: Reenable migration accross schedule
@@ -18,7 +18,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  1 file changed, 20 insertions(+), 12 deletions(-)
 
 diff --git a/kernel/locking/rtmutex.c b/kernel/locking/rtmutex.c
-index 2674b3c..fbe77f4 100644
+index 2674b3cfb70c..fbe77f43235f 100644
 --- a/kernel/locking/rtmutex.c
 +++ b/kernel/locking/rtmutex.c
 @@ -980,14 +980,19 @@ static int __try_to_take_rt_mutex(struct rt_mutex *lock,
@@ -113,5 +113,5 @@ index 2674b3c..fbe77f4 100644
  EXPORT_SYMBOL(rt_spin_lock_nested);
  #endif
 -- 
-2.7.4
+2.28.0
 

@@ -1,4 +1,4 @@
-From e17cf27e7ebcfdf5f2765b6d63b01058e4037915 Mon Sep 17 00:00:00 2001
+From a6321fdbb0edb62c166a0bc2fcef12040badf124 Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Wed, 22 Mar 2017 11:35:52 +0100
 Subject: [PATCH 009/365] futex: Change locking rules
@@ -33,11 +33,11 @@ Link: http://lkml.kernel.org/r/20170322104151.751993333@infradead.org
 Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
 Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 ---
- kernel/futex.c | 165 +++++++++++++++++++++++++++++++++++++++++++++------------
+ kernel/futex.c | 165 +++++++++++++++++++++++++++++++++++++++----------
  1 file changed, 132 insertions(+), 33 deletions(-)
 
 diff --git a/kernel/futex.c b/kernel/futex.c
-index c126218..c0d5e64 100644
+index c126218ac5ed..c0d5e64b37b2 100644
 --- a/kernel/futex.c
 +++ b/kernel/futex.c
 @@ -989,6 +989,39 @@ void exit_pi_state_list(struct task_struct *curr)
@@ -94,7 +94,7 @@ index c126218..c0d5e64 100644
  
  	/*
  	 * Userspace might have messed up non-PI and PI futexes [3]
-@@ -1007,9 +1042,34 @@ static int attach_to_pi_state(u32 uval, struct futex_pi_state *pi_state,
+@@ -1007,8 +1042,33 @@ static int attach_to_pi_state(u32 uval, struct futex_pi_state *pi_state,
  	if (unlikely(!pi_state))
  		return -EINVAL;
  
@@ -107,7 +107,7 @@ index c126218..c0d5e64 100644
 +	 */
  	WARN_ON(!atomic_read(&pi_state->refcount));
  
- 	/*
++	/*
 +	 * Now that we have a pi_state, we can acquire wait_lock
 +	 * and do the state validation.
 +	 */
@@ -125,10 +125,9 @@ index c126218..c0d5e64 100644
 +	if (uval != uval2)
 +		goto out_eagain;
 +
-+	/*
+ 	/*
  	 * Handle the owner died case:
  	 */
- 	if (uval & FUTEX_OWNER_DIED) {
 @@ -1024,11 +1084,11 @@ static int attach_to_pi_state(u32 uval, struct futex_pi_state *pi_state,
  			 * is not 0. Inconsistent state. [5]
  			 */
@@ -372,5 +371,5 @@ index c126218..c0d5e64 100644
  
  static long futex_wait_restart(struct restart_block *restart);
 -- 
-2.7.4
+2.28.0
 

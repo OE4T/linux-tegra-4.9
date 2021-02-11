@@ -1,4 +1,4 @@
-From 1fbb117d634fb3b14175af4b84a586f87b0ef168 Mon Sep 17 00:00:00 2001
+From 135bcffd6e7db60297ba46d7fdb099ea81081bec Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Wed, 22 Mar 2017 11:35:59 +0100
 Subject: [PATCH 016/365] futex: Futex_unlock_pi() determinism
@@ -35,7 +35,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  1 file changed, 11 insertions(+), 13 deletions(-)
 
 diff --git a/kernel/futex.c b/kernel/futex.c
-index 7e89ec3..079f340 100644
+index 7e89ec3ca138..079f34048e90 100644
 --- a/kernel/futex.c
 +++ b/kernel/futex.c
 @@ -1414,15 +1414,10 @@ static int wake_futex_pi(u32 __user *uaddr, u32 uval, struct futex_pi_state *pi_
@@ -82,5 +82,5 @@ index 7e89ec3..079f340 100644
  
  		ret = wake_futex_pi(uaddr, uval, pi_state);
 -- 
-2.7.4
+2.28.0
 

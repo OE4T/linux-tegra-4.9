@@ -1,4 +1,4 @@
-From 36823799d5be9a68af6193265fc975b468b13118 Mon Sep 17 00:00:00 2001
+From a1ea4ba483d5fde2145878a8e797cf8b7a81538d Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Thu, 22 Jun 2017 17:53:34 +0200
 Subject: [PATCH 176/365] kernel/locking: use an exclusive wait_q for sleepers
@@ -43,7 +43,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  4 files changed, 33 insertions(+), 7 deletions(-)
 
 diff --git a/include/linux/sched.h b/include/linux/sched.h
-index 9b7c920..364ec7e 100644
+index 9b7c9209e8ea..364ec7e0b38d 100644
 --- a/include/linux/sched.h
 +++ b/include/linux/sched.h
 @@ -1047,8 +1047,20 @@ struct wake_q_head {
@@ -78,10 +78,10 @@ index 9b7c920..364ec7e 100644
  #ifdef CONFIG_RT_MUTEXES
  	/* PI waiters blocked on a rt_mutex held by this task */
 diff --git a/kernel/fork.c b/kernel/fork.c
-index cabc083..5171f47 100644
+index beb07138c728..e9cea5de947e 100644
 --- a/kernel/fork.c
 +++ b/kernel/fork.c
-@@ -571,6 +571,7 @@ static struct task_struct *dup_task_struct(struct task_struct *orig, int node)
+@@ -572,6 +572,7 @@ static struct task_struct *dup_task_struct(struct task_struct *orig, int node)
  	tsk->splice_pipe = NULL;
  	tsk->task_frag.page = NULL;
  	tsk->wake_q.next = NULL;
@@ -90,7 +90,7 @@ index cabc083..5171f47 100644
  	account_kernel_stack(tsk, 1);
  
 diff --git a/kernel/locking/rtmutex.c b/kernel/locking/rtmutex.c
-index 3fca489..f909d47 100644
+index 3fca4892ec51..f909d47c43d1 100644
 --- a/kernel/locking/rtmutex.c
 +++ b/kernel/locking/rtmutex.c
 @@ -1463,7 +1463,7 @@ static void mark_wakeup_next_waiter(struct wake_q_head *wake_q,
@@ -103,7 +103,7 @@ index 3fca489..f909d47 100644
  		wake_q_add(wake_q, waiter->task);
  	raw_spin_unlock(&current->pi_lock);
 diff --git a/kernel/sched/core.c b/kernel/sched/core.c
-index 303367c..0f0d0cf 100644
+index 303367c6cc2b..0f0d0cfe8161 100644
 --- a/kernel/sched/core.c
 +++ b/kernel/sched/core.c
 @@ -445,9 +445,15 @@ static bool set_nr_if_polling(struct task_struct *p)
@@ -145,5 +145,5 @@ index 303367c..0f0d0cf 100644
  		/*
  		 * wake_up_process() implies a wmb() to pair with the queueing
 -- 
-2.7.4
+2.28.0
 

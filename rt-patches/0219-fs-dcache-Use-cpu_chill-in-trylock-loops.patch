@@ -1,4 +1,4 @@
-From 95eee3bef72db05cee5ae4033b3fc671f0d568cd Mon Sep 17 00:00:00 2001
+From 6f05fc5bb3de3c6dd109a5d166d8c44c92464377 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Wed, 7 Mar 2012 21:00:34 +0100
 Subject: [PATCH 219/365] fs: dcache: Use cpu_chill() in trylock loops
@@ -16,7 +16,7 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  4 files changed, 20 insertions(+), 6 deletions(-)
 
 diff --git a/fs/autofs4/autofs_i.h b/fs/autofs4/autofs_i.h
-index 42f8633..e4deae2 100644
+index 42f863346409..e4deae2d9fa1 100644
 --- a/fs/autofs4/autofs_i.h
 +++ b/fs/autofs4/autofs_i.h
 @@ -32,6 +32,7 @@
@@ -28,7 +28,7 @@ index 42f8633..e4deae2 100644
  #include <linux/uaccess.h>
  
 diff --git a/fs/autofs4/expire.c b/fs/autofs4/expire.c
-index 02f0d37..1454264 100644
+index 02f0d373adbf..1454264c8c1a 100644
 --- a/fs/autofs4/expire.c
 +++ b/fs/autofs4/expire.c
 @@ -148,7 +148,7 @@ static struct dentry *get_next_positive_dentry(struct dentry *prev,
@@ -41,7 +41,7 @@ index 02f0d37..1454264 100644
  			}
  			spin_unlock(&p->d_lock);
 diff --git a/fs/dcache.c b/fs/dcache.c
-index ed0a023..f757c63 100644
+index ed0a023a0567..f757c63e36a6 100644
 --- a/fs/dcache.c
 +++ b/fs/dcache.c
 @@ -19,6 +19,7 @@
@@ -93,7 +93,7 @@ index ed0a023..f757c63 100644
  		}
  		dentry->d_flags &= ~DCACHE_CANT_MOUNT;
 diff --git a/fs/namespace.c b/fs/namespace.c
-index 3f5b81c..6d5149d 100644
+index 3f5b81c194ab..6d5149dc7667 100644
 --- a/fs/namespace.c
 +++ b/fs/namespace.c
 @@ -14,6 +14,7 @@
@@ -114,5 +114,5 @@ index 3f5b81c..6d5149d 100644
  	}
  	/*
 -- 
-2.7.4
+2.28.0
 

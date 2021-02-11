@@ -1,4 +1,4 @@
-From 630746dfbf51fe60956b1b77f2e4c44b563057b5 Mon Sep 17 00:00:00 2001
+From 7b5a6716bdd2256d8f17a62fce721e377437e449 Mon Sep 17 00:00:00 2001
 From: Steven Rostedt <rostedt@goodmis.org>
 Date: Fri, 15 Nov 2019 09:28:29 -0500
 Subject: [PATCH 364/365] genirq: Do not call cancel_work on old_notify->work
@@ -16,7 +16,7 @@ Signed-off-by: Steven Rostedt <rostedt@goodmis.org>
  1 file changed, 3 insertions(+), 4 deletions(-)
 
 diff --git a/kernel/irq/manage.c b/kernel/irq/manage.c
-index 5a217c2..2fc96cb 100644
+index 5a217c230dee..2fc96cb4eb28 100644
 --- a/kernel/irq/manage.c
 +++ b/kernel/irq/manage.c
 @@ -372,10 +372,9 @@ irq_set_affinity_notifier(unsigned int irq, struct irq_affinity_notify *notify)
@@ -34,5 +34,5 @@ index 5a217c2..2fc96cb 100644
  	}
  
 -- 
-2.7.4
+2.28.0
 

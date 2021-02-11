@@ -1,4 +1,4 @@
-From 7f0d0299bc953775b9b4876e286c84a7f0c491c6 Mon Sep 17 00:00:00 2001
+From 53e383e2aa32dbd6751f888a1db840666b1af2df Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Mon, 6 Nov 2017 18:45:30 +0100
 Subject: [PATCH 326/365] fs: convert two more BH_Uptodate_Lock related
@@ -17,7 +17,7 @@ Signed-off-by: Steven Rostedt (VMware) <rostedt@goodmis.org>
  2 files changed, 4 insertions(+), 8 deletions(-)
 
 diff --git a/fs/ext4/page-io.c b/fs/ext4/page-io.c
-index d68032b..e395a96 100644
+index d68032bda4bf..e395a96cb2a2 100644
 --- a/fs/ext4/page-io.c
 +++ b/fs/ext4/page-io.c
 @@ -94,8 +94,7 @@ static void ext4_finish_bio(struct bio *bio)
@@ -41,7 +41,7 @@ index d68032b..e395a96 100644
  #ifdef CONFIG_EXT4_FS_ENCRYPTION
  			if (data_page)
 diff --git a/fs/xfs/xfs_aops.c b/fs/xfs/xfs_aops.c
-index f3acecf..c30dbde 100644
+index f3acecf3869d..c30dbde2a5af 100644
 --- a/fs/xfs/xfs_aops.c
 +++ b/fs/xfs/xfs_aops.c
 @@ -112,8 +112,7 @@ xfs_finish_page_writeback(
@@ -65,5 +65,5 @@ index f3acecf..c30dbde 100644
  	if (!busy)
  		end_page_writeback(bvec->bv_page);
 -- 
-2.7.4
+2.28.0
 

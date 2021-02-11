@@ -1,4 +1,4 @@
-From 912650502a450e99541440fd7cf8fabfe2ae8589 Mon Sep 17 00:00:00 2001
+From 4fd4b0359f26429ec4080af787882c26ac515b00 Mon Sep 17 00:00:00 2001
 From: Carsten Emde <C.Emde@osadl.org>
 Date: Tue, 19 Jul 2011 14:03:41 +0100
 Subject: [PATCH 063/365] tracing: Add latency histograms
@@ -13,15 +13,15 @@ filesystem. For details please consult Documentation/trace/histograms.txt.
 Signed-off-by: Carsten Emde <C.Emde@osadl.org>
 Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
 ---
- Documentation/trace/histograms.txt  |  186 ++++++
+ Documentation/trace/histograms.txt  |  186 +++++
  include/linux/hrtimer.h             |    4 +
  include/linux/sched.h               |    6 +
- include/trace/events/hist.h         |   73 +++
+ include/trace/events/hist.h         |   73 ++
  include/trace/events/latency_hist.h |   29 +
  kernel/time/hrtimer.c               |   21 +
- kernel/trace/Kconfig                |  104 ++++
+ kernel/trace/Kconfig                |  104 +++
  kernel/trace/Makefile               |    4 +
- kernel/trace/latency_hist.c         | 1178 +++++++++++++++++++++++++++++++++++
+ kernel/trace/latency_hist.c         | 1178 +++++++++++++++++++++++++++
  kernel/trace/trace_irqsoff.c        |   11 +
  10 files changed, 1616 insertions(+)
  create mode 100644 Documentation/trace/histograms.txt
@@ -31,7 +31,7 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
 
 diff --git a/Documentation/trace/histograms.txt b/Documentation/trace/histograms.txt
 new file mode 100644
-index 00000000..6f2aeab
+index 000000000000..6f2aeabf7faa
 --- /dev/null
 +++ b/Documentation/trace/histograms.txt
 @@ -0,0 +1,186 @@
@@ -222,7 +222,7 @@ index 00000000..6f2aeab
 +
 +These data are also reset when the wakeup histogram is reset.
 diff --git a/include/linux/hrtimer.h b/include/linux/hrtimer.h
-index 5ae70d2..8d129e9 100644
+index 5ae70d2f9a2f..8d129e969b3b 100644
 --- a/include/linux/hrtimer.h
 +++ b/include/linux/hrtimer.h
 @@ -87,6 +87,7 @@ enum hrtimer_restart {
@@ -244,7 +244,7 @@ index 5ae70d2..8d129e9 100644
  #ifdef CONFIG_TIMER_STATS
  	int				start_pid;
 diff --git a/include/linux/sched.h b/include/linux/sched.h
-index a7f5c594..85a7776 100644
+index a7f5c594d8c2..85a7776b84e5 100644
 --- a/include/linux/sched.h
 +++ b/include/linux/sched.h
 @@ -2099,6 +2099,12 @@ struct task_struct {
@@ -262,7 +262,7 @@ index a7f5c594..85a7776 100644
  	enum kcov_mode kcov_mode;
 diff --git a/include/trace/events/hist.h b/include/trace/events/hist.h
 new file mode 100644
-index 00000000..f7710de
+index 000000000000..f7710de1b1f3
 --- /dev/null
 +++ b/include/trace/events/hist.h
 @@ -0,0 +1,73 @@
@@ -341,7 +341,7 @@ index 00000000..f7710de
 +#include <trace/define_trace.h>
 diff --git a/include/trace/events/latency_hist.h b/include/trace/events/latency_hist.h
 new file mode 100644
-index 00000000..d3f2fbd
+index 000000000000..d3f2fbd560b1
 --- /dev/null
 +++ b/include/trace/events/latency_hist.h
 @@ -0,0 +1,29 @@
@@ -375,7 +375,7 @@ index 00000000..d3f2fbd
 +
 +#endif /* _LATENCY_HIST_H */
 diff --git a/kernel/time/hrtimer.c b/kernel/time/hrtimer.c
-index f31637c..1d48b7d 100644
+index f31637ced7fa..1d48b7d5c546 100644
 --- a/kernel/time/hrtimer.c
 +++ b/kernel/time/hrtimer.c
 @@ -53,6 +53,7 @@
@@ -429,7 +429,7 @@ index f31637c..1d48b7d 100644
  			 * The immediate goal for using the softexpires is
  			 * minimizing wakeups, not running timers at the
 diff --git a/kernel/trace/Kconfig b/kernel/trace/Kconfig
-index 5771ce7..3e8de30 100644
+index 5771ce7f08b3..3e8de300752b 100644
 --- a/kernel/trace/Kconfig
 +++ b/kernel/trace/Kconfig
 @@ -196,6 +196,24 @@ config IRQSOFF_TRACER
@@ -558,7 +558,7 @@ index 5771ce7..3e8de30 100644
  	bool "Trace process context switches and events"
  	depends on !GENERIC_TRACER
 diff --git a/kernel/trace/Makefile b/kernel/trace/Makefile
-index 907c144..77c6a1f 100644
+index 907c14446dbd..77c6a1f1a28f 100644
 --- a/kernel/trace/Makefile
 +++ b/kernel/trace/Makefile
 @@ -39,6 +39,10 @@ obj-$(CONFIG_IRQSOFF_TRACER) += trace_irqsoff.o
@@ -574,7 +574,7 @@ index 907c144..77c6a1f 100644
  obj-$(CONFIG_MMIOTRACE) += trace_mmiotrace.o
 diff --git a/kernel/trace/latency_hist.c b/kernel/trace/latency_hist.c
 new file mode 100644
-index 00000000..66a69eb
+index 000000000000..66a69eb5329c
 --- /dev/null
 +++ b/kernel/trace/latency_hist.c
 @@ -0,0 +1,1178 @@
@@ -1757,7 +1757,7 @@ index 00000000..66a69eb
 +
 +device_initcall(latency_hist_init);
 diff --git a/kernel/trace/trace_irqsoff.c b/kernel/trace/trace_irqsoff.c
-index c180fe5..3a03bf08 100644
+index c180fe513eb2..3a03bf08f2b7 100644
 --- a/kernel/trace/trace_irqsoff.c
 +++ b/kernel/trace/trace_irqsoff.c
 @@ -13,6 +13,7 @@
@@ -1843,5 +1843,5 @@ index c180fe5..3a03bf08 100644
  		start_critical_timing(a0, a1);
  }
 -- 
-2.7.4
+2.28.0
 

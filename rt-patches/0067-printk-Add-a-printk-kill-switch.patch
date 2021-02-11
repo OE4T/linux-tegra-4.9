@@ -1,4 +1,4 @@
-From 7809a3c447fc9971e827676a72ae82f9131c2d66 Mon Sep 17 00:00:00 2001
+From 1c6f7f178af39e484583a091c34a5a0b35f99c46 Mon Sep 17 00:00:00 2001
 From: Ingo Molnar <mingo@elte.hu>
 Date: Fri, 22 Jul 2011 17:58:40 +0200
 Subject: [PATCH 067/365] printk: Add a printk kill switch
@@ -6,16 +6,16 @@ Subject: [PATCH 067/365] printk: Add a printk kill switch
 Add a prinkt-kill-switch. This is used from (NMI) watchdog to ensure that
 it does not dead-lock with the early printk code.
 
-Change-Id: I5e3e35a6a48f1935783bf31721e2f6ece7f79cbe
+Change-Id: Id189c263b6a1572e9967ee5a213f10ba2e634784
 Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
 ---
  include/linux/printk.h |  2 ++
- kernel/printk/printk.c | 78 +++++++++++++++++++++++++++++++++++++-------------
- kernel/watchdog_hld.c  |  9 ++++++
- 3 files changed, 69 insertions(+), 20 deletions(-)
+ kernel/printk/printk.c | 79 +++++++++++++++++++++++++++++++-----------
+ kernel/watchdog_hld.c  |  9 +++++
+ 3 files changed, 69 insertions(+), 21 deletions(-)
 
 diff --git a/include/linux/printk.h b/include/linux/printk.h
-index 45993a72..c666419 100644
+index 45993a72ee43..c666419e8e6a 100644
 --- a/include/linux/printk.h
 +++ b/include/linux/printk.h
 @@ -127,9 +127,11 @@ struct va_format {
@@ -31,10 +31,18 @@ index 45993a72..c666419 100644
  
  #ifdef CONFIG_PRINTK_NMI
 diff --git a/kernel/printk/printk.c b/kernel/printk/printk.c
-index 6577838..ca0a488 100644
+index 673aadadf6c4..5c62cfde8cf2 100644
 --- a/kernel/printk/printk.c
 +++ b/kernel/printk/printk.c
-@@ -402,6 +402,57 @@ DEFINE_RAW_SPINLOCK(logbuf_lock);
+@@ -374,7 +374,6 @@ __packed __aligned(4)
+  * console_unlock() or anything else that might wake up a process.
+  */
+ DEFINE_RAW_SPINLOCK(logbuf_lock);
+-
+ /*
+  * Helper macros to lock/unlock logbuf_lock and switch between
+  * printk-safe/unsafe modes.
+@@ -402,6 +401,57 @@ DEFINE_RAW_SPINLOCK(logbuf_lock);
  		raw_spin_unlock(&logbuf_lock);		\
  		printk_safe_exit_irqrestore(flags);	\
  	} while (0)
@@ -92,7 +100,7 @@ index 6577838..ca0a488 100644
  
  #ifdef CONFIG_PRINTK
  DECLARE_WAIT_QUEUE_HEAD(log_wait);
-@@ -1770,6 +1821,13 @@ asmlinkage int vprintk_emit(int facility, int level,
+@@ -1770,6 +1820,13 @@ asmlinkage int vprintk_emit(int facility, int level,
  	int printed_len = 0;
  	bool in_sched = false;
  
@@ -106,7 +114,7 @@ index 6577838..ca0a488 100644
  	if (level == LOGLEVEL_SCHED) {
  		level = LOGLEVEL_DEFAULT;
  		in_sched = true;
-@@ -1952,26 +2010,6 @@ static bool suppress_message_printing(int level) { return false; }
+@@ -1952,26 +2009,6 @@ static bool suppress_message_printing(int level) { return false; }
  
  #endif /* CONFIG_PRINTK */
  
@@ -134,7 +142,7 @@ index 6577838..ca0a488 100644
  				   char *brl_options)
  {
 diff --git a/kernel/watchdog_hld.c b/kernel/watchdog_hld.c
-index e5709b8..9566409 100644
+index e5709b8603ac..9566409a1d50 100644
 --- a/kernel/watchdog_hld.c
 +++ b/kernel/watchdog_hld.c
 @@ -25,6 +25,7 @@ static DEFINE_PER_CPU(unsigned long, hrtimer_interrupts_saved);
@@ -168,5 +176,5 @@ index e5709b8..9566409 100644
  			nmi_panic(regs, "Hard LOCKUP");
  
 -- 
-2.7.4
+2.28.0
 

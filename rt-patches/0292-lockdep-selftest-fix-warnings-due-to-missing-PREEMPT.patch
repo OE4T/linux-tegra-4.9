@@ -1,4 +1,4 @@
-From 4e7524340056ca3474934725db63cb996bde03b8 Mon Sep 17 00:00:00 2001
+From 771b12789588494ab6c3e6ef30b463429a5d415f Mon Sep 17 00:00:00 2001
 From: Josh Cartwright <josh.cartwright@ni.com>
 Date: Wed, 28 Jan 2015 13:08:45 -0600
 Subject: [PATCH 292/365] lockdep: selftest: fix warnings due to missing
@@ -29,7 +29,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  1 file changed, 27 insertions(+)
 
 diff --git a/lib/locking-selftest.c b/lib/locking-selftest.c
-index c17fc0b..4611b15 100644
+index c17fc0bd0aa3..4611b156ef79 100644
 --- a/lib/locking-selftest.c
 +++ b/lib/locking-selftest.c
 @@ -590,6 +590,8 @@ GENERATE_TESTCASE(init_held_rsem)
@@ -144,5 +144,5 @@ index c17fc0b..4611b15 100644
   * read-lock / write-lock recursion that is unsafe.
   */
 -- 
-2.7.4
+2.28.0
 

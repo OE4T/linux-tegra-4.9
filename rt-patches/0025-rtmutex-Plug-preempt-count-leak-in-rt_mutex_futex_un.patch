@@ -1,4 +1,4 @@
-From 3631644c705e661a572624604510de41f29da746 Mon Sep 17 00:00:00 2001
+From fe45cf84704aa90443cc3cb4d0b5e9f9aea87c11 Mon Sep 17 00:00:00 2001
 From: Mike Galbraith <efault@gmx.de>
 Date: Wed, 5 Apr 2017 10:08:27 +0200
 Subject: [PATCH 025/365] rtmutex: Plug preempt count leak in
@@ -21,7 +21,7 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  1 file changed, 5 insertions(+), 5 deletions(-)
 
 diff --git a/kernel/locking/rtmutex.c b/kernel/locking/rtmutex.c
-index a8202c7..ed2755b 100644
+index a8202c772907..ed2755befa35 100644
 --- a/kernel/locking/rtmutex.c
 +++ b/kernel/locking/rtmutex.c
 @@ -1579,13 +1579,13 @@ bool __sched __rt_mutex_futex_unlock(struct rt_mutex *lock,
@@ -44,5 +44,5 @@ index a8202c7..ed2755b 100644
  	return true; /* call postunlock() */
  }
 -- 
-2.7.4
+2.28.0
 

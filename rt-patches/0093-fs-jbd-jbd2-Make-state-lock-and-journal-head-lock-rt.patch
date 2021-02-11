@@ -1,4 +1,4 @@
-From d17232a48a0c3a13bd6b810d5fbd9b7aa9719c94 Mon Sep 17 00:00:00 2001
+From 9d1c7412e36a1eafdc8f3ed13a0b27857fd36fce Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Fri, 18 Mar 2011 10:11:25 +0100
 Subject: [PATCH 093/365] fs: jbd/jbd2: Make state lock and journal head lock
@@ -18,7 +18,7 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  2 files changed, 32 insertions(+)
 
 diff --git a/include/linux/buffer_head.h b/include/linux/buffer_head.h
-index 87c4ed3..0744157 100644
+index 87c4ed37ee77..0744157a97ca 100644
 --- a/include/linux/buffer_head.h
 +++ b/include/linux/buffer_head.h
 @@ -77,6 +77,10 @@ struct buffer_head {
@@ -44,7 +44,7 @@ index 87c4ed3..0744157 100644
  }
  
 diff --git a/include/linux/jbd2.h b/include/linux/jbd2.h
-index 344eb87..757524c 100644
+index 344eb873f6f5..757524c8103e 100644
 --- a/include/linux/jbd2.h
 +++ b/include/linux/jbd2.h
 @@ -347,32 +347,56 @@ static inline struct journal_head *bh2jh(struct buffer_head *bh)
@@ -105,5 +105,5 @@ index 344eb87..757524c 100644
  
  #define J_ASSERT(assert)	BUG_ON(!(assert))
 -- 
-2.7.4
+2.28.0
 

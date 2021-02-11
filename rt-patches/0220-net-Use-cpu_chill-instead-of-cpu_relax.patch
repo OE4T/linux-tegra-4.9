@@ -1,4 +1,4 @@
-From 4c6c684402f48284da84e7b3f97a9ff76cd3a726 Mon Sep 17 00:00:00 2001
+From 14e74a16aaa01093ef3008a63f68fa1482a66418 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Wed, 7 Mar 2012 21:10:04 +0100
 Subject: [PATCH 220/365] net: Use cpu_chill() instead of cpu_relax()
@@ -14,7 +14,7 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  2 files changed, 5 insertions(+), 3 deletions(-)
 
 diff --git a/net/packet/af_packet.c b/net/packet/af_packet.c
-index fb64394..f38276c 100644
+index b5b79f501541..f4959d6f1090 100644
 --- a/net/packet/af_packet.c
 +++ b/net/packet/af_packet.c
 @@ -63,6 +63,7 @@
@@ -44,7 +44,7 @@ index fb64394..f38276c 100644
  		}
  		prb_close_block(pkc, pbd, po, status);
 diff --git a/net/rds/ib_rdma.c b/net/rds/ib_rdma.c
-index 78d5d68..9f75849 100644
+index 78d5d68cbbce..9f758494b337 100644
 --- a/net/rds/ib_rdma.c
 +++ b/net/rds/ib_rdma.c
 @@ -34,6 +34,7 @@
@@ -65,5 +65,5 @@ index 78d5d68..9f75849 100644
  }
  
 -- 
-2.7.4
+2.28.0
 

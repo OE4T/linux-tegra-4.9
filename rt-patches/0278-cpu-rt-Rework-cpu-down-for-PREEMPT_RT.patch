@@ -1,4 +1,4 @@
-From 9874d001fcee0a3d8d71c8c2eaaa07efc529038f Mon Sep 17 00:00:00 2001
+From d398a1820a6d40be976b39fd8ad0dbfa8093b392 Mon Sep 17 00:00:00 2001
 From: Steven Rostedt <srostedt@redhat.com>
 Date: Mon, 16 Jul 2012 08:07:43 +0000
 Subject: [PATCH 278/365] cpu/rt: Rework cpu down for PREEMPT_RT
@@ -50,12 +50,12 @@ Signed-off-by: Steven Rostedt <rostedt@goodmis.org>
 Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
 ---
  include/linux/sched.h |   7 ++
- kernel/cpu.c          | 236 +++++++++++++++++++++++++++++++++++++++++---------
- kernel/sched/core.c   |  78 +++++++++++++++++
+ kernel/cpu.c          | 236 ++++++++++++++++++++++++++++++++++--------
+ kernel/sched/core.c   |  78 ++++++++++++++
  3 files changed, 280 insertions(+), 41 deletions(-)
 
 diff --git a/include/linux/sched.h b/include/linux/sched.h
-index 99c2109..4d97250 100644
+index 99c2109ea183..4d97250139c7 100644
 --- a/include/linux/sched.h
 +++ b/include/linux/sched.h
 @@ -2689,6 +2689,10 @@ extern void do_set_cpus_allowed(struct task_struct *p,
@@ -80,7 +80,7 @@ index 99c2109..4d97250 100644
  
  #ifdef CONFIG_NO_HZ_COMMON
 diff --git a/kernel/cpu.c b/kernel/cpu.c
-index 817ff43..176b910 100644
+index adbc793d6b5e..a923a942b684 100644
 --- a/kernel/cpu.c
 +++ b/kernel/cpu.c
 @@ -218,16 +218,10 @@ static int cpu_hotplug_disabled;
@@ -430,7 +430,7 @@ index 817ff43..176b910 100644
  	cpuhp_lock_release();
  }
  
-@@ -1045,6 +1196,9 @@ static int takedown_cpu(unsigned int cpu)
+@@ -1049,6 +1200,9 @@ static int takedown_cpu(unsigned int cpu)
  	/* Park the smpboot threads */
  	kthread_park(per_cpu_ptr(&cpuhp_state, cpu)->thread);
  
@@ -441,7 +441,7 @@ index 817ff43..176b910 100644
  	 * Prevent irq alloc/free while the dying cpu reorganizes the
  	 * interrupt affinities.
 diff --git a/kernel/sched/core.c b/kernel/sched/core.c
-index 69ffb7f..67258a6 100644
+index 9bfb19c3f295..a10fb31876de 100644
 --- a/kernel/sched/core.c
 +++ b/kernel/sched/core.c
 @@ -1193,6 +1193,84 @@ void do_set_cpus_allowed(struct task_struct *p, const struct cpumask *new_mask)
@@ -530,5 +530,5 @@ index 69ffb7f..67258a6 100644
   * Change a given task's CPU affinity. Migrate the thread to a
   * proper CPU and schedule it away if the CPU it's executing on
 -- 
-2.7.4
+2.28.0
 

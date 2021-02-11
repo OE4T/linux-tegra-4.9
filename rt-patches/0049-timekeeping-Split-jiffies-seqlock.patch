@@ -1,4 +1,4 @@
-From ab8f4a676945158c9fc6ae5781ace32360d7de3c Mon Sep 17 00:00:00 2001
+From 1ed87bacbe5112276aa15a6a32aee4ec5b165116 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Thu, 14 Feb 2013 22:36:59 +0100
 Subject: [PATCH 049/365] timekeeping: Split jiffies seqlock
@@ -16,7 +16,7 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  5 files changed, 28 insertions(+), 17 deletions(-)
 
 diff --git a/kernel/time/jiffies.c b/kernel/time/jiffies.c
-index 2a6e41e..faea04a 100644
+index 2a6e41e2dd89..faea04a9914d 100644
 --- a/kernel/time/jiffies.c
 +++ b/kernel/time/jiffies.c
 @@ -74,7 +74,8 @@ static struct clocksource clocksource_jiffies = {
@@ -42,7 +42,7 @@ index 2a6e41e..faea04a 100644
  }
  EXPORT_SYMBOL(get_jiffies_64);
 diff --git a/kernel/time/tick-common.c b/kernel/time/tick-common.c
-index 4fcd99e..5a47f2e 100644
+index 4fcd99e12aa0..5a47f2e98faf 100644
 --- a/kernel/time/tick-common.c
 +++ b/kernel/time/tick-common.c
 @@ -79,13 +79,15 @@ int tick_is_oneshot_available(void)
@@ -76,7 +76,7 @@ index 4fcd99e..5a47f2e 100644
  		clockevents_switch_state(dev, CLOCK_EVT_STATE_ONESHOT);
  
 diff --git a/kernel/time/tick-sched.c b/kernel/time/tick-sched.c
-index 65aafad..065f663 100644
+index 65aafadad8e2..065f663702f2 100644
 --- a/kernel/time/tick-sched.c
 +++ b/kernel/time/tick-sched.c
 @@ -62,7 +62,8 @@ static void tick_do_update_jiffies64(ktime_t now)
@@ -135,10 +135,10 @@ index 65aafad..065f663 100644
  
  	/*
 diff --git a/kernel/time/timekeeping.c b/kernel/time/timekeeping.c
-index c257fe7..6c50076 100644
+index 357e9e23344f..c4097f4ca032 100644
 --- a/kernel/time/timekeeping.c
 +++ b/kernel/time/timekeeping.c
-@@ -2404,8 +2404,10 @@ EXPORT_SYMBOL(hardpps);
+@@ -2403,8 +2403,10 @@ EXPORT_SYMBOL(hardpps);
   */
  void xtime_update(unsigned long ticks)
  {
@@ -152,7 +152,7 @@ index c257fe7..6c50076 100644
  	update_wall_time();
  }
 diff --git a/kernel/time/timekeeping.h b/kernel/time/timekeeping.h
-index 704f595..763a3e5 100644
+index 704f595ce83f..763a3e5121ff 100644
 --- a/kernel/time/timekeeping.h
 +++ b/kernel/time/timekeeping.h
 @@ -19,7 +19,8 @@ extern void timekeeping_resume(void);
@@ -166,5 +166,5 @@ index 704f595..763a3e5 100644
  #define CS_NAME_LEN	32
  
 -- 
-2.7.4
+2.28.0
 

@@ -1,4 +1,4 @@
-From f7895acff2e230e3401a821fe4abd3a2d3765e8e Mon Sep 17 00:00:00 2001
+From 6877f57eeec42efa30d91d00a476752c2bb6a5ff Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Tue, 9 Jan 2018 11:02:24 +0100
 Subject: [PATCH 354/365] locking: add types.h
@@ -15,7 +15,7 @@ Signed-off-by: Julia Cartwright <julia@ni.com>
  1 file changed, 2 insertions(+)
 
 diff --git a/include/linux/spinlock_types_raw.h b/include/linux/spinlock_types_raw.h
-index edffc4d..03235b4 100644
+index edffc4d53fc9..03235b475b77 100644
 --- a/include/linux/spinlock_types_raw.h
 +++ b/include/linux/spinlock_types_raw.h
 @@ -1,6 +1,8 @@
@@ -28,5 +28,5 @@ index edffc4d..03235b4 100644
  # include <asm/spinlock_types.h>
  #else
 -- 
-2.7.4
+2.28.0
 

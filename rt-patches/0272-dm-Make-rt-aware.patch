@@ -1,4 +1,4 @@
-From a49d90ac6fe64239d5de8c4a845665731a9aaed0 Mon Sep 17 00:00:00 2001
+From 1c57ed19a228bf7012474b9008f61e606f30c26f Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Mon, 14 Nov 2011 23:06:09 +0100
 Subject: [PATCH 272/365] dm: Make rt aware
@@ -15,7 +15,7 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/drivers/md/dm-rq.c b/drivers/md/dm-rq.c
-index ba7c4c6..834ec32 100644
+index ba7c4c685db3..834ec328f217 100644
 --- a/drivers/md/dm-rq.c
 +++ b/drivers/md/dm-rq.c
 @@ -842,7 +842,7 @@ static void dm_old_request_fn(struct request_queue *q)
@@ -28,5 +28,5 @@ index ba7c4c6..834ec32 100644
  }
  
 -- 
-2.7.4
+2.28.0
 

@@ -1,4 +1,4 @@
-From ff6cdc63e726447027fafa1c4a1a9984c201bc77 Mon Sep 17 00:00:00 2001
+From 4845741567c819e587a0416e329a751af3111fd1 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Thu, 7 Sep 2017 12:38:47 +0200
 Subject: [PATCH 341/365] locking/rtmutex: don't drop the wait_lock twice
@@ -19,7 +19,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  1 file changed, 1 deletion(-)
 
 diff --git a/kernel/locking/rtmutex.c b/kernel/locking/rtmutex.c
-index bb6a154..1f3ceaf 100644
+index bb6a15456e62..1f3ceaf15588 100644
 --- a/kernel/locking/rtmutex.c
 +++ b/kernel/locking/rtmutex.c
 @@ -2312,7 +2312,6 @@ int __rt_mutex_start_proxy_lock(struct rt_mutex *lock,
@@ -31,5 +31,5 @@ index bb6a154..1f3ceaf 100644
  	}
  	task->pi_blocked_on = PI_REQUEUE_INPROGRESS;
 -- 
-2.7.4
+2.28.0
 

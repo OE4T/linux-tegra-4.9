@@ -1,4 +1,4 @@
-From 476d201fb22a3702e37b713a521828a00ed3f5eb Mon Sep 17 00:00:00 2001
+From dc9eb77febdc4f508db04d17694d992cfcc1c270 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Wed, 8 Mar 2017 14:23:35 +0100
 Subject: [PATCH 077/365] futex: workaround migrate_disable/enable in different
@@ -16,7 +16,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  1 file changed, 20 insertions(+)
 
 diff --git a/kernel/futex.c b/kernel/futex.c
-index fb1964a..86eec2e 100644
+index fb1964a68e66..86eec2e2b752 100644
 --- a/kernel/futex.c
 +++ b/kernel/futex.c
 @@ -2737,9 +2737,18 @@ static int futex_lock_pi(u32 __user *uaddr, unsigned int flags,
@@ -61,5 +61,5 @@ index fb1964a..86eec2e 100644
  
  		/*
 -- 
-2.7.4
+2.28.0
 

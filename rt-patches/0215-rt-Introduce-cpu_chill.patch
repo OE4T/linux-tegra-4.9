@@ -1,4 +1,4 @@
-From 477324416a385da50188114de108730a1901b735 Mon Sep 17 00:00:00 2001
+From d9b35625c1c2a18cab7b4a6959f4f257b751b8ac Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Wed, 7 Mar 2012 20:51:03 +0100
 Subject: [PATCH 215/365] rt: Introduce cpu_chill()
@@ -87,7 +87,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  2 files changed, 25 insertions(+)
 
 diff --git a/include/linux/delay.h b/include/linux/delay.h
-index a6ecb34..37caab3 100644
+index a6ecb34cf547..37caab306336 100644
 --- a/include/linux/delay.h
 +++ b/include/linux/delay.h
 @@ -52,4 +52,10 @@ static inline void ssleep(unsigned int seconds)
@@ -102,7 +102,7 @@ index a6ecb34..37caab3 100644
 +
  #endif /* defined(_LINUX_DELAY_H) */
 diff --git a/kernel/time/hrtimer.c b/kernel/time/hrtimer.c
-index 34c38da..a652e5b 100644
+index 34c38da46ad2..a652e5bcbc37 100644
 --- a/kernel/time/hrtimer.c
 +++ b/kernel/time/hrtimer.c
 @@ -1788,6 +1788,25 @@ SYSCALL_DEFINE2(nanosleep, struct timespec __user *, rqtp,
@@ -132,5 +132,5 @@ index 34c38da..a652e5b 100644
   * Functions related to boot-time initialization:
   */
 -- 
-2.7.4
+2.28.0
 

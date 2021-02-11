@@ -1,4 +1,4 @@
-From 661cbb047bed830ed3589b89e76d5c60a6a7caf8 Mon Sep 17 00:00:00 2001
+From 8b8b0aa54f60317230e8ae8edd176c7243137ac9 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Sun, 28 Oct 2012 13:26:09 +0000
 Subject: [PATCH 295/365] rcu: Disable RCU_FAST_NO_HZ on RT
@@ -12,7 +12,7 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/init/Kconfig b/init/Kconfig
-index c2896d9..f89f1be 100644
+index 9acc4c703f1c..d4acd7f21762 100644
 --- a/init/Kconfig
 +++ b/init/Kconfig
 @@ -632,7 +632,7 @@ config RCU_FANOUT_LEAF
@@ -25,5 +25,5 @@ index c2896d9..f89f1be 100644
  	help
  	  This option permits CPUs to enter dynticks-idle state even if
 -- 
-2.7.4
+2.28.0
 

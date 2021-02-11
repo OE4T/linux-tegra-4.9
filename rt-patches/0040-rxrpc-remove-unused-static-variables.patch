@@ -1,4 +1,4 @@
-From 20b1d76353928f5d6c063146e098ffa01aab8dda Mon Sep 17 00:00:00 2001
+From d12271d7db5b59a087276f2ed3f4fe8a9de03411 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Fri, 21 Oct 2016 10:54:50 +0200
 Subject: [PATCH 040/365] rxrpc: remove unused static variables
@@ -14,7 +14,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  1 file changed, 3 deletions(-)
 
 diff --git a/net/rxrpc/security.c b/net/rxrpc/security.c
-index 7d921e5..13df56a 100644
+index 7d921e56e715..13df56a738e5 100644
 --- a/net/rxrpc/security.c
 +++ b/net/rxrpc/security.c
 @@ -19,9 +19,6 @@
@@ -28,5 +28,5 @@ index 7d921e5..13df56a 100644
  	[RXRPC_SECURITY_NONE]	= &rxrpc_no_security,
  #ifdef CONFIG_RXKAD
 -- 
-2.7.4
+2.28.0
 

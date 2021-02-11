@@ -1,4 +1,4 @@
-From b7b3f7b57efb81f49d9561e7035bc88ddcf47091 Mon Sep 17 00:00:00 2001
+From cd0526cfcc2221b6bebc0f0c7833bb86ba39f114 Mon Sep 17 00:00:00 2001
 From: Tiejun Chen <tiejun.chen@windriver.com>
 Date: Wed, 18 Dec 2013 17:51:49 +0800
 Subject: [PATCH 186/365] rcutree/rcu_bh_qs: Disable irq while calling
@@ -34,7 +34,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  1 file changed, 5 insertions(+)
 
 diff --git a/kernel/rcu/tree.c b/kernel/rcu/tree.c
-index 6d8eca8..b627ee1 100644
+index 6d8eca89b239..b627ee1e4669 100644
 --- a/kernel/rcu/tree.c
 +++ b/kernel/rcu/tree.c
 @@ -265,7 +265,12 @@ static void rcu_preempt_qs(void);
@@ -51,5 +51,5 @@ index 6d8eca8..b627ee1 100644
  #else
  void rcu_bh_qs(void)
 -- 
-2.7.4
+2.28.0
 

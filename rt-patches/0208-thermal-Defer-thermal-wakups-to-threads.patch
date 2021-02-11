@@ -1,4 +1,4 @@
-From f7ef2e5afa042ffcc987ec1cebd3a7d289ba06a5 Mon Sep 17 00:00:00 2001
+From 35459c1be3824b4f6f39153e4b4d9ad82fe6760f Mon Sep 17 00:00:00 2001
 From: Daniel Wagner <wagi@monom.org>
 Date: Tue, 17 Feb 2015 09:37:44 +0100
 Subject: [PATCH 208/365] thermal: Defer thermal wakups to threads
@@ -24,11 +24,11 @@ Signed-off-by: Daniel Wagner <daniel.wagner@bmw-carit.de>
 [bigeasy: reoder init/denit position. TODO: flush swork on exit]
 Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 ---
- drivers/thermal/x86_pkg_temp_thermal.c | 50 ++++++++++++++++++++++++++++++++--
+ drivers/thermal/x86_pkg_temp_thermal.c | 50 ++++++++++++++++++++++++--
  1 file changed, 47 insertions(+), 3 deletions(-)
 
 diff --git a/drivers/thermal/x86_pkg_temp_thermal.c b/drivers/thermal/x86_pkg_temp_thermal.c
-index 95f4c1b..0be9347 100644
+index 95f4c1bcdb4c..0be934799bff 100644
 --- a/drivers/thermal/x86_pkg_temp_thermal.c
 +++ b/drivers/thermal/x86_pkg_temp_thermal.c
 @@ -29,6 +29,7 @@
@@ -134,5 +134,5 @@ index 95f4c1b..0be9347 100644
  		cancel_delayed_work_sync(
  			&per_cpu(pkg_temp_thermal_threshold_work, i));
 -- 
-2.7.4
+2.28.0
 

@@ -1,4 +1,4 @@
-From 001c108607735c00bacd7fc83815cf259b4d5caf Mon Sep 17 00:00:00 2001
+From 47fb1f1e6e64d2d6f1c313c5096f6b0a0da19011 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Thu, 16 Dec 2010 14:25:18 +0100
 Subject: [PATCH 205/365] x86: stackprotector: Avoid random pool on rt
@@ -18,7 +18,7 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  1 file changed, 8 insertions(+), 1 deletion(-)
 
 diff --git a/arch/x86/include/asm/stackprotector.h b/arch/x86/include/asm/stackprotector.h
-index 743bd2d..e1fabfc 100644
+index 743bd2d77e51..e1fabfcddd65 100644
 --- a/arch/x86/include/asm/stackprotector.h
 +++ b/arch/x86/include/asm/stackprotector.h
 @@ -64,7 +64,7 @@
@@ -47,5 +47,5 @@ index 743bd2d..e1fabfc 100644
  	canary += tsc + (tsc << 32UL);
  
 -- 
-2.7.4
+2.28.0
 

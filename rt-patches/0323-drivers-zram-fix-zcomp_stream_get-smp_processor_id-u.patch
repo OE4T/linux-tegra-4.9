@@ -1,4 +1,4 @@
-From 63a68b90903f540bc0b638a9fd8483fa3d704b3e Mon Sep 17 00:00:00 2001
+From eb7742fca715d0140fa5ffb47b9e20104c2eb28d Mon Sep 17 00:00:00 2001
 From: Mike Galbraith <efault@gmx.de>
 Date: Wed, 23 Aug 2017 11:57:29 +0200
 Subject: [PATCH 323/365] drivers/zram: fix zcomp_stream_get()
@@ -19,7 +19,7 @@ Signed-off-by: Steven Rostedt (VMware) <rostedt@goodmis.org>
  1 file changed, 2 insertions(+), 1 deletion(-)
 
 diff --git a/drivers/block/zram/zcomp.c b/drivers/block/zram/zcomp.c
-index fa8329a..8c93ee1 100644
+index fa8329ad79fd..8c93ee150ee8 100644
 --- a/drivers/block/zram/zcomp.c
 +++ b/drivers/block/zram/zcomp.c
 @@ -120,7 +120,7 @@ struct zcomp_strm *zcomp_stream_get(struct zcomp *comp)
@@ -40,5 +40,5 @@ index fa8329a..8c93ee1 100644
  
  int zcomp_compress(struct zcomp_strm *zstrm,
 -- 
-2.7.4
+2.28.0
 

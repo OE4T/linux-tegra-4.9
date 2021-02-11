@@ -1,4 +1,4 @@
-From a7d3ce91d280b599f3451b956c947f8b7d3e39a5 Mon Sep 17 00:00:00 2001
+From 041d3d236d70ba9277a3385076324a9d6aecfd86 Mon Sep 17 00:00:00 2001
 From: Paul Gortmaker <paul.gortmaker@windriver.com>
 Date: Sat, 14 Feb 2015 11:01:16 -0500
 Subject: [PATCH 269/365] sas-ata/isci: dont't disable interrupts in qc_issue
@@ -59,7 +59,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  1 file changed, 2 insertions(+), 2 deletions(-)
 
 diff --git a/drivers/scsi/libsas/sas_ata.c b/drivers/scsi/libsas/sas_ata.c
-index 87f5e694..23c0a50 100644
+index b820c3a022ea..2b96e30158ae 100644
 --- a/drivers/scsi/libsas/sas_ata.c
 +++ b/drivers/scsi/libsas/sas_ata.c
 @@ -190,7 +190,7 @@ static unsigned int sas_ata_qc_issue(struct ata_queued_cmd *qc)
@@ -71,7 +71,7 @@ index 87f5e694..23c0a50 100644
  	spin_unlock(ap->lock);
  
  	/* If the device fell off, no sense in issuing commands */
-@@ -252,7 +252,7 @@ static unsigned int sas_ata_qc_issue(struct ata_queued_cmd *qc)
+@@ -255,7 +255,7 @@ static unsigned int sas_ata_qc_issue(struct ata_queued_cmd *qc)
  
   out:
  	spin_lock(ap->lock);
@@ -81,5 +81,5 @@ index 87f5e694..23c0a50 100644
  }
  
 -- 
-2.7.4
+2.28.0
 

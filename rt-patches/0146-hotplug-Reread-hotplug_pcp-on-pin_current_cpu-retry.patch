@@ -1,4 +1,4 @@
-From 91328b0bf74d98f1301b41336f822d93f05dfd47 Mon Sep 17 00:00:00 2001
+From 4140b15058d8fe38b20b4ee42bc0091064bdc955 Mon Sep 17 00:00:00 2001
 From: Yong Zhang <yong.zhang0@gmail.com>
 Date: Thu, 28 Jul 2011 11:16:00 +0800
 Subject: [PATCH 146/365] hotplug: Reread hotplug_pcp on pin_current_cpu()
@@ -20,7 +20,7 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  1 file changed, 3 insertions(+), 1 deletion(-)
 
 diff --git a/kernel/cpu.c b/kernel/cpu.c
-index 145091a..eb39e35 100644
+index 5ce5c0917b42..5fe38fac0b69 100644
 --- a/kernel/cpu.c
 +++ b/kernel/cpu.c
 @@ -265,9 +265,11 @@ static DEFINE_PER_CPU(struct hotplug_pcp, hotplug_pcp);
@@ -37,5 +37,5 @@ index 145091a..eb39e35 100644
  	    hp->unplug == current) {
  		hp->refcount++;
 -- 
-2.7.4
+2.28.0
 

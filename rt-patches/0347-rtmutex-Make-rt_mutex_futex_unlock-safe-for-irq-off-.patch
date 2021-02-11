@@ -1,4 +1,4 @@
-From 03c2ad27346a98a32a4eb1bfdec5e3db9db338df Mon Sep 17 00:00:00 2001
+From bcc1f6823be77ce04c0ed12f727a2853c5b37d24 Mon Sep 17 00:00:00 2001
 From: Boqun Feng <boqun.feng@gmail.com>
 Date: Wed, 6 Jun 2018 15:31:30 +0200
 Subject: [PATCH 347/365] rtmutex: Make rt_mutex_futex_unlock() safe for
@@ -104,7 +104,7 @@ Signed-off-by: Julia Cartwright <julia@ni.com>
  1 file changed, 3 insertions(+), 2 deletions(-)
 
 diff --git a/kernel/locking/rtmutex.c b/kernel/locking/rtmutex.c
-index 7e3b7a9..af10410 100644
+index 7e3b7a99d004..af104105ff07 100644
 --- a/kernel/locking/rtmutex.c
 +++ b/kernel/locking/rtmutex.c
 @@ -2213,11 +2213,12 @@ void __sched rt_mutex_futex_unlock(struct rt_mutex *lock)
@@ -123,5 +123,5 @@ index 7e3b7a9..af10410 100644
  	if (postunlock)
  		rt_mutex_postunlock(&wake_q, &wake_sleeper_q);
 -- 
-2.7.4
+2.28.0
 

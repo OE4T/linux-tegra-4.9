@@ -1,4 +1,4 @@
-From fc4251c7093396afefbee35d997a49a2272e92bb Mon Sep 17 00:00:00 2001
+From 4e52279eea1c870efdb8e702a12fb0357bc6f559 Mon Sep 17 00:00:00 2001
 From: Mike Galbraith <umgwanakikbuti@gmail.com>
 Date: Sun, 16 Oct 2016 05:11:54 +0200
 Subject: [PATCH 309/365] connector/cn_proc: Protect send_msg() with a local
@@ -35,7 +35,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  1 file changed, 4 insertions(+), 2 deletions(-)
 
 diff --git a/drivers/connector/cn_proc.c b/drivers/connector/cn_proc.c
-index a782ce8..19d2659 100644
+index a782ce87715c..19d265948526 100644
 --- a/drivers/connector/cn_proc.c
 +++ b/drivers/connector/cn_proc.c
 @@ -32,6 +32,7 @@
@@ -69,5 +69,5 @@ index a782ce8..19d2659 100644
  
  void proc_fork_connector(struct task_struct *task)
 -- 
-2.7.4
+2.28.0
 

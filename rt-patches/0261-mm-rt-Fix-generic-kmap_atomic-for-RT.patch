@@ -1,4 +1,4 @@
-From aff92b6e45b302555013691c2320ad919af0efa8 Mon Sep 17 00:00:00 2001
+From 1fab47de0f663c28d0d97f09a1ec9ed3fad1052d Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Sat, 19 Sep 2015 10:15:00 +0200
 Subject: [PATCH 261/365] mm: rt: Fix generic kmap_atomic for RT
@@ -20,7 +20,7 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  1 file changed, 2 insertions(+), 2 deletions(-)
 
 diff --git a/include/linux/highmem.h b/include/linux/highmem.h
-index 396d5c4..2f56829 100644
+index 396d5c42272e..2f56829181ee 100644
 --- a/include/linux/highmem.h
 +++ b/include/linux/highmem.h
 @@ -65,7 +65,7 @@ static inline void kunmap(struct page *page)
@@ -42,5 +42,5 @@ index 396d5c4..2f56829 100644
  
  #define kmap_atomic_pfn(pfn)	kmap_atomic(pfn_to_page(pfn))
 -- 
-2.7.4
+2.28.0
 

@@ -1,4 +1,4 @@
-From 127a57a04fa114a634e605626850fd988526364d Mon Sep 17 00:00:00 2001
+From df6e0139024bcd1c0f595d6bdef63fb3d7ca5404 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Sun, 13 Nov 2011 17:17:09 +0100
 Subject: [PATCH 152/365] softirq: Check preemption after reenabling interrupts
@@ -21,7 +21,7 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  4 files changed, 18 insertions(+)
 
 diff --git a/block/blk-softirq.c b/block/blk-softirq.c
-index 06cf980..c403426 100644
+index 06cf9807f49a..c40342643ca0 100644
 --- a/block/blk-softirq.c
 +++ b/block/blk-softirq.c
 @@ -51,6 +51,7 @@ static void trigger_softirq(void *data)
@@ -49,7 +49,7 @@ index 06cf980..c403426 100644
  
  /**
 diff --git a/include/linux/preempt.h b/include/linux/preempt.h
-index f17045b..2eed4b5 100644
+index f17045be9fbf..2eed4b5fd08e 100644
 --- a/include/linux/preempt.h
 +++ b/include/linux/preempt.h
 @@ -165,8 +165,10 @@ do { \
@@ -72,7 +72,7 @@ index f17045b..2eed4b5 100644
  
  #endif /* CONFIG_PREEMPT_COUNT */
 diff --git a/lib/irq_poll.c b/lib/irq_poll.c
-index 1d6565e8..b23a797 100644
+index 1d6565e81030..b23a79761df7 100644
 --- a/lib/irq_poll.c
 +++ b/lib/irq_poll.c
 @@ -36,6 +36,7 @@ void irq_poll_sched(struct irq_poll *iop)
@@ -116,7 +116,7 @@ index 1d6565e8..b23a797 100644
  	return 0;
  }
 diff --git a/net/core/dev.c b/net/core/dev.c
-index 267b648..abad506 100644
+index 9ac591dd16d5..122368549acc 100644
 --- a/net/core/dev.c
 +++ b/net/core/dev.c
 @@ -2312,6 +2312,7 @@ static void __netif_reschedule(struct Qdisc *q)
@@ -167,7 +167,7 @@ index 267b648..abad506 100644
  }
  EXPORT_SYMBOL(__napi_schedule);
  
-@@ -8110,6 +8116,7 @@ static int dev_cpu_callback(struct notifier_block *nfb,
+@@ -8111,6 +8117,7 @@ static int dev_cpu_callback(struct notifier_block *nfb,
  
  	raise_softirq_irqoff(NET_TX_SOFTIRQ);
  	local_irq_enable();
@@ -176,5 +176,5 @@ index 267b648..abad506 100644
  	/* Process offline CPU's input_pkt_queue */
  	while ((skb = __skb_dequeue(&oldsd->process_queue))) {
 -- 
-2.7.4
+2.28.0
 

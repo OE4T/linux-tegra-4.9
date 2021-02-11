@@ -1,4 +1,4 @@
-From ea14b2fa4ec106e718f125ec063f27a8355157c7 Mon Sep 17 00:00:00 2001
+From 611ad34c27aa2cbaa56d400a98f72e877c1dc25d Mon Sep 17 00:00:00 2001
 From: Ingo Molnar <mingo@elte.hu>
 Date: Fri, 3 Jul 2009 08:29:51 -0500
 Subject: [PATCH 101/365] mm/swap: Convert to percpu locked
@@ -16,7 +16,7 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  4 files changed, 29 insertions(+), 18 deletions(-)
 
 diff --git a/include/linux/swap.h b/include/linux/swap.h
-index d4ecdf7..74dab80 100644
+index d4ecdf7f894a..74dab80ae176 100644
 --- a/include/linux/swap.h
 +++ b/include/linux/swap.h
 @@ -312,6 +312,7 @@ extern unsigned long nr_free_pagecache_pages(void);
@@ -28,7 +28,7 @@ index d4ecdf7..74dab80 100644
  extern void lru_cache_add_anon(struct page *page);
  extern void lru_cache_add_file(struct page *page);
 diff --git a/mm/compaction.c b/mm/compaction.c
-index af19210..8627c9c 100644
+index af1921069fac..8627c9c8f59f 100644
 --- a/mm/compaction.c
 +++ b/mm/compaction.c
 @@ -1594,10 +1594,12 @@ static enum compact_result compact_zone(struct zone *zone, struct compact_contro
@@ -47,10 +47,10 @@ index af19210..8627c9c 100644
  				cc->last_migrated_pfn = 0;
  			}
 diff --git a/mm/page_alloc.c b/mm/page_alloc.c
-index 582348b..6e81349 100644
+index 660b7abbc8f8..71278318ef1a 100644
 --- a/mm/page_alloc.c
 +++ b/mm/page_alloc.c
-@@ -6632,7 +6632,9 @@ static int page_alloc_cpu_notify(struct notifier_block *self,
+@@ -6634,7 +6634,9 @@ static int page_alloc_cpu_notify(struct notifier_block *self,
  	int cpu = (unsigned long)hcpu;
  
  	if (action == CPU_DEAD || action == CPU_DEAD_FROZEN) {
@@ -61,7 +61,7 @@ index 582348b..6e81349 100644
  
  		/*
 diff --git a/mm/swap.c b/mm/swap.c
-index adea901..796f366 100644
+index adea901a5927..796f3664e2fc 100644
 --- a/mm/swap.c
 +++ b/mm/swap.c
 @@ -32,6 +32,7 @@
@@ -197,5 +197,5 @@ index adea901..796f366 100644
  
  static void lru_add_drain_per_cpu(struct work_struct *dummy)
 -- 
-2.7.4
+2.28.0
 

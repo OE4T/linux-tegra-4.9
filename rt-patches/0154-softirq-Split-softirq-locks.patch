@@ -1,4 +1,4 @@
-From 843f225a8ea440809f45f45712536ddba072da49 Mon Sep 17 00:00:00 2001
+From 2e6f756349357393440bf58665efab6b907597c7 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Thu, 4 Oct 2012 14:20:47 +0100
 Subject: [PATCH 154/365] softirq: Split softirq locks
@@ -30,13 +30,13 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  include/linux/preempt.h     |  15 +-
  include/linux/sched.h       |   3 +
  init/main.c                 |   1 +
- kernel/softirq.c            | 491 +++++++++++++++++++++++++++++++++++++-------
+ kernel/softirq.c            | 491 ++++++++++++++++++++++++++++++------
  kernel/time/tick-sched.c    |   9 +-
  net/core/dev.c              |   6 +-
  8 files changed, 480 insertions(+), 94 deletions(-)
 
 diff --git a/include/linux/bottom_half.h b/include/linux/bottom_half.h
-index 8fdcb78..d07dbee 100644
+index 8fdcb783197d..d07dbeec7bc1 100644
 --- a/include/linux/bottom_half.h
 +++ b/include/linux/bottom_half.h
 @@ -3,6 +3,39 @@
@@ -87,7 +87,7 @@ index 8fdcb78..d07dbee 100644
  
  #endif /* _LINUX_BH_H */
 diff --git a/include/linux/interrupt.h b/include/linux/interrupt.h
-index e5f4cea..94b32e8 100644
+index e5f4ceaedc2b..94b32e8fe65d 100644
 --- a/include/linux/interrupt.h
 +++ b/include/linux/interrupt.h
 @@ -470,10 +470,11 @@ struct softirq_action
@@ -136,7 +136,7 @@ index e5f4cea..94b32e8 100644
   * Autoprobing for irqs:
   *
 diff --git a/include/linux/preempt.h b/include/linux/preempt.h
-index 2eed4b5..0c734628 100644
+index 2eed4b5fd08e..0c7346289422 100644
 --- a/include/linux/preempt.h
 +++ b/include/linux/preempt.h
 @@ -50,7 +50,11 @@
@@ -178,7 +178,7 @@ index 2eed4b5..0c734628 100644
  #define in_task()		(!(preempt_count() & \
  				   (NMI_MASK | HARDIRQ_MASK | SOFTIRQ_OFFSET)))
 diff --git a/include/linux/sched.h b/include/linux/sched.h
-index f986d30..cf10098 100644
+index f986d30fca47..cf100987fc3f 100644
 --- a/include/linux/sched.h
 +++ b/include/linux/sched.h
 @@ -2145,6 +2145,8 @@ struct task_struct {
@@ -199,7 +199,7 @@ index f986d30..cf10098 100644
  #define PF_EXITPIDONE	0x00000008	/* pi exit done on shut down */
  #define PF_VCPU		0x00000010	/* I'm a virtual CPU */
 diff --git a/init/main.c b/init/main.c
-index d3f8d31..3ad0778 100644
+index 8a95fddb0bdd..1dfeb7168c6a 100644
 --- a/init/main.c
 +++ b/init/main.c
 @@ -509,6 +509,7 @@ asmlinkage __visible void __init start_kernel(void)
@@ -211,7 +211,7 @@ index d3f8d31..3ad0778 100644
  	boot_cpu_hotplug_init();
  
 diff --git a/kernel/softirq.c b/kernel/softirq.c
-index 02d1106..9fb267a 100644
+index 02d1106adeea..9fb267aff2b2 100644
 --- a/kernel/softirq.c
 +++ b/kernel/softirq.c
 @@ -26,6 +26,7 @@
@@ -446,10 +446,11 @@ index 02d1106..9fb267a 100644
  
  	pending = local_softirq_pending();
  	if (pending) {
-@@ -336,6 +460,246 @@ asmlinkage __visible void do_softirq(void)
+@@ -335,6 +459,246 @@ asmlinkage __visible void do_softirq(void)
+ 	local_irq_restore(flags);
  }
  
- /*
++/*
 + * This function must run with irqs disabled!
 + */
 +void raise_softirq_irqoff(unsigned int nr)
@@ -689,10 +690,9 @@ index 02d1106..9fb267a 100644
 +}
 +
 +#endif /* PREEMPT_RT_FULL */
-+/*
+ /*
   * Enter an interrupt context.
   */
- void irq_enter(void)
 @@ -346,9 +710,9 @@ void irq_enter(void)
  		 * Prevent raise_softirq from needlessly waking up ksoftirqd
  		 * here, as softirq will be serviced on return from interrupt.
@@ -810,7 +810,7 @@ index 02d1106..9fb267a 100644
  	.thread_fn		= run_ksoftirqd,
  	.thread_comm		= "ksoftirqd/%u",
 diff --git a/kernel/time/tick-sched.c b/kernel/time/tick-sched.c
-index 6a1b656..943d0f77 100644
+index 6a1b656216b8..943d0f7772e8 100644
 --- a/kernel/time/tick-sched.c
 +++ b/kernel/time/tick-sched.c
 @@ -897,14 +897,7 @@ static bool can_stop_idle_tick(int cpu, struct tick_sched *ts)
@@ -830,7 +830,7 @@ index 6a1b656..943d0f77 100644
  	}
  
 diff --git a/net/core/dev.c b/net/core/dev.c
-index abad506..e0dc562 100644
+index 122368549acc..1864b75415b2 100644
 --- a/net/core/dev.c
 +++ b/net/core/dev.c
 @@ -3912,11 +3912,9 @@ int netif_rx_ni(struct sk_buff *skb)
@@ -848,5 +848,5 @@ index abad506..e0dc562 100644
  	return err;
  }
 -- 
-2.7.4
+2.28.0
 

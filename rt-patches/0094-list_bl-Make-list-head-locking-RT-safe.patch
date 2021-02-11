@@ -1,4 +1,4 @@
-From 5de440c9daa4948d490c84ad49d63a71cef804d1 Mon Sep 17 00:00:00 2001
+From 7199b197958f10d02d7b3cf236a00c87e34a0f98 Mon Sep 17 00:00:00 2001
 From: Paul Gortmaker <paul.gortmaker@windriver.com>
 Date: Fri, 21 Jun 2013 15:07:25 -0400
 Subject: [PATCH 094/365] list_bl: Make list head locking RT safe
@@ -52,7 +52,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  1 file changed, 26 insertions(+), 2 deletions(-)
 
 diff --git a/include/linux/list_bl.h b/include/linux/list_bl.h
-index cb48330..d3af099 100644
+index cb483305e1f5..d3af0990f01a 100644
 --- a/include/linux/list_bl.h
 +++ b/include/linux/list_bl.h
 @@ -2,6 +2,7 @@
@@ -116,5 +116,5 @@ index cb48330..d3af099 100644
  
  static inline bool hlist_bl_is_locked(struct hlist_bl_head *b)
 -- 
-2.7.4
+2.28.0
 

@@ -1,7 +1,7 @@
-From 54b581cca25a74fb5c421ea0eda481160ee643e8 Mon Sep 17 00:00:00 2001
+From 730dd6e7a0d54f25ffde85be6dd31fdcac74ac01 Mon Sep 17 00:00:00 2001
 From: Anders Roxell <anders.roxell@linaro.org>
 Date: Thu, 14 May 2015 17:52:17 +0200
-Subject: [PATCH 304/365] arch/arm64: Add lazy preempt support
+Subject: [PATCH 304/304] arch/arm64: Add lazy preempt support
 
 arm64 is missing support for PREEMPT_RT. The main feature which is
 lacking is support for lazy preemption. The arch-specific entry code,
@@ -10,18 +10,18 @@ have to be extended to provide this support. Then the Kconfig file has
 to be extended to indicate the support is available, and also to
 indicate that support for full RT preemption is now available.
 
-Change-Id: I1b22fa2ae0aee3728a2d42bda860b9a8edf5c86c
+Change-Id: I14be0f2747e4b745a7210fa9e74d0a5ee3a00a02
 Signed-off-by: Anders Roxell <anders.roxell@linaro.org>
 ---
  arch/arm64/Kconfig                   |  1 +
  arch/arm64/include/asm/thread_info.h |  8 +++++++-
  arch/arm64/kernel/asm-offsets.c      |  1 +
- arch/arm64/kernel/entry.S            | 11 ++++++++---
+ arch/arm64/kernel/entry.S            | 12 +++++++++---
  arch/arm64/kernel/signal.c           |  2 +-
- 5 files changed, 18 insertions(+), 5 deletions(-)
+ 5 files changed, 19 insertions(+), 5 deletions(-)
 
 diff --git a/arch/arm64/Kconfig b/arch/arm64/Kconfig
-index e403397..1e97dd7 100644
+index e40339726039..1e97dd7efb5a 100644
 --- a/arch/arm64/Kconfig
 +++ b/arch/arm64/Kconfig
 @@ -92,6 +92,7 @@ config ARM64
@@ -33,7 +33,7 @@ index e403397..1e97dd7 100644
  	select HAVE_RCU_TABLE_FREE
  	select HAVE_SYSCALL_TRACEPOINTS
 diff --git a/arch/arm64/include/asm/thread_info.h b/arch/arm64/include/asm/thread_info.h
-index 5b96df6..f7c4271 100644
+index 5b96df618873..f7c4271d565c 100644
 --- a/arch/arm64/include/asm/thread_info.h
 +++ b/arch/arm64/include/asm/thread_info.h
 @@ -51,6 +51,8 @@ struct thread_info {
@@ -73,7 +73,7 @@ index 5b96df6..f7c4271 100644
  #define _TIF_SYSCALL_WORK	(_TIF_SYSCALL_TRACE | _TIF_SYSCALL_AUDIT | \
  				 _TIF_SYSCALL_TRACEPOINT | _TIF_SECCOMP | \
 diff --git a/arch/arm64/kernel/asm-offsets.c b/arch/arm64/kernel/asm-offsets.c
-index b2debec..ed1bc22 100644
+index b2debecb51e2..ae495cc3cdb2 100644
 --- a/arch/arm64/kernel/asm-offsets.c
 +++ b/arch/arm64/kernel/asm-offsets.c
 @@ -39,6 +39,7 @@ int main(void)
@@ -85,10 +85,10 @@ index b2debec..ed1bc22 100644
  #ifdef CONFIG_ARM64_SW_TTBR0_PAN
    DEFINE(TSK_TI_TTBR0,		offsetof(struct task_struct, thread_info.ttbr0));
 diff --git a/arch/arm64/kernel/entry.S b/arch/arm64/kernel/entry.S
-index 09bf87b..daccff7 100644
+index 09bf87b0a3a7..91241924ab1d 100644
 --- a/arch/arm64/kernel/entry.S
 +++ b/arch/arm64/kernel/entry.S
-@@ -564,11 +564,15 @@ el1_irq:
+@@ -564,11 +564,16 @@ el1_irq:
  
  #ifdef CONFIG_PREEMPT
  	ldr	w24, [tsk, #TSK_TI_PREEMPT]	// get preempt count
@@ -98,7 +98,8 @@ index 09bf87b..daccff7 100644
 -	tbz	x0, #TIF_NEED_RESCHED, 1f	// needs rescheduling?
 -	bl	el1_preempt
 +	tbnz	x0, #TIF_NEED_RESCHED, 1f	// needs rescheduling?
-+	ldr	w24, [tsk, #TSK_TI_PREEMPT_LAZY]	// get preempt lazy count
++
++	ldr	w24, [tsk, #TSK_TI_PREEMPT_LAZY]// get preempt lazy count
 +	cbnz	w24, 2f				// preempt lazy count != 0
 +	tbz	x0, #TIF_NEED_RESCHED_LAZY, 2f	// needs rescheduling?
  1:
@@ -107,7 +108,7 @@ index 09bf87b..daccff7 100644
  #endif
  #ifdef CONFIG_TRACE_IRQFLAGS
  	bl	trace_hardirqs_on
-@@ -582,6 +586,7 @@ el1_preempt:
+@@ -582,6 +587,7 @@ el1_preempt:
  1:	bl	preempt_schedule_irq		// irq en/disable is done inside
  	ldr	x0, [tsk, #TSK_TI_FLAGS]	// get new tasks TI_FLAGS
  	tbnz	x0, #TIF_NEED_RESCHED, 1b	// needs rescheduling?
@@ -116,7 +117,7 @@ index 09bf87b..daccff7 100644
  #endif
  
 diff --git a/arch/arm64/kernel/signal.c b/arch/arm64/kernel/signal.c
-index 404dd67..639dc6d 100644
+index 404dd67080b9..639dc6d12e72 100644
 --- a/arch/arm64/kernel/signal.c
 +++ b/arch/arm64/kernel/signal.c
 @@ -409,7 +409,7 @@ asmlinkage void do_notify_resume(struct pt_regs *regs,
@@ -129,5 +130,5 @@ index 404dd67..639dc6d 100644
  		} else {
  			local_irq_enable();
 -- 
-2.7.4
+2.28.0
 

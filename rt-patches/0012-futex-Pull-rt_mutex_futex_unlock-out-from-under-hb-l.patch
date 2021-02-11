@@ -1,4 +1,4 @@
-From 6af6b46c5a2895d38d1bf602c90d7ee3a95fd4e9 Mon Sep 17 00:00:00 2001
+From 3c204e6d04dee9ca056211743e82ef2b2e713f6a Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Wed, 22 Mar 2017 11:35:55 +0100
 Subject: [PATCH 012/365] futex: Pull rt_mutex_futex_unlock() out from under
@@ -41,11 +41,11 @@ Link: http://lkml.kernel.org/r/20170322104151.900002056@infradead.org
 Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
 Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 ---
- kernel/futex.c | 154 +++++++++++++++++++++++++++++++++++++--------------------
+ kernel/futex.c | 154 ++++++++++++++++++++++++++++++++-----------------
  1 file changed, 100 insertions(+), 54 deletions(-)
 
 diff --git a/kernel/futex.c b/kernel/futex.c
-index 10468883..8187c8a 100644
+index 10468883d7f0..8187c8a1acd2 100644
 --- a/kernel/futex.c
 +++ b/kernel/futex.c
 @@ -937,10 +937,12 @@ void exit_pi_state_list(struct task_struct *curr)
@@ -360,5 +360,5 @@ index 10468883..8187c8a 100644
  		/*
  		 * We've already been requeued, but cannot restart by calling
 -- 
-2.7.4
+2.28.0
 

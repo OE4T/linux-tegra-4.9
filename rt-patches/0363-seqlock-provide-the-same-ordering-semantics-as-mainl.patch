@@ -1,4 +1,4 @@
-From 28ee4b7d82a7964de6f20b00f5057192920e03f9 Mon Sep 17 00:00:00 2001
+From 02af6d2bc04f659443c6844b6c2eb3311fc16a9f Mon Sep 17 00:00:00 2001
 From: Julia Cartwright <julia@ni.com>
 Date: Thu, 26 Apr 2018 15:02:03 -0500
 Subject: [PATCH 363/365] seqlock: provide the same ordering semantics as
@@ -22,10 +22,10 @@ Signed-off-by: Julia Cartwright <julia@ni.com>
  1 file changed, 1 insertion(+)
 
 diff --git a/include/linux/seqlock.h b/include/linux/seqlock.h
-index 3d7223f..de04d6d 100644
+index b6d15b2f597a..961e07b762dd 100644
 --- a/include/linux/seqlock.h
 +++ b/include/linux/seqlock.h
-@@ -461,6 +461,7 @@ static inline unsigned read_seqbegin(seqlock_t *sl)
+@@ -468,6 +468,7 @@ static inline unsigned read_seqbegin(seqlock_t *sl)
  		spin_unlock_wait(&sl->lock);
  		goto repeat;
  	}
@@ -34,5 +34,5 @@ index 3d7223f..de04d6d 100644
  }
  #endif
 -- 
-2.7.4
+2.28.0
 

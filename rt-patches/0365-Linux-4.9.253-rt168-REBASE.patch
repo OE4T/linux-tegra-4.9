@@ -1,0 +1,20 @@
+From 4153dddda3fa1830facff5fd3d9b1d4b43e8f890 Mon Sep 17 00:00:00 2001
+From: "Luis Claudio R. Goncalves" <lgoncalv@redhat.com>
+Date: Sat, 23 Jan 2021 22:28:35 -0300
+Subject: [PATCH 365/365] Linux 4.9.253-rt168 REBASE
+
+Signed-off-by: Luis Claudio R. Goncalves <lgoncalv@redhat.com>
+---
+ localversion-rt | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/localversion-rt b/localversion-rt
+index 9a218ca23053..074dfb9ed494 100644
+--- a/localversion-rt
++++ b/localversion-rt
+@@ -1 +1 @@
+--rt23
++-rt168
+-- 
+2.28.0
+

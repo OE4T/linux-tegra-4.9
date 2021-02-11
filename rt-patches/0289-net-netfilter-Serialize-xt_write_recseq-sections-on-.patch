@@ -1,4 +1,4 @@
-From c933a23791d12ebca983b132e800e186c407259a Mon Sep 17 00:00:00 2001
+From c1f377715039d0e58d2934e0d86b0056076bb7b7 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Sun, 28 Oct 2012 11:18:08 +0100
 Subject: [PATCH 289/365] net: netfilter: Serialize xt_write_recseq sections on
@@ -16,7 +16,7 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  2 files changed, 13 insertions(+)
 
 diff --git a/include/linux/netfilter/x_tables.h b/include/linux/netfilter/x_tables.h
-index 69111fa..e64c02a 100644
+index 69111fa2e578..e64c02af5894 100644
 --- a/include/linux/netfilter/x_tables.h
 +++ b/include/linux/netfilter/x_tables.h
 @@ -4,6 +4,7 @@
@@ -55,7 +55,7 @@ index 69111fa..e64c02a 100644
  
  /*
 diff --git a/net/netfilter/core.c b/net/netfilter/core.c
-index d869ea5..5cafa87 100644
+index d869ea50623e..5cafa87b030b 100644
 --- a/net/netfilter/core.c
 +++ b/net/netfilter/core.c
 @@ -22,12 +22,18 @@
@@ -78,5 +78,5 @@ index d869ea5..5cafa87 100644
  
  const struct nf_afinfo __rcu *nf_afinfo[NFPROTO_NUMPROTO] __read_mostly;
 -- 
-2.7.4
+2.28.0
 

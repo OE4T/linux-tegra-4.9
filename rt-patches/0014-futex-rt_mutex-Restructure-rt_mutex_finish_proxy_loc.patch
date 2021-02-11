@@ -1,4 +1,4 @@
-From 3ec26ce23db74dbdecccf918ec5cad2518328932 Mon Sep 17 00:00:00 2001
+From 930e844d958515d1a659d3f7d112d0001b28d2b0 Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Wed, 22 Mar 2017 11:35:57 +0100
 Subject: [PATCH 014/365] futex,rt_mutex: Restructure
@@ -39,7 +39,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  1 file changed, 1 insertion(+)
 
 diff --git a/kernel/locking/rtmutex_common.h b/kernel/locking/rtmutex_common.h
-index b550e9d..8e81b17 100644
+index b550e9d86b1f..8e81b17c0ee5 100644
 --- a/kernel/locking/rtmutex_common.h
 +++ b/kernel/locking/rtmutex_common.h
 @@ -113,6 +113,7 @@ extern int rt_mutex_wait_proxy_lock(struct rt_mutex *lock,
@@ -51,5 +51,5 @@ index b550e9d..8e81b17 100644
  extern int rt_mutex_futex_trylock(struct rt_mutex *l);
  
 -- 
-2.7.4
+2.28.0
 

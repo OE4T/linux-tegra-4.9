@@ -1,4 +1,4 @@
-From 01281e2e03dadb417febcd7d8a2d2cfa9a329047 Mon Sep 17 00:00:00 2001
+From 01245c4166e6e83608444b1a1ad346a27119e89c Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Wed, 22 Mar 2017 11:36:00 +0100
 Subject: [PATCH 017/365] futex: Drop hb->lock before enqueueing on the rtmutex
@@ -48,13 +48,13 @@ Link: http://lkml.kernel.org/r/20170322104152.161341537@infradead.org
 Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
 Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 ---
- kernel/futex.c                  | 30 +++++++++++++++++--------
- kernel/locking/rtmutex.c        | 49 +++++++++++++++++++++++------------------
- kernel/locking/rtmutex_common.h |  3 +++
+ kernel/futex.c                  | 30 ++++++++++++++------
+ kernel/locking/rtmutex.c        | 49 +++++++++++++++++++--------------
+ kernel/locking/rtmutex_common.h |  3 ++
  3 files changed, 52 insertions(+), 30 deletions(-)
 
 diff --git a/kernel/futex.c b/kernel/futex.c
-index 079f340..4dfa778 100644
+index 079f34048e90..4dfa778e7cb1 100644
 --- a/kernel/futex.c
 +++ b/kernel/futex.c
 @@ -2720,20 +2720,33 @@ static int futex_lock_pi(u32 __user *uaddr, unsigned int flags,
@@ -118,7 +118,7 @@ index 079f340..4dfa778 100644
  		 * there is no point where we hold neither; and therefore
  		 * wake_futex_pi() must observe a state consistent with what we
 diff --git a/kernel/locking/rtmutex.c b/kernel/locking/rtmutex.c
-index ef5cdcd..7f8ee5d 100644
+index ef5cdcd6d9ec..7f8ee5d61ce9 100644
 --- a/kernel/locking/rtmutex.c
 +++ b/kernel/locking/rtmutex.c
 @@ -1684,31 +1684,14 @@ void rt_mutex_proxy_unlock(struct rt_mutex *lock,
@@ -155,7 +155,7 @@ index ef5cdcd..7f8ee5d 100644
  
  	/* We enforce deadlock detection for futexes */
  	ret = task_blocks_on_rt_mutex(lock, waiter, task,
-@@ -1727,14 +1710,38 @@ int rt_mutex_start_proxy_lock(struct rt_mutex *lock,
+@@ -1727,13 +1710,37 @@ int rt_mutex_start_proxy_lock(struct rt_mutex *lock,
  	if (unlikely(ret))
  		remove_waiter(lock, waiter);
  
@@ -166,7 +166,7 @@ index ef5cdcd..7f8ee5d 100644
  	return ret;
  }
  
- /**
++/**
 + * rt_mutex_start_proxy_lock() - Start lock acquisition for another task
 + * @lock:		the rt_mutex to take
 + * @waiter:		the pre-initialized rt_mutex_waiter
@@ -192,12 +192,11 @@ index ef5cdcd..7f8ee5d 100644
 +	return ret;
 +}
 +
-+/**
+ /**
   * rt_mutex_next_owner - return the next owner of the lock
   *
-  * @lock: the rt lock query
 diff --git a/kernel/locking/rtmutex_common.h b/kernel/locking/rtmutex_common.h
-index b620aaf..f4c34c4 100644
+index b620aafa06e1..f4c34c4195a0 100644
 --- a/kernel/locking/rtmutex_common.h
 +++ b/kernel/locking/rtmutex_common.h
 @@ -105,6 +105,9 @@ extern void rt_mutex_init_proxy_locked(struct rt_mutex *lock,
@@ -211,5 +210,5 @@ index b620aaf..f4c34c4 100644
  				     struct rt_mutex_waiter *waiter,
  				     struct task_struct *task);
 -- 
-2.7.4
+2.28.0
 

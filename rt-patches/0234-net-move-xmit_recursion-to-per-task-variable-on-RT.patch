@@ -1,4 +1,4 @@
-From fb4262af115f9aeb494829d184ad6b684fbf96ab Mon Sep 17 00:00:00 2001
+From 2833b436678688c205b618157f5184b85c9b4361 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Wed, 13 Jan 2016 15:55:02 +0100
 Subject: [PATCH 234/365] net: move xmit_recursion to per-task variable on -RT
@@ -16,14 +16,14 @@ the recursion properly on -RT.
 Cc: stable-rt@vger.kernel.org
 Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 ---
- include/linux/netdevice.h | 41 ++++++++++++++++++++++++++++++++++++++++-
+ include/linux/netdevice.h | 41 ++++++++++++++++++++++++++++++++++++++-
  include/linux/sched.h     |  3 +++
  net/core/dev.c            |  9 +++++----
  net/core/filter.c         |  6 +++---
  4 files changed, 51 insertions(+), 8 deletions(-)
 
 diff --git a/include/linux/netdevice.h b/include/linux/netdevice.h
-index 6108dd6..c08d3be 100644
+index 6108dd6baaec..c08d3be754fe 100644
 --- a/include/linux/netdevice.h
 +++ b/include/linux/netdevice.h
 @@ -2479,14 +2479,53 @@ void netdev_freemem(struct net_device *dev);
@@ -82,21 +82,21 @@ index 6108dd6..c08d3be 100644
  struct net_device *__dev_get_by_index(struct net *net, int ifindex);
  struct net_device *dev_get_by_index_rcu(struct net *net, int ifindex);
 diff --git a/include/linux/sched.h b/include/linux/sched.h
-index 2a87c8d..48045b1 100644
+index 2a87c8d69774..48045b14c24e 100644
 --- a/include/linux/sched.h
 +++ b/include/linux/sched.h
-@@ -2176,6 +2176,9 @@ struct task_struct {
+@@ -2175,6 +2175,9 @@ struct task_struct {
+ #endif
  #ifdef CONFIG_DEBUG_ATOMIC_SLEEP
  	unsigned long	task_state_change;
- #endif
++#endif
 +#ifdef CONFIG_PREEMPT_RT_FULL
 +	int xmit_recursion;
-+#endif
+ #endif
  	int pagefault_disabled;
  #ifdef CONFIG_MMU
- 	struct task_struct *oom_reaper_list;
 diff --git a/net/core/dev.c b/net/core/dev.c
-index d0a5514..c3d762c 100644
+index 357d35cd2c54..56ea4b78e75a 100644
 --- a/net/core/dev.c
 +++ b/net/core/dev.c
 @@ -3221,8 +3221,10 @@ static void skb_update_prio(struct sk_buff *skb)
@@ -133,7 +133,7 @@ index d0a5514..c3d762c 100644
  					HARD_TX_UNLOCK(dev, txq);
  					goto out;
 diff --git a/net/core/filter.c b/net/core/filter.c
-index 768688b..f57e0af8 100644
+index 768688bfc7df..f57e0af83967 100644
 --- a/net/core/filter.c
 +++ b/net/core/filter.c
 @@ -1657,7 +1657,7 @@ static inline int __bpf_tx_skb(struct net_device *dev, struct sk_buff *skb)
@@ -158,5 +158,5 @@ index 768688b..f57e0af8 100644
  	return ret;
  }
 -- 
-2.7.4
+2.28.0
 

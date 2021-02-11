@@ -1,4 +1,4 @@
-From dae944cd5f9ce859a703b96d34f318ead1b122bb Mon Sep 17 00:00:00 2001
+From bd0e83b20d8dbea20d7e7f34bae3091edf8d0f75 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Wed, 13 Jul 2016 18:22:23 +0200
 Subject: [PATCH 001/365] timer: make the base lock raw
@@ -9,14 +9,14 @@ That means the lock can be made raw and held in IRQ context.
 
 Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 ---
- kernel/time/timer.c | 48 ++++++++++++++++++++++++------------------------
+ kernel/time/timer.c | 48 ++++++++++++++++++++++-----------------------
  1 file changed, 24 insertions(+), 24 deletions(-)
 
 diff --git a/kernel/time/timer.c b/kernel/time/timer.c
-index b560324..c68f96a 100644
+index c9325a1e30d0..0133a7160f11 100644
 --- a/kernel/time/timer.c
 +++ b/kernel/time/timer.c
-@@ -193,7 +193,7 @@ EXPORT_SYMBOL(jiffies_64);
+@@ -194,7 +194,7 @@ EXPORT_SYMBOL(jiffies_64);
  #endif
  
  struct timer_base {
@@ -25,7 +25,7 @@ index b560324..c68f96a 100644
  	struct timer_list	*running_timer;
  	unsigned long		clk;
  	unsigned long		next_expiry;
-@@ -953,10 +953,10 @@ static struct timer_base *lock_timer_base(struct timer_list *timer,
+@@ -954,10 +954,10 @@ static struct timer_base *lock_timer_base(struct timer_list *timer,
  
  		if (!(tf & TIMER_MIGRATING)) {
  			base = get_timer_base(tf);
@@ -38,7 +38,7 @@ index b560324..c68f96a 100644
  		}
  		cpu_relax();
  	}
-@@ -1033,9 +1033,9 @@ __mod_timer(struct timer_list *timer, unsigned long expires, bool pending_only)
+@@ -1034,9 +1034,9 @@ __mod_timer(struct timer_list *timer, unsigned long expires, bool pending_only)
  			/* See the comment in lock_timer_base() */
  			timer->flags |= TIMER_MIGRATING;
  
@@ -50,7 +50,7 @@ index b560324..c68f96a 100644
  			WRITE_ONCE(timer->flags,
  				   (timer->flags & ~TIMER_BASEMASK) | base->cpu);
  			forward_timer_base(base);
-@@ -1060,7 +1060,7 @@ __mod_timer(struct timer_list *timer, unsigned long expires, bool pending_only)
+@@ -1061,7 +1061,7 @@ __mod_timer(struct timer_list *timer, unsigned long expires, bool pending_only)
  	}
  
  out_unlock:
@@ -59,7 +59,7 @@ index b560324..c68f96a 100644
  
  	return ret;
  }
-@@ -1154,9 +1154,9 @@ void add_timer_on(struct timer_list *timer, int cpu)
+@@ -1155,9 +1155,9 @@ void add_timer_on(struct timer_list *timer, int cpu)
  	if (base != new_base) {
  		timer->flags |= TIMER_MIGRATING;
  
@@ -71,7 +71,7 @@ index b560324..c68f96a 100644
  		WRITE_ONCE(timer->flags,
  			   (timer->flags & ~TIMER_BASEMASK) | cpu);
  	}
-@@ -1164,7 +1164,7 @@ void add_timer_on(struct timer_list *timer, int cpu)
+@@ -1165,7 +1165,7 @@ void add_timer_on(struct timer_list *timer, int cpu)
  
  	debug_activate(timer, timer->expires);
  	internal_add_timer(base, timer);
@@ -80,7 +80,7 @@ index b560324..c68f96a 100644
  }
  EXPORT_SYMBOL_GPL(add_timer_on);
  
-@@ -1191,7 +1191,7 @@ int del_timer(struct timer_list *timer)
+@@ -1192,7 +1192,7 @@ int del_timer(struct timer_list *timer)
  	if (timer_pending(timer)) {
  		base = lock_timer_base(timer, &flags);
  		ret = detach_if_pending(timer, base, true);
@@ -89,7 +89,7 @@ index b560324..c68f96a 100644
  	}
  
  	return ret;
-@@ -1219,7 +1219,7 @@ int try_to_del_timer_sync(struct timer_list *timer)
+@@ -1220,7 +1220,7 @@ int try_to_del_timer_sync(struct timer_list *timer)
  		timer_stats_timer_clear_start_info(timer);
  		ret = detach_if_pending(timer, base, true);
  	}
@@ -98,7 +98,7 @@ index b560324..c68f96a 100644
  
  	return ret;
  }
-@@ -1351,13 +1351,13 @@ static void expire_timers(struct timer_base *base, struct hlist_head *head)
+@@ -1352,13 +1352,13 @@ static void expire_timers(struct timer_base *base, struct hlist_head *head)
  		data = timer->data;
  
  		if (timer->flags & TIMER_IRQSAFE) {
@@ -116,7 +116,7 @@ index b560324..c68f96a 100644
  		}
  	}
  }
-@@ -1526,7 +1526,7 @@ u64 get_next_timer_interrupt(unsigned long basej, u64 basem)
+@@ -1527,7 +1527,7 @@ u64 get_next_timer_interrupt(unsigned long basej, u64 basem)
  	if (cpu_is_offline(smp_processor_id()))
  		return expires;
  
@@ -125,7 +125,7 @@ index b560324..c68f96a 100644
  	nextevt = __next_timer_interrupt(base);
  	is_max_delta = (nextevt == base->clk + NEXT_TIMER_MAX_DELTA);
  	base->next_expiry = nextevt;
-@@ -1560,7 +1560,7 @@ u64 get_next_timer_interrupt(unsigned long basej, u64 basem)
+@@ -1561,7 +1561,7 @@ u64 get_next_timer_interrupt(unsigned long basej, u64 basem)
  			base->is_idle = true;
  		}
  	}
@@ -134,7 +134,7 @@ index b560324..c68f96a 100644
  
  	return cmp_next_hrtimer_event(basem, expires);
  }
-@@ -1649,7 +1649,7 @@ static inline void __run_timers(struct timer_base *base)
+@@ -1650,7 +1650,7 @@ static inline void __run_timers(struct timer_base *base)
  	if (!time_after_eq(jiffies, base->clk))
  		return;
  
@@ -143,7 +143,7 @@ index b560324..c68f96a 100644
  
  	/*
  	 * timer_base::must_forward_clk must be cleared before running
-@@ -1676,7 +1676,7 @@ static inline void __run_timers(struct timer_base *base)
+@@ -1677,7 +1677,7 @@ static inline void __run_timers(struct timer_base *base)
  			expire_timers(base, heads + levels);
  	}
  	base->running_timer = NULL;
@@ -152,7 +152,7 @@ index b560324..c68f96a 100644
  }
  
  /*
-@@ -1886,8 +1886,8 @@ int timers_dead_cpu(unsigned int cpu)
+@@ -1887,8 +1887,8 @@ int timers_dead_cpu(unsigned int cpu)
  		 * The caller is globally serialized and nobody else
  		 * takes two locks at once, deadlock is not possible.
  		 */
@@ -163,7 +163,7 @@ index b560324..c68f96a 100644
  
  		/*
  		 * The current CPUs base clock might be stale. Update it
-@@ -1900,8 +1900,8 @@ int timers_dead_cpu(unsigned int cpu)
+@@ -1901,8 +1901,8 @@ int timers_dead_cpu(unsigned int cpu)
  		for (i = 0; i < WHEEL_SIZE; i++)
  			migrate_timer_list(new_base, old_base->vectors + i);
  
@@ -174,7 +174,7 @@ index b560324..c68f96a 100644
  		put_cpu_ptr(&timer_bases);
  	}
  	return 0;
-@@ -1917,7 +1917,7 @@ static void __init init_timer_cpu(int cpu)
+@@ -1918,7 +1918,7 @@ static void __init init_timer_cpu(int cpu)
  	for (i = 0; i < NR_BASES; i++) {
  		base = per_cpu_ptr(&timer_bases[i], cpu);
  		base->cpu = cpu;
@@ -184,5 +184,5 @@ index b560324..c68f96a 100644
  	}
  }
 -- 
-2.7.4
+2.28.0
 

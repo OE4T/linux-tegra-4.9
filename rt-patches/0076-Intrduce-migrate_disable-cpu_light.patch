@@ -1,4 +1,4 @@
-From f253f1827ae1a87ff5846e7450ead3bc6ce7d08b Mon Sep 17 00:00:00 2001
+From 25502fb9b1eceda615b517a48074cf0b214827d3 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Fri, 17 Jun 2011 15:42:38 +0200
 Subject: [PATCH 076/365] Intrduce migrate_disable() + cpu_light()
@@ -29,20 +29,20 @@ it uses migrate_disable() instead of preempt_disable(). That means the user
 remains on the same CPU but the function using it may be preempted and
 invoked again from another caller on the same CPU.
 
-Change-Id: Id77685273ab65451e1a0a7a1f7c667963fa0b95d
+Change-Id: I5b31fd07b37490fee056e4c8498b8b419e6dae98
 Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
 ---
- include/linux/cpu.h     |  3 +++
- include/linux/preempt.h |  9 +++++++
- include/linux/sched.h   | 38 +++++++++++++++++++++------
- include/linux/smp.h     |  3 +++
- kernel/sched/core.c     | 70 ++++++++++++++++++++++++++++++++++++++++++++++++-
+ include/linux/cpu.h     |  3 ++
+ include/linux/preempt.h |  9 ++++++
+ include/linux/sched.h   | 38 +++++++++++++++++-----
+ include/linux/smp.h     |  3 ++
+ kernel/sched/core.c     | 70 ++++++++++++++++++++++++++++++++++++++++-
  kernel/sched/debug.c    |  7 +++++
- lib/smp_processor_id.c  |  5 ++--
+ lib/smp_processor_id.c  |  5 +--
  7 files changed, 124 insertions(+), 11 deletions(-)
 
 diff --git a/include/linux/cpu.h b/include/linux/cpu.h
-index cf9ebc5..e1fe7c9 100644
+index cf9ebc5d5063..e1fe7c9460c4 100644
 --- a/include/linux/cpu.h
 +++ b/include/linux/cpu.h
 @@ -191,6 +191,9 @@ static inline void cpu_notifier_register_done(void)
@@ -56,7 +56,7 @@ index cf9ebc5..e1fe7c9 100644
  /* Stop CPUs going up and down. */
  
 diff --git a/include/linux/preempt.h b/include/linux/preempt.h
-index 26e0eaa..64f1488 100644
+index 26e0eaa16492..64f1488df183 100644
 --- a/include/linux/preempt.h
 +++ b/include/linux/preempt.h
 @@ -262,11 +262,20 @@ do { \
@@ -81,7 +81,7 @@ index 26e0eaa..64f1488 100644
  
  #ifdef CONFIG_PREEMPT_NOTIFIERS
 diff --git a/include/linux/sched.h b/include/linux/sched.h
-index 85a7776..a659714 100644
+index 85a7776b84e5..a6597145763e 100644
 --- a/include/linux/sched.h
 +++ b/include/linux/sched.h
 @@ -1691,6 +1691,12 @@ struct task_struct {
@@ -144,7 +144,7 @@ index 85a7776..a659714 100644
  extern long sched_setaffinity(pid_t pid, const struct cpumask *new_mask);
  extern long sched_getaffinity(pid_t pid, struct cpumask *mask);
 diff --git a/include/linux/smp.h b/include/linux/smp.h
-index 68123c1..891c533 100644
+index 68123c1fe549..891c533724f5 100644
 --- a/include/linux/smp.h
 +++ b/include/linux/smp.h
 @@ -197,6 +197,9 @@ static inline int get_boot_cpu_id(void)
@@ -158,7 +158,7 @@ index 68123c1..891c533 100644
   * Callback to arch code if there's nosmp or maxcpus=0 on the
   * boot command line:
 diff --git a/kernel/sched/core.c b/kernel/sched/core.c
-index 964438b..b10e01e 100644
+index 964438bebe44..b10e01ee9478 100644
 --- a/kernel/sched/core.c
 +++ b/kernel/sched/core.c
 @@ -1141,6 +1141,11 @@ void do_set_cpus_allowed(struct task_struct *p, const struct cpumask *new_mask)
@@ -253,7 +253,7 @@ index 964438b..b10e01e 100644
   * Pick up the highest-prio task:
   */
 diff --git a/kernel/sched/debug.c b/kernel/sched/debug.c
-index 59e38cd..a7edaab 100644
+index 59e38cd81076..a7edaab47c09 100644
 --- a/kernel/sched/debug.c
 +++ b/kernel/sched/debug.c
 @@ -621,6 +621,9 @@ void print_rt_rq(struct seq_file *m, int cpu, struct rt_rq *rt_rq)
@@ -278,7 +278,7 @@ index 59e38cd..a7edaab 100644
  #undef PN
  #undef __PN
 diff --git a/lib/smp_processor_id.c b/lib/smp_processor_id.c
-index 1afec32..11fa431 100644
+index 1afec32de6f2..11fa431046a8 100644
 --- a/lib/smp_processor_id.c
 +++ b/lib/smp_processor_id.c
 @@ -39,8 +39,9 @@ notrace static unsigned int check_preemption_disabled(const char *what1,
@@ -294,5 +294,5 @@ index 1afec32..11fa431 100644
  	print_symbol("caller is %s\n", (long)__builtin_return_address(0));
  	dump_stack();
 -- 
-2.7.4
+2.28.0
 

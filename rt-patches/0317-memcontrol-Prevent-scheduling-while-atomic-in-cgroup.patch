@@ -1,4 +1,4 @@
-From a3e6a53b588464bbcba9986cfabedb11d83ebb7a Mon Sep 17 00:00:00 2001
+From 60efec9d4342a3b6930882da022585c2fd6b0b2a Mon Sep 17 00:00:00 2001
 From: Mike Galbraith <umgwanakikbuti@gmail.com>
 Date: Sat, 21 Jun 2014 10:09:48 +0200
 Subject: [PATCH 317/365] memcontrol: Prevent scheduling while atomic in cgroup
@@ -43,7 +43,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  1 file changed, 7 insertions(+), 6 deletions(-)
 
 diff --git a/mm/memcontrol.c b/mm/memcontrol.c
-index bbd7ab7..52af1a5 100644
+index 1c39495b1677..106918b6b30b 100644
 --- a/mm/memcontrol.c
 +++ b/mm/memcontrol.c
 @@ -1717,6 +1717,7 @@ struct memcg_stock_pcp {
@@ -107,5 +107,5 @@ index bbd7ab7..52af1a5 100644
  
  /*
 -- 
-2.7.4
+2.28.0
 

@@ -1,4 +1,4 @@
-From 141d8ce05f1be94ed44413b05e25d2c69174013c Mon Sep 17 00:00:00 2001
+From 7c3400c4283b60f6df007b23304c95fc6e39b8f7 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Wed, 14 Sep 2016 11:55:23 +0200
 Subject: [PATCH 034/365] fs/dcache: include wait.h
@@ -13,7 +13,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  1 file changed, 1 insertion(+)
 
 diff --git a/include/linux/dcache.h b/include/linux/dcache.h
-index 014d7f9..d3d3aca 100644
+index 014d7f9ac615..d3d3acabe665 100644
 --- a/include/linux/dcache.h
 +++ b/include/linux/dcache.h
 @@ -11,6 +11,7 @@
@@ -25,5 +25,5 @@ index 014d7f9..d3d3aca 100644
  struct path;
  struct vfsmount;
 -- 
-2.7.4
+2.28.0
 

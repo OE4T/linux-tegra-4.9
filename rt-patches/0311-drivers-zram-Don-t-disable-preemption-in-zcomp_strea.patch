@@ -1,4 +1,4 @@
-From b35e2a0a1e9786d3ea03b2e0553659e24f49e403 Mon Sep 17 00:00:00 2001
+From 61751ce1ba547bd0ef0457be194e8aee3c81d577 Mon Sep 17 00:00:00 2001
 From: Mike Galbraith <umgwanakikbuti@gmail.com>
 Date: Thu, 20 Oct 2016 11:15:22 +0200
 Subject: [PATCH 311/365] drivers/zram: Don't disable preemption in
@@ -20,7 +20,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  3 files changed, 14 insertions(+), 5 deletions(-)
 
 diff --git a/drivers/block/zram/zcomp.c b/drivers/block/zram/zcomp.c
-index 4b5cd3a..fa8329a 100644
+index 4b5cd3a7b2b6..fa8329ad79fd 100644
 --- a/drivers/block/zram/zcomp.c
 +++ b/drivers/block/zram/zcomp.c
 @@ -118,12 +118,19 @@ ssize_t zcomp_available_show(const char *comp, char *buf)
@@ -54,7 +54,7 @@ index 4b5cd3a..fa8329a 100644
  		break;
  	case CPU_DEAD:
 diff --git a/drivers/block/zram/zcomp.h b/drivers/block/zram/zcomp.h
-index 478cac2..f7a6efd 100644
+index 478cac2ed465..f7a6efdc3285 100644
 --- a/drivers/block/zram/zcomp.h
 +++ b/drivers/block/zram/zcomp.h
 @@ -14,6 +14,7 @@ struct zcomp_strm {
@@ -66,7 +66,7 @@ index 478cac2..f7a6efd 100644
  
  /* dynamic per-device compression frontend */
 diff --git a/drivers/block/zram/zram_drv.c b/drivers/block/zram/zram_drv.c
-index c864ad5..a9765ff 100644
+index c864ad57348a..a9765ffa322a 100644
 --- a/drivers/block/zram/zram_drv.c
 +++ b/drivers/block/zram/zram_drv.c
 @@ -577,6 +577,7 @@ static int zram_decompress_page(struct zram *zram, char *mem, u32 index)
@@ -97,5 +97,5 @@ index c864ad5..a9765ff 100644
  
  	/* Should NEVER happen. Return bio error if it does. */
 -- 
-2.7.4
+2.28.0
 

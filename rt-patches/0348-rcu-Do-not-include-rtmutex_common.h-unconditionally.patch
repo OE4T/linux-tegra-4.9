@@ -1,4 +1,4 @@
-From 695db0247bcb3463c67555368879c2ad3851259a Mon Sep 17 00:00:00 2001
+From 7ae2b72f322e9edceac43a2052d518033daa916d Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Mon, 9 Jul 2018 11:58:08 +0200
 Subject: [PATCH 348/365] rcu: Do not include rtmutex_common.h unconditionally
@@ -19,7 +19,7 @@ Signed-off-by: Julia Cartwright <julia@ni.com>
  1 file changed, 1 insertion(+), 2 deletions(-)
 
 diff --git a/kernel/rcu/tree_plugin.h b/kernel/rcu/tree_plugin.h
-index a1a7baf..3d18d08 100644
+index a1a7bafcce15..3d18d08e8382 100644
 --- a/kernel/rcu/tree_plugin.h
 +++ b/kernel/rcu/tree_plugin.h
 @@ -37,6 +37,7 @@
@@ -40,5 +40,5 @@ index a1a7baf..3d18d08 100644
  
  static void rcu_initiate_boost_trace(struct rcu_node *rnp)
 -- 
-2.7.4
+2.28.0
 

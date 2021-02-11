@@ -1,4 +1,4 @@
-From cb1758aeceee449e0f9976ef679992d021cb0392 Mon Sep 17 00:00:00 2001
+From 8cbfcaa3935bfd3d5961719bd6598db2c8a3b7d3 Mon Sep 17 00:00:00 2001
 From: Luiz Capitulino <lcapitulino@redhat.com>
 Date: Fri, 27 May 2016 15:03:28 +0200
 Subject: [PATCH 102/365] mm: perform lru_add_drain_all() remotely
@@ -24,7 +24,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  1 file changed, 32 insertions(+), 10 deletions(-)
 
 diff --git a/mm/swap.c b/mm/swap.c
-index 796f366..e360916 100644
+index 796f3664e2fc..e360916a5c6d 100644
 --- a/mm/swap.c
 +++ b/mm/swap.c
 @@ -597,9 +597,15 @@ void lru_add_drain_cpu(int cpu)
@@ -112,5 +112,5 @@ index 796f366..e360916 100644
  	put_online_cpus();
  	mutex_unlock(&lock);
 -- 
-2.7.4
+2.28.0
 

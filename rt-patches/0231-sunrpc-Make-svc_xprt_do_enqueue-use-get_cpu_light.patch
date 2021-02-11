@@ -1,4 +1,4 @@
-From ec0fdb54d7d1359997b4785cb9500ff7c9734a85 Mon Sep 17 00:00:00 2001
+From 5d5232f06159c959827b286e899d7c3b90a43245 Mon Sep 17 00:00:00 2001
 From: Mike Galbraith <umgwanakikbuti@gmail.com>
 Date: Wed, 18 Feb 2015 16:05:28 +0100
 Subject: [PATCH 231/365] sunrpc: Make svc_xprt_do_enqueue() use
@@ -34,10 +34,10 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  1 file changed, 3 insertions(+), 3 deletions(-)
 
 diff --git a/net/sunrpc/svc_xprt.c b/net/sunrpc/svc_xprt.c
-index 42ce3ed..81bb5fc 100644
+index 56e4ac8e2e99..bac86b275a79 100644
 --- a/net/sunrpc/svc_xprt.c
 +++ b/net/sunrpc/svc_xprt.c
-@@ -396,7 +396,7 @@ void svc_xprt_do_enqueue(struct svc_xprt *xprt)
+@@ -405,7 +405,7 @@ void svc_xprt_do_enqueue(struct svc_xprt *xprt)
  		goto out;
  	}
  
@@ -46,7 +46,7 @@ index 42ce3ed..81bb5fc 100644
  	pool = svc_pool_for_cpu(xprt->xpt_server, cpu);
  
  	atomic_long_inc(&pool->sp_stats.packets);
-@@ -432,7 +432,7 @@ void svc_xprt_do_enqueue(struct svc_xprt *xprt)
+@@ -441,7 +441,7 @@ void svc_xprt_do_enqueue(struct svc_xprt *xprt)
  
  		atomic_long_inc(&pool->sp_stats.threads_woken);
  		wake_up_process(rqstp->rq_task);
@@ -55,7 +55,7 @@ index 42ce3ed..81bb5fc 100644
  		goto out;
  	}
  	rcu_read_unlock();
-@@ -453,7 +453,7 @@ void svc_xprt_do_enqueue(struct svc_xprt *xprt)
+@@ -462,7 +462,7 @@ void svc_xprt_do_enqueue(struct svc_xprt *xprt)
  		goto redo_search;
  	}
  	rqstp = NULL;
@@ -65,5 +65,5 @@ index 42ce3ed..81bb5fc 100644
  	trace_svc_xprt_do_enqueue(xprt, rqstp);
  }
 -- 
-2.7.4
+2.28.0
 

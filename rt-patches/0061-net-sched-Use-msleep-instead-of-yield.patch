@@ -1,4 +1,4 @@
-From 58297e4f0fd47f1405fc4217868c8b14051e4447 Mon Sep 17 00:00:00 2001
+From 327a906e7010488e1c5326a553eb541f26d87121 Mon Sep 17 00:00:00 2001
 From: Marc Kleine-Budde <mkl@pengutronix.de>
 Date: Wed, 5 Mar 2014 00:49:47 +0100
 Subject: [PATCH 061/365] net: sched: Use msleep() instead of yield()
@@ -46,7 +46,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/net/sched/sch_generic.c b/net/sched/sch_generic.c
-index cb0e918..07071c8 100644
+index cb0e9189e423..07071c838ea3 100644
 --- a/net/sched/sch_generic.c
 +++ b/net/sched/sch_generic.c
 @@ -938,7 +938,7 @@ void dev_deactivate_many(struct list_head *head)
@@ -59,5 +59,5 @@ index cb0e918..07071c8 100644
  
  void dev_deactivate(struct net_device *dev)
 -- 
-2.7.4
+2.28.0
 

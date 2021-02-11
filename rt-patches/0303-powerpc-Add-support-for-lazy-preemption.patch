@@ -1,4 +1,4 @@
-From fa797102cbf02c715802b6242278f32e994d6c9c Mon Sep 17 00:00:00 2001
+From 2a8be89aa82a43e75b10af4aa9d293c0aebc9176 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Thu, 1 Nov 2012 10:14:11 +0100
 Subject: [PATCH 303/365] powerpc: Add support for lazy preemption
@@ -15,7 +15,7 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  5 files changed, 33 insertions(+), 11 deletions(-)
 
 diff --git a/arch/powerpc/Kconfig b/arch/powerpc/Kconfig
-index f235b07..245c7ba 100644
+index f235b07fcc34..245c7ba1ad42 100644
 --- a/arch/powerpc/Kconfig
 +++ b/arch/powerpc/Kconfig
 @@ -137,6 +137,7 @@ config PPC
@@ -27,7 +27,7 @@ index f235b07..245c7ba 100644
  	select MODULES_USE_ELF_RELA
  	select CLONE_BACKWARDS
 diff --git a/arch/powerpc/include/asm/thread_info.h b/arch/powerpc/include/asm/thread_info.h
-index 87e4b2d..981e501 100644
+index 87e4b2d8dcd4..981e501a4359 100644
 --- a/arch/powerpc/include/asm/thread_info.h
 +++ b/arch/powerpc/include/asm/thread_info.h
 @@ -43,6 +43,8 @@ struct thread_info {
@@ -77,7 +77,7 @@ index 87e4b2d..981e501 100644
  /* Bits in local_flags */
  /* Don't move TLF_NAPPING without adjusting the code in entry_32.S */
 diff --git a/arch/powerpc/kernel/asm-offsets.c b/arch/powerpc/kernel/asm-offsets.c
-index dfcf28b..40f047d 100644
+index dfcf28be12ba..40f047d95cfb 100644
 --- a/arch/powerpc/kernel/asm-offsets.c
 +++ b/arch/powerpc/kernel/asm-offsets.c
 @@ -156,6 +156,7 @@ int main(void)
@@ -89,7 +89,7 @@ index dfcf28b..40f047d 100644
  	DEFINE(TI_CPU, offsetof(struct thread_info, cpu));
  
 diff --git a/arch/powerpc/kernel/entry_32.S b/arch/powerpc/kernel/entry_32.S
-index bdd88f9..3a30180 100644
+index bdd88f9d7926..3a3018036ec1 100644
 --- a/arch/powerpc/kernel/entry_32.S
 +++ b/arch/powerpc/kernel/entry_32.S
 @@ -848,7 +848,14 @@ resume_kernel:
@@ -141,7 +141,7 @@ index bdd88f9..3a30180 100644
  	andi.	r0,r9,_TIF_USER_WORK_MASK
  	beq	restore_user
 diff --git a/arch/powerpc/kernel/entry_64.S b/arch/powerpc/kernel/entry_64.S
-index 38f0a75..d84a974a 100644
+index 38f0a75014eb..d84a974a00de 100644
 --- a/arch/powerpc/kernel/entry_64.S
 +++ b/arch/powerpc/kernel/entry_64.S
 @@ -746,7 +746,7 @@ _GLOBAL(ret_from_except_lite)
@@ -183,5 +183,5 @@ index 38f0a75..d84a974a 100644
  
  	/*
 -- 
-2.7.4
+2.28.0
 

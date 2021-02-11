@@ -1,4 +1,4 @@
-From f2873092f7547f52c0aeeb58c10c269f57c01ff7 Mon Sep 17 00:00:00 2001
+From e2d8e875c142dd4192a550b1c415e3411bf1ba38 Mon Sep 17 00:00:00 2001
 From: Steven Rostedt <srostedt@redhat.com>
 Date: Fri, 3 Jul 2009 08:44:29 -0500
 Subject: [PATCH 080/365] ata: Do not disable interrupts in ide code for
@@ -14,7 +14,7 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  1 file changed, 6 insertions(+), 6 deletions(-)
 
 diff --git a/drivers/ata/libata-sff.c b/drivers/ata/libata-sff.c
-index d717785..27d227e 100644
+index 8bb0c372cdb4..516d0bd82d04 100644
 --- a/drivers/ata/libata-sff.c
 +++ b/drivers/ata/libata-sff.c
 @@ -678,9 +678,9 @@ unsigned int ata_sff_data_xfer_noirq(struct ata_device *dev, unsigned char *buf,
@@ -66,5 +66,5 @@ index d717785..27d227e 100644
  		buf = page_address(page);
  		consumed = ap->ops->sff_data_xfer(dev,  buf + offset,
 -- 
-2.7.4
+2.28.0
 

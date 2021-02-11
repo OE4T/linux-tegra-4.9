@@ -1,4 +1,4 @@
-From d861df17c8c881bd7545722ec504609350499ef9 Mon Sep 17 00:00:00 2001
+From f2f37ef0e64a2ca0b3a3e2976a9a23295021a178 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Mon, 18 Jul 2011 17:03:52 +0200
 Subject: [PATCH 139/365] sched: Disable CONFIG_RT_GROUP_SCHED on RT
@@ -18,10 +18,10 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  1 file changed, 1 insertion(+)
 
 diff --git a/init/Kconfig b/init/Kconfig
-index 538e78c..c2896d9 100644
+index 43dc481d2d5c..9acc4c703f1c 100644
 --- a/init/Kconfig
 +++ b/init/Kconfig
-@@ -1139,6 +1139,7 @@ config CFS_BANDWIDTH
+@@ -1140,6 +1140,7 @@ config CFS_BANDWIDTH
  config RT_GROUP_SCHED
  	bool "Group scheduling for SCHED_RR/FIFO"
  	depends on CGROUP_SCHED
@@ -30,5 +30,5 @@ index 538e78c..c2896d9 100644
  	help
  	  This feature lets you explicitly allocate real CPU bandwidth
 -- 
-2.7.4
+2.28.0
 

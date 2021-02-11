@@ -1,4 +1,4 @@
-From c8372b314f58fc32176e56234d5e6d7d8b125bbb Mon Sep 17 00:00:00 2001
+From 8080acbbbe2006a1daf0f782fc84979b82961f2b Mon Sep 17 00:00:00 2001
 From: Josh Cartwright <joshc@ni.com>
 Date: Thu, 11 Feb 2016 11:54:00 -0600
 Subject: [PATCH 253/365] genirq: update irq_set_irqchip_state documentation
@@ -14,7 +14,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/kernel/irq/manage.c b/kernel/irq/manage.c
-index 8f45928..491ceca 100644
+index 8f459282b034..491ceca98798 100644
 --- a/kernel/irq/manage.c
 +++ b/kernel/irq/manage.c
 @@ -2129,7 +2129,7 @@ EXPORT_SYMBOL_GPL(irq_get_irqchip_state);
@@ -27,5 +27,5 @@ index 8f45928..491ceca 100644
   */
  int irq_set_irqchip_state(unsigned int irq, enum irqchip_irq_state which,
 -- 
-2.7.4
+2.28.0
 

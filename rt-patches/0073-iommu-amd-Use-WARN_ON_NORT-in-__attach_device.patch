@@ -1,4 +1,4 @@
-From 95c69b1843bea6b68f2c69de94324237f14ae1d1 Mon Sep 17 00:00:00 2001
+From 9849d5c25683b98de80b939fc33bc8ef9bdd2edb Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Sat, 27 Feb 2016 10:22:23 +0100
 Subject: [PATCH 073/365] iommu/amd: Use WARN_ON_NORT in __attach_device()
@@ -16,7 +16,7 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  1 file changed, 6 insertions(+), 6 deletions(-)
 
 diff --git a/drivers/iommu/amd_iommu.c b/drivers/iommu/amd_iommu.c
-index bb0448c..5d6b181 100644
+index f4a15d9f2bbb..e5693cbc0e3b 100644
 --- a/drivers/iommu/amd_iommu.c
 +++ b/drivers/iommu/amd_iommu.c
 @@ -1953,10 +1953,10 @@ static int __attach_device(struct iommu_dev_data *dev_data,
@@ -48,5 +48,5 @@ index bb0448c..5d6b181 100644
  	if (WARN_ON(!dev_data->domain))
  		return;
 -- 
-2.7.4
+2.28.0
 

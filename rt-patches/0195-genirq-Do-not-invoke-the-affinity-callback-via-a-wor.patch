@@ -1,4 +1,4 @@
-From caf6d9978d78b58cd733e01acfba72d86916dca7 Mon Sep 17 00:00:00 2001
+From 60e95a9fdc9b5283e0a076ba9b3b8ef3ee7abf81 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Wed, 21 Aug 2013 17:48:46 +0200
 Subject: [PATCH 195/365] genirq: Do not invoke the affinity callback via a
@@ -11,13 +11,13 @@ This patch uses swork_queue() instead.
 
 Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 ---
- drivers/scsi/qla2xxx/qla_isr.c |  4 ++++
- include/linux/interrupt.h      |  6 ++++++
- kernel/irq/manage.c            | 49 +++++++++++++++++++++++++++++++++++-------
+ drivers/scsi/qla2xxx/qla_isr.c |  4 +++
+ include/linux/interrupt.h      |  6 +++++
+ kernel/irq/manage.c            | 49 ++++++++++++++++++++++++++++------
  3 files changed, 51 insertions(+), 8 deletions(-)
 
 diff --git a/drivers/scsi/qla2xxx/qla_isr.c b/drivers/scsi/qla2xxx/qla_isr.c
-index 17b1525..6249c4b 100644
+index 17b1525d492b..6249c4b6f4be 100644
 --- a/drivers/scsi/qla2xxx/qla_isr.c
 +++ b/drivers/scsi/qla2xxx/qla_isr.c
 @@ -3127,7 +3127,11 @@ qla24xx_enable_msix(struct qla_hw_data *ha, struct rsp_que *rsp)
@@ -33,7 +33,7 @@ index 17b1525..6249c4b 100644
  
  	/*
 diff --git a/include/linux/interrupt.h b/include/linux/interrupt.h
-index 807d3f6..4917b62 100644
+index 807d3f6af646..4917b6273f33 100644
 --- a/include/linux/interrupt.h
 +++ b/include/linux/interrupt.h
 @@ -14,6 +14,7 @@
@@ -65,7 +65,7 @@ index 807d3f6..4917b62 100644
  	void (*release)(struct kref *ref);
  };
 diff --git a/kernel/irq/manage.c b/kernel/irq/manage.c
-index 996b5fb..8f45928 100644
+index 996b5fb0efc4..8f459282b034 100644
 --- a/kernel/irq/manage.c
 +++ b/kernel/irq/manage.c
 @@ -235,11 +235,12 @@ int irq_set_affinity_locked(struct irq_data *data, const struct cpumask *mask,
@@ -148,5 +148,5 @@ index 996b5fb..8f45928 100644
  
  	raw_spin_lock_irqsave(&desc->lock, flags);
 -- 
-2.7.4
+2.28.0
 

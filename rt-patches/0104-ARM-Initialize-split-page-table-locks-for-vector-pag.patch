@@ -1,4 +1,4 @@
-From 85603e4e6d0607acae24689f0363c9a5b4687ab9 Mon Sep 17 00:00:00 2001
+From b4a89bba89fb4ce5c15387f756b8b45722f10bdf Mon Sep 17 00:00:00 2001
 From: Frank Rowand <frank.rowand@am.sony.com>
 Date: Sat, 1 Oct 2011 18:58:13 -0700
 Subject: [PATCH 104/365] ARM: Initialize split page table locks for vector
@@ -36,7 +36,7 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  1 file changed, 24 insertions(+)
 
 diff --git a/arch/arm/kernel/process.c b/arch/arm/kernel/process.c
-index 38ad8b9..c8dcbd22 100644
+index 38ad8b956c6b..c8dcbd220c14 100644
 --- a/arch/arm/kernel/process.c
 +++ b/arch/arm/kernel/process.c
 @@ -397,6 +397,30 @@ unsigned long arch_randomize_brk(struct mm_struct *mm)
@@ -71,5 +71,5 @@ index 38ad8b9..c8dcbd22 100644
  /*
   * The vectors page is always readable from user space for the
 -- 
-2.7.4
+2.28.0
 

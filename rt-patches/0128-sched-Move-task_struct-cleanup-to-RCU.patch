@@ -1,4 +1,4 @@
-From 5dd6ab547fdfdd19f9a7124417193c4ba4326511 Mon Sep 17 00:00:00 2001
+From 53a11a72311da906343a130c92fb28078bcf2ba7 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Tue, 31 May 2011 16:59:16 +0200
 Subject: [PATCH 128/365] sched: Move task_struct cleanup to RCU
@@ -13,7 +13,7 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  2 files changed, 27 insertions(+), 1 deletion(-)
 
 diff --git a/include/linux/sched.h b/include/linux/sched.h
-index 1938041..20deb65 100644
+index 1938041d8160..20deb6518f81 100644
 --- a/include/linux/sched.h
 +++ b/include/linux/sched.h
 @@ -2143,6 +2143,9 @@ struct task_struct {
@@ -51,7 +51,7 @@ index 1938041..20deb65 100644
  struct task_struct *task_rcu_dereference(struct task_struct **ptask);
  struct task_struct *try_get_task_struct(struct task_struct **ptask);
 diff --git a/kernel/fork.c b/kernel/fork.c
-index 31db305..86296ac 100644
+index bdeac24765b8..b8f2b166e6b0 100644
 --- a/kernel/fork.c
 +++ b/kernel/fork.c
 @@ -386,7 +386,9 @@ static inline void put_signal_struct(struct signal_struct *sig)
@@ -85,5 +85,5 @@ index 31db305..86296ac 100644
  void __init __weak arch_task_cache_init(void) { }
  
 -- 
-2.7.4
+2.28.0
 

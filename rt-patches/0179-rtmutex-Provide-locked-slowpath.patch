@@ -1,4 +1,4 @@
-From c0814f1d73c5c06fbdc87bf2b3e9ab151c66759a Mon Sep 17 00:00:00 2001
+From dbeeb44c6cb66c6b06bc601fd3427666ba018ab2 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Sat, 1 Apr 2017 12:51:01 +0200
 Subject: [PATCH 179/365] rtmutex: Provide locked slowpath
@@ -13,12 +13,12 @@ wait_lock held.
 Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
 Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 ---
- kernel/locking/rtmutex.c        | 72 ++++++++++++++++++++++++-----------------
- kernel/locking/rtmutex_common.h |  9 ++++++
+ kernel/locking/rtmutex.c        | 72 +++++++++++++++++++--------------
+ kernel/locking/rtmutex_common.h |  9 +++++
  2 files changed, 51 insertions(+), 30 deletions(-)
 
 diff --git a/kernel/locking/rtmutex.c b/kernel/locking/rtmutex.c
-index 2241d3f..42a9132 100644
+index 2241d3f63097..42a91329b4cd 100644
 --- a/kernel/locking/rtmutex.c
 +++ b/kernel/locking/rtmutex.c
 @@ -1750,36 +1750,18 @@ static void ww_mutex_account_lock(struct rt_mutex *lock,
@@ -133,7 +133,7 @@ index 2241d3f..42a9132 100644
  	raw_spin_unlock_irqrestore(&lock->wait_lock, flags);
  
 diff --git a/kernel/locking/rtmutex_common.h b/kernel/locking/rtmutex_common.h
-index 32ae70f..64d89d7 100644
+index 32ae70f25c08..64d89d780059 100644
 --- a/kernel/locking/rtmutex_common.h
 +++ b/kernel/locking/rtmutex_common.h
 @@ -131,6 +131,15 @@ extern bool __rt_mutex_futex_unlock(struct rt_mutex *lock,
@@ -153,5 +153,5 @@ index 32ae70f..64d89d7 100644
  # include "rtmutex-debug.h"
  #else
 -- 
-2.7.4
+2.28.0
 

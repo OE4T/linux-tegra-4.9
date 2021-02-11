@@ -1,4 +1,4 @@
-From c368c292baa0cca7866f07ef858cf8ecdac3c28e Mon Sep 17 00:00:00 2001
+From dee0e5fad8fc4c5cd3366eb404ad721efc8905f5 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Fri, 13 Feb 2015 11:01:26 +0100
 Subject: [PATCH 217/365] block: blk-mq: Use swait
@@ -45,7 +45,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  3 files changed, 9 insertions(+), 9 deletions(-)
 
 diff --git a/block/blk-core.c b/block/blk-core.c
-index ebac0d3..2ce6dee 100644
+index ebac0d312d3d..2ce6dee96262 100644
 --- a/block/blk-core.c
 +++ b/block/blk-core.c
 @@ -664,9 +664,9 @@ int blk_queue_enter(struct request_queue *q, bool nowait)
@@ -80,7 +80,7 @@ index ebac0d3..2ce6dee 100644
  	/*
  	 * Init percpu_ref in atomic mode so that it's faster to shutdown.
 diff --git a/block/blk-mq.c b/block/blk-mq.c
-index d877210..9a505b9 100644
+index d877210e9a1b..9a505b9361ee 100644
 --- a/block/blk-mq.c
 +++ b/block/blk-mq.c
 @@ -69,7 +69,7 @@ EXPORT_SYMBOL_GPL(blk_mq_freeze_queue_start);
@@ -111,7 +111,7 @@ index d877210..9a505b9 100644
  
  bool blk_mq_can_queue(struct blk_mq_hw_ctx *hctx)
 diff --git a/include/linux/blkdev.h b/include/linux/blkdev.h
-index a0458bf..c6de2cc 100644
+index 552fb3fb991b..9d56ed8ccbaf 100644
 --- a/include/linux/blkdev.h
 +++ b/include/linux/blkdev.h
 @@ -477,7 +477,7 @@ struct request_queue {
@@ -124,5 +124,5 @@ index a0458bf..c6de2cc 100644
  	struct list_head	all_q_node;
  
 -- 
-2.7.4
+2.28.0
 

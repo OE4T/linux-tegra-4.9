@@ -1,4 +1,4 @@
-From 69424c5c6203e9cdb98cadf749c85ae446ad209f Mon Sep 17 00:00:00 2001
+From d4cdee35a25f1ae496804adf7ea821fc8bb312c5 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Wed, 1 Mar 2017 16:30:49 +0100
 Subject: [PATCH 126/365] timer/hrtimer: check properly for a running timer
@@ -16,7 +16,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  1 file changed, 7 insertions(+), 1 deletion(-)
 
 diff --git a/include/linux/hrtimer.h b/include/linux/hrtimer.h
-index 74532c5..cf423f1 100644
+index 74532c59d066..cf423f1570c5 100644
 --- a/include/linux/hrtimer.h
 +++ b/include/linux/hrtimer.h
 @@ -461,7 +461,13 @@ static inline bool hrtimer_is_queued(struct hrtimer *timer)
@@ -35,5 +35,5 @@ index 74532c5..cf423f1 100644
  
  /* Forward a hrtimer so it expires after now: */
 -- 
-2.7.4
+2.28.0
 

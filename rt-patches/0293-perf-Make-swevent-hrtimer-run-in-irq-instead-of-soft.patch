@@ -1,4 +1,4 @@
-From 7fc65715edb667b998be25b04fbd7722f36f6965 Mon Sep 17 00:00:00 2001
+From ed8b62f7ba3d677b359d9e3aa0c190fb1067717b Mon Sep 17 00:00:00 2001
 From: Yong Zhang <yong.zhang@windriver.com>
 Date: Wed, 11 Jul 2012 22:05:21 +0000
 Subject: [PATCH 293/365] perf: Make swevent hrtimer run in irq instead of
@@ -58,10 +58,10 @@ Signed-off-by: Steven Rostedt <rostedt@goodmis.org>
  1 file changed, 1 insertion(+)
 
 diff --git a/kernel/events/core.c b/kernel/events/core.c
-index c89413a..68ef818 100644
+index c7b70b50ec84..6796d1faf3ae 100644
 --- a/kernel/events/core.c
 +++ b/kernel/events/core.c
-@@ -8470,6 +8470,7 @@ static void perf_swevent_init_hrtimer(struct perf_event *event)
+@@ -8471,6 +8471,7 @@ static void perf_swevent_init_hrtimer(struct perf_event *event)
  
  	hrtimer_init(&hwc->hrtimer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
  	hwc->hrtimer.function = perf_swevent_hrtimer;
@@ -70,5 +70,5 @@ index c89413a..68ef818 100644
  	/*
  	 * Since hrtimers have a fixed rate, we can do a static freq->period
 -- 
-2.7.4
+2.28.0
 

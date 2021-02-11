@@ -1,4 +1,4 @@
-From 73acc7c54d7b899031664f87b57b88b8ef5060c8 Mon Sep 17 00:00:00 2001
+From aa73fba3d63b8545159192725dbf8be085d875e7 Mon Sep 17 00:00:00 2001
 From: Mike Galbraith <efault@gmx.de>
 Date: Sun, 3 Sep 2017 04:48:10 +0200
 Subject: [PATCH 337/365] kernel/hrtimer/hotplug: don't wake ktimersoftd while
@@ -15,7 +15,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  1 file changed, 13 insertions(+), 6 deletions(-)
 
 diff --git a/kernel/time/hrtimer.c b/kernel/time/hrtimer.c
-index bfe46fe..b01e1fe 100644
+index bfe46fe6a700..b01e1fecdb25 100644
 --- a/kernel/time/hrtimer.c
 +++ b/kernel/time/hrtimer.c
 @@ -1848,7 +1848,7 @@ int hrtimers_prepare_cpu(unsigned int cpu)
@@ -70,5 +70,5 @@ index bfe46fe..b01e1fe 100644
  	__hrtimer_peek_ahead_timers();
  	local_irq_enable();
 -- 
-2.7.4
+2.28.0
 

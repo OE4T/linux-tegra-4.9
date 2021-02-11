@@ -1,4 +1,4 @@
-From bf25ef4c3f5b467a610f3149f14e1403a7700c7f Mon Sep 17 00:00:00 2001
+From 4b04526c40538359916b20a35fc1cfe94eb3e8e0 Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Wed, 23 Nov 2016 16:29:32 +0100
 Subject: [PATCH 197/365] locking/percpu-rwsem: Remove preempt_disable variants
@@ -17,7 +17,7 @@ Signed-off-by: Peter Zijlstra (Intel) <peterz@infradead.org>
  2 files changed, 20 insertions(+), 36 deletions(-)
 
 diff --git a/fs/locks.c b/fs/locks.c
-index 8252647..36d8752 100644
+index 8252647c6084..36d8752fbf17 100644
 --- a/fs/locks.c
 +++ b/fs/locks.c
 @@ -935,7 +935,7 @@ static int flock_lock_inode(struct inode *inode, struct file_lock *request)
@@ -161,7 +161,7 @@ index 8252647..36d8752 100644
  	locks_dispose_list(&dispose);
  }
 diff --git a/include/linux/percpu-rwsem.h b/include/linux/percpu-rwsem.h
-index 82d54a4..ea940f4 100644
+index 82d54a4b9988..ea940f451606 100644
 --- a/include/linux/percpu-rwsem.h
 +++ b/include/linux/percpu-rwsem.h
 @@ -28,7 +28,7 @@ static struct percpu_rw_semaphore name = {				\
@@ -221,5 +221,5 @@ index 82d54a4..ea940f4 100644
  extern void percpu_up_write(struct percpu_rw_semaphore *);
  
 -- 
-2.7.4
+2.28.0
 

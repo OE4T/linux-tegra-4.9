@@ -1,4 +1,4 @@
-From 08a489337fb7f9924c54f394d15b45b310ab0e20 Mon Sep 17 00:00:00 2001
+From 9351c928db699567d05555baa2f17b1fc9ae74f3 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Fri, 13 Feb 2015 15:52:24 +0100
 Subject: [PATCH 316/365] cgroups: use simple wait in css_release()
@@ -27,7 +27,7 @@ To avoid:
 | [<ffffffff810948d8>] kthread+0xe8/0x100
 | [<ffffffff815b9c3c>] ret_from_fork+0x7c/0xb0
 
-Change-Id: Ie81040a8bcd8a1008f54408af922a29e87484cc3
+Change-Id: I8b940389f9ddf119d2be48cb56802a6dd4f85733
 Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 ---
  include/linux/cgroup-defs.h | 2 ++
@@ -35,7 +35,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  2 files changed, 7 insertions(+), 4 deletions(-)
 
 diff --git a/include/linux/cgroup-defs.h b/include/linux/cgroup-defs.h
-index 9c72b21..0049a7e 100644
+index 8875175dc1a8..703ebb376f54 100644
 --- a/include/linux/cgroup-defs.h
 +++ b/include/linux/cgroup-defs.h
 @@ -17,6 +17,7 @@
@@ -55,7 +55,7 @@ index 9c72b21..0049a7e 100644
  
  /*
 diff --git a/kernel/cgroup.c b/kernel/cgroup.c
-index 789bc20..71d0805 100644
+index e4e6bee81c42..ac0c4eea819c 100644
 --- a/kernel/cgroup.c
 +++ b/kernel/cgroup.c
 @@ -5046,10 +5046,10 @@ static void css_free_rcu_fn(struct rcu_head *rcu_head)
@@ -91,5 +91,5 @@ index 789bc20..71d0805 100644
  	/*
  	 * Used to destroy pidlists and separate to serve as flush domain.
 -- 
-2.7.4
+2.28.0
 

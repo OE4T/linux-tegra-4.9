@@ -1,4 +1,4 @@
-From 47993c4131f26e273617d89a1b0af6594b8eb138 Mon Sep 17 00:00:00 2001
+From 784ca6519822d165eb56fc9e471777c185bd96be Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Thu, 25 Oct 2012 10:32:35 +0100
 Subject: [PATCH 107/365] mm: Enable SLUB for RT
@@ -9,11 +9,11 @@ move the freeing out of the lock held region.
 Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
 ---
  mm/slab.h |   4 ++
- mm/slub.c | 134 ++++++++++++++++++++++++++++++++++++++++++++++++--------------
+ mm/slub.c | 134 ++++++++++++++++++++++++++++++++++++++++++------------
  2 files changed, 109 insertions(+), 29 deletions(-)
 
 diff --git a/mm/slab.h b/mm/slab.h
-index ceb7d70..dfd281e 100644
+index ceb7d70cdb76..dfd281e43fbe 100644
 --- a/mm/slab.h
 +++ b/mm/slab.h
 @@ -426,7 +426,11 @@ static inline void slab_post_alloc_hook(struct kmem_cache *s, gfp_t flags,
@@ -29,7 +29,7 @@ index ceb7d70..dfd281e 100644
  #ifdef CONFIG_SLAB
  	struct list_head slabs_partial;	/* partial list first, better asm code */
 diff --git a/mm/slub.c b/mm/slub.c
-index 454c1d55..d5110f1 100644
+index d2f61d434292..1167a156f43f 100644
 --- a/mm/slub.c
 +++ b/mm/slub.c
 @@ -1158,7 +1158,7 @@ static noinline int free_debug_processing(
@@ -434,7 +434,7 @@ index 454c1d55..d5110f1 100644
  
  	if (debug_guardpage_minorder())
  		slub_max_order = 0;
-@@ -4369,7 +4445,7 @@ static int validate_slab_node(struct kmem_cache *s,
+@@ -4371,7 +4447,7 @@ static int validate_slab_node(struct kmem_cache *s,
  	struct page *page;
  	unsigned long flags;
  
@@ -443,7 +443,7 @@ index 454c1d55..d5110f1 100644
  
  	list_for_each_entry(page, &n->partial, lru) {
  		validate_slab_slab(s, page, map);
-@@ -4391,7 +4467,7 @@ static int validate_slab_node(struct kmem_cache *s,
+@@ -4393,7 +4469,7 @@ static int validate_slab_node(struct kmem_cache *s,
  		       s->name, count, atomic_long_read(&n->nr_slabs));
  
  out:
@@ -452,7 +452,7 @@ index 454c1d55..d5110f1 100644
  	return count;
  }
  
-@@ -4579,12 +4655,12 @@ static int list_locations(struct kmem_cache *s, char *buf,
+@@ -4581,12 +4657,12 @@ static int list_locations(struct kmem_cache *s, char *buf,
  		if (!atomic_long_read(&n->nr_slabs))
  			continue;
  
@@ -468,5 +468,5 @@ index 454c1d55..d5110f1 100644
  
  	for (i = 0; i < t.count; i++) {
 -- 
-2.7.4
+2.28.0
 

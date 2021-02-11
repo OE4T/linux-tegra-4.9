@@ -1,4 +1,4 @@
-From a24c411d5aa8dcef1a20877fd40fc32c366da3ed Mon Sep 17 00:00:00 2001
+From 77773385270db9f6f06ea16fd3183795e94068d5 Mon Sep 17 00:00:00 2001
 From: Mike Galbraith <efault@gmx.de>
 Date: Fri, 3 Jul 2009 08:44:12 -0500
 Subject: [PATCH 201/365] fs: ntfs: disable interrupt only on !RT
@@ -40,7 +40,7 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  1 file changed, 4 insertions(+), 4 deletions(-)
 
 diff --git a/fs/ntfs/aops.c b/fs/ntfs/aops.c
-index 8bb79f5..e89da4f 100644
+index 8bb79f5fda59..e89da4fb14c2 100644
 --- a/fs/ntfs/aops.c
 +++ b/fs/ntfs/aops.c
 @@ -92,13 +92,13 @@ static void ntfs_end_buffer_async_read(struct buffer_head *bh, int uptodate)
@@ -76,5 +76,5 @@ index 8bb79f5..e89da4f 100644
  		if (likely(page_uptodate && !PageError(page)))
  			SetPageUptodate(page);
 -- 
-2.7.4
+2.28.0
 

@@ -1,4 +1,4 @@
-From d53cd6ef3c0f1ca5a8be40cfb9b3ec5a09ce4878 Mon Sep 17 00:00:00 2001
+From 404f6027c8c1af0f4498c38eceba2c308b13c053 Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Mon, 14 Nov 2011 18:19:27 +0100
 Subject: [PATCH 270/365] x86: crypto: Reduce preempt disabled regions
@@ -18,7 +18,7 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  1 file changed, 13 insertions(+), 11 deletions(-)
 
 diff --git a/arch/x86/crypto/aesni-intel_glue.c b/arch/x86/crypto/aesni-intel_glue.c
-index d9ae404..0f1d62d 100644
+index d9ae404f08c9..0f1d62d9e111 100644
 --- a/arch/x86/crypto/aesni-intel_glue.c
 +++ b/arch/x86/crypto/aesni-intel_glue.c
 @@ -372,14 +372,14 @@ static int ecb_encrypt(struct blkcipher_desc *desc,
@@ -114,5 +114,5 @@ index d9ae404..0f1d62d 100644
  	return err;
  }
 -- 
-2.7.4
+2.28.0
 

@@ -1,4 +1,4 @@
-From 83fdf11528698d029bb98f574d45ff8783915b58 Mon Sep 17 00:00:00 2001
+From ad4343bda3f32768fbbbe8b1e8d4a780717007a5 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Fri, 8 Nov 2013 17:34:54 +0100
 Subject: [PATCH 085/365] usb: Use _nort in giveback function
@@ -43,7 +43,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  1 file changed, 2 insertions(+), 2 deletions(-)
 
 diff --git a/drivers/usb/core/hcd.c b/drivers/usb/core/hcd.c
-index 1dd4c65..35220ce 100644
+index 1dd4c65e9188..35220ce86815 100644
 --- a/drivers/usb/core/hcd.c
 +++ b/drivers/usb/core/hcd.c
 @@ -1764,9 +1764,9 @@ static void __usb_hcd_giveback_urb(struct urb *urb)
@@ -59,5 +59,5 @@ index 1dd4c65..35220ce 100644
  	usb_anchor_resume_wakeups(anchor);
  	atomic_dec(&urb->use_count);
 -- 
-2.7.4
+2.28.0
 

@@ -1,4 +1,4 @@
-From 35518f0a3544348b030348a4bfa51a02d731512e Mon Sep 17 00:00:00 2001
+From df2b08ecdb520cb5acc0df5d55df46902cd2cc39 Mon Sep 17 00:00:00 2001
 From: Mike Galbraith <umgwanakikbuti@gmail.com>
 Date: Wed, 18 Feb 2015 15:09:23 +0100
 Subject: [PATCH 244/365] snd/pcm: fix snd_pcm_stream_lock*() irqs_disabled()
@@ -32,7 +32,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  1 file changed, 4 insertions(+), 4 deletions(-)
 
 diff --git a/sound/core/pcm_native.c b/sound/core/pcm_native.c
-index 21b7a19..f3af5c5 100644
+index 21b7a1909c17..f3af5c5e375a 100644
 --- a/sound/core/pcm_native.c
 +++ b/sound/core/pcm_native.c
 @@ -136,7 +136,7 @@ EXPORT_SYMBOL_GPL(snd_pcm_stream_unlock);
@@ -72,5 +72,5 @@ index 21b7a19..f3af5c5 100644
  EXPORT_SYMBOL_GPL(snd_pcm_stream_unlock_irqrestore);
  
 -- 
-2.7.4
+2.28.0
 

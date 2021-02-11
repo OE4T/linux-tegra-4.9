@@ -1,4 +1,4 @@
-From f5d663176dd02b888bf1659e6950ff8a736e3060 Mon Sep 17 00:00:00 2001
+From b0c82e8f48f2fd6326ba8d03f9a0c3e8c1c0f54b Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Thu, 21 Sep 2017 14:39:56 +0200
 Subject: [PATCH 340/365] rt/locking: allow recursive local_trylock()
@@ -13,7 +13,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  1 file changed, 9 insertions(+)
 
 diff --git a/include/linux/locallock.h b/include/linux/locallock.h
-index 845c77f..280f884 100644
+index 845c77f1a5ca..280f884a05a3 100644
 --- a/include/linux/locallock.h
 +++ b/include/linux/locallock.h
 @@ -77,6 +77,9 @@ static inline int __local_trylock(struct local_irq_lock *lv)
@@ -40,5 +40,5 @@ index 845c77f..280f884 100644
  #define local_unlock(lvar)			preempt_enable()
  #define local_lock_irq(lvar)			local_irq_disable()
 -- 
-2.7.4
+2.28.0
 

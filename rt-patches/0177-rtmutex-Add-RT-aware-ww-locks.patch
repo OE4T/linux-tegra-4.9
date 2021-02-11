@@ -1,4 +1,4 @@
-From fd88c606812c2be7affc0520ef31da2a9841daed Mon Sep 17 00:00:00 2001
+From 3f0c5488687ea8cdeebf768066fbe6a8e042ab7d Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <sebastian@breakpoint.cc>
 Date: Mon, 28 Oct 2013 09:36:37 +0100
 Subject: [PATCH 177/365] rtmutex: Add RT aware ww locks
@@ -23,11 +23,11 @@ lockdep says:
 
 Signed-off-by: Sebastian Andrzej Siewior <sebastian@breakpoint.cc>
 ---
- kernel/locking/rtmutex.c | 248 ++++++++++++++++++++++++++++++++++++++++++-----
+ kernel/locking/rtmutex.c | 248 +++++++++++++++++++++++++++++++++++----
  1 file changed, 224 insertions(+), 24 deletions(-)
 
 diff --git a/kernel/locking/rtmutex.c b/kernel/locking/rtmutex.c
-index f909d47..a093edf 100644
+index f909d47c43d1..a093edfb702b 100644
 --- a/kernel/locking/rtmutex.c
 +++ b/kernel/locking/rtmutex.c
 @@ -21,6 +21,7 @@
@@ -413,5 +413,5 @@ index f909d47..a093edf 100644
 +EXPORT_SYMBOL(ww_mutex_unlock);
  #endif
 -- 
-2.7.4
+2.28.0
 

@@ -1,4 +1,4 @@
-From 0fe61889a0ec8ee1daafb457b57d6b5faa79fa89 Mon Sep 17 00:00:00 2001
+From 57212acc72d4493fcbe96390d09d8487ae924703 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Fri, 10 Jun 2011 11:04:15 +0200
 Subject: [PATCH 163/365] rtmutex: Handle the various new futex race conditions
@@ -9,13 +9,13 @@ therefor not disabling preemption.
 
 Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
 ---
- kernel/futex.c                  | 77 +++++++++++++++++++++++++++++++++--------
- kernel/locking/rtmutex.c        | 37 ++++++++++++++++----
- kernel/locking/rtmutex_common.h |  2 ++
+ kernel/futex.c                  | 77 ++++++++++++++++++++++++++-------
+ kernel/locking/rtmutex.c        | 37 +++++++++++++---
+ kernel/locking/rtmutex_common.h |  2 +
  3 files changed, 95 insertions(+), 21 deletions(-)
 
 diff --git a/kernel/futex.c b/kernel/futex.c
-index 86eec2e..068c2a9 100644
+index 86eec2e2b752..068c2a971bf6 100644
 --- a/kernel/futex.c
 +++ b/kernel/futex.c
 @@ -2079,6 +2079,16 @@ static int futex_requeue(u32 __user *uaddr1, unsigned int flags,
@@ -141,7 +141,7 @@ index 86eec2e..068c2a9 100644
  			ret = 0;
  
 diff --git a/kernel/locking/rtmutex.c b/kernel/locking/rtmutex.c
-index e3dd21f..b1ad592 100644
+index e3dd21fee0c7..b1ad592cdbef 100644
 --- a/kernel/locking/rtmutex.c
 +++ b/kernel/locking/rtmutex.c
 @@ -133,6 +133,11 @@ static void fixup_rt_mutex_waiters(struct rt_mutex *lock)
@@ -238,7 +238,7 @@ index e3dd21f..b1ad592 100644
  		return;
  	}
 diff --git a/kernel/locking/rtmutex_common.h b/kernel/locking/rtmutex_common.h
-index 722e3cf..be1c017 100644
+index 722e3cf38acf..be1c0171f647 100644
 --- a/kernel/locking/rtmutex_common.h
 +++ b/kernel/locking/rtmutex_common.h
 @@ -99,6 +99,8 @@ enum rtmutex_chainwalk {
@@ -251,5 +251,5 @@ index 722e3cf..be1c017 100644
  extern void rt_mutex_init_proxy_locked(struct rt_mutex *lock,
  				       struct task_struct *proxy_owner);
 -- 
-2.7.4
+2.28.0
 

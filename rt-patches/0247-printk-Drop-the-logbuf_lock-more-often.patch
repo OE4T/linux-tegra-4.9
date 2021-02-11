@@ -1,4 +1,4 @@
-From adef61e8c0156268bc32b58bcbf4e9507a33ea09 Mon Sep 17 00:00:00 2001
+From 81d025b3d82fe088bc97095d089fdf275ffd630d Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Thu, 21 Mar 2013 19:01:05 +0100
 Subject: [PATCH 247/365] printk: Drop the logbuf_lock more often
@@ -6,17 +6,17 @@ Subject: [PATCH 247/365] printk: Drop the logbuf_lock more often
 The lock is hold with irgs off. The latency drops 500us+ on my arm bugs
 with a "full" buffer after executing "dmesg" on the shell.
 
-Change-Id: Icaf6628558f60d2acb8584c2a471fc2ee991855d
+Change-Id: Ie465d7ef0ce5bac6a26c5c77f37904990fd811c0
 Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 ---
  kernel/printk/printk.c | 27 ++++++++++++++++++++++++++-
  1 file changed, 26 insertions(+), 1 deletion(-)
 
 diff --git a/kernel/printk/printk.c b/kernel/printk/printk.c
-index ac52528..8d70f29 100644
+index 5be16920da43..23b352f2d725 100644
 --- a/kernel/printk/printk.c
 +++ b/kernel/printk/printk.c
-@@ -1421,6 +1421,7 @@ static int syslog_print_all(char __user *buf, int size, bool clear)
+@@ -1420,6 +1420,7 @@ static int syslog_print_all(char __user *buf, int size, bool clear)
  {
  	char *text;
  	int len = 0;
@@ -24,7 +24,7 @@ index ac52528..8d70f29 100644
  
  	text = kmalloc(LOG_LINE_MAX + PREFIX_MAX, GFP_KERNEL);
  	if (!text)
-@@ -1431,6 +1432,14 @@ static int syslog_print_all(char __user *buf, int size, bool clear)
+@@ -1430,6 +1431,14 @@ static int syslog_print_all(char __user *buf, int size, bool clear)
  		u64 next_seq;
  		u64 seq;
  		u32 idx;
@@ -39,7 +39,7 @@ index ac52528..8d70f29 100644
  
  		/*
  		 * Find first record that fits, including all following records,
-@@ -1444,6 +1453,14 @@ static int syslog_print_all(char __user *buf, int size, bool clear)
+@@ -1443,6 +1452,14 @@ static int syslog_print_all(char __user *buf, int size, bool clear)
  			len += msg_print_text(msg, true, NULL, 0);
  			idx = log_next(idx);
  			seq++;
@@ -54,7 +54,7 @@ index ac52528..8d70f29 100644
  		}
  
  		/* move first record forward until length fits into the buffer */
-@@ -1455,6 +1472,14 @@ static int syslog_print_all(char __user *buf, int size, bool clear)
+@@ -1454,6 +1471,14 @@ static int syslog_print_all(char __user *buf, int size, bool clear)
  			len -= msg_print_text(msg, true, NULL, 0);
  			idx = log_next(idx);
  			seq++;
@@ -69,7 +69,7 @@ index ac52528..8d70f29 100644
  		}
  
  		/* last message fitting into this dump */
-@@ -1493,8 +1518,8 @@ static int syslog_print_all(char __user *buf, int size, bool clear)
+@@ -1492,8 +1517,8 @@ static int syslog_print_all(char __user *buf, int size, bool clear)
  		clear_seq = log_next_seq;
  		clear_idx = log_next_idx;
  	}
@@ -80,5 +80,5 @@ index ac52528..8d70f29 100644
  	return len;
  }
 -- 
-2.7.4
+2.28.0
 

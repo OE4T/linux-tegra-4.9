@@ -1,4 +1,4 @@
-From 195f97355756e1f81746a07e1b786f84a3e6f3a6 Mon Sep 17 00:00:00 2001
+From 07f1be9c30975e4e387daf98b833d7ed2764d5bd Mon Sep 17 00:00:00 2001
 From: Steven Rostedt <rostedt@goodmis.org>
 Date: Wed, 26 Jun 2013 15:28:11 -0400
 Subject: [PATCH 319/365] rt,ntp: Move call to schedule_delayed_work() to
@@ -27,7 +27,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  1 file changed, 26 insertions(+)
 
 diff --git a/kernel/time/ntp.c b/kernel/time/ntp.c
-index 4bdb596..0b4e2e9 100644
+index 4bdb59604526..0b4e2e9792d2 100644
 --- a/kernel/time/ntp.c
 +++ b/kernel/time/ntp.c
 @@ -17,6 +17,7 @@
@@ -75,5 +75,5 @@ index 4bdb596..0b4e2e9 100644
  #else
  void ntp_notify_cmos_timer(void) { }
 -- 
-2.7.4
+2.28.0
 

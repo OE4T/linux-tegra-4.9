@@ -1,4 +1,4 @@
-From 71474438c3e0ee7138b4022a9ea0b2d5a2b2e3a9 Mon Sep 17 00:00:00 2001
+From eac753e84595fc2c62a2e019a05d53563cacbc07 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Fri, 6 Nov 2015 18:51:03 +0100
 Subject: [PATCH 033/365] rtmutex: Handle non enqueued waiters gracefully
@@ -20,7 +20,7 @@ Cc: stable-rt@vger.kernel.org
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/kernel/locking/rtmutex.c b/kernel/locking/rtmutex.c
-index 1c032c2..b0e7b22 100644
+index 1c032c286efe..b0e7b222399f 100644
 --- a/kernel/locking/rtmutex.c
 +++ b/kernel/locking/rtmutex.c
 @@ -1697,7 +1697,7 @@ int __rt_mutex_start_proxy_lock(struct rt_mutex *lock,
@@ -33,5 +33,5 @@ index 1c032c2..b0e7b22 100644
  
  	debug_rt_mutex_print_deadlock(waiter);
 -- 
-2.7.4
+2.28.0
 

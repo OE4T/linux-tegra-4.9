@@ -1,4 +1,4 @@
-From e1c07c40aa22ceca15dcb9d7321f3c7fdc0c4124 Mon Sep 17 00:00:00 2001
+From b7fd8d8127fadb1d1bc6c85b2174ab93b06730d0 Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Wed, 22 Mar 2017 11:35:54 +0100
 Subject: [PATCH 011/365] futex: Rework inconsistent rt_mutex/futex_q state
@@ -58,7 +58,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  1 file changed, 14 insertions(+), 36 deletions(-)
 
 diff --git a/kernel/futex.c b/kernel/futex.c
-index 629db2c..10468883 100644
+index 629db2cd530e..10468883d7f0 100644
 --- a/kernel/futex.c
 +++ b/kernel/futex.c
 @@ -1420,12 +1420,19 @@ static int wake_futex_pi(u32 __user *uaddr, u32 uval, struct futex_q *top_waiter
@@ -94,10 +94,11 @@ index 629db2c..10468883 100644
  	int ret = 0;
  
  	if (locked) {
-@@ -2412,43 +2418,15 @@ static int fixup_owner(u32 __user *uaddr, struct futex_q *q, int locked)
+@@ -2411,44 +2417,16 @@ static int fixup_owner(u32 __user *uaddr, struct futex_q *q, int locked)
+ 		goto out;
  	}
  
- 	/*
+-	/*
 -	 * Catch the rare case, where the lock was released when we were on the
 -	 * way back before we locked the hash bucket.
 -	 */
@@ -126,7 +127,7 @@ index 629db2c..10468883 100644
 -		goto out;
 -	}
 -
--	/*
+ 	/*
  	 * Paranoia check. If we did not take the lock, then we should not be
  	 * the owner of the rt_mutex.
  	 */
@@ -141,5 +142,5 @@ index 629db2c..10468883 100644
  out:
  	return ret ? ret : locked;
 -- 
-2.7.4
+2.28.0
 

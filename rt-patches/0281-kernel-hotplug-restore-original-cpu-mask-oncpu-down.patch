@@ -1,4 +1,4 @@
-From d47431b611e9e0fae1b828b9a17f8d7111eebd70 Mon Sep 17 00:00:00 2001
+From f2d67a7b326442ac173f822b73e8c3cda13f9db1 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Fri, 14 Jun 2013 17:16:35 +0200
 Subject: [PATCH 281/365] kernel/hotplug: restore original cpu mask oncpu/down
@@ -14,10 +14,10 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  1 file changed, 12 insertions(+), 1 deletion(-)
 
 diff --git a/kernel/cpu.c b/kernel/cpu.c
-index c88f2aba..ba398c5 100644
+index 1fbc7dd95ccc..072e296c1c12 100644
 --- a/kernel/cpu.c
 +++ b/kernel/cpu.c
-@@ -1304,6 +1304,7 @@ static int __ref _cpu_down(unsigned int cpu, int tasks_frozen,
+@@ -1308,6 +1308,7 @@ static int __ref _cpu_down(unsigned int cpu, int tasks_frozen,
  	bool hasdied = false;
  	int mycpu;
  	cpumask_var_t cpumask;
@@ -25,7 +25,7 @@ index c88f2aba..ba398c5 100644
  
  	if (num_online_cpus() == 1)
  		return -EBUSY;
-@@ -1314,6 +1315,12 @@ static int __ref _cpu_down(unsigned int cpu, int tasks_frozen,
+@@ -1318,6 +1319,12 @@ static int __ref _cpu_down(unsigned int cpu, int tasks_frozen,
  	/* Move the downtaker off the unplug cpu */
  	if (!alloc_cpumask_var(&cpumask, GFP_KERNEL))
  		return -ENOMEM;
@@ -38,7 +38,7 @@ index c88f2aba..ba398c5 100644
  	cpumask_andnot(cpumask, cpu_online_mask, cpumask_of(cpu));
  	set_cpus_allowed_ptr(current, cpumask);
  	free_cpumask_var(cpumask);
-@@ -1322,7 +1329,8 @@ static int __ref _cpu_down(unsigned int cpu, int tasks_frozen,
+@@ -1326,7 +1333,8 @@ static int __ref _cpu_down(unsigned int cpu, int tasks_frozen,
  	if (mycpu == cpu) {
  		printk(KERN_ERR "Yuck! Still on unplug CPU\n!");
  		migrate_enable();
@@ -48,7 +48,7 @@ index c88f2aba..ba398c5 100644
  	}
  
  	cpu_hotplug_begin();
-@@ -1376,6 +1384,9 @@ static int __ref _cpu_down(unsigned int cpu, int tasks_frozen,
+@@ -1380,6 +1388,9 @@ static int __ref _cpu_down(unsigned int cpu, int tasks_frozen,
  	/* This post dead nonsense must die */
  	if (!ret && hasdied)
  		cpu_notify_nofail(CPU_POST_DEAD, cpu);
@@ -59,5 +59,5 @@ index c88f2aba..ba398c5 100644
  	return ret;
  }
 -- 
-2.7.4
+2.28.0
 

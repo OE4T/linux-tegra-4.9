@@ -1,4 +1,4 @@
-From c49b07faefdecc13276524cf620a97568488a10f Mon Sep 17 00:00:00 2001
+From 3e726d626994d2a87b10714a0c45c1f23e41a328 Mon Sep 17 00:00:00 2001
 From: Mike Galbraith <umgwanakikbuti@gmail.com>
 Date: Tue, 22 Mar 2016 11:16:09 +0100
 Subject: [PATCH 115/365] mm/zsmalloc: copy with get_cpu_var() and locking
@@ -13,11 +13,11 @@ Signed-off-by: Mike Galbraith <umgwanakikbuti@gmail.com>
 fixed the size magic]
 Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 ---
- mm/zsmalloc.c | 80 ++++++++++++++++++++++++++++++++++++++++++++++++++++++-----
+ mm/zsmalloc.c | 80 +++++++++++++++++++++++++++++++++++++++++++++++----
  1 file changed, 74 insertions(+), 6 deletions(-)
 
 diff --git a/mm/zsmalloc.c b/mm/zsmalloc.c
-index bb5f048..a7901da 100644
+index bb5f04833976..a7901da48e98 100644
 --- a/mm/zsmalloc.c
 +++ b/mm/zsmalloc.c
 @@ -54,6 +54,7 @@
@@ -198,5 +198,5 @@ index bb5f048..a7901da 100644
  	migrate_read_unlock(zspage);
  	unpin_tag(handle);
 -- 
-2.7.4
+2.28.0
 

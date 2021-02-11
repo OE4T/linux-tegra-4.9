@@ -1,4 +1,4 @@
-From 65cb91968952f8ab187f91ac5f162ef077029ab9 Mon Sep 17 00:00:00 2001
+From 39f710e222c6e981f751df63b84ecb82b67940d0 Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Wed, 22 Mar 2017 11:35:53 +0100
 Subject: [PATCH 010/365] futex: Cleanup refcounting
@@ -25,7 +25,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  1 file changed, 9 insertions(+), 4 deletions(-)
 
 diff --git a/kernel/futex.c b/kernel/futex.c
-index c0d5e64..629db2c 100644
+index c0d5e64b37b2..629db2cd530e 100644
 --- a/kernel/futex.c
 +++ b/kernel/futex.c
 @@ -818,7 +818,7 @@ static int refill_pi_state_cache(void)
@@ -77,5 +77,5 @@ index c0d5e64..629db2c 100644
  			ret = rt_mutex_start_proxy_lock(&pi_state->pi_mutex,
  							this->rt_waiter,
 -- 
-2.7.4
+2.28.0
 

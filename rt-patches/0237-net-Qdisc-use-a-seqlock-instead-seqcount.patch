@@ -1,4 +1,4 @@
-From 9efc764ce73cc1f9eb7e9400770ec0132310f013 Mon Sep 17 00:00:00 2001
+From a6a3579afc2f1defaafc6d44dbdadfd382949e37 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Wed, 14 Sep 2016 17:36:35 +0200
 Subject: [PATCH 237/365] net/Qdisc: use a seqlock instead seqcount
@@ -22,10 +22,10 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  create mode 100644 include/net/net_seq_lock.h
 
 diff --git a/include/linux/seqlock.h b/include/linux/seqlock.h
-index 17a8721..3d7223f 100644
+index d0813d9d4491..b6d15b2f597a 100644
 --- a/include/linux/seqlock.h
 +++ b/include/linux/seqlock.h
-@@ -481,6 +481,15 @@ static inline void write_seqlock(seqlock_t *sl)
+@@ -488,6 +488,15 @@ static inline void write_seqlock(seqlock_t *sl)
  	__raw_write_seqcount_begin(&sl->seqcount);
  }
  
@@ -42,7 +42,7 @@ index 17a8721..3d7223f 100644
  {
  	__raw_write_seqcount_end(&sl->seqcount);
 diff --git a/include/net/gen_stats.h b/include/net/gen_stats.h
-index 231e121..d125222 100644
+index 231e121cc7d9..d125222b979d 100644
 --- a/include/net/gen_stats.h
 +++ b/include/net/gen_stats.h
 @@ -5,6 +5,7 @@
@@ -86,7 +86,7 @@ index 231e121..d125222 100644
  #endif
 diff --git a/include/net/net_seq_lock.h b/include/net/net_seq_lock.h
 new file mode 100644
-index 00000000..a703429
+index 000000000000..a7034298a82a
 --- /dev/null
 +++ b/include/net/net_seq_lock.h
 @@ -0,0 +1,15 @@
@@ -106,7 +106,7 @@ index 00000000..a703429
 +
 +#endif
 diff --git a/include/net/sch_generic.h b/include/net/sch_generic.h
-index 5d5a137..3a6860f 100644
+index 5d5a137b9067..3a6860f0166d 100644
 --- a/include/net/sch_generic.h
 +++ b/include/net/sch_generic.h
 @@ -10,6 +10,7 @@
@@ -177,7 +177,7 @@ index 5d5a137..3a6860f 100644
  	struct Qdisc *root = qdisc_root_sleeping(qdisc);
  
 diff --git a/net/core/gen_estimator.c b/net/core/gen_estimator.c
-index cad8e79..2a9364f 100644
+index cad8e791f28e..2a9364fe62a5 100644
 --- a/net/core/gen_estimator.c
 +++ b/net/core/gen_estimator.c
 @@ -84,7 +84,7 @@ struct gen_estimator
@@ -208,7 +208,7 @@ index cad8e79..2a9364f 100644
  	gen_kill_estimator(bstats, rate_est);
  	return gen_new_estimator(bstats, cpu_bstats, rate_est, stats_lock, running, opt);
 diff --git a/net/core/gen_stats.c b/net/core/gen_stats.c
-index 18f17e1..9afe5d6 100644
+index 18f17e1e5762..9afe5d6e149f 100644
 --- a/net/core/gen_stats.c
 +++ b/net/core/gen_stats.c
 @@ -142,7 +142,7 @@ __gnet_stats_copy_basic_cpu(struct gnet_stats_basic_packed *bstats,
@@ -243,7 +243,7 @@ index 18f17e1..9afe5d6 100644
  		      struct gnet_stats_basic_cpu __percpu *cpu,
  		      struct gnet_stats_basic_packed *b)
 diff --git a/net/sched/sch_api.c b/net/sched/sch_api.c
-index 912ed9b..1614dbd 100644
+index 912ed9b901ac..1614dbd5863c 100644
 --- a/net/sched/sch_api.c
 +++ b/net/sched/sch_api.c
 @@ -980,7 +980,7 @@ static struct Qdisc *qdisc_create(struct net_device *dev,
@@ -256,7 +256,7 @@ index 912ed9b..1614dbd 100644
  			err = -EOPNOTSUPP;
  			if (sch->flags & TCQ_F_MQROOT)
 diff --git a/net/sched/sch_generic.c b/net/sched/sch_generic.c
-index 07071c8..05e5fe3 100644
+index 07071c838ea3..05e5fe3f9049 100644
 --- a/net/sched/sch_generic.c
 +++ b/net/sched/sch_generic.c
 @@ -426,7 +426,11 @@ struct Qdisc noop_qdisc = {
@@ -290,5 +290,5 @@ index 07071c8..05e5fe3 100644
  	sch->ops = ops;
  	sch->enqueue = ops->enqueue;
 -- 
-2.7.4
+2.28.0
 

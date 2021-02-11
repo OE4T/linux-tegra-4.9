@@ -1,4 +1,4 @@
-From d879e5adeafb83ee5bdfc7e3a9a3d4d2cd6cebf6 Mon Sep 17 00:00:00 2001
+From 2c91f2661cb66544c8c8e41721eb48788dfcec52 Mon Sep 17 00:00:00 2001
 From: Steven Rostedt <rostedt@goodmis.org>
 Date: Tue, 4 Mar 2014 12:28:32 -0500
 Subject: [PATCH 216/365] cpu_chill: Add a UNINTERRUPTIBLE hrtimer_nanosleep
@@ -33,7 +33,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  1 file changed, 18 insertions(+), 7 deletions(-)
 
 diff --git a/kernel/time/hrtimer.c b/kernel/time/hrtimer.c
-index a652e5b..d2fb17f 100644
+index a652e5bcbc37..d2fb17faae9f 100644
 --- a/kernel/time/hrtimer.c
 +++ b/kernel/time/hrtimer.c
 @@ -1669,12 +1669,13 @@ void hrtimer_init_sleeper(struct hrtimer_sleeper *sl, struct task_struct *task)
@@ -108,5 +108,5 @@ index a652e5b..d2fb17f 100644
  		current->flags &= ~PF_NOFREEZE;
  }
 -- 
-2.7.4
+2.28.0
 

@@ -1,4 +1,4 @@
-From 42ec414188b2e7f832bfa53eab8bbd6ba24b80fe Mon Sep 17 00:00:00 2001
+From 36fe38776bb6cec8f0ad04b9cca942b2f07f60b5 Mon Sep 17 00:00:00 2001
 From: "Paul E. McKenney" <paulmck@linux.vnet.ibm.com>
 Date: Wed, 6 Jun 2018 15:31:31 +0200
 Subject: [PATCH 349/365] rcu: Suppress lockdep false-positive ->boost_mtx
@@ -27,7 +27,7 @@ Signed-off-by: Julia Cartwright <julia@ni.com>
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/kernel/rcu/tree_plugin.h b/kernel/rcu/tree_plugin.h
-index 3d18d08..510de72 100644
+index 3d18d08e8382..510de72ad8a3 100644
 --- a/kernel/rcu/tree_plugin.h
 +++ b/kernel/rcu/tree_plugin.h
 @@ -486,7 +486,7 @@ void rcu_read_unlock_special(struct task_struct *t)
@@ -40,5 +40,5 @@ index 3d18d08..510de72 100644
  		/*
  		 * If this was the last task on the expedited lists,
 -- 
-2.7.4
+2.28.0
 

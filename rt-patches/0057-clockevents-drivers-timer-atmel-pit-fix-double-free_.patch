@@ -1,4 +1,4 @@
-From 9739f0502544a7493cae33ba6bb1d8128db0d136 Mon Sep 17 00:00:00 2001
+From 0b21bbfb246888fddefb107373ab1ae00e3a963a Mon Sep 17 00:00:00 2001
 From: Alexandre Belloni <alexandre.belloni@free-electrons.com>
 Date: Thu, 17 Mar 2016 21:09:43 +0100
 Subject: [PATCH 057/365] clockevents/drivers/timer-atmel-pit: fix double
@@ -15,7 +15,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  1 file changed, 7 insertions(+), 1 deletion(-)
 
 diff --git a/drivers/clocksource/timer-atmel-pit.c b/drivers/clocksource/timer-atmel-pit.c
-index 2c66bb3..9328884 100644
+index 2c66bb3e595b..93288849b2bd 100644
 --- a/drivers/clocksource/timer-atmel-pit.c
 +++ b/drivers/clocksource/timer-atmel-pit.c
 @@ -46,6 +46,7 @@ struct pit_data {
@@ -48,5 +48,5 @@ index 2c66bb3..9328884 100644
  	data->cnt += data->cycle * PIT_PICNT(pit_read(data->base, AT91_PIT_PIVR));
  	pit_write(data->base, AT91_PIT_MR,
 -- 
-2.7.4
+2.28.0
 

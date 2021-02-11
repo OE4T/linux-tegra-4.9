@@ -1,4 +1,4 @@
-From f331bc127e96c5b1d322462e5cba55d3d7604e5c Mon Sep 17 00:00:00 2001
+From b0a07e7ba071603ff37b264505027bc7adfaa9e4 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Fri, 18 Aug 2017 10:09:09 +0200
 Subject: [PATCH 334/365] kernel/hrtimer: migrate deferred timer on CPU down
@@ -18,7 +18,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  1 file changed, 5 insertions(+)
 
 diff --git a/kernel/time/hrtimer.c b/kernel/time/hrtimer.c
-index d2fb17f..0860d60 100644
+index d2fb17faae9f..0860d60957cd 100644
 --- a/kernel/time/hrtimer.c
 +++ b/kernel/time/hrtimer.c
 @@ -1871,6 +1871,11 @@ static void migrate_hrtimer_list(struct hrtimer_clock_base *old_base,
@@ -34,5 +34,5 @@ index d2fb17f..0860d60 100644
  
  int hrtimers_dead_cpu(unsigned int scpu)
 -- 
-2.7.4
+2.28.0
 

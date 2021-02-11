@@ -1,4 +1,4 @@
-From 36a602e2fc5c5fa5468b8d596c5f0b132bb737d5 Mon Sep 17 00:00:00 2001
+From 08568a10adfdc2c786a7494772e9b2aea543c1b4 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Wed, 9 Jan 2013 12:11:12 +0100
 Subject: [PATCH 307/365] mmci: Remove bogus local_irq_save()
@@ -12,7 +12,7 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  1 file changed, 5 deletions(-)
 
 diff --git a/drivers/mmc/host/mmci.c b/drivers/mmc/host/mmci.c
-index df990bb..1a16270 100644
+index df990bb8c873..1a162709a85e 100644
 --- a/drivers/mmc/host/mmci.c
 +++ b/drivers/mmc/host/mmci.c
 @@ -1147,15 +1147,12 @@ static irqreturn_t mmci_pio_irq(int irq, void *dev_id)
@@ -41,5 +41,5 @@ index df990bb..1a16270 100644
  	 * If we have less than the fifo 'half-full' threshold to transfer,
  	 * trigger a PIO interrupt as soon as any data is available.
 -- 
-2.7.4
+2.28.0
 

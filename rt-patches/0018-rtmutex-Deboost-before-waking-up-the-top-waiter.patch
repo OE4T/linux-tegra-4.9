@@ -1,4 +1,4 @@
-From 7c8bf2f49a85ba73e42b849ad3f4af95134bc5ce Mon Sep 17 00:00:00 2001
+From ce774d63bdfdcbcb5b8e1b3fb303fc1db4866313 Mon Sep 17 00:00:00 2001
 From: Xunlei Pang <xlpang@redhat.com>
 Date: Thu, 23 Mar 2017 15:56:07 +0100
 Subject: [PATCH 018/365] rtmutex: Deboost before waking up the top waiter
@@ -38,13 +38,13 @@ Cc: bristot@redhat.com
 Link: http://lkml.kernel.org/r/20170323150216.110065320@infradead.org
 Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
 ---
- kernel/futex.c                  |  5 +---
- kernel/locking/rtmutex.c        | 59 ++++++++++++++++++++++-------------------
+ kernel/futex.c                  |  5 +--
+ kernel/locking/rtmutex.c        | 59 ++++++++++++++++++---------------
  kernel/locking/rtmutex_common.h |  2 +-
  3 files changed, 34 insertions(+), 32 deletions(-)
 
 diff --git a/kernel/futex.c b/kernel/futex.c
-index 4dfa778..f8a35ec 100644
+index 4dfa778e7cb1..f8a35ec29c28 100644
 --- a/kernel/futex.c
 +++ b/kernel/futex.c
 @@ -1476,10 +1476,7 @@ static int wake_futex_pi(u32 __user *uaddr, u32 uval, struct futex_pi_state *pi_
@@ -60,13 +60,14 @@ index 4dfa778..f8a35ec 100644
  	return ret;
  }
 diff --git a/kernel/locking/rtmutex.c b/kernel/locking/rtmutex.c
-index 7f8ee5d..a77f7ca 100644
+index 7f8ee5d61ce9..a77f7cae7ca0 100644
 --- a/kernel/locking/rtmutex.c
 +++ b/kernel/locking/rtmutex.c
-@@ -370,24 +370,6 @@ static void __rt_mutex_adjust_prio(struct task_struct *task)
+@@ -369,24 +369,6 @@ static void __rt_mutex_adjust_prio(struct task_struct *task)
+ 		rt_mutex_setprio(task, prio);
  }
  
- /*
+-/*
 - * Adjust task priority (undo boosting). Called from the exit path of
 - * rt_mutex_slowunlock() and rt_mutex_slowlock().
 - *
@@ -84,10 +85,9 @@ index 7f8ee5d..a77f7ca 100644
 -	raw_spin_unlock_irqrestore(&task->pi_lock, flags);
 -}
 -
--/*
+ /*
   * Deadlock detection is conditional:
   *
-  * If CONFIG_DEBUG_RT_MUTEXES=n, deadlock detection is only conducted
 @@ -1072,6 +1054,7 @@ static void mark_wakeup_next_waiter(struct wake_q_head *wake_q,
  	 * lock->wait_lock.
  	 */
@@ -172,7 +172,7 @@ index 7f8ee5d..a77f7ca 100644
  
  /**
 diff --git a/kernel/locking/rtmutex_common.h b/kernel/locking/rtmutex_common.h
-index f4c34c4..dad9229 100644
+index f4c34c4195a0..dad9229040dc 100644
 --- a/kernel/locking/rtmutex_common.h
 +++ b/kernel/locking/rtmutex_common.h
 @@ -123,7 +123,7 @@ extern void rt_mutex_futex_unlock(struct rt_mutex *lock);
@@ -185,5 +185,5 @@ index f4c34c4..dad9229 100644
  #ifdef CONFIG_DEBUG_RT_MUTEXES
  # include "rtmutex-debug.h"
 -- 
-2.7.4
+2.28.0
 

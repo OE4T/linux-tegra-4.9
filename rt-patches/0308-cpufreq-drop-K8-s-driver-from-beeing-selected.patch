@@ -1,4 +1,4 @@
-From 36446e98253c2c13333f7ece925edaf8ddecf473 Mon Sep 17 00:00:00 2001
+From 17cc56bf00cd028bbfc35a646855024ad710a0f9 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Thu, 9 Apr 2015 15:23:01 +0200
 Subject: [PATCH 308/365] cpufreq: drop K8's driver from beeing selected
@@ -21,7 +21,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/drivers/cpufreq/Kconfig.x86 b/drivers/cpufreq/Kconfig.x86
-index adbd1de..1fac507 100644
+index adbd1de1cea5..1fac5074f2cf 100644
 --- a/drivers/cpufreq/Kconfig.x86
 +++ b/drivers/cpufreq/Kconfig.x86
 @@ -124,7 +124,7 @@ config X86_POWERNOW_K7_ACPI
@@ -34,5 +34,5 @@ index adbd1de..1fac507 100644
  	  This adds the CPUFreq driver for K8/early Opteron/Athlon64 processors.
  	  Support for K10 and newer processors is now in acpi-cpufreq.
 -- 
-2.7.4
+2.28.0
 

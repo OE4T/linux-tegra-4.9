@@ -1,4 +1,4 @@
-From ea4f68e1ab545e149d369d3e930631b04cc92e8c Mon Sep 17 00:00:00 2001
+From c3e639bc522bac3c706ec59f0fe927af2c5f4a5a Mon Sep 17 00:00:00 2001
 From: Josh Cartwright <joshc@ni.com>
 Date: Thu, 31 Mar 2016 00:04:25 -0500
 Subject: [PATCH 095/365] list_bl: fixup bogus lockdep warning
@@ -74,7 +74,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  1 file changed, 7 insertions(+), 5 deletions(-)
 
 diff --git a/include/linux/list_bl.h b/include/linux/list_bl.h
-index d3af099..4e50623 100644
+index d3af0990f01a..4e5062316bb6 100644
 --- a/include/linux/list_bl.h
 +++ b/include/linux/list_bl.h
 @@ -42,13 +42,15 @@ struct hlist_bl_node {
@@ -99,5 +99,5 @@ index d3af099..4e50623 100644
  static inline void INIT_HLIST_BL_NODE(struct hlist_bl_node *h)
  {
 -- 
-2.7.4
+2.28.0
 

@@ -1,4 +1,4 @@
-From c1e025555cc27f396bdcdae9ee2d9d1503e98c2a Mon Sep 17 00:00:00 2001
+From fdf3cecf298ff63677d785c9f5c2736f2115d969 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Tue, 7 Jun 2011 09:19:06 +0200
 Subject: [PATCH 135/365] sched: Do not account rcu_preempt_depth on RT in
@@ -14,7 +14,7 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  2 files changed, 8 insertions(+), 1 deletion(-)
 
 diff --git a/include/linux/rcupdate.h b/include/linux/rcupdate.h
-index 96037ba..67e67ea 100644
+index 96037ba940ee..67e67ea896a5 100644
 --- a/include/linux/rcupdate.h
 +++ b/include/linux/rcupdate.h
 @@ -301,6 +301,11 @@ void synchronize_rcu(void);
@@ -39,7 +39,7 @@ index 96037ba..67e67ea 100644
  
  /* Internal to kernel */
 diff --git a/kernel/sched/core.c b/kernel/sched/core.c
-index 7324696a..7178c6a 100644
+index 7324696a9c7a..7178c6a4a71c 100644
 --- a/kernel/sched/core.c
 +++ b/kernel/sched/core.c
 @@ -8125,7 +8125,7 @@ void __init sched_init(void)
@@ -52,5 +52,5 @@ index 7324696a..7178c6a 100644
  	return (nested == preempt_offset);
  }
 -- 
-2.7.4
+2.28.0
 

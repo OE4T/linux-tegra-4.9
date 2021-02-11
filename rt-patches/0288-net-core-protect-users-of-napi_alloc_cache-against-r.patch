@@ -1,4 +1,4 @@
-From 37cd42c2191eab6aac58b12c2ad49f252b74eceb Mon Sep 17 00:00:00 2001
+From 474b471d3b2670c710a4b7db7ce855e270857b5f Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Fri, 15 Jan 2016 16:33:34 +0100
 Subject: [PATCH 288/365] net/core: protect users of napi_alloc_cache against
@@ -13,11 +13,11 @@ This patch ensures that each user of napi_alloc_cache uses a local lock.
 Cc: stable-rt@vger.kernel.org
 Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 ---
- net/core/skbuff.c | 25 +++++++++++++++++++------
- 1 file changed, 19 insertions(+), 6 deletions(-)
+ net/core/skbuff.c | 23 ++++++++++++++++++-----
+ 1 file changed, 18 insertions(+), 5 deletions(-)
 
 diff --git a/net/core/skbuff.c b/net/core/skbuff.c
-index 7573942..00c7471 100644
+index c89c40271856..4b3ff49e1230 100644
 --- a/net/core/skbuff.c
 +++ b/net/core/skbuff.c
 @@ -362,6 +362,7 @@ struct napi_alloc_cache {
@@ -44,19 +44,15 @@ index 7573942..00c7471 100644
  }
  
  void *napi_alloc_frag(unsigned int fragsz)
-@@ -491,9 +496,10 @@ EXPORT_SYMBOL(__netdev_alloc_skb);
- struct sk_buff *__napi_alloc_skb(struct napi_struct *napi, unsigned int len,
- 				 gfp_t gfp_mask)
- {
--	struct napi_alloc_cache *nc = this_cpu_ptr(&napi_alloc_cache);
-+	struct napi_alloc_cache *nc;
+@@ -494,6 +499,7 @@ struct sk_buff *__napi_alloc_skb(struct napi_struct *napi, unsigned int len,
+ 	struct napi_alloc_cache *nc;
  	struct sk_buff *skb;
  	void *data;
 +	bool pfmemalloc;
  
  	len += NET_SKB_PAD + NET_IP_ALIGN;
  
-@@ -511,7 +517,10 @@ struct sk_buff *__napi_alloc_skb(struct napi_struct *napi, unsigned int len,
+@@ -516,7 +522,10 @@ struct sk_buff *__napi_alloc_skb(struct napi_struct *napi, unsigned int len,
  	if (sk_memalloc_socks())
  		gfp_mask |= __GFP_MEMALLOC;
  
@@ -67,7 +63,7 @@ index 7573942..00c7471 100644
  	if (unlikely(!data))
  		return NULL;
  
-@@ -522,7 +531,7 @@ struct sk_buff *__napi_alloc_skb(struct napi_struct *napi, unsigned int len,
+@@ -527,7 +536,7 @@ struct sk_buff *__napi_alloc_skb(struct napi_struct *napi, unsigned int len,
  	}
  
  	/* use OR instead of assignment to avoid clearing of bits in mask */
@@ -76,7 +72,7 @@ index 7573942..00c7471 100644
  		skb->pfmemalloc = 1;
  	skb->head_frag = 1;
  
-@@ -766,23 +775,26 @@ EXPORT_SYMBOL(consume_skb);
+@@ -771,23 +780,26 @@ EXPORT_SYMBOL(consume_skb);
  
  void __kfree_skb_flush(void)
  {
@@ -105,7 +101,7 @@ index 7573942..00c7471 100644
  	/* record skb to CPU local list */
  	nc->skb_cache[nc->skb_count++] = skb;
  
-@@ -797,6 +809,7 @@ static inline void _kfree_skb_defer(struct sk_buff *skb)
+@@ -802,6 +814,7 @@ static inline void _kfree_skb_defer(struct sk_buff *skb)
  				     nc->skb_cache);
  		nc->skb_count = 0;
  	}
@@ -114,5 +110,5 @@ index 7573942..00c7471 100644
  void __kfree_skb_defer(struct sk_buff *skb)
  {
 -- 
-2.7.4
+2.28.0
 

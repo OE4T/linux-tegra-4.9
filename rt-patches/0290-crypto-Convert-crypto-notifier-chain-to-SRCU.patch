@@ -1,4 +1,4 @@
-From a21bced55de651e631f8694c9e0922ac40cdfbb8 Mon Sep 17 00:00:00 2001
+From 1d8a7311ba7004e544cbaed73896f544623c4f1f Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Fri, 5 Oct 2012 09:03:24 +0100
 Subject: [PATCH 290/365] crypto: Convert crypto notifier chain to SRCU
@@ -120,7 +120,7 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  3 files changed, 7 insertions(+), 7 deletions(-)
 
 diff --git a/crypto/algapi.c b/crypto/algapi.c
-index 9e5b243..0287942 100644
+index 9e5b24329b41..02879424488d 100644
 --- a/crypto/algapi.c
 +++ b/crypto/algapi.c
 @@ -723,13 +723,13 @@ EXPORT_SYMBOL_GPL(crypto_spawn_tfm2);
@@ -140,7 +140,7 @@ index 9e5b243..0287942 100644
  EXPORT_SYMBOL_GPL(crypto_unregister_notifier);
  
 diff --git a/crypto/api.c b/crypto/api.c
-index b47796b..1df402c 100644
+index b47796b33a14..1df402cd9a7e 100644
 --- a/crypto/api.c
 +++ b/crypto/api.c
 @@ -32,7 +32,7 @@ EXPORT_SYMBOL_GPL(crypto_alg_list);
@@ -166,7 +166,7 @@ index b47796b..1df402c 100644
  
  	return ok;
 diff --git a/crypto/internal.h b/crypto/internal.h
-index 31e3dab..232701f 100644
+index 31e3dab36f16..232701f62d44 100644
 --- a/crypto/internal.h
 +++ b/crypto/internal.h
 @@ -52,7 +52,7 @@ struct crypto_larval {
@@ -188,5 +188,5 @@ index 31e3dab..232701f 100644
  
  #endif	/* _CRYPTO_INTERNAL_H */
 -- 
-2.7.4
+2.28.0
 

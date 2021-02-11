@@ -1,4 +1,4 @@
-From e3bc02a7758b1731863a40a052d381d533af8c21 Mon Sep 17 00:00:00 2001
+From 539a0a5991dfe1a702ff89fe962be0c8288f2392 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Mon, 13 Dec 2010 16:33:39 +0100
 Subject: [PATCH 203/365] x86: Convert mce timer to hrtimer
@@ -22,11 +22,11 @@ fold in:
 |[bigeasy: use ULL instead of u64 cast]
 |Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 ---
- arch/x86/kernel/cpu/mcheck/mce.c | 52 ++++++++++++++++------------------------
+ arch/x86/kernel/cpu/mcheck/mce.c | 52 ++++++++++++--------------------
  1 file changed, 20 insertions(+), 32 deletions(-)
 
 diff --git a/arch/x86/kernel/cpu/mcheck/mce.c b/arch/x86/kernel/cpu/mcheck/mce.c
-index 07188a0..6af5d35 100644
+index 07188a012492..6af5d3590271 100644
 --- a/arch/x86/kernel/cpu/mcheck/mce.c
 +++ b/arch/x86/kernel/cpu/mcheck/mce.c
 @@ -41,6 +41,7 @@
@@ -181,5 +181,5 @@ index 07188a0..6af5d35 100644
  	}
  
 -- 
-2.7.4
+2.28.0
 

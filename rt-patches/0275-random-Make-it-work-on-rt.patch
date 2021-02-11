@@ -1,4 +1,4 @@
-From 0d58ba1c8a7448207e52234aa1717db026a8491e Mon Sep 17 00:00:00 2001
+From 009c283c062765f56233edb87df368fe351ffecf Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Tue, 21 Aug 2012 20:38:50 +0200
 Subject: [PATCH 275/365] random: Make it work on rt
@@ -19,7 +19,7 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  6 files changed, 24 insertions(+), 9 deletions(-)
 
 diff --git a/drivers/char/random.c b/drivers/char/random.c
-index f1fb82b..3777a8f 100644
+index f1fb82b3e66c..3777a8ff637e 100644
 --- a/drivers/char/random.c
 +++ b/drivers/char/random.c
 @@ -1183,28 +1183,27 @@ static __u32 get_reg(struct fast_pool *f, struct pt_regs *regs)
@@ -57,7 +57,7 @@ index f1fb82b..3777a8f 100644
  	fast_mix(fast_pool);
  	add_interrupt_bench(cycles);
 diff --git a/drivers/hv/vmbus_drv.c b/drivers/hv/vmbus_drv.c
-index 9a0d0d0..ca93cfa 100644
+index 9a0d0d0ad6d0..ca93cfa43f64 100644
 --- a/drivers/hv/vmbus_drv.c
 +++ b/drivers/hv/vmbus_drv.c
 @@ -43,6 +43,7 @@
@@ -87,7 +87,7 @@ index 9a0d0d0..ca93cfa 100644
  
  
 diff --git a/include/linux/irqdesc.h b/include/linux/irqdesc.h
-index bb5547a8..529da7e 100644
+index bb5547a83daf..529da7ef55e3 100644
 --- a/include/linux/irqdesc.h
 +++ b/include/linux/irqdesc.h
 @@ -67,6 +67,7 @@ struct irq_desc {
@@ -99,7 +99,7 @@ index bb5547a8..529da7e 100644
  	struct cpumask		*percpu_enabled;
  	const struct cpumask	*percpu_affinity;
 diff --git a/include/linux/random.h b/include/linux/random.h
-index 16ab429..9d0fecb 100644
+index 15cd75454468..a50fcce24354 100644
 --- a/include/linux/random.h
 +++ b/include/linux/random.h
 @@ -31,7 +31,7 @@ static inline void add_latent_entropy(void) {}
@@ -112,7 +112,7 @@ index 16ab429..9d0fecb 100644
  extern void get_random_bytes(void *buf, int nbytes);
  extern int add_random_ready_callback(struct random_ready_callback *rdy);
 diff --git a/kernel/irq/handle.c b/kernel/irq/handle.c
-index d3f2490..f87aa8f 100644
+index d3f24905852c..f87aa8fdcc51 100644
 --- a/kernel/irq/handle.c
 +++ b/kernel/irq/handle.c
 @@ -181,10 +181,16 @@ irqreturn_t handle_irq_event_percpu(struct irq_desc *desc)
@@ -134,7 +134,7 @@ index d3f2490..f87aa8f 100644
  	if (!noirqdebug)
  		note_interrupt(desc, retval);
 diff --git a/kernel/irq/manage.c b/kernel/irq/manage.c
-index 491ceca..5a217c2 100644
+index 491ceca98798..5a217c230dee 100644
 --- a/kernel/irq/manage.c
 +++ b/kernel/irq/manage.c
 @@ -1032,6 +1032,12 @@ static int irq_thread(void *data)
@@ -151,5 +151,5 @@ index 491ceca..5a217c2 100644
  	}
  
 -- 
-2.7.4
+2.28.0
 

@@ -1,4 +1,4 @@
-From de5e9428bad6a97832d84395c179a3931af3472c Mon Sep 17 00:00:00 2001
+From 66e68a92a0c6ad1224c97577408f610651ff4c61 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Wed, 2 Nov 2016 16:45:58 +0100
 Subject: [PATCH 041/365] rcu: update: make RCU_EXPEDITE_BOOT default
@@ -16,7 +16,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  2 files changed, 2 insertions(+), 17 deletions(-)
 
 diff --git a/init/Kconfig b/init/Kconfig
-index e2568b0..e689cb3 100644
+index cefd06480226..c0c36e5a417a 100644
 --- a/init/Kconfig
 +++ b/init/Kconfig
 @@ -790,19 +790,6 @@ config RCU_NOCB_CPU_ALL
@@ -40,7 +40,7 @@ index e2568b0..e689cb3 100644
  
  config BUILD_BIN2C
 diff --git a/kernel/rcu/update.c b/kernel/rcu/update.c
-index 4f6db7e..019b470 100644
+index 4f6db7e6a117..019b4708c9fa 100644
 --- a/kernel/rcu/update.c
 +++ b/kernel/rcu/update.c
 @@ -132,8 +132,7 @@ bool rcu_gp_is_normal(void)
@@ -64,5 +64,5 @@ index 4f6db7e..019b470 100644
  		WRITE_ONCE(rcu_normal, 1);
  }
 -- 
-2.7.4
+2.28.0
 

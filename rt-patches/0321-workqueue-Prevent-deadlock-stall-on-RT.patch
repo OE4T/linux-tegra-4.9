@@ -1,4 +1,4 @@
-From 7821d54424185ee01465b3d7bfbce6c3e3c0000d Mon Sep 17 00:00:00 2001
+From a300ee6de11e5f5399a0baa52f02205fd8387a0d Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Fri, 27 Jun 2014 16:24:52 +0200
 Subject: [PATCH 321/365] workqueue: Prevent deadlock/stall on RT
@@ -37,15 +37,15 @@ Link: http://vger.kernel.org/r/alpine.DEB.2.10.1406271249510.5170@nanos
 Cc: Richard Weinberger <richard.weinberger@gmail.com>
 Cc: Steven Rostedt <rostedt@goodmis.org>
 ---
- kernel/sched/core.c |  7 +++++--
- kernel/workqueue.c  | 60 +++++++++++++++++++++++++++++++++++++++++------------
+ kernel/sched/core.c |  7 ++++--
+ kernel/workqueue.c  | 60 +++++++++++++++++++++++++++++++++++----------
  2 files changed, 52 insertions(+), 15 deletions(-)
 
 diff --git a/kernel/sched/core.c b/kernel/sched/core.c
-index 42b2cb4..2178e83 100644
+index 874658e9d15a..3ea841212e91 100644
 --- a/kernel/sched/core.c
 +++ b/kernel/sched/core.c
-@@ -3791,9 +3791,8 @@ void __noreturn do_task_dead(void)
+@@ -3843,9 +3843,8 @@ void __noreturn do_task_dead(void)
  
  static inline void sched_submit_work(struct task_struct *tsk)
  {
@@ -56,7 +56,7 @@ index 42b2cb4..2178e83 100644
  	/*
  	 * If a worker went to sleep, notify and ask workqueue whether
  	 * it wants to wake up a task to maintain concurrency.
-@@ -3801,6 +3800,10 @@ static inline void sched_submit_work(struct task_struct *tsk)
+@@ -3853,6 +3852,10 @@ static inline void sched_submit_work(struct task_struct *tsk)
  	if (tsk->flags & PF_WQ_WORKER)
  		wq_worker_sleeping(tsk);
  
@@ -68,7 +68,7 @@ index 42b2cb4..2178e83 100644
  	 * If we are going to sleep and we have plugged IO queued,
  	 * make sure to submit it to avoid deadlocks.
 diff --git a/kernel/workqueue.c b/kernel/workqueue.c
-index 4495f28..c8ccc3d 100644
+index d18bbaab9b69..c58cf38d8e43 100644
 --- a/kernel/workqueue.c
 +++ b/kernel/workqueue.c
 @@ -125,6 +125,11 @@ enum {
@@ -203,5 +203,5 @@ index 4495f28..c8ccc3d 100644
  	wake_up_process(worker->task);
  }
 -- 
-2.7.4
+2.28.0
 

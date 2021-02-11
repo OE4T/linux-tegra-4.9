@@ -1,4 +1,4 @@
-From 2c9dcbcb02db08b26a597760a17abc87fce308e9 Mon Sep 17 00:00:00 2001
+From 37cb0f3e9322e2933d53373212cbf6fe35839f47 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Wed, 20 Jan 2016 15:39:05 +0100
 Subject: [PATCH 235/365] net: provide a way to delegate processing a softirq
@@ -20,7 +20,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  3 files changed, 30 insertions(+), 1 deletion(-)
 
 diff --git a/include/linux/interrupt.h b/include/linux/interrupt.h
-index 4917b62..6e3c032 100644
+index 4917b6273f33..6e3c0328aeb5 100644
 --- a/include/linux/interrupt.h
 +++ b/include/linux/interrupt.h
 @@ -497,6 +497,14 @@ extern void thread_do_softirq(void);
@@ -39,13 +39,14 @@ index 4917b62..6e3c032 100644
  extern void raise_softirq_irqoff(unsigned int nr);
  extern void raise_softirq(unsigned int nr);
 diff --git a/kernel/softirq.c b/kernel/softirq.c
-index b5f185b..d1c9bf1 100644
+index b5f185b89857..d1c9bf11645a 100644
 --- a/kernel/softirq.c
 +++ b/kernel/softirq.c
-@@ -689,6 +689,27 @@ void __raise_softirq_irqoff(unsigned int nr)
+@@ -688,6 +688,27 @@ void __raise_softirq_irqoff(unsigned int nr)
+ 		wakeup_proper_softirq(nr);
  }
  
- /*
++/*
 + * Same as __raise_softirq_irqoff() but will process them in ksoftirqd
 + */
 +void __raise_softirq_irqoff_ksoft(unsigned int nr)
@@ -66,15 +67,14 @@ index b5f185b..d1c9bf1 100644
 +	wakeup_proper_softirq(nr);
 +}
 +
-+/*
+ /*
   * This function must run with irqs disabled!
   */
- void raise_softirq_irqoff(unsigned int nr)
 diff --git a/net/core/dev.c b/net/core/dev.c
-index c3d762c..73cadd4 100644
+index 56ea4b78e75a..09c4709d1a2e 100644
 --- a/net/core/dev.c
 +++ b/net/core/dev.c
-@@ -5352,7 +5352,7 @@ static __latent_entropy void net_rx_action(struct softirq_action *h)
+@@ -5353,7 +5353,7 @@ static __latent_entropy void net_rx_action(struct softirq_action *h)
  	list_splice_tail(&repoll, &list);
  	list_splice(&list, &sd->poll_list);
  	if (!list_empty(&sd->poll_list))
@@ -84,5 +84,5 @@ index c3d762c..73cadd4 100644
  	net_rps_action_and_irq_enable(sd);
  }
 -- 
-2.7.4
+2.28.0
 

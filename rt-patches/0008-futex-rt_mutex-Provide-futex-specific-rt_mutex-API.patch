@@ -1,4 +1,4 @@
-From 81bfc06de5acdc96995ad48486e8356b4c7c3276 Mon Sep 17 00:00:00 2001
+From ec89615c6cb3de88061a2a89cae080d96d6fe8f6 Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Wed, 22 Mar 2017 11:35:51 +0100
 Subject: [PATCH 008/365] futex,rt_mutex: Provide futex specific rt_mutex API
@@ -31,13 +31,13 @@ Link: http://lkml.kernel.org/r/20170322104151.702962446@infradead.org
 Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
 Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 ---
- kernel/futex.c                  | 30 +++++++++++-----------
- kernel/locking/rtmutex.c        | 55 ++++++++++++++++++++++++++++++-----------
- kernel/locking/rtmutex_common.h |  8 ++++--
+ kernel/futex.c                  | 30 +++++++++---------
+ kernel/locking/rtmutex.c        | 55 ++++++++++++++++++++++++---------
+ kernel/locking/rtmutex_common.h |  8 +++--
  3 files changed, 61 insertions(+), 32 deletions(-)
 
 diff --git a/kernel/futex.c b/kernel/futex.c
-index b4cba6d..c126218 100644
+index b4cba6dbf608..c126218ac5ed 100644
 --- a/kernel/futex.c
 +++ b/kernel/futex.c
 @@ -932,7 +932,7 @@ void exit_pi_state_list(struct task_struct *curr)
@@ -124,7 +124,7 @@ index b4cba6d..c126218 100644
  		/* Unqueue and drop the lock. */
  		unqueue_me_pi(&q);
 diff --git a/kernel/locking/rtmutex.c b/kernel/locking/rtmutex.c
-index 57d99e4..de302c5 100644
+index 57d99e49e967..de302c580d65 100644
 --- a/kernel/locking/rtmutex.c
 +++ b/kernel/locking/rtmutex.c
 @@ -1511,15 +1511,23 @@ EXPORT_SYMBOL_GPL(rt_mutex_lock_interruptible);
@@ -205,7 +205,7 @@ index 57d99e4..de302c5 100644
  
  /**
 diff --git a/kernel/locking/rtmutex_common.h b/kernel/locking/rtmutex_common.h
-index 14cbafe..882d84e 100644
+index 14cbafed0014..882d84eda50a 100644
 --- a/kernel/locking/rtmutex_common.h
 +++ b/kernel/locking/rtmutex_common.h
 @@ -113,8 +113,12 @@ extern int rt_mutex_wait_proxy_lock(struct rt_mutex *lock,
@@ -224,5 +224,5 @@ index 14cbafe..882d84e 100644
  
  #ifdef CONFIG_DEBUG_RT_MUTEXES
 -- 
-2.7.4
+2.28.0
 

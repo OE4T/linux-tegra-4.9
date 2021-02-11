@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2020, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2011-2021, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -692,12 +692,15 @@ static int nvgpu_gpu_ioctl_trigger_suspend(struct gk20a *g)
 
 	err = gk20a_busy(g);
 	if (err)
-	    return err;
+		return err;
 
-	nvgpu_mutex_acquire(&g->dbg_sessions_lock);
-	err = gr_gk20a_elpg_protected_call(g,
+	if (g->ops.gr.trigger_suspend) {
+		nvgpu_mutex_acquire(&g->dbg_sessions_lock);
+		err = gr_gk20a_elpg_protected_call(g,
 			g->ops.gr.trigger_suspend(g));
-	nvgpu_mutex_release(&g->dbg_sessions_lock);
+		nvgpu_mutex_release(&g->dbg_sessions_lock);
+	} else
+		err = -EINVAL;
 
 	gk20a_idle(g);
 
@@ -731,8 +734,13 @@ static int nvgpu_gpu_ioctl_wait_for_pause(struct gk20a *g,
 		goto out_free;
 
 	nvgpu_mutex_acquire(&g->dbg_sessions_lock);
-	(void)gr_gk20a_elpg_protected_call(g,
+	if (g->ops.gr.wait_for_pause) {
+		(void)gr_gk20a_elpg_protected_call(g,
 			g->ops.gr.wait_for_pause(g, w_state));
+	} else {
+		err = -EINVAL;
+		goto out_idle;
+	}
 
 	for (sm_id = 0; sm_id < g->gr.no_of_sm; sm_id++) {
 		ioctl_w_state[sm_id].valid_warps[0] =
@@ -755,6 +763,7 @@ static int nvgpu_gpu_ioctl_wait_for_pause(struct gk20a *g,
 		err = -EFAULT;
 	}
 
+out_idle:
 	nvgpu_mutex_release(&g->dbg_sessions_lock);
 
 	gk20a_idle(g);
@@ -772,12 +781,15 @@ static int nvgpu_gpu_ioctl_resume_from_pause(struct gk20a *g)
 
 	err = gk20a_busy(g);
 	if (err)
-	    return err;
+		return err;
 
-	nvgpu_mutex_acquire(&g->dbg_sessions_lock);
-	err = gr_gk20a_elpg_protected_call(g,
+	if (g->ops.gr.resume_from_pause) {
+		nvgpu_mutex_acquire(&g->dbg_sessions_lock);
+		err = gr_gk20a_elpg_protected_call(g,
 			g->ops.gr.resume_from_pause(g));
-	nvgpu_mutex_release(&g->dbg_sessions_lock);
+		nvgpu_mutex_release(&g->dbg_sessions_lock);
+	} else
+		err = -EINVAL;
 
 	gk20a_idle(g);
 
@@ -792,8 +804,11 @@ static int nvgpu_gpu_ioctl_clear_sm_errors(struct gk20a *g)
 	if (err)
 		return err;
 
-	err = gr_gk20a_elpg_protected_call(g,
+	if (g->ops.gr.clear_sm_errors) {
+		err = gr_gk20a_elpg_protected_call(g,
 			g->ops.gr.clear_sm_errors(g));
+	} else
+		err = -EINVAL;
 
 	gk20a_idle(g);
 
@@ -806,9 +821,12 @@ static int nvgpu_gpu_ioctl_has_any_exception(
 {
 	u32 tpc_exception_en;
 
-	nvgpu_mutex_acquire(&g->dbg_sessions_lock);
-	tpc_exception_en = g->ops.gr.tpc_enabled_exceptions(g);
-	nvgpu_mutex_release(&g->dbg_sessions_lock);
+	if (g->ops.gr.tpc_enabled_exceptions) {
+		nvgpu_mutex_acquire(&g->dbg_sessions_lock);
+		tpc_exception_en = g->ops.gr.tpc_enabled_exceptions(g);
+		nvgpu_mutex_release(&g->dbg_sessions_lock);
+	} else
+		return -EINVAL;
 
 	args->tpc_exception_en_sm_mask = tpc_exception_en;
 

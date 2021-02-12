@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2021, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -40,6 +40,8 @@ struct nvgpu_acr;
 
 #define HSBIN_ACR_BL_UCODE_IMAGE "pmu_bl.bin"
 #define HSBIN_ACR_UCODE_IMAGE "acr_ucode.bin"
+#define HSBIN_ACR_PROD_UCODE "acr_ucode_prod.bin"
+#define HSBIN_ACR_DBG_UCODE "acr_ucode_dbg.bin"
 #define HSBIN_ACR_AHESASC_PROD_UCODE "acr_ahesasc_prod_ucode.bin"
 #define HSBIN_ACR_ASB_PROD_UCODE "acr_asb_prod_ucode.bin"
 #define HSBIN_ACR_AHESASC_DBG_UCODE "acr_ahesasc_dbg_ucode.bin"

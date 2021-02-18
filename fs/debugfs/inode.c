@@ -294,6 +294,9 @@ static struct dentry *start_creating(const char *name, struct dentry *parent)
 	struct dentry *dentry;
 	int error;
 
+	if (!debugfs_initialized())
+		return ERR_PTR(-ENOENT);
+
 	pr_debug("debugfs: creating file '%s'\n",name);
 
 	if (IS_ERR(parent))

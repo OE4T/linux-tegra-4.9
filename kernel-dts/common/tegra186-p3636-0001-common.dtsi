@@ -184,6 +184,7 @@
 		extcon-cables = <&vbus_id_extcon 0>;
 		extcon-cable-names = "vbus";
 		#extcon-cells = <1>;
+		emc-frequency = <100000000>;
 	};
 
 	xhci@3530000 {

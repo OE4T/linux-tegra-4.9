@@ -204,6 +204,10 @@
 			status = "okay";
 		};
 	};
+
+	i2c@c250000 {
+		status = "okay";
+	};
 };
 #if LINUX_VERSION >= 414
 #include <tegra186-linux-4.14.dtsi>

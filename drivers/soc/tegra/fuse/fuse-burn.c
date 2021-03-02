@@ -102,6 +102,7 @@ struct tegra_fuse_burn_dev {
 	s32 min_temp;
 	s32 max_temp;
 	u32 thermal_zone;
+	bool limit_check_disabled;
 };
 
 static DEFINE_MUTEX(fuse_lock);
@@ -242,8 +243,7 @@ static int tegra_fuse_is_temp_under_range(struct tegra_fuse_burn_dev *fuse_dev)
 	int shutdown_limit = 0;
 
 	/* Check if temperature is under permissible range */
-	ret = thermal_zone_get_temp(fuse_dev->tz, &temp);
-	if (ret)
+	if (thermal_zone_get_temp(fuse_dev->tz, &temp))
 		goto out;
 
 	if (temp < fuse_dev->min_temp ||
@@ -254,7 +254,7 @@ static int tegra_fuse_is_temp_under_range(struct tegra_fuse_burn_dev *fuse_dev)
 		goto out;
 	}
 
-	if (!fuse_dev->thermal_zone)
+	if (fuse_dev->limit_check_disabled)
 		goto out;
 
 	ret = tegra_fuse_get_shutdown_limit(fuse_dev, &shutdown_limit);
@@ -867,16 +867,20 @@ static int tegra_fuse_burn_probe(struct platform_device *pdev)
 
 	wakeup_source_init(&fuse_dev->wake_lock, "fuse_wake_lock");
 
-	if (of_property_read_u32(np, "thermal-zone", &fuse_dev->thermal_zone))
+	if (of_property_read_u32(np, "thermal-zone", &fuse_dev->thermal_zone)) {
+		fuse_dev->limit_check_disabled = true;
 		dev_info(fuse_dev->dev, "shutdown limit check disabled\n");
+	}
 
 	tz_np = of_parse_phandle(np, "nvidia,tz", 0);
 	if (tz_np) {
-		fuse_dev->tz = thermal_zone_get_zone_by_node(tz_np);
-		if (IS_ERR(fuse_dev->tz))
+		struct thermal_zone_device *tzd = thermal_zone_get_zone_by_node(tz_np);
+		if (IS_ERR(tzd))
 			dev_dbg(&pdev->dev, "temp zone node not available\n");
-		else
+		else {
+			fuse_dev->tz = tzd;
 			tegra_fuse_parse_dt(fuse_dev, np);
+		}
 	}
 
 	dev_info(&pdev->dev, "Fuse burn driver initialized\n");

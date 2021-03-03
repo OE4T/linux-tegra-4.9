@@ -98,12 +98,7 @@
 		nvidia,invert-interrupt;
 	};
 
-
-	spi@3210000 {
-		status = "okay";
-	};
-
-	spi@3240000 {
+	spi@3210000 { /* SPI 1 to 40 pin header */
 		status = "okay";
 		spi@0 {
 			compatible = "tegra-spidev";
@@ -127,6 +122,25 @@
 		};
 	};
 
+	spi@c260000 { /* SPI 2 to 40 pin header */
+		status = "okay";
+		spi@0 {
+			compatible = "tegra-spidev";
+			reg = <0x0>;
+			spi-max-frequency = <33000000>;
+			controller-data {
+				nvidia,enable-hw-based-cs;
+			};
+		};
+		spi@1 {
+			compatible = "tegra-spidev";
+			reg = <0x1>;
+			spi-max-frequency = <33000000>;
+			controller-data {
+				nvidia,enable-hw-based-cs;
+			};
+		};
+	};
 
 	external-connection {
 		vbus_id_extcon: extcon@1 {

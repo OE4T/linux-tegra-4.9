@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2021, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2021, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,11 +15,11 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "tegra210-camera-rbpcv2-dual-imx219.dtsi"
+#include "tegra210-camera-rbpcv3-dual-imx477.dtsi"
 
 #define CAM1_PWDN		TEGRA_GPIO(S, 7)
 #define CAM2_PWDN		TEGRA_GPIO(T, 0)
-#define CAM_I2C_MUX TEGRA_GPIO(I, 0) // NFC_EN GPIO
+#define CAM_I2C_MUX		TEGRA_GPIO(I, 0) // NFC_EN GPIO
 
 / {
 	cam_i2cmux {
@@ -28,19 +28,24 @@
 		#size-cells = <0>;
 		mux-gpios = <&gpio CAM_I2C_MUX GPIO_ACTIVE_HIGH>;
 		i2c-parent = <&i2c7>;
+		status = "disabled";
 		i2c@0 {
+			status = "disabled";
 			reg = <0>;
 			#address-cells = <1>;
 			#size-cells = <0>;
-			rbpcv2_imx219_a@10 {
+			rbpcv3_imx477_a@1a {
+				status = "disabled";
 				reset-gpios = <&gpio CAM1_PWDN GPIO_ACTIVE_HIGH>;
 			};
 		};
 		i2c@1 {
+			status = "disabled";
 			reg = <1>;
 			#address-cells = <1>;
 			#size-cells = <0>;
-			rbpcv2_imx219_e@10 {
+			rbpcv3_imx477_e@1a {
+				status = "disabled";
 				reset-gpios = <&gpio CAM2_PWDN GPIO_ACTIVE_HIGH>;
 			};
 		};

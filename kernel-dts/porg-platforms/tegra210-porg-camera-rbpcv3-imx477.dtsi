@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2021, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2021, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,14 +15,19 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "tegra210-camera-rbpcv2-imx219.dtsi"
+#include "tegra210-camera-rbpcv3-imx477.dtsi"
 
 #define CAM1_PWDN		TEGRA_GPIO(S, 7)
 
 / {
     host1x {
 		i2c@546c0000 {
-			rbpcv2_imx219_a@10 {
+			rbpcv3_imx477_a@1a {
+				status = "disabled";
+				clocks = <&tegra_car TEGRA210_CLK_CLK_OUT_3>;
+				clock-names = "clk_out_3";
+				clock-frequency = <24000000>;
+				mclk = "clk_out_3";
 				reset-gpios = <&gpio CAM1_PWDN GPIO_ACTIVE_HIGH>;
 			};
 		};

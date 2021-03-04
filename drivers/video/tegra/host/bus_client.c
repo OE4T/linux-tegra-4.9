@@ -1,7 +1,7 @@
 /*
  * Tegra Graphics Host Client Module
  *
- * Copyright (c) 2010-2020, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2010-2021, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -1141,7 +1141,7 @@ static long nvhost_channelctl(struct file *filp,
 
 	if (_IOC_DIR(cmd) & _IOC_WRITE) {
 		if (copy_from_user(buf, (void __user *)arg, _IOC_SIZE(cmd))) {
-			nvhost_err(NULL,
+			nvhost_err_ratelimited(NULL,
 				   "failed to copy from user: arg=%px",
 				   (void __user *)arg);
 			return -EFAULT;

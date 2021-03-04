@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2016-2021, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -38,42 +38,6 @@ static u32 tegra_safety_ivc_notify(void *data, u32 response)
 	return 0;
 }
 
-static u32 tegra_safety_cmd_full_notify(void *data, u32 response)
-{
-	struct tegra_safety_ivc *safety_ivc = data;
-
-	atomic_set(&safety_ivc->cmd.response, response);
-	wake_up(&safety_ivc->cmd.response_waitq);
-
-	return 0;
-}
-
-static void tegra_safety_cmd_empty_notify(void *data, u32 empty_value)
-{
-	struct tegra_safety_ivc *safety_ivc = data;
-
-	atomic_set(&safety_ivc->cmd.emptied, 1);
-	wake_up(&safety_ivc->cmd.empty_waitq);
-}
-
-static long tegra_safety_ivc_wait_for_empty(struct device *dev,
-		long timeout)
-{
-	struct tegra_safety_ivc *safety_ivc = dev_get_drvdata(dev);
-
-	timeout = wait_event_interruptible_timeout(
-			safety_ivc->cmd.empty_waitq,
-			/* Make sure IRQ has been handled */
-			atomic_read(&safety_ivc->cmd.emptied) != 0 &&
-			tegra_hsp_sm_pair_is_empty(safety_ivc->cmd_pair),
-			timeout);
-
-	if (timeout > 0)
-		atomic_set(&safety_ivc->cmd.emptied, 0);
-
-	return timeout;
-}
-
 static int tegra_safety_ivc_command(struct device *dev, u32 command,
 					long timeout)
 {
@@ -82,16 +46,11 @@ static int tegra_safety_ivc_command(struct device *dev, u32 command,
 
 #define INVALID_RESPONSE (0x80000000U)
 
-	timeout = tegra_safety_ivc_wait_for_empty(dev, timeout);
-	if (timeout <= 0) {
-		dev_err(dev, "Timed out waiting for empty mailbox");
-		response = -ETIMEDOUT;
-		goto done;
-	}
-
 	atomic_set(&safety_ivc->cmd.response, INVALID_RESPONSE);
 
-	tegra_hsp_sm_pair_write(safety_ivc->cmd_pair, command);
+#if IS_ENABLED(CONFIG_TEGRA_SAFETY_IVC_DEBUG)
+	atomic_set(&safety_ivc->cmd.response, 0x1000000);
+#endif
 
 	timeout = wait_event_interruptible_timeout(
 			safety_ivc->cmd.response_waitq,
@@ -104,7 +63,6 @@ static int tegra_safety_ivc_command(struct device *dev, u32 command,
 		response = (int)atomic_read(&safety_ivc->cmd.response);
 	}
 
-done:
 	return response;
 }
 
@@ -307,17 +265,6 @@ static int tegra_safety_ivc_parse_hsp(struct device *dev)
 	int ret;
 
 	hsp_node = of_get_child_by_name(dev->of_node, "hsp");
-	safety_ivc->cmd_pair = of_tegra_hsp_sm_pair_by_name(hsp_node,
-			"cmd-pair", tegra_safety_cmd_full_notify,
-			tegra_safety_cmd_empty_notify, safety_ivc);
-	of_node_put(hsp_node);
-	if (IS_ERR(safety_ivc->cmd_pair)) {
-		ret = PTR_ERR(safety_ivc->cmd_pair);
-		dev_err(dev, "failed to obtain cmd mbox pair: %d\n", ret);
-		return ret;
-	}
-
-	hsp_node = of_get_child_by_name(dev->of_node, "hsp");
 	safety_ivc->ivc_pair = of_tegra_hsp_sm_pair_by_name(hsp_node,
 			"ivc-pair", tegra_safety_ivc_notify,
 			NULL, NULL);
@@ -351,7 +298,6 @@ static int tegra_safety_ivc_remove(struct platform_device *pdev)
 		tegra_safety_dev_exit(dev, i);
 
 	tegra_safety_ast_region_free(dev);
-	tegra_hsp_sm_pair_free(safety_ivc->cmd_pair);
 	tegra_hsp_sm_pair_free(safety_ivc->ivc_pair);
 	ivc_chan_count = 0;
 
@@ -373,7 +319,6 @@ static int tegra_safety_ivc_probe(struct platform_device *pdev)
 	dev_set_drvdata(dev, safety_ivc);
 
 	init_waitqueue_head(&safety_ivc->cmd.response_waitq);
-	init_waitqueue_head(&safety_ivc->cmd.empty_waitq);
 
 	ret = tegra_safety_ivc_parse_hsp(dev);
 	if (ret) {

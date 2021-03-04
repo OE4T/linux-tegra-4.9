@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2016-2021, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -36,7 +36,6 @@ struct safety_ast_region {
 
 struct tegra_safety_ivc {
 	struct safety_ast_region region;
-	struct tegra_hsp_sm_pair *cmd_pair;
 	struct tegra_hsp_sm_pair *ivc_pair;
 	struct {
 		wait_queue_head_t response_waitq;

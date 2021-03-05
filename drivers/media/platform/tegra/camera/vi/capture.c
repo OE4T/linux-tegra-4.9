@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host VI
  *
- * Copyright (c) 2017-2020, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2021, NVIDIA CORPORATION.  All rights reserved.
  *
  * Author: David Wang <davidw@nvidia.com>
  *
@@ -615,6 +615,7 @@ static int csi_stream_tpg_disable(struct tegra_vi_channel *chan)
 	struct vi_capture *capture = chan->capture_data;
 	struct CAPTURE_CONTROL_MSG control_desc;
 	struct CAPTURE_CONTROL_MSG *resp_msg = &capture->control_resp_msg;
+	struct vi_capture_control_msg msg;
 	int err = 0;
 
 	memset(&control_desc, 0, sizeof(control_desc));
@@ -623,6 +624,11 @@ static int csi_stream_tpg_disable(struct tegra_vi_channel *chan)
 	control_desc.csi_stream_tpg_stop_req.stream_id = capture->stream_id;
 	control_desc.csi_stream_tpg_stop_req.virtual_channel_id =
 		capture->virtual_channel_id;
+
+	memset(&msg, 0, sizeof(struct vi_capture_control_msg));
+	msg.ptr = (uint64_t)&control_desc;
+	msg.size = sizeof(control_desc);
+	msg.response = (uint64_t)resp_msg;
 
 	err = vi_capture_ivc_send_control(chan, &control_desc,
 		sizeof(control_desc), CAPTURE_CSI_STREAM_TPG_STOP_RESP);
@@ -639,6 +645,7 @@ static int csi_stream_tpg_disable(struct tegra_vi_channel *chan)
 static int csi_stream_close(struct tegra_vi_channel *chan)
 {
 	struct vi_capture *capture = chan->capture_data;
+	struct vi_capture_control_msg msg;
 	struct CAPTURE_CONTROL_MSG control_desc;
 	struct CAPTURE_CONTROL_MSG *resp_msg = &capture->control_resp_msg;
 	int err = 0;
@@ -650,8 +657,12 @@ static int csi_stream_close(struct tegra_vi_channel *chan)
 	control_desc.phy_stream_close_req.stream_id = capture->stream_id;
 	control_desc.phy_stream_close_req.csi_port = capture->csi_port;
 
-	err = vi_capture_ivc_send_control(chan, &control_desc,
-		sizeof(control_desc), CAPTURE_PHY_STREAM_CLOSE_RESP);
+	memset(&msg, 0, sizeof(struct vi_capture_control_msg));
+	msg.ptr = (uint64_t)&control_desc;
+	msg.size = sizeof(control_desc);
+	msg.response = (uint64_t)resp_msg;
+
+	err = vi_capture_control_message(chan, &msg);
 	if ((err < 0) ||
 			(resp_msg->phy_stream_close_resp.result != CAPTURE_OK))
 		return err;
@@ -872,11 +883,25 @@ int vi_capture_control_message(struct tegra_vi_channel *chan,
 		resp_id = CAPTURE_SYNCGEN_DISABLE_RESP;
 		break;
 	case CAPTURE_PHY_STREAM_OPEN_REQ:
+		if (chan->is_stream_open) {
+			dev_dbg(chan->dev,
+				"stream is already open\n");
+			resp_msg->phy_stream_open_resp.result = CAPTURE_OK;
+			kfree(msg_cpy);
+			return 0;
+		}
 		resp_id = CAPTURE_PHY_STREAM_OPEN_RESP;
 		capture->stream_id = req_msg->phy_stream_open_req.stream_id;
 		capture->csi_port = req_msg->phy_stream_open_req.csi_port;
 		break;
 	case CAPTURE_PHY_STREAM_CLOSE_REQ:
+		if (!chan->is_stream_open) {
+			dev_dbg(chan->dev,
+				"stream is already closed\n");
+			resp_msg->phy_stream_close_resp.result = CAPTURE_OK;
+			kfree(msg_cpy);
+			return 0;
+		}
 		resp_id = CAPTURE_PHY_STREAM_CLOSE_RESP;
 		capture->stream_id = NVCSI_STREAM_INVALID_ID;
 		capture->csi_port = NVCSI_PORT_UNSPECIFIED;
@@ -930,6 +955,11 @@ int vi_capture_control_message(struct tegra_vi_channel *chan,
 	err = vi_capture_ivc_send_control(chan, msg_cpy, msg->size, resp_id);
 	if (err < 0)
 		goto fail;
+
+	if (header->msg_id == CAPTURE_PHY_STREAM_OPEN_REQ)
+		chan->is_stream_open = true;
+	else if (header->msg_id == CAPTURE_PHY_STREAM_CLOSE_REQ)
+		chan->is_stream_open = false;
 
 	err = copy_to_user(response, resp_msg,
 			sizeof(*resp_msg)) ? -EFAULT : 0;

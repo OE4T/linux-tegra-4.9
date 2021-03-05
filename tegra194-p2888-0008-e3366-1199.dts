@@ -86,4 +86,14 @@
 			};
 		};
 	};
+
+	host1x {
+		sor2 {
+			hdmi-display {
+				disp-default-out {
+					nvidia,out-flags = <TEGRA_DC_OUT_HOTPLUG_LOW>;
+				};
+			};
+		};
+	};
 };

@@ -402,7 +402,7 @@ static int iscsi_sw_tcp_send_hdr_done(struct iscsi_tcp_conn *tcp_conn,
 
 	tcp_sw_conn->out.segment = tcp_sw_conn->out.data_segment;
 	ISCSI_SW_TCP_DBG(tcp_conn->iscsi_conn,
-			 "Header done. Next segment size %u total_size %u\n",
+			 "Header done. Next segment size %u total_size %lu\n",
 			 tcp_sw_conn->out.segment.size,
 			 tcp_sw_conn->out.segment.total_size);
 	return 0;

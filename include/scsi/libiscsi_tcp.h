@@ -33,10 +33,10 @@ typedef int iscsi_segment_done_fn_t(struct iscsi_tcp_conn *,
 
 struct iscsi_segment {
 	unsigned char		*data;
-	unsigned int		size;
+	unsigned int 		size;
 	unsigned int		copied;
-	unsigned int		total_size;
-	unsigned int		total_copied;
+	size_t		      	total_size;
+	unsigned long		total_copied;
 
 	struct ahash_request	*hash;
 	unsigned char		padbuf[ISCSI_PAD_LEN];
@@ -46,7 +46,7 @@ struct iscsi_segment {
 
 	struct scatterlist	*sg;
 	void			*sg_mapped;
-	unsigned int		sg_offset;
+	unsigned long		sg_offset;
 	bool			atomic_mapped;
 
 	iscsi_segment_done_fn_t	*done;
@@ -115,7 +115,7 @@ extern void iscsi_segment_init_linear(struct iscsi_segment *segment,
 extern int
 iscsi_segment_seek_sg(struct iscsi_segment *segment,
 		      struct scatterlist *sg_list, unsigned int sg_count,
-		      unsigned int offset, size_t size,
+		      unsigned long offset, size_t size,
 		      iscsi_segment_done_fn_t *done,
 		      struct ahash_request *hash);
 

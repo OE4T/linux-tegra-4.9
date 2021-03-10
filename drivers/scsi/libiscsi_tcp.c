@@ -95,12 +95,12 @@ static int iscsi_tcp_hdr_recv_done(struct iscsi_tcp_conn *tcp_conn,
  */
 static inline void
 iscsi_tcp_segment_init_sg(struct iscsi_segment *segment,
-			  struct scatterlist *sg, unsigned int offset)
+			  struct scatterlist *sg, unsigned long offset)
 {
 	segment->sg = sg;
 	segment->sg_offset = offset;
 	segment->size = min(sg->length - offset,
-			    segment->total_size - segment->total_copied);
+    			    segment->total_size - segment->total_copied);
 	segment->data = NULL;
 }
 
@@ -232,12 +232,11 @@ int iscsi_tcp_segment_done(struct iscsi_tcp_conn *tcp_conn,
 	iscsi_tcp_segment_unmap(segment);
 
 	/* Do we have more scatterlist entries? */
-	ISCSI_DBG_TCP(tcp_conn->iscsi_conn, "total copied %u total size %u\n",
+	ISCSI_DBG_TCP(tcp_conn->iscsi_conn, "total copied %lu total size %lu\n",
 		      segment->total_copied, segment->total_size);
 	if (segment->total_copied < segment->total_size) {
 		/* Proceed to the next entry in the scatterlist. */
-		iscsi_tcp_segment_init_sg(segment, sg_next(segment->sg),
-					  0);
+		iscsi_tcp_segment_init_sg(segment, sg_next(segment->sg), 0);
 		iscsi_tcp_segment_map(segment, recv);
 		BUG_ON(segment->size == 0);
 		return 0;
@@ -371,7 +370,7 @@ EXPORT_SYMBOL_GPL(iscsi_segment_init_linear);
 inline int
 iscsi_segment_seek_sg(struct iscsi_segment *segment,
 		      struct scatterlist *sg_list, unsigned int sg_count,
-		      unsigned int offset, size_t size,
+		      unsigned long offset, size_t size,
 		      iscsi_segment_done_fn_t *done,
 		      struct ahash_request *hash)
 {

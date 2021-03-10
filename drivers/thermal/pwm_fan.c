@@ -1532,6 +1532,9 @@ static int pwm_fan_probe(struct platform_device *pdev)
 	}
 
 	mutex_init(&fan_data->fan_state_lock);
+	mutex_init(&fan_data->pwm_set);
+	spin_lock_init(&fan_data->irq_lock);
+
 	fan_data->workqueue = alloc_workqueue(dev_name(&pdev->dev),
 				WQ_HIGHPRI | WQ_UNBOUND, 1);
 	if (!fan_data->workqueue) {
@@ -1595,7 +1598,6 @@ static int pwm_fan_probe(struct platform_device *pdev)
 			fan_data->rpm_diff_tolerance = (int)value;
 			dev_info(&pdev->dev,
 				"Using tachometer rpm feedback control");
-			mutex_init(&fan_data->pwm_set);
 			INIT_DELAYED_WORK(
 				&(fan_data->fan_ramp_rpm_work),
 				fan_ramping_rpm_work_func);
@@ -1671,7 +1673,6 @@ static int pwm_fan_probe(struct platform_device *pdev)
 			fan_data->fan_pwm_polarity ? "inversed" : "normal");
 	}
 
-	spin_lock_init(&fan_data->irq_lock);
 	atomic_set(&fan_data->tach_enabled, 0);
 	if (fan_data->tach_gpio != -1) {
 		/* init fan tach */

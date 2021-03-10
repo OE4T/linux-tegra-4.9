@@ -35,7 +35,7 @@ struct iscsi_segment {
 	unsigned char		*data;
 	unsigned int 		size;
 	unsigned int		copied;
-	size_t		      total_size;
+	size_t		      	total_size;
 	unsigned long		total_copied;
 
 	struct ahash_request	*hash;

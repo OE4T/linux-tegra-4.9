@@ -785,6 +785,7 @@ static int tsec_probe(struct platform_device *dev)
 	struct nvhost_device_data *pdata = NULL;
 	u32 carveout_addr;
 	u32 carveout_size;
+	DEFINE_DMA_ATTRS(attrs);
 
 	if (dev->dev.of_node) {
 		const struct of_device_id *match;
@@ -807,7 +808,6 @@ static int tsec_probe(struct platform_device *dev)
 
 	node = of_get_child_by_name(dev->dev.of_node, "carveout");
 	if (node) {
-		DEFINE_DMA_ATTRS(attrs);
 		/* This is currently used only in T124. carveout_addr and
 		 * carveout_size are 32 bit. */
 		err = of_property_read_u32(node, "carveout_addr",
@@ -841,12 +841,25 @@ static int tsec_probe(struct platform_device *dev)
 
 	err = nvhost_client_device_get_resources(dev);
 	if (err)
-		return err;
+		goto fail;
 	if (!tsec)
 		tsec = dev;
-	nvhost_module_init(dev);
+
+	if (nvhost_module_init(dev)) {
+		dev_err(&dev->dev, "nvhost_module_init failed\n");
+		err = -EAGAIN;
+		goto fail;
+	}
 
 	err = nvhost_client_device_init(dev);
+
+fail:
+	if (err)
+		dma_unmap_single_attrs(&dev->dev,
+				pdata->carveout_addr,
+				pdata->carveout_size,
+				DMA_TO_DEVICE,
+				__DMA_ATTR(attrs));
 
 	return err;
 }

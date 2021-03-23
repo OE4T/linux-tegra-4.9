@@ -1,7 +1,7 @@
 /*
  * NVDLA queue and task management for T194
  *
- * Copyright (c) 2016-2019, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2016-2021, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -174,6 +174,11 @@ static int nvdla_unmap_task_memory(struct nvdla_task *task)
 
 	/* unpin address list */
 	for (ii = 0; ii < task->num_addresses; ii++) {
+		if (task->memory_handles[ii].type ==
+				NVDLA_BUFFER_TYPE_INTERNAL) {
+			/* No unpinning required for internal buffers */
+			continue;
+		}
 		if (task->memory_handles[ii].handle) {
 			nvdla_buffer_submit_unpin(task->buffers,
 				&task->memory_dmabuf[ii], 1);
@@ -524,15 +529,24 @@ static int nvdla_map_task_memory(struct nvdla_task *task)
 	for (jj = 0; jj < task->num_addresses; jj++) {
 		dma_addr_t dma_addr;
 		size_t dma_size;
-		err = -EFAULT;
 
 		nvdla_dbg_info(pdev, "count[%d] handle[%u] offset[%u]",
 				jj,
 				task->memory_handles[jj].handle,
 				task->memory_handles[jj].offset);
 
-		if (!task->memory_handles[jj].handle)
+		if (task->memory_handles[jj].type ==
+				NVDLA_BUFFER_TYPE_INTERNAL) {
+			/* For internal buffers, offset is the final address */
+			next = add_address(next,
+					task->memory_handles[jj].offset);
+			continue;
+		}
+
+		if (!task->memory_handles[jj].handle) {
+			err = -EFAULT;
 			goto fail_to_pin_mem;
+		}
 
 		task->memory_dmabuf[jj] =
 			dma_buf_get(task->memory_handles[jj].handle);

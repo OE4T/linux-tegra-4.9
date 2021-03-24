@@ -114,8 +114,7 @@ static void fan_validate_target_rpm(struct fan_dev_data *fan_data)
 						fan_data->next_target_pwm);
 
 	fan_data->fan_rpm_in_limits = false;
-	cancel_delayed_work(&fan_data->fan_ramp_rpm_work);
-	mutex_unlock(&fan_data->fan_state_lock);
+	cancel_delayed_work_sync(&fan_data->fan_ramp_rpm_work);
 	queue_delayed_work(fan_data->workqueue,
 			&fan_data->fan_ramp_rpm_work,
 			msecs_to_jiffies(fan_data->fan_ramp_time_ms));
@@ -126,12 +125,8 @@ static void fan_update_target_pwm(struct fan_dev_data *fan_data, int val)
 	if (fan_data) {
 		fan_data->next_target_pwm = min(val, fan_data->fan_cap_pwm);
 
-		/* If a new pwm update request, reset the lock sequence */
-		if (mutex_is_locked(&fan_data->pwm_set))
-			mutex_unlock(&fan_data->pwm_set);
-		mutex_lock(&fan_data->pwm_set);
 		if (fan_data->next_target_pwm != fan_data->fan_cur_pwm) {
-			cancel_delayed_work(&fan_data->fan_ramp_pwm_work);
+			cancel_delayed_work_sync(&fan_data->fan_ramp_pwm_work);
 			queue_delayed_work(fan_data->workqueue,
 					&fan_data->fan_ramp_pwm_work,
 					msecs_to_jiffies(fan_data->step_time));
@@ -659,16 +654,19 @@ static void fan_ramping_rpm_work_func(struct work_struct *work)
 			struct fan_dev_data,
 			fan_ramp_rpm_work);
 
-	/*
-	 * If mutex is locked, preempt. Only after pwm work function is done
-	 * with its execution, rpm work function should start.
-	 */
-	if (mutex_is_locked((&fan_data->pwm_set))) {
-		time_off = fan_data->fan_ramp_time_ms;
-		goto reschedule;
+	time_off = fan_data->rpm_invalid_retry_delay;
+	if (!wait_for_completion_timeout(&fan_data->pwm_set,
+					 msecs_to_jiffies(10000))) {
+		dev_info(fan_data->dev, "pwm_set completion timedout\n");
+		return;
 	}
 
-	mutex_lock(&fan_data->fan_state_lock);
+	if (!mutex_trylock(&fan_data->fan_state_lock)) {
+		queue_delayed_work(fan_data->workqueue,
+			&fan_data->fan_ramp_rpm_work,
+			msecs_to_jiffies(fan_data->step_time + time_off));
+		return;
+	}
 
 	if (!fan_data->fan_temp_control_flag)
 		goto unlock_mutex;
@@ -788,13 +786,30 @@ static void fan_ramping_pwm_work_func(struct work_struct *work)
 {
 	int rru, rrd, err;
 	int cur_pwm, next_pwm;
+	int time_off;
 	struct delayed_work *dwork = container_of(work, struct delayed_work,
 									work);
 	struct fan_dev_data *fan_data = container_of(dwork, struct
 						fan_dev_data,
 						fan_ramp_pwm_work);
 
-	mutex_lock(&fan_data->fan_state_lock);
+	time_off = fan_data->rpm_invalid_retry_delay;
+	if (!mutex_trylock(&fan_data->fan_state_lock)) {
+		if (fan_data->pwm_tach_dev)
+			cancel_delayed_work_sync(&fan_data->fan_ramp_rpm_work);
+
+		queue_delayed_work(fan_data->workqueue,
+				&(fan_data->fan_ramp_pwm_work),
+				msecs_to_jiffies(fan_data->step_time));
+
+		if (fan_data->pwm_tach_dev)
+			queue_delayed_work(fan_data->workqueue,
+			&fan_data->fan_ramp_rpm_work,
+			msecs_to_jiffies(fan_data->step_time + time_off));
+		return;
+	}
+
+	reinit_completion(&fan_data->pwm_set);
 
 	cur_pwm = fan_data->fan_cur_pwm;
 	rru = fan_get_pwm_rru(cur_pwm, fan_data);
@@ -841,12 +856,21 @@ static void fan_ramping_pwm_work_func(struct work_struct *work)
 
 	set_pwm_duty_cycle(next_pwm, fan_data);
 	fan_data->fan_cur_pwm = next_pwm;
-	if (fan_data->next_target_pwm != next_pwm)
+	if (fan_data->next_target_pwm != next_pwm) {
+		if (fan_data->pwm_tach_dev)
+			cancel_delayed_work_sync(&fan_data->fan_ramp_rpm_work);
+
 		queue_delayed_work(fan_data->workqueue,
 				&(fan_data->fan_ramp_pwm_work),
 				msecs_to_jiffies(fan_data->step_time));
+
+		if (fan_data->pwm_tach_dev)
+			queue_delayed_work(fan_data->workqueue,
+			&fan_data->fan_ramp_rpm_work,
+			msecs_to_jiffies(fan_data->step_time + time_off));
+	}
 	else
-		mutex_unlock(&fan_data->pwm_set);
+		complete(&fan_data->pwm_set);
 
 	mutex_unlock(&fan_data->fan_state_lock);
 }
@@ -1529,7 +1553,7 @@ static int pwm_fan_probe(struct platform_device *pdev)
 	}
 
 	mutex_init(&fan_data->fan_state_lock);
-	mutex_init(&fan_data->pwm_set);
+	init_completion(&fan_data->pwm_set);
 	spin_lock_init(&fan_data->irq_lock);
 
 	fan_data->workqueue = alloc_workqueue(dev_name(&pdev->dev),
@@ -1873,9 +1897,9 @@ static int pwm_fan_resume(struct platform_device *pdev)
 {
 	struct fan_dev_data *fan_data = platform_get_drvdata(pdev);
 
-	mutex_lock(&fan_data->fan_state_lock);
-
 	gpio_free(fan_data->pwm_gpio);
+
+	reinit_completion(&fan_data->pwm_set);
 
 	queue_delayed_work(fan_data->workqueue,
 				&fan_data->fan_ramp_pwm_work,
@@ -1886,7 +1910,6 @@ static int pwm_fan_resume(struct platform_device *pdev)
 				msecs_to_jiffies(fan_data->step_time));
 
 	fan_data->fan_temp_control_flag = 1;
-	mutex_unlock(&fan_data->fan_state_lock);
 	return 0;
 }
 #endif

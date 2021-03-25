@@ -41,7 +41,10 @@
 			override@2 {
 				target = <&{/gpio@2200000}>;
 				_overlay_ {
-					pcie-reg-enable {
+					pcie-3v3-enable {
+						status = "disabled";
+					};
+					pcie-12v-enable {
 						status = "disabled";
 					};
 				};

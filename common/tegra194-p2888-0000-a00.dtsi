@@ -108,11 +108,18 @@
 		"",     "",     "",     "",     "",     "SPI3_CS0_N",     "",     "",     "",   "",
 		"",     "",     "",     "SPI1_CLK",     "SPI1_MISO",     "SPI1_MOSI",     "SPI1_CS0_N",     "SPI1_CS1_N",     "",     "";
 
-		pcie-reg-enable {
+		pcie-3v3-enable {
 			gpio-hog;
-			gpios = <TEGRA194_MAIN_GPIO(Z, 2) GPIO_ACTIVE_HIGH
-				 TEGRA194_MAIN_GPIO(A, 1) GPIO_ACTIVE_LOW>;
-			label = "pcie-3v3-reg", "pcie-12v-reg";
+			gpios = <TEGRA194_MAIN_GPIO(Z, 2) GPIO_ACTIVE_HIGH>;
+			label = "pcie_3v3_reg";
+			output-high;
+			status = "okay";
+		};
+
+		pcie-12v-enable {
+			gpio-hog;
+			gpios = <TEGRA194_MAIN_GPIO(A, 1) GPIO_ACTIVE_LOW>;
+			label = "pcie_12v_reg";
 			output-high;
 			status = "okay";
 		};

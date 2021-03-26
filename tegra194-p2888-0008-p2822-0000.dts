@@ -87,4 +87,20 @@
 			};
 		};
 	};
+
+	gpio@2200000 {
+		pcie-12v-enable {
+			status = "disabled";
+		};
+	};
+
+	gpio@c2f0000 {
+		pcie-12v-enable {
+			gpio-hog;
+			gpios = <TEGRA194_AON_GPIO(AA, 7) GPIO_ACTIVE_LOW>;
+			label = "pcie_12v_reg";
+			output-high;
+			status = "okay";
+		};
+	};
 };

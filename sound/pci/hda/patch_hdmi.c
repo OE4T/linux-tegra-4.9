@@ -2117,18 +2117,17 @@ static int generic_hdmi_build_controls(struct hda_codec *codec)
 					get_pcm_rec(spec, pcm_idx)->device);
 		if (err < 0)
 			return err;
+
+		/* add control for custom ELD */
+		err = hdmi_create_custom_eld_ctl(codec, pcm_idx,
+					 get_pcm_rec(spec, pcm_idx)->device);
+		if (err < 0)
+			return err;
 	}
 
 	for (pin_idx = 0; pin_idx < spec->num_pins; pin_idx++) {
 		struct hdmi_spec_per_pin *per_pin = get_pin(spec, pin_idx);
 		struct hdmi_eld *pin_eld = &per_pin->sink_eld;
-
-		/* add control for custom ELD */
-		err = hdmi_create_custom_eld_ctl(codec,
-						 per_pin->pin_nid,
-						 HDA_PCM_TYPE_HDMI);
-		if (err < 0)
-			return err;
 
 		pin_eld->eld_valid = false;
 		hdmi_present_sense(per_pin, 0);

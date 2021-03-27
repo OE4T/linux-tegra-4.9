@@ -44,6 +44,7 @@
 #include "hda_codec.h"
 #include "hda_local.h"
 #include "hda_jack.h"
+#include "hda_controller.h"
 
 #if IS_ENABLED(CONFIG_SND_HDA_TEGRA)
 #include <video/tegra_hdmi_audio.h>
@@ -1162,6 +1163,10 @@ static int hdmi_pcm_open(struct hda_pcm_stream *hinfo,
 	per_pin->cvt_nid = per_cvt->cvt_nid;
 	hinfo->nid = per_cvt->cvt_nid;
 
+	/* flip stripe flag for the assigned stream if supported */
+	if (get_wcaps(codec, per_cvt->cvt_nid) & AC_WCAP_STRIPE)
+		azx_stream(get_azx_dev(substream))->stripe = 1;
+
 	snd_hda_codec_write_cache(codec, per_pin->pin_nid, 0,
 			    AC_VERB_SET_CONNECT_SEL,
 			    per_pin->mux_idx);
@@ -1751,7 +1756,7 @@ static int generic_hdmi_playback_pcm_prepare(struct hda_pcm_stream *hinfo,
 	hda_nid_t pin_nid;
 	struct snd_pcm_runtime *runtime = substream->runtime;
 	bool non_pcm;
-	int pinctl;
+	int pinctl, stripe;
 	int err;
 
 	mutex_lock(&spec->pcm_lock);
@@ -1795,19 +1800,18 @@ static int generic_hdmi_playback_pcm_prepare(struct hda_pcm_stream *hinfo,
 	per_pin->channels = substream->runtime->channels;
 	per_pin->setup = true;
 
-#if IS_ENABLED(CONFIG_SND_HDA_TEGRA)
-	if (is_tegra_hdmi(codec)) {
-		int stripe;
-		int err = 0;
-		struct hdmi_eld *pin_eld = &per_pin->sink_eld;
-
-		/* For multi SOR, program SDO lines to support required bw */
+	if (get_wcaps(codec, cvt_nid) & AC_WCAP_STRIPE) {
 		stripe = snd_hdac_get_stream_stripe_ctl(&codec->bus->core,
 							substream);
-
 		snd_hda_codec_write(codec, cvt_nid, 0,
-				    AC_VERB_SET_STRIPE_CONTROL,
-				    stripe);
+					AC_VERB_SET_STRIPE_CONTROL,
+					stripe);
+	}
+
+#if IS_ENABLED(CONFIG_SND_HDA_TEGRA)
+	if (is_tegra_hdmi(codec)) {
+		int err = 0;
+		struct hdmi_eld *pin_eld = &per_pin->sink_eld;
 
 		if ((substream->runtime->channels == 2) &&
 			is_pcm_format(format))
@@ -1886,6 +1890,8 @@ static int hdmi_pcm_close(struct hda_pcm_stream *hinfo,
 		snd_BUG_ON(!per_cvt->assigned);
 		per_cvt->assigned = 0;
 		hinfo->nid = 0;
+
+		azx_stream(get_azx_dev(substream))->stripe = 0;
 
 		mutex_lock(&spec->pcm_lock);
 		snd_hda_spdif_ctls_unassign(codec, pcm_idx);

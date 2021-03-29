@@ -11,6 +11,7 @@ dtbo-$(CONFIG_ARCH_TEGRA_18x_SOC) += tegra186-p3636-0001-p3509-0000-a01-adafruit
 dtbo-$(CONFIG_ARCH_TEGRA_18x_SOC) += tegra186-p3636-0001-p3509-0000-a01-adafruit-uda1334a.dtbo
 dtbo-$(CONFIG_ARCH_TEGRA_18x_SOC) += tegra186-p3636-0001-p3509-0000-a01-fe-pi-audio.dtbo
 dtbo-$(CONFIG_ARCH_TEGRA_18x_SOC) += tegra186-p3636-0001-p3509-0000-a01-hdr40.dtbo
+dtbo-$(CONFIG_ARCH_TEGRA_18x_SOC) += tegra186-p3636-0001-p3509-0000-a01-m2ke.dtbo
 dtbo-$(CONFIG_ARCH_TEGRA_18x_SOC) += tegra186-p3636-0001-p3509-0000-a01-respeaker-4-mic-array.dtbo
 
 ifneq ($(dtb-y),)

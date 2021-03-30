@@ -22,7 +22,7 @@
 	nvidia,fastboot-usb-pid = <0xee1e>;
 
 	model = "Jetson-AGXi";
-	compatible = "nvidia,galen-industrial", "nvidia,tegra194";
+	compatible = "nvidia,jetson-xavier-industrial", "nvidia,tegra194";
 
 	/* QSPI flash S25FS512SFABHB210 is controlled by qspi0 */
 	spi@3270000 {

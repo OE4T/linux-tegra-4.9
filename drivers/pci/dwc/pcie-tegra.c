@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017 - 2020, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017 - 2021, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -4590,6 +4590,11 @@ static int tegra_pcie_dw_suspend_late(struct device *dev)
 {
 	struct tegra_pcie_dw *pcie = dev_get_drvdata(dev);
 	u32 val;
+
+	if (pcie->mode == DW_PCIE_EP_TYPE) {
+		dev_err(dev, "Tegra PCIe is in EP mode, suspend not allowed");
+		return -EPERM;
+	}
 
 	if (!pcie->link_state && pcie->power_down_en)
 		return 0;

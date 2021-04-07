@@ -39,6 +39,8 @@ struct hs_acr;
 struct nvgpu_acr;
 
 #define HSBIN_ACR_BL_UCODE_IMAGE "pmu_bl.bin"
+#define GM20B_HSBIN_ACR_PROD_UCODE "nv_acr_ucode_prod.bin"
+#define GM20B_HSBIN_ACR_DBG_UCODE "nv_acr_ucode_dbg.bin"
 #define HSBIN_ACR_UCODE_IMAGE "acr_ucode.bin"
 #define HSBIN_ACR_PROD_UCODE "acr_ucode_prod.bin"
 #define HSBIN_ACR_DBG_UCODE "acr_ucode_dbg.bin"

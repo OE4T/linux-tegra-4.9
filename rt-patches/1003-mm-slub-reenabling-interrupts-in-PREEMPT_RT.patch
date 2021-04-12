@@ -1,7 +1,7 @@
-From fe4bbef06392ecf7668bc488645493303ff5cfa3 Mon Sep 17 00:00:00 2001
+From 806d60502e94db6119679aa14e0642f5ff5a30e2 Mon Sep 17 00:00:00 2001
 From: dmitry pervushin <dpervushin@nvidia.com>
 Date: Thu, 17 Nov 2016 13:39:25 +0100
-Subject: [PATCH 371/371] mm: slub: reenabling interrupts in PREEMPT_RT
+Subject: [PATCH 369/370] mm: slub: reenabling interrupts in PREEMPT_RT
 X-NVConfidentiality: public
 
 If we are past SYSTEM_BOOTING_SINGLECORE, we have smp fully
@@ -17,10 +17,10 @@ Reviewed-by: Sumeet Gupta <sumeetg@nvidia.com>
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/mm/slub.c b/mm/slub.c
-index 2c75c05..baf8ee9 100644
+index fa466d2..ef5fb4e 100644
 --- a/mm/slub.c
 +++ b/mm/slub.c
-@@ -1543,7 +1543,7 @@ static struct page *allocate_slab(struct kmem_cache *s, gfp_t flags, int node)
+@@ -1562,7 +1562,7 @@ static struct page *allocate_slab(struct kmem_cache *s, gfp_t flags, int node)
  	if (gfpflags_allow_blocking(flags))
  		enableirqs = true;
  #ifdef CONFIG_PREEMPT_RT_FULL

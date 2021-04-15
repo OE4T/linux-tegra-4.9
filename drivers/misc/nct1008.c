@@ -3,7 +3,7 @@
  *
  * Driver for NCT1008, temperature monitoring device from ON Semiconductors
  *
- * Copyright (c) 2010-2020, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2010-2021, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -593,8 +593,11 @@ static ssize_t nct1008_set_nadjust(struct device *dev,
 	struct i2c_client *client = to_i2c_client(dev);
 	struct nct1008_data *data = i2c_get_clientdata(client);
 	int r, nadj;
+	int ret;
 
-	sscanf(buf, "%d", &nadj);
+	ret = kstrtoint(buf, 0, &nadj);
+	if (ret < 0)
+		return ret;
 	r = nct1008_write_reg(data, NFACTOR_CORRECTION, nadj);
 	if (r)
 		return r;
@@ -625,8 +628,11 @@ static ssize_t nct1008_set_offset(struct device *dev,
 	struct i2c_client *client = to_i2c_client(dev);
 	struct nct1008_data *data = i2c_get_clientdata(client);
 	int r = count, hi_b, lo_b;
+	int ret;
 
-	sscanf(buf, "%d %d", &hi_b, &lo_b);
+	ret = sscanf(buf, "%d %d", &hi_b, &lo_b);
+	if (ret <= 0)
+		return -EINVAL;
 	r = nct1008_write_reg(data, OFFSET_WR, hi_b);
 	r = r ? r : nct1008_write_reg(data, OFFSET_QUARTER_WR, lo_b << 4);
 	if (r)

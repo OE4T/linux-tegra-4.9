@@ -1,7 +1,7 @@
 /*
  * drivers/ata/ahci_tegra.c
  *
- * Copyright (c) 2016-2019, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2021, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -569,9 +569,11 @@ static void tegra_ahci_unbind(struct work_struct *work)
 		struct ata_port *ap = host->ports[i];
 		unsigned long flags;
 
+		if (!ap)
+			continue;
 		spin_lock_irqsave(ap->lock, flags);
-		if (ap && ((ap->pflags & ATA_PFLAG_LOADING) ||
-					(ap->pflags & ATA_PFLAG_INITIALIZING))) {
+		if ((ap->pflags & ATA_PFLAG_LOADING) ||
+					(ap->pflags & ATA_PFLAG_INITIALIZING)) {
 			INIT_DELAYED_WORK(&tegra->work, tegra_ahci_unbind);
 			schedule_delayed_work(&tegra->work, msecs_to_jiffies(1000));
 			spin_unlock_irqrestore(ap->lock, flags);

@@ -3,7 +3,7 @@
  *
  * User-space interface to nvmap
  *
- * Copyright (c) 2011-2020, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2011-2021, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -388,6 +388,15 @@ int nvmap_ioctl_rw_handle(struct file *filp, int is_read, void __user *arg,
 		ret = set_vpr_fail_data((void *)addr, user_stride, elem_size, count);
 		nvmap_handle_put(h);
 		return ret ?: -EPERM;
+	}
+
+	/*
+	 * If Buffer is RO and write operation is asked from the buffer,
+	 * return error.
+	 */
+	if (h->is_ro && !is_read) {
+		nvmap_handle_put(h);
+		return -EPERM;
 	}
 
 	nvmap_kmaps_inc(h);

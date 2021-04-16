@@ -22,7 +22,7 @@
 	nvidia,fastboot-usb-pid = <0xee1e>;
 
 	model = "Jetson-AGXi";
-	compatible = "nvidia,galen-industrial", "nvidia,tegra194";
+	compatible = "nvidia,jetson-xavier-industrial", "nvidia,tegra194";
 
 	/* QSPI flash S25FS512SFABHB210 is controlled by qspi0 */
 	spi@3270000 {
@@ -90,9 +90,28 @@
 
 	sce@b000000 {
 		status = "okay";
+		hsp {
+			nvidia,hsp-shared-mailbox = <&sce_hsp 0>;
+		};
 	};
 
 	tegra-hsp@b150000 {
 		status = "okay";
+	};
+
+	gpio@2200000 {
+		pcie-12v-enable {
+			status = "disabled";
+		};
+	};
+
+	gpio@c2f0000 {
+		pcie-12v-enable {
+			gpio-hog;
+			gpios = <TEGRA194_AON_GPIO(AA, 7) GPIO_ACTIVE_LOW>;
+			label = "pcie_12v_reg";
+			output-high;
+			status = "okay";
+		};
 	};
 };

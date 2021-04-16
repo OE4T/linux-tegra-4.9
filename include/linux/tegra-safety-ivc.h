@@ -15,6 +15,7 @@
 #ifndef _LINUX_TEGRA_SAFETY_IVC_H_
 #define _LINUX_TEGRA_SAFETY_IVC_H_
 
+#define SAFETY_CONF_IVC_L2SS_READY     (SAFETY_CONF_IVC_READY << 24)
 #define SAFETY_CONF(id, value)          ((SAFETY_CONF_ ## id << 24) | (value))
 #define SAFETY_CONF_GET_ID(value)       (((value) >> 24) & 0x7f)
 #define SAFETY_CONF_GET_VALUE(value)    ((value) & 0xffffff)
@@ -44,6 +45,7 @@ struct tegra_safety_ivc {
 		atomic_t emptied;
 	} cmd;
 	struct tegra_safety_ivc_chan *ivc_chan[MAX_SAFETY_CHANNELS];
+	atomic_t ivc_ready;
 };
 
 struct tegra_safety_ivc_chan {

@@ -27,43 +27,48 @@
 #include <linux/tegra-safety-ivc.h>
 
 #define NV(p) "nvidia," #p
+#define TEGRA_SAFETY_IVC_READ_TIMEOUT	2 * HZ
 
 int ivc_chan_count;
 
 /* wake up cmd-resp threads */
-static u32 tegra_safety_ivc_notify(void *data, u32 response)
+static u32 tegra_safety_ivc_full_notify(void *data, u32 response)
 {
+	struct tegra_safety_ivc *safety_ivc = (struct tegra_safety_ivc *)data;
+
 	tegra_safety_dev_notify();
 
+	if (response & SAFETY_CONF_IVC_L2SS_READY) {
+		atomic_set(&safety_ivc->ivc_ready, 1);
+		wake_up(&safety_ivc->cmd.response_waitq);
+	}
+
 	return 0;
+}
+
+static void tegra_safety_ivc_empty_notify(void *data, u32 response)
+{
+	struct tegra_safety_ivc *safety_ivc = (struct tegra_safety_ivc *)data;
+	wake_up(&safety_ivc->cmd.empty_waitq);
 }
 
 static int tegra_safety_ivc_command(struct device *dev, u32 command,
 					long timeout)
 {
 	struct tegra_safety_ivc *safety_ivc = dev_get_drvdata(dev);
-	int response;
 
-#define INVALID_RESPONSE (0x80000000U)
-
-	atomic_set(&safety_ivc->cmd.response, INVALID_RESPONSE);
-
-#if IS_ENABLED(CONFIG_TEGRA_SAFETY_IVC_DEBUG)
-	atomic_set(&safety_ivc->cmd.response, 0x1000000);
-#endif
+	tegra_hsp_sm_pair_write(safety_ivc->ivc_pair, command);
 
 	timeout = wait_event_interruptible_timeout(
-			safety_ivc->cmd.response_waitq,
-			atomic_read(&safety_ivc->cmd.response) !=
-				INVALID_RESPONSE, timeout);
+			safety_ivc->cmd.empty_waitq,
+			tegra_hsp_sm_pair_is_empty(safety_ivc->ivc_pair),
+			timeout);
 	if (timeout <= 0) {
-		dev_err(dev, "Timed out waiting for response");
-		response = -ETIMEDOUT;
-	} else {
-		response = (int)atomic_read(&safety_ivc->cmd.response);
+		dev_err(dev, "Timed out waiting for empty SM");
+		return -ETIMEDOUT;
 	}
 
-	return response;
+	return 0;
 }
 
 static int tegra_safety_ivc_setup_ready(struct device *dev)
@@ -72,16 +77,22 @@ static int tegra_safety_ivc_setup_ready(struct device *dev)
 	struct safety_ast_region *region = &safety_ivc->region;
 	u32 command;
 	int ret;
+	long timeout;
 
 	command = SAFETY_CONF(IVC_READY, (region->dma >> 8));
 
-	ret = tegra_safety_ivc_command(dev, command, 2*HZ);
+	ret = tegra_safety_ivc_command(dev, command,
+			TEGRA_SAFETY_IVC_READ_TIMEOUT);
 	if (ret < 0)
 		return ret;
 
-	if (SAFETY_CONF_GET_ID(ret) != SAFETY_CONF_IVC_READY) {
-		dev_err(dev, "IVC setup problem (response=0x%08x)\n", ret);
-		return -EIO;
+	timeout = wait_event_interruptible_timeout(
+			safety_ivc->cmd.response_waitq,
+			(atomic_read(&safety_ivc->ivc_ready) == 1),
+			TEGRA_SAFETY_IVC_READ_TIMEOUT * 2);
+	if (timeout <= 0) {
+		dev_err(dev, "Timed out waiting for SCE Ready");
+		ret = -ETIMEDOUT;
 	}
 
 	return 0;
@@ -266,8 +277,8 @@ static int tegra_safety_ivc_parse_hsp(struct device *dev)
 
 	hsp_node = of_get_child_by_name(dev->of_node, "hsp");
 	safety_ivc->ivc_pair = of_tegra_hsp_sm_pair_by_name(hsp_node,
-			"ivc-pair", tegra_safety_ivc_notify,
-			NULL, NULL);
+			"ivc-pair", tegra_safety_ivc_full_notify,
+			tegra_safety_ivc_empty_notify, safety_ivc);
 	of_node_put(hsp_node);
 	if (IS_ERR(safety_ivc->ivc_pair)) {
 		ret = PTR_ERR(safety_ivc->ivc_pair);
@@ -319,6 +330,7 @@ static int tegra_safety_ivc_probe(struct platform_device *pdev)
 	dev_set_drvdata(dev, safety_ivc);
 
 	init_waitqueue_head(&safety_ivc->cmd.response_waitq);
+	init_waitqueue_head(&safety_ivc->cmd.empty_waitq);
 
 	ret = tegra_safety_ivc_parse_hsp(dev);
 	if (ret) {

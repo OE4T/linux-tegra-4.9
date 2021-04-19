@@ -3,7 +3,7 @@
  *
  * Very loosely based on virtio_net.c
  *
- * Copyright (C) 2014-2020, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (C) 2014-2021, NVIDIA CORPORATION. All rights reserved.
  *
  * This file is licensed under the terms of the GNU General Public License
  * version 2.  This program is licensed "as is" without any warranty of any
@@ -191,9 +191,10 @@ static void *tegra_hv_net_xmit_get_buffer(struct tegra_hv_net *hvn)
 			msecs_to_jiffies(hvn->max_tx_delay));
 		if (ret <= 0) {
 			net_warn_ratelimited(
-				"%s: timed out after %u ms\n",
+				"%s: Error getting IVC buffer, timed out after" \
+				" %u ms ERROR %ld \n",
 				hvn->ndev->name,
-				hvn->max_tx_delay);
+				hvn->max_tx_delay, PTR_ERR(p));
 		}
 	}
 
@@ -224,7 +225,7 @@ static void tegra_hv_net_xmit_work(struct kthread_work *work)
 		ret = skb_linearize(skb);
 		if (ret != 0) {
 			netdev_err(hvn->ndev,
-				"%s: skb_linearize error=%d\n",
+				"%s: skb_linearize failed error=%d\n",
 				__func__, ret);
 
 			dk = dk_linearize;
@@ -246,6 +247,9 @@ static void tegra_hv_net_xmit_work(struct kthread_work *work)
 			p = tegra_hv_net_xmit_get_buffer(hvn);
 			if (IS_ERR(p)) {
 				dk = dk_wq;
+				netdev_err(hvn->ndev,
+				"tegra_hv_net_xmit_get_buffer failed" \
+				" error=%ld\n", PTR_ERR(p));
 				goto drop;
 			}
 

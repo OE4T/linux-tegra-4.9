@@ -1,7 +1,7 @@
 /*
  * NVDLA IOCTL for T194
  *
- * Copyright (c) 2016-2019, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2016-2021, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -632,6 +632,10 @@ static int nvdla_update_signal_fences(struct nvdla_task *task,
 	nvdla_dbg_info(dla_pdev, "postfences copied for user");
 
 fail:
+	/**
+	 * TODO: Unmap task memory in event of failure.
+	 *  Defering the fix since this is rare failure to encounter.
+	 **/
 	return err;
 }
 
@@ -709,7 +713,6 @@ static int nvdla_fill_task(struct nvdla_queue *queue,
 	nvdla_dbg_fn(pdev, "");
 
 	 /* initialize task parameters */
-	kref_init(&task->ref);
 	task->queue = queue;
 	task->buffers = buffers;
 	task->sp = &nvhost_get_host(pdev)->syncpt;
@@ -1016,7 +1019,7 @@ static int nvdla_submit(struct nvdla_private *priv, void *arg)
 	struct nvdla_queue *queue;
 	struct nvdla_buffers *buffers;
 	u32 num_tasks;
-	struct nvdla_task *task;
+	struct nvdla_task *task = NULL; // task under submission
 	int err = 0, i = 0;
 
 	if (!args || !priv)
@@ -1050,7 +1053,6 @@ static int nvdla_submit(struct nvdla_private *priv, void *arg)
 	nvdla_dbg_info(pdev, "copy of user tasks done");
 
 	for (i = 0; i < num_tasks; i++) {
-
 		nvdla_dbg_info(pdev, "submit [%d]th task", i + 1);
 
 		err = nvdla_get_task_mem(queue, &task);
@@ -1060,11 +1062,13 @@ static int nvdla_submit(struct nvdla_private *priv, void *arg)
 		}
 		nvdla_dbg_info(pdev, "task[%d] mem allocate done", i + 1);
 
+		/* Initialize ref for task submit preparation */
+		kref_init(&task->ref);
+
 		/* fill local task param from user args */
 		err = nvdla_fill_task(queue, buffers, local_tasks + i, task);
 		if (err) {
 			nvdla_dbg_err(pdev, "failed to fill task[%d]", i + 1);
-			kref_put(&task->ref, task_free);
 			goto fail_to_fill_task;
 		}
 		nvdla_dbg_info(pdev, "local task[%d] filled", i + 1);
@@ -1110,11 +1114,22 @@ static int nvdla_submit(struct nvdla_private *priv, void *arg)
 
 	return 0;
 
+/**
+ * Note:
+ * Any failures during a task submit preparation,
+ * 1. shall not affect previous tasks within this submit that has been
+ *    successfully submitted.
+ * 2. shall abandon consecutive tasks within this submit.
+ **/
 fail_to_submit_task:
 fail_to_update_postfences:
 fail_to_get_fences:
 fail_to_fill_task_desc:
 fail_to_fill_task:
+	/* Remove ref corresponding task submit preparation */
+	if (task != NULL)
+		kref_put(&task->ref, task_free);
+
 	/*TODO: traverse list in reverse and delete jobs */
 fail_to_get_task_mem:
 fail_to_copy_task:

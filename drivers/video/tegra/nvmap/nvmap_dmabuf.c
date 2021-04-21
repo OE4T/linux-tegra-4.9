@@ -1,7 +1,7 @@
 /*
  * dma_buf exporter for nvmap
  *
- * Copyright (c) 2012-2018, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2012-2021, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -557,10 +557,20 @@ unlock:
 static void *nvmap_dmabuf_get_private(struct dma_buf *dmabuf,
 		struct device *dev)
 {
-	void *priv = NULL;
-	struct nvmap_handle_info *info = dmabuf->priv;
-	struct nvmap_handle *handle = info->handle;
 	struct nvmap_handle_dmabuf_priv *curr = NULL;
+	struct nvmap_handle_info *info;
+	struct nvmap_handle *handle;
+	void *priv = NULL;
+
+	if (dmabuf && dmabuf->priv)
+		info = dmabuf->priv;
+	else
+		return NULL;
+
+	if (info && info->handle)
+		handle = info->handle;
+	else
+		return NULL;
 
 	mutex_lock(&handle->lock);
 	list_for_each_entry(curr, &handle->dmabuf_priv, list) {

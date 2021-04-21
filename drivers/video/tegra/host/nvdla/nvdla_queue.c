@@ -88,11 +88,17 @@ int nvdla_get_task_mem(struct nvdla_queue *queue,
 	struct nvdla_task *task = NULL;
 	struct nvdla_queue_task_mem_info task_mem_info;
 	struct platform_device *pdev = queue->pool->pdev;
+	int n_retries = (NVDLA_TASK_MEM_AVAIL_TIMEOUT_MS /
+					NVDLA_TASK_MEM_AVAIL_RETRY_PERIOD);
 
 	nvdla_dbg_fn(pdev, "");
 
 	/* get mem task descriptor and task mem from task_mem_pool */
-	err = nvdla_queue_alloc_task_memory(queue, &task_mem_info);
+	do {
+		n_retries = n_retries - 1;
+		err = nvdla_queue_alloc_task_memory(queue, &task_mem_info);
+	} while ((n_retries > 0) && (err == -EAGAIN));
+
 	task = task_mem_info.kmem_addr;
 	if ((err < 0) || !task)
 		goto fail_to_assign_pool;

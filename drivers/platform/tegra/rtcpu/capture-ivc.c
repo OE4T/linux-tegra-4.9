@@ -26,6 +26,7 @@
 #include <linux/tegra-ivc.h>
 #include <linux/tegra-ivc-bus.h>
 #include <linux/nospec.h>
+#include <linux/semaphore.h>
 
 #include <asm/barrier.h>
 
@@ -40,13 +41,17 @@
 #define TOTAL_CHANNELS (NUM_CAPTURE_CHANNELS + NUM_CAPTURE_TRANSACTION_IDS)
 #define TRANS_ID_START_IDX NUM_CAPTURE_CHANNELS
 
-/* Temporay csi channel-id */
+/* Temporary csi channel-id */
 #define CSI_TEMP_CHANNEL_ID 65
+
+/* Timeout for acquiring channel-id */
+#define TIMEOUT_ACQUIRE_CHANNEL_ID 120
 
 struct tegra_capture_ivc_cb_ctx {
 	struct list_head node;
 	tegra_capture_ivc_cb_func cb_func;
 	const void *priv_context;
+	struct semaphore sem_ch;
 };
 
 struct tegra_capture_ivc {
@@ -243,6 +248,20 @@ int tegra_capture_ivc_notify_chan_id(uint32_t chan_id, uint32_t trans_id)
 
 	civc = __scivc_control;
 
+	/* WAR: Keep semaphore down with 2 seconds timeout for chan_id
+	 * until it unregisters the callback. It is observed that in
+	 * multiple sessions scenario, on RELEASE call, RCE freed the
+	 * chan_id, but the callback is not unregistered yet. In meantime,
+	 * a new SETUP request arrived and RCE allocated the same chan_id.
+	 * while trying to update the callback, it hits channel-context busy
+	 * errors. 2 seconds timeout is added based on experiments with the
+	 * test app.
+	 */
+	if (down_timeout(&civc->cb_ctx[chan_id].sem_ch,
+			TIMEOUT_ACQUIRE_CHANNEL_ID)) {
+		return -EBUSY;
+	}
+
 	mutex_lock(&civc->cb_ctx_lock);
 
 	if (WARN(civc->cb_ctx[trans_id].cb_func == NULL,
@@ -347,6 +366,7 @@ int tegra_capture_ivc_unregister_control_cb(uint32_t id)
 	civc->cb_ctx[id].priv_context = NULL;
 
 	mutex_unlock(&civc->cb_ctx_lock);
+	up(&civc->cb_ctx[id].sem_ch);
 
 	/*
 	 * If it's trans_id, client encountered an error before or during
@@ -477,6 +497,9 @@ static int tegra_capture_ivc_probe(struct tegra_ivc_channel *chan)
 
 	mutex_init(&civc->cb_ctx_lock);
 	mutex_init(&civc->ivc_wr_lock);
+
+	for (i = 0; i < TOTAL_CHANNELS; i++)
+		sema_init(&civc->cb_ctx[i].sem_ch, 1);
 
 	/* Initialize ivc_work */
 	INIT_WORK(&civc->work, tegra_capture_ivc_worker);

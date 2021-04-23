@@ -1,0 +1,104 @@
+From cdab094e6826d7566f98398795c61533331705ce Mon Sep 17 00:00:00 2001
+From: Sumit Gupta <sumitg@nvidia.com>
+Date: Fri, 9 Apr 2021 11:30:49 +0530
+Subject: [PATCH 371/371] printk: Use printk-safe calls for logbuf_lock
+X-NVConfidentiality: public
+
+Use printk-safe calls for logbuf_lock to fix error coming
+from console_unlock() on enabling CONFIG_DEBUG_PREEMPT macro.
+ "BUG: using smp_processor_id() in preemptible"
+
+Also, replacing the call at other places where used.
+Printk-safe api's were backported to fix multiple printk
+deadlock isssues. The backporting seem to have introduced
+this issue as calls were not replaced at all locations and
+debug macro wasn't enabled then.
+
+Bug 3250026
+
+Signed-off-by: Sumit Gupta <sumitg@nvidia.com>
+Change-Id: I161b02201aa7c48efcf65ddf1125c2223cb123d1
+---
+ kernel/printk/printk.c | 26 ++++++++++++++------------
+ 1 file changed, 14 insertions(+), 12 deletions(-)
+
+diff --git a/kernel/printk/printk.c b/kernel/printk/printk.c
+index a558b0b..d3bc5d9 100644
+--- a/kernel/printk/printk.c
++++ b/kernel/printk/printk.c
+@@ -1456,8 +1456,8 @@ static int syslog_print_all(char __user *buf, int size, bool clear)
+ 			num_msg++;
+ 			if (num_msg > 5) {
+ 				num_msg = 0;
+-				raw_spin_unlock_irq(&logbuf_lock);
+-				raw_spin_lock_irq(&logbuf_lock);
++				logbuf_unlock_irq();
++				logbuf_lock_irq();
+ 				if (clear_seq < log_first_seq)
+ 					goto try_again;
+ 			}
+@@ -1475,8 +1475,8 @@ static int syslog_print_all(char __user *buf, int size, bool clear)
+ 			num_msg++;
+ 			if (num_msg > 5) {
+ 				num_msg = 0;
+-				raw_spin_unlock_irq(&logbuf_lock);
+-				raw_spin_lock_irq(&logbuf_lock);
++				logbuf_unlock_irq();
++				logbuf_lock_irq();
+ 				if (clear_seq < log_first_seq)
+ 					goto try_again;
+ 			}
+@@ -2307,7 +2307,8 @@ static void console_cont_flush(char *text, size_t size)
+ 	unsigned long flags;
+ 	size_t len;
+ 
+-	raw_spin_lock_irqsave(&logbuf_lock, flags);
++	printk_safe_enter_irqsave(flags);
++	raw_spin_lock(&logbuf_lock);
+ 
+ 	if (!cont.len)
+ 		goto out;
+@@ -2328,19 +2329,20 @@ static void console_cont_flush(char *text, size_t size)
+ 		goto out;
+ 
+ 	len = cont_print_text(text, size);
++	raw_spin_unlock(&logbuf_lock);
+ #ifdef CONFIG_PREEMPT_RT_FULL
+-	raw_spin_unlock_irqrestore(&logbuf_lock, flags);
++	printk_safe_exit_irqrestore(flags);
+ 	call_console_drivers(cont.level, NULL, 0, text, len);
+ #else
+-	raw_spin_unlock(&logbuf_lock);
+ 	stop_critical_timings();
+ 	call_console_drivers(cont.level, NULL, 0, text, len);
+ 	start_critical_timings();
+-	local_irq_restore(flags);
++	printk_safe_exit_irqrestore(flags);
+ #endif
+ 	return;
+ out:
+-	raw_spin_unlock_irqrestore(&logbuf_lock, flags);
++	raw_spin_unlock(&logbuf_lock);
++	printk_safe_exit_irqrestore(flags);
+ }
+ 
+ /**
+@@ -2462,12 +2464,12 @@ void console_unlock(void)
+ 		}
+ 		console_idx = log_next(console_idx);
+ 		console_seq++;
++		raw_spin_unlock(&logbuf_lock);
++
+ #ifdef CONFIG_PREEMPT_RT_FULL
+-		raw_spin_unlock_irqrestore(&logbuf_lock, flags);
++		printk_safe_exit_irqrestore(flags);
+ 		call_console_drivers(level, ext_text, ext_len, text, len);
+ #else
+-		raw_spin_unlock(&logbuf_lock);
+-
+ 		stop_critical_timings();	/* don't trace print latency */
+ 		call_console_drivers(level, ext_text, ext_len, text, len);
+ 		start_critical_timings();
+-- 
+2.7.4
+

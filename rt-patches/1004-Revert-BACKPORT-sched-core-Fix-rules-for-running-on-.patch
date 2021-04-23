@@ -1,7 +1,7 @@
-From 32cd1f840820cb7457d9066feee391610a0f20e9 Mon Sep 17 00:00:00 2001
+From c452b6b7f53f56fe3afa64ad2a3be344157ae9da Mon Sep 17 00:00:00 2001
 From: Sumit Gupta <sumitg@nvidia.com>
 Date: Thu, 22 Apr 2021 10:46:11 +0530
-Subject: [PATCH 370/370] Revert "BACKPORT: sched/core: Fix rules for running
+Subject: [PATCH 370/371] Revert "BACKPORT: sched/core: Fix rules for running
  on online && !active CPUs"
 X-NVConfidentiality: public
 

@@ -4,7 +4,7 @@
  *
  * Support for Tegra Security Engine hardware crypto algorithms.
  *
- * Copyright (c) 2015-2020, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2021, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -471,13 +471,24 @@ static int tegra_init_key_slot(struct tegra_se_dev *se_dev)
 {
 	int i;
 
+	spin_lock_init(&key_slot_lock);
+	spin_lock(&key_slot_lock);
+	/*
+	 *To avoid multiple secure engine initializing
+	 *key-slots.
+	 */
+	if (key_slot.prev != key_slot.next) {
+		spin_unlock(&key_slot_lock);
+		return 0;
+	}
+	spin_unlock(&key_slot_lock);
+
 	se_dev->slot_list = devm_kzalloc(se_dev->dev,
 					 sizeof(struct tegra_se_slot) *
 					 TEGRA_SE_KEYSLOT_COUNT, GFP_KERNEL);
 	if (!se_dev->slot_list)
 		return -ENOMEM;
 
-	spin_lock_init(&key_slot_lock);
 	spin_lock(&key_slot_lock);
 	for (i = 0; i < TEGRA_SE_KEYSLOT_COUNT; i++) {
 		/*

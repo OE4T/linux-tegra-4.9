@@ -488,27 +488,26 @@ static int gk20a_ctrl_alloc_as(
 
 	snprintf(name, sizeof(name), "nvhost-%s-fd%d", g->name, fd);
 
-	file = anon_inode_getfile(name, l->as_dev.cdev.ops, NULL, O_RDWR);
-	if (IS_ERR(file)) {
-		err = PTR_ERR(file);
-		goto clean_up;
-	}
-
 	err = gk20a_as_alloc_share(g, args->big_page_size,
 				   gk20a_as_translate_as_alloc_flags(g,
 					   args->flags),
 				   &as_share);
 	if (err)
-		goto clean_up_file;
+		goto clean_up;
+
+	file = anon_inode_getfile(name, l->as_dev.cdev.ops, as_share, O_RDWR);
+	if (IS_ERR(file)) {
+		err = PTR_ERR(file);
+		goto clean_up_as;
+	}
 
 	fd_install(fd, file);
-	file->private_data = as_share;
 
 	args->as_fd = fd;
 	return 0;
 
-clean_up_file:
-	fput(file);
+clean_up_as:
+	gk20a_as_release_share(as_share);
 clean_up:
 	put_unused_fd(fd);
 	return err;

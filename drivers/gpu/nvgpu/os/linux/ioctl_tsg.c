@@ -310,17 +310,10 @@ static int gk20a_tsg_event_id_enable(struct tsg_gk20a *tsg,
 	snprintf(name, sizeof(name), "nvgpu-event%d-fd%d",
 		 event_id, local_fd);
 
-	file = anon_inode_getfile(name, &gk20a_event_id_ops,
-				  NULL, O_RDWR);
-	if (IS_ERR(file)) {
-		err = PTR_ERR(file);
-		goto clean_up;
-	}
-
 	event_id_data = nvgpu_kzalloc(tsg->g, sizeof(*event_id_data));
 	if (!event_id_data) {
 		err = -ENOMEM;
-		goto clean_up_file;
+		goto clean_up;
 	}
 	event_id_data->g = g;
 	event_id_data->id = tsg->tsgid;
@@ -333,12 +326,18 @@ static int gk20a_tsg_event_id_enable(struct tsg_gk20a *tsg,
 
 	nvgpu_init_list_node(&event_id_data->event_id_node);
 
+	file = anon_inode_getfile(name, &gk20a_event_id_ops,
+				event_id_data, O_RDWR);
+	if (IS_ERR(file)) {
+		err = PTR_ERR(file);
+		goto clean_up_free;
+	}
+
 	nvgpu_mutex_acquire(&tsg->event_id_list_lock);
 	nvgpu_list_add_tail(&event_id_data->event_id_node, &tsg->event_id_list);
 	nvgpu_mutex_release(&tsg->event_id_list_lock);
 
 	fd_install(local_fd, file);
-	file->private_data = event_id_data;
 
 	*fd = local_fd;
 
@@ -346,8 +345,6 @@ static int gk20a_tsg_event_id_enable(struct tsg_gk20a *tsg,
 
 clean_up_free:
 	nvgpu_kfree(g, event_id_data);
-clean_up_file:
-	fput(file);
 clean_up:
 	put_unused_fd(local_fd);
 free_ref:

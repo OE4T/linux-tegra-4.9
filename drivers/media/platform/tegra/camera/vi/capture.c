@@ -233,8 +233,13 @@ static int vi_capture_ivc_send_control(struct tegra_vi_channel *chan,
 	timeout = wait_for_completion_timeout(
 			&capture->control_resp, timeout);
 	if (timeout <= 0) {
+		if (tegra_capture_ivc_capture_control_can_read() != 0)
+			dev_err(chan->dev, "pending control response ivc reads\n");
+
 		dev_err(chan->dev,
 			"no reply from camera processor\n");
+		dev_err(chan->dev, "%s: pending chan_id %u msg_id %u\n",
+			__func__, resp_header.channel_id, resp_header.msg_id);
 		err = -ETIMEDOUT;
 		goto fail;
 	}
@@ -243,6 +248,8 @@ static int vi_capture_ivc_send_control(struct tegra_vi_channel *chan,
 			sizeof(resp_header)) != 0) {
 		dev_err(chan->dev,
 			"unexpected response from camera processor\n");
+		dev_err(chan->dev, "%s: sending chan_id %u msg_id %u\n",
+			__func__, resp_header.channel_id, resp_header.msg_id);
 		err = -EINVAL;
 		goto fail;
 	}
@@ -1052,6 +1059,11 @@ int vi_capture_status(struct tegra_vi_channel *chan,
 				&capture->capture_resp,
 				msecs_to_jiffies(timeout_ms));
 		if (ret == 0) {
+			/* Can we run ping test here ?*/
+			if (tegra_capture_ivc_capture_status_can_read() != 0) {
+				dev_err(chan->dev,
+				 "pending status response ivc reads\n");
+			}
 			dev_err(chan->dev,
 				"no reply from camera processor\n");
 			return -ETIMEDOUT;

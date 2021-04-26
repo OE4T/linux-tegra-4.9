@@ -1,7 +1,7 @@
 /*
  * Capture IVC driver
  *
- * Copyright (c) 2017-2020 NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2017-2021 NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -112,6 +112,32 @@ static int tegra_capture_ivc_tx(struct tegra_capture_ivc *civc,
 
 static struct tegra_capture_ivc *__scivc_control;
 static struct tegra_capture_ivc *__scivc_capture;
+static int tegra_capture_ivc_can_read(struct tegra_capture_ivc *civc)
+{
+	struct tegra_ivc_channel *chan = civc->chan;
+
+	return tegra_ivc_can_read(&chan->ivc);
+}
+
+int tegra_capture_ivc_capture_control_can_read(void)
+{
+
+	if (WARN_ON(__scivc_control == NULL))
+		return -ENODEV;
+
+	return tegra_capture_ivc_can_read(__scivc_control);
+}
+EXPORT_SYMBOL(tegra_capture_ivc_capture_control_can_read);
+
+int tegra_capture_ivc_capture_status_can_read(void)
+{
+
+	if (WARN_ON(__scivc_capture == NULL))
+		return -ENODEV;
+
+	return tegra_capture_ivc_can_read(__scivc_capture);
+}
+EXPORT_SYMBOL(tegra_capture_ivc_capture_status_can_read);
 
 int tegra_capture_ivc_control_submit(const void *control_desc, size_t len)
 {

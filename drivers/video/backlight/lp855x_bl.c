@@ -3,7 +3,7 @@
  *
  *			Copyright (C) 2011 Texas Instruments
  *
- * Copyright (c) 2016-2018, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2016-2021, NVIDIA CORPORATION, All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -21,7 +21,7 @@
 #include <linux/platform_data/lp855x.h>
 #include <linux/pwm.h>
 #include <linux/regulator/consumer.h>
-#include <../../../nvidia/drivers/video/tegra/dc/panel/board-panel.h>
+#include "board-panel.h"
 
 /* LP8550/1/2/3/6 Registers */
 #define LP855X_BRIGHTNESS_CTRL		0x00

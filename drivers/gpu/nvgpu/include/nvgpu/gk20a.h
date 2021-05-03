@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2020, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2021, NVIDIA CORPORATION.  All rights reserved.
  *
  * GK20A Graphics
  *
@@ -1793,6 +1793,8 @@ bool gk20a_check_poweron(struct gk20a *g);
 int gk20a_prepare_poweroff(struct gk20a *g);
 int gk20a_finalize_poweron(struct gk20a *g);
 
+int nvgpu_wait_for_stall_interrupts(struct gk20a *g, u32 timeout);
+int nvgpu_wait_for_nonstall_interrupts(struct gk20a *g, u32 timeout);
 void nvgpu_wait_for_deferred_interrupts(struct gk20a *g);
 
 struct gk20a * __must_check gk20a_get(struct gk20a *g);

@@ -172,6 +172,15 @@ int gk20a_tsg_unbind_channel(struct channel_gk20a *ch, bool force)
 		/* If channel unbind fails, channel is still part of runlist */
 		channel_gk20a_update_runlist(ch, false);
 
+		while (ch->mmu_debug_mode_refcnt > 0U) {
+			err = nvgpu_tsg_set_mmu_debug_mode(ch, false);
+			if (err != 0) {
+				nvgpu_err(g, "disable mmu debug mode failed ch:%u",
+					ch->chid);
+				break;
+			}
+		}
+
 		nvgpu_rwsem_down_write(&tsg->ch_list_lock);
 		nvgpu_list_del(&ch->ch_entry);
 		ch->tsgid = NVGPU_INVALID_TSG_ID;

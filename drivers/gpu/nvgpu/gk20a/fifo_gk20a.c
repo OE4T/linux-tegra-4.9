@@ -1602,6 +1602,7 @@ int gk20a_fifo_deferred_reset(struct gk20a *g, struct channel_gk20a *ch)
 		engines = gk20a_fifo_engines_on_id(g, tsg->tsgid, true);
 	} else {
 		nvgpu_err(g, "chid: %d is not bound to tsg", ch->chid);
+		engines = g->fifo.deferred_fault_engines;
 	}
 
 	if (engines == 0U) {

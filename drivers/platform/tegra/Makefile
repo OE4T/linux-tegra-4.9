@@ -3,7 +3,8 @@ KBUILD_CFLAGS += -I$(srctree)/arch/arm/mach-tegra \
 		 -I$(srctree)/drivers/platform/tegra/ \
 		 -I$(srctree.nvidia)/drivers/platform/tegra/rtcpu \
 		 -I$(srctree.nvidia)/drivers/video/tegra/dc/ \
-		 -I$(srctree.nvidia)/drivers/video/tegra/dc/panel/
+		 -I$(srctree.nvidia)/drivers/video/tegra/dc/panel/ \
+		 -I$(srctree.nvidia)/include/linux/platform/tegra/safety/
 
 ccflags-y += -Werror
 obj-y += tegra-mce.o
@@ -47,6 +48,7 @@ obj-$(CONFIG_DENVER_CPU) += denver-knobs.o
 obj-$(CONFIG_DENVER_MCA) += denver_mca.o
 obj-$(CONFIG_TEGRA_HV_XHCI_DEBUG) += tegra-hv-xhci-debug.o
 obj-$(CONFIG_TEGRA_SAFETY) += tegra-safety-ivc.o
+obj-$(CONFIG_TEGRA_SAFETY) += tegra_l1ss_cmd_resp_l2_interface.o tegra_l1ss.o
 obj-$(CONFIG_TEGRA_SAFETY) += tegra-safety-dev.o
 
 obj-$(CONFIG_PSTORE_RAM) += tegra_ramoops.o

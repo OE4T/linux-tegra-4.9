@@ -25,11 +25,53 @@
 
 #include <dt-bindings/memory/tegra-swgroup.h>
 #include <linux/tegra-safety-ivc.h>
+#include "tegra_l1ss.h"
 
 #define NV(p) "nvidia," #p
 #define TEGRA_SAFETY_IVC_READ_TIMEOUT	2 * HZ
 
 int ivc_chan_count;
+struct tegra_safety_ivc_chan *tegra_safety_get_ivc_chan_from_str(
+		struct tegra_safety_ivc *safety_ivc,
+		char *ch_name)
+{
+	int i;
+
+	for (i = 0; i < ivc_chan_count; i++) {
+		if (strcmp(safety_ivc->ivc_chan[i]->name, ch_name) == 0)
+			return safety_ivc->ivc_chan[i];
+	}
+
+	return NULL;
+}
+
+static void tegra_safety_decode_cmd_resp(struct tegra_safety_ivc *safety_ivc)
+{
+	struct tegra_safety_ivc_chan *ivc_ch;
+	struct ivc *ivc;
+	static uint8_t cmd_resp[CMDRESP_CMD_FRAME_EX_SIZE] = {0};
+	const void *ivc_frame = NULL;
+
+	ivc_ch = tegra_safety_get_ivc_chan_from_str(safety_ivc, "cmdresp");
+	if (!ivc_ch) {
+		pr_err("%s: Failed to get CMD RESP IVC channel\n", __func__);
+		return;
+	}
+
+	ivc = &ivc_ch->ivc;
+	if (tegra_ivc_can_read(ivc)) {
+		pr_err("%s: Reading IVC channel\n", __func__);
+		ivc_frame = tegra_ivc_read_get_next_frame(ivc);
+		if (ivc_frame == NULL)
+			pr_err("%s: No IVC frame to read\n", __func__);
+
+		memcpy(cmd_resp, ivc_frame, sizeof(cmdresp_frame_ex_t));
+
+		tegra_ivc_read_advance(ivc);
+		tegra_safety_handle_cmd((cmdresp_frame_ex_t *)&cmd_resp,
+					safety_ivc->ldata);
+	}
+}
 
 /* wake up cmd-resp threads */
 static u32 tegra_safety_ivc_full_notify(void *data, u32 response)
@@ -41,6 +83,8 @@ static u32 tegra_safety_ivc_full_notify(void *data, u32 response)
 	if (response & SAFETY_CONF_IVC_L2SS_READY) {
 		atomic_set(&safety_ivc->ivc_ready, 1);
 		wake_up(&safety_ivc->cmd.response_waitq);
+	} else if (response == 0) {
+		tegra_safety_decode_cmd_resp(safety_ivc);
 	}
 
 	return 0;
@@ -305,6 +349,8 @@ static int tegra_safety_ivc_remove(struct platform_device *pdev)
 	if (!safety_ivc)
 		return 0;
 
+	l1ss_exit(safety_ivc);
+
 	for (i = 0; i < ivc_chan_count; i++)
 		tegra_safety_dev_exit(dev, i);
 
@@ -350,6 +396,11 @@ static int tegra_safety_ivc_probe(struct platform_device *pdev)
 		goto fail;
 	}
 
+	ret = l1ss_init(safety_ivc);
+	if (ret) {
+		dev_err(dev, "failed to setup l1ss: %d\n", ret);
+		goto fail;
+	}
 	/* inform sce that IVC setup is complete */
 	ret = tegra_safety_ivc_setup_ready(dev);
 	if (ret) {

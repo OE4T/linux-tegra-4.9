@@ -228,7 +228,7 @@ per_page_cache_maint:
 
 		ret = nvmap_cache_maint_phys_range(op, paddr, paddr + size,
 				inner, outer);
-		BUG_ON(ret != 0);
+		WARN_ON(ret != 0);
 		start = next;
 	}
 }

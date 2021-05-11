@@ -1912,7 +1912,7 @@ static void complete_call_back(void *data)
 	struct ablkcipher_request *req;
 	struct tegra_vse_priv_data *priv =
 		(struct tegra_vse_priv_data *)data;
-	int err = status_to_errno(priv->rx_status);
+	int err;
 	int num_sgs;
 	void *buf;
 
@@ -1920,6 +1920,8 @@ static void complete_call_back(void *data)
 		pr_err("%s:%d\n", __func__, __LINE__);
 		return;
 	}
+
+	err = status_to_errno(priv->rx_status);
 
 	dma_sync_single_for_cpu(priv->se_dev->dev, priv->buf_addr,
 		priv->gather_buf_sz, DMA_BIDIRECTIONAL);

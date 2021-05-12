@@ -1412,15 +1412,24 @@ static int tegra_ahci_disable_features(struct ahci_host_priv *hpriv)
 static int tegra_ahci_quirks(struct ahci_host_priv *hpriv)
 {
 	struct tegra_ahci_priv *tegra = hpriv->plat_data;
-	struct platform_device *pdev = tegra->pdev;
-	struct device *dev = &pdev->dev;
-	u32 t_satao_nvoob_comma_cnt_mask =
-			tegra->soc_data->reg.t_satao_nvoob_comma_cnt_mask;
-	u32 t_satao_nvoob_comma_cnt =
-			tegra->soc_data->reg.t_satao_nvoob_comma_cnt;
+	struct platform_device *pdev;
+	struct device *dev;
+	u32 t_satao_nvoob_comma_cnt_mask;
+	u32 t_satao_nvoob_comma_cnt;
 	unsigned int val;
 	unsigned int mask;
 	int ret = 0;
+
+	if (tegra) {
+		pdev = tegra->pdev;
+		dev = &pdev->dev;
+		t_satao_nvoob_comma_cnt_mask =
+			tegra->soc_data->reg.t_satao_nvoob_comma_cnt_mask;
+		t_satao_nvoob_comma_cnt =
+			tegra->soc_data->reg.t_satao_nvoob_comma_cnt;
+	} else {
+		return -ENODEV;
+	}
 
 	/* SATA WARS */
 	/* For SQUELCH Filter & Gen3 drive getting detected as Gen1 drive */
@@ -1443,7 +1452,7 @@ static int tegra_ahci_quirks(struct ahci_host_priv *hpriv)
 	val = T_SATA0_CFG2NVOOB_2_COMWAKE_IDLE_CNT_LOW;
 	tegra_ahci_scfg_update(hpriv, val, mask, T_SATA0_CFG2NVOOB_2);
 
-	if (tegra && tegra->prod_list) {
+	if (tegra->prod_list) {
 		tegra_ahci_scfg_writel(hpriv, T_SATA0_INDEX_CH1, T_SATA0_INDEX);
 		ret = tegra_prod_set_by_name(tegra->base_list, "prod",
 							tegra->prod_list);

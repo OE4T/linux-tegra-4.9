@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2019-2021, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,6 +16,7 @@
 #include "tegra194-p3509-disp.dtsi"
 #include "tegra194-audio-p3668.dtsi"
 #include "tegra194-super-module-e2614-p3509.dtsi"
+#include "tegra194-camera-jakku-rbpcv3-imx477.dtsi"
 #include "tegra194-camera-jakku-rbpcv2-imx219.dtsi"
 / {
 	gpio-keys {

@@ -33,6 +33,7 @@
 #include <linux/tegra-ivc-instance.h>
 #include <linux/tegra-hsp.h>
 #include <linux/tegra_l1ss_ioctl.h>
+#include <linux/tegra_l1ss_kernel_interface.h>
 
 #include "tegra_l1ss.h"
 #include "tegra_l1ss_cmd_resp_exec_config.h"

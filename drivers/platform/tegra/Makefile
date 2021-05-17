@@ -3,8 +3,7 @@ KBUILD_CFLAGS += -I$(srctree)/arch/arm/mach-tegra \
 		 -I$(srctree)/drivers/platform/tegra/ \
 		 -I$(srctree.nvidia)/drivers/platform/tegra/rtcpu \
 		 -I$(srctree.nvidia)/drivers/video/tegra/dc/ \
-		 -I$(srctree.nvidia)/drivers/video/tegra/dc/panel/ \
-		 -I$(srctree.nvidia)/include/linux/platform/tegra/safety/
+		 -I$(srctree.nvidia)/drivers/video/tegra/dc/panel/
 
 ccflags-y += -Werror
 obj-y += tegra-mce.o

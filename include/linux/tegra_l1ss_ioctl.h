@@ -18,8 +18,8 @@
 #define _L1SS_IOCTL_H
 
 #include <linux/ioctl.h>
-#include <tegra_nv_guard_service_id.h>
-#include <tegra_nv_guard_group_id.h>
+#include <linux/tegra_nv_guard_service_id.h>
+#include <linux/tegra_nv_guard_group_id.h>
 
 typedef unsigned char uint8_t;
 typedef unsigned int uint32_t;

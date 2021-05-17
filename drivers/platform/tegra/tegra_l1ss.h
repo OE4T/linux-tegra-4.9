@@ -1,9 +1,9 @@
 #ifndef _L1SS_H
 #define _L1SS_H
 
-#include <linux/tegra_l1ss_ioctl.h>
 #include <linux/cdev.h>
 #include <linux/tegra-safety-ivc.h>
+#include <linux/tegra_l1ss_ioctl.h>
 
 #include "tegra_l1ss_cmd_resp_exec_config.h"
 
@@ -48,7 +48,6 @@ struct l1ss_data {
 
 int l1ss_init(struct tegra_safety_ivc *safety_ivc);
 int l1ss_exit(struct tegra_safety_ivc *safety_ivc);
-int l1ss_submit_rq(nv_guard_request_t *req, bool can_sleep);
 int tegra_safety_handle_cmd(cmdresp_frame_ex_t *cmd_resp,
 			    struct l1ss_data *ldata);
 

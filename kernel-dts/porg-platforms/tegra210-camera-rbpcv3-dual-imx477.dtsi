@@ -192,7 +192,7 @@
 				* Sensor embedded metadata height in units of rows.
 				* If sensor does not support embedded metadata value should be 0.
 				*/
-				mode0 { /* IMX477_MODE_4032X3040 */
+				mode0 { /* IMX477_MODE_3840x2160 */
 					mclk_khz = "24000";
 					num_lanes = "2";
 					tegra_sinterface = "serial_a";
@@ -201,13 +201,13 @@
 					dpcm_enable = "false";
 					cil_settletime = "0";
 
-					active_w = "4032";
-					active_h = "3040";
+					active_w = "3840";
+					active_h = "2160";
 					mode_type = "bayer";
 					pixel_phase = "rggb";
 					csi_pixel_bit_depth = "10";
 					readout_orientation = "90";
-					line_length = "9024";
+					line_length = "11200";
 					inherent_gain = "1";
 					mclk_multiplier = "80";
 					pix_clk_hz = "840000000";
@@ -247,7 +247,7 @@
 					pixel_phase = "rggb";
 					csi_pixel_bit_depth = "10";
 					readout_orientation = "90";
-					line_length = "9024";
+					line_length = "7000";
 					inherent_gain = "1";
 					mclk_multiplier = "80";
 					pix_clk_hz = "840000000";
@@ -386,7 +386,7 @@
 				* Sensor embedded metadata height in units of rows.
 				* If sensor does not support embedded metadata value should be 0.
 				*/
-				mode0 { /* IMX477_MODE_4032X3040 */
+				mode0 { /* IMX477_MODE_3840x2160 */
 					mclk_khz = "24000";
 					num_lanes = "2";
 					tegra_sinterface = "serial_e";
@@ -395,13 +395,13 @@
 					dpcm_enable = "false";
 					cil_settletime = "0";
 
-					active_w = "4032";
-					active_h = "3040";
+					active_w = "3840";
+					active_h = "2160";
 					mode_type = "bayer";
 					pixel_phase = "rggb";
 					csi_pixel_bit_depth = "10";
 					readout_orientation = "90";
-					line_length = "9024";
+					line_length = "11200";
 					inherent_gain = "1";
 					mclk_multiplier = "80";
 					pix_clk_hz = "840000000";
@@ -441,7 +441,7 @@
 					pixel_phase = "rggb";
 					csi_pixel_bit_depth = "10";
 					readout_orientation = "90";
-					line_length = "9024";
+					line_length = "7000";
 					inherent_gain = "1";
 					mclk_multiplier = "80";
 					pix_clk_hz = "840000000";

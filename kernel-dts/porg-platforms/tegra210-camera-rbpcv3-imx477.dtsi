@@ -162,7 +162,7 @@
 				* Sensor embedded metadata height in units of rows.
 				* If sensor does not support embedded metadata value should be 0.
 				*/
-				mode0 { /* IMX477_MODE_4032X3040 */
+				mode0 { /* IMX477_MODE_3840x2160 */
 					mclk_khz = "24000";
 					num_lanes = "2";
 					tegra_sinterface = "serial_a";

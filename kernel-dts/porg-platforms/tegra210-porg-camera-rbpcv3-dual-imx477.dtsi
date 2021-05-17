@@ -28,9 +28,7 @@
 		#size-cells = <0>;
 		mux-gpios = <&gpio CAM_I2C_MUX GPIO_ACTIVE_HIGH>;
 		i2c-parent = <&i2c7>;
-		status = "disabled";
 		i2c@0 {
-			status = "disabled";
 			reg = <0>;
 			#address-cells = <1>;
 			#size-cells = <0>;
@@ -40,7 +38,6 @@
 			};
 		};
 		i2c@1 {
-			status = "disabled";
 			reg = <1>;
 			#address-cells = <1>;
 			#size-cells = <0>;

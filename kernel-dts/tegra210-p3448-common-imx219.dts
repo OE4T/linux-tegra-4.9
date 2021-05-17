@@ -13,7 +13,7 @@
 / {
 	overlay-name = "Camera IMX219";
 	jetson-header-name = "Jetson Nano CSI Connector";
-	compatible = "nvidia,p3542-0000+p3448-0003", "nvidia,p3449-0000-a02+p3448-0000-a02";
+	compatible = "nvidia,p3542-0000+p3448-0003", "nvidia,p3449-0000-a02+p3448-0000-a02","nvidia,p3449-0000-a01+p3448-0000-a01";
 
 	/* IMX219 single sensor module */
 	fragment@0 {

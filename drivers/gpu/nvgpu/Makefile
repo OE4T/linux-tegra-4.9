@@ -98,6 +98,8 @@ nvgpu-y += \
 	os/linux/ltc.o \
 	os/linux/vpr.o
 
+nvgpu-$(CONFIG_NVGPU_SUPPORT_LINUX_ECC_ERROR_REPORTING) += os/linux/sdl.o
+
 nvgpu-$(CONFIG_GK20A_VIDMEM) += \
 	os/linux/dmabuf_vidmem.o
 

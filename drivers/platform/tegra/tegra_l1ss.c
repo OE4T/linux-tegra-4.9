@@ -74,7 +74,8 @@ int l1ss_cmd_resp_send_frame(const cmdresp_frame_ex_t *pCmdPkt,
 	void *frame = NULL;
 	int count = 10;
 
-	if (layer_id == CMDRESPEXEC_L2_LAYER_ID) {
+	if (atomic_read(&ldata->safety_ivc->ivc_ready) == 1 &&
+			layer_id == CMDRESPEXEC_L2_LAYER_ID) {
 		ivc_ch = tegra_safety_get_ivc_chan_from_str(ldata->safety_ivc,
 							    "cmdresp");
 		if (!ivc_ch) {

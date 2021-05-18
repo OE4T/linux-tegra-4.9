@@ -232,6 +232,13 @@ typedef struct {
 	};
 } nv_guard_request_t;
 
+/*
+ * Identifies a client
+ */
+typedef uint32_t nv_guard_client_id_t;
+
+#define NVGUARD_INVALID_CLIENTID		(0U)
+#define NVGUARD_MAX_CLIENT_CONNECTIONS		(4U * NVGUARD_GROUPID_MAX)
 
 #define L1SS_CLIENT_REQUEST	_IOR(L1SS_IOCTL_MAGIC, 1, nv_guard_request_t)
 

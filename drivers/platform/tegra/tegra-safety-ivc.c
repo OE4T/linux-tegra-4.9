@@ -21,6 +21,7 @@
 #include <linux/tegra-hsp.h>
 #include <linux/tegra-ivc.h>
 #include <linux/tegra-ivc-instance.h>
+#include <linux/tegra_l1ss_kernel_interface.h>
 #include <linux/wait.h>
 
 #include <dt-bindings/memory/tegra-swgroup.h>
@@ -82,7 +83,9 @@ static u32 tegra_safety_ivc_full_notify(void *data, u32 response)
 
 	if (response & SAFETY_CONF_IVC_L2SS_READY) {
 		atomic_set(&safety_ivc->ivc_ready, 1);
+		l1ss_set_ivc_ready();
 		wake_up(&safety_ivc->cmd.response_waitq);
+		l1ss_notify_client(L1SS_READY);
 	} else if (response == 0) {
 		tegra_safety_decode_cmd_resp(safety_ivc);
 	}

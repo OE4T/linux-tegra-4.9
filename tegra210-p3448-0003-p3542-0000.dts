@@ -1,7 +1,7 @@
 /*
  * tegra210-p3448-0003-p3542-0000.dts
  *
- * Copyright (c) 2020, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2020-2021, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -82,12 +82,6 @@
 	extcon {
 		extcon@0 {
 			status = "disabled";
-		};
-	};
-
-	external-memory-controller@7001b000 {
-		emc-table@0 {
-			nvidia,ram-code = <1>;
 		};
 	};
 

@@ -51,6 +51,10 @@ cmd_resp_l1_user_rcv_register_notification(
 					const cmdresp_frame_ex_t *CmdRespFrame,
 					struct l1ss_data *ldata);
 
+int cmd_resp_l1_user_rcv_check_aliveness(
+					 const cmdresp_frame_ex_t *CmdRespFrame,
+					 struct l1ss_data *ldata);
+
 int user_send_service_status_notification(const nv_guard_srv_status_t *Var1,
 					nv_guard_3lss_layer_t Layer_Id,
 					struct l1ss_data *ldata);

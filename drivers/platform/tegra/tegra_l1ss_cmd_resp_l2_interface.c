@@ -16,31 +16,123 @@
 
 #include "tegra_l1ss.h"
 #include "tegra_l1ss_cmd_resp_l2_interface.h"
+#include "tegra_l1ss_heartbeat.h"
+
+/* 2s / 40ms */
+#define TEGRA_L1SS_INIT_DONE_PHASE_HB_COUNT	50
+/* 6s / 40ms */
+#define TEGRA_L1SS_RUN_PHASE_HB_COUNT		150
 
 int l1ss_cmd_resp_send_frame(const cmdresp_frame_ex_t *pCmdPkt,
 			     nv_guard_3lss_layer_t NvGuardLayerId,
 			     struct l1ss_data *ldata);
 
 int cmd_resp_l1_callback_not_configured(const cmdresp_frame_ex_t *cmd_resp,
-					struct l1ss_data *ldata) {
-	PDEBUG("%s(%d) Command not implemented\n", __func__, __LINE__);
+					struct l1ss_data *ldata)
+{
+	uint8_t cmd;
+	uint8_t class;
+	bool is_resp;
+	cmdresp_header_t *cmdresp_h = (cmdresp_header_t *)&(cmd_resp->header);
+
+	l1ss_get_class_cmd_resp_from_header(cmdresp_h, &class, &cmd, &is_resp);
+	PDEBUG("%s: Class(%d), Cmd(%d), is_resp(%d) not implemented\n",
+			__func__, class, cmd, is_resp);
 	return 0;
 }
 
 int cmd_resp_l1_user_rcv_register_notification(
-					 const cmdresp_frame_ex_t *CmdRespFrame,
-					 struct l1ss_data *ldata)
+					const cmdresp_frame_ex_t *cmdresp_frame,
+					struct l1ss_data *ldata)
 {
 	nv_guard_grp_list_t lVar1;
 	uint8_t *lPtr;
 
 	lPtr = (uint8_t *)&lVar1;
-	(void)memcpy(lPtr, &(CmdRespFrame->data[0]),
+	(void)memcpy(lPtr, &(cmdresp_frame->data[0]),
 			sizeof(nv_guard_grp_list_t));
 	PDEBUG("%s(%d) num_group=%d %d\n", __func__, __LINE__,
 			lVar1.num_grp, lVar1.grp_list[0]);
 	atomic_set(&ldata->cmd.notify_registered, 1);
 	wake_up(&ldata->cmd.notify_waitq);
+
+	return 0;
+}
+
+static void tegra_safety_create_l1ss_hb(cmdresp_frame_ex_t *l1ss_hb)
+{
+	static u16 monotonic_count;
+	static uint8_t phase = NVGUARD_TEGRA_PHASE_INIT;
+
+	/*
+	 * 40ms is the HB polling period. Change the phase to INIT_DONE after 2s
+	 * as the register notifications are completed by then. Change the phase
+	 * to run after 6s of first HB as an optimistic kernel boot time from
+	 * first HB.
+	 */
+	if ((phase == NVGUARD_TEGRA_PHASE_INIT) &&
+			(monotonic_count ==
+			 TEGRA_L1SS_INIT_DONE_PHASE_HB_COUNT))
+		phase = NVGUARD_TEGRA_PHASE_INITDONE;
+	else if ((phase == NVGUARD_TEGRA_PHASE_INITDONE) &&
+			(monotonic_count == TEGRA_L1SS_RUN_PHASE_HB_COUNT))
+		phase = NVGUARD_TEGRA_PHASE_RUN;
+
+	/* Set phase to NVGUARD_TEGRA_PHASE_INIT for Init stage */
+	l1ss_hb->data[TEGRA_3LSS_PHASE_BYTE] = l_set_hb_field(
+			l1ss_hb->data[TEGRA_3LSS_PHASE_BYTE],
+			TEGRA_3LSS_PHASE_MASK,
+			TEGRA_3LSS_PHASE_SHIFT, phase);
+
+	/* Hard coding SW error status to no error for now. */
+	l1ss_hb->data[SW_ERROR_STATUS_BYTE] = NVGUARD_NO_ERROR;
+	l1ss_hb->data[HW_ERROR_STATUS_BYTE] = NVGUARD_NO_ERROR;
+	l1ss_hb->data[DIAG_SERVICE_STATUS_BYTE] = l_set_hb_field(
+			l1ss_hb->data[DIAG_SERVICE_STATUS_BYTE],
+			DIAG_SERVICE_STATUS_MASK,
+			DIAG_SERVICE_STATUS_SHIFT, SDL_E_OK);
+
+	memcpy(&l1ss_hb->data[MONOTONIC_COUNT_LB],
+		(uint8_t *)&monotonic_count, sizeof(uint16_t));
+
+	if (monotonic_count < (uint16_t)UINT16_MAX)
+		monotonic_count++;
+	else
+		monotonic_count = 0;
+
+	/* SCE is configured currently for 40ms of HB period */
+	l1ss_hb->data[DIAG_PERIOD_BYTE] = 4;
+	/* Variable to store common service deadline */
+	l1ss_hb->data[SRV_DEADLINE_BYTE] = 2;
+	l1ss_hb->data[MAJOR_VER_BYTE] = TEGRA_SAFETY_L1SS_MAJOR_VERSION;
+	l1ss_hb->data[MINOR_VER_BYTE] = TEGRA_SAFETY_L1SS_MINOR_VERSION;
+	l1ss_hb->data[PATCH_VER_BYTE] = TEGRA_SAFETY_L1SS_PATCH_VERSION;
+
+	cmd_resp_update_header(&l1ss_hb->header, CMDRESPL1_CLASS0,
+				CMDRESPL1_CHECK_ALIVENESS, NVGUARD_LAYER_2,
+				true);
+}
+
+int cmd_resp_l1_user_rcv_check_aliveness(const
+					cmdresp_frame_ex_t *cmdresp_frame,
+					struct l1ss_data *ldata)
+{
+	static cmdresp_frame_ex_t l1ss_hb = {0};
+	static bool first_hb = true;
+	int ret;
+
+	tegra_safety_create_l1ss_hb(&l1ss_hb);
+	ret = l1ss_cmd_resp_send_frame(&l1ss_hb, CMDRESPEXEC_L2_LAYER_ID,
+			ldata);
+	if (ret < 0) {
+		pr_err("%s: Failed to send HB(ret - %d)\n", __func__, ret);
+		return ret;
+	}
+
+	if (first_hb) {
+		first_hb = false;
+		pr_err("Sending first HB\n");
+	}
 
 	return 0;
 }

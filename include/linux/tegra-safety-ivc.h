@@ -22,6 +22,8 @@
 #define SAFETY_CONF(id, value)          ((SAFETY_CONF_ ## id << 24) | (value))
 #define SAFETY_CONF_GET_ID(value)       (((value) >> 24) & 0x7f)
 #define SAFETY_CONF_GET_VALUE(value)    ((value) & 0xffffff)
+#define TEGRA_SAFETY_SM_CMDRESP_CH     0
+#define TEGRA_SAFETY_IVC_READ_TIMEOUT	(2 * HZ)
 
 enum {
 	SAFETY_CONF_IVC_READY = 1,
@@ -49,6 +51,10 @@ struct tegra_safety_ivc {
 	} cmd;
 	struct tegra_safety_ivc_chan *ivc_chan[MAX_SAFETY_CHANNELS];
 	atomic_t ivc_ready;
+	struct work_struct work;
+	struct workqueue_struct *wq;
+	struct mutex rlock;
+	struct mutex wlock;
 	struct l1ss_data *ldata;
 };
 

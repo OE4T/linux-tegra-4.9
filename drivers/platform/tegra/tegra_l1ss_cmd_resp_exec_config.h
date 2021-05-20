@@ -127,7 +127,7 @@
 {\
 	{CMDRESPL1_CMD_ID_NOTUSED, cmd_resp_l1_callback_not_configured,\
 	cmd_resp_l1_callback_not_configured, 0U},\
-	{CMDRESPL1_CHECK_ALIVENESS, cmd_resp_l1_callback_not_configured,\
+	{CMDRESPL1_CHECK_ALIVENESS, cmd_resp_l1_user_rcv_check_aliveness,\
 	cmd_resp_l1_callback_not_configured, 0U},\
 	{CMDRESPL1_CMD_ID_NOTUSED, cmd_resp_l1_callback_not_configured,\
 	cmd_resp_l1_callback_not_configured, 0U},\

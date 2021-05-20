@@ -34,6 +34,7 @@
 #include <linux/tegra-hsp.h>
 #include <linux/tegra_l1ss_ioctl.h>
 #include <linux/tegra_l1ss_kernel_interface.h>
+#include <linux/wait.h>
 
 #include "tegra_l1ss.h"
 #include "tegra_l1ss_cmd_resp_exec_config.h"
@@ -66,13 +67,14 @@ static const struct file_operations l1ss_fops = {
 	.unlocked_ioctl = l1ss_ioctl,
 };
 
-int l1ss_cmd_resp_send_frame(const cmdresp_frame_ex_t *pCmdPkt,
+int l1ss_cmd_resp_send_frame(const cmdresp_frame_ex_t *p_cmd_pkt,
 			     nv_guard_3lss_layer_t layer_id,
 			     struct l1ss_data *ldata)
 {
 	struct tegra_safety_ivc_chan *ivc_ch = NULL;
-	void *frame = NULL;
-	int count = 10;
+	int ret = 0;
+
+	mutex_lock(&ldata->safety_ivc->wlock);
 
 	if (atomic_read(&ldata->safety_ivc->ivc_ready) == 1 &&
 			layer_id == CMDRESPEXEC_L2_LAYER_ID) {
@@ -80,31 +82,22 @@ int l1ss_cmd_resp_send_frame(const cmdresp_frame_ex_t *pCmdPkt,
 							    "cmdresp");
 		if (!ivc_ch) {
 			pr_err("L1SS: Failed to get cmdresp IVC channel\n");
-			return -1;
-		}
-		if (tegra_ivc_can_write(&ivc_ch->ivc)) {
-			frame = tegra_ivc_write_get_next_frame(&ivc_ch->ivc);
-			if (IS_ERR_OR_NULL(frame)) {
-				pr_err("L1SS: get next write frame failed\n");
-				return -1;
-			}
-			memcpy(frame, pCmdPkt, sizeof(cmdresp_frame_ex_t));
-			tegra_ivc_write_advance(&ivc_ch->ivc);
-		} else {
-			pr_err("Failed to write frame\n");
-			return -1;
+			ret = -EINVAL;
+			goto unlock_mutex;
 		}
 
-		tegra_hsp_sm_pair_write(ldata->safety_ivc->ivc_pair, 0);
-		count = 10;
-		while (count-- &&
-		       !tegra_hsp_sm_pair_is_empty(ldata->safety_ivc->ivc_pair)
-		       ) {
-			PDEBUG("%s waiting for empty\n", __func__);
-			msleep(1000);
+		ret = tegra_ivc_write(&ivc_ch->ivc, p_cmd_pkt,
+					sizeof(cmdresp_frame_ex_t));
+		if (ret < 0) {
+			pr_err("%s: IVC write failed\n", __func__);
+			goto unlock_mutex;
 		}
+		ret = 0;
 	}
-	return 0;
+
+unlock_mutex:
+	mutex_unlock(&ldata->safety_ivc->wlock);
+	return ret;
 }
 
 static int l1ss_uevent(struct device *dev, struct kobj_uevent_env *env)
@@ -175,6 +168,7 @@ int l1ss_init(struct tegra_safety_ivc *safety_ivc)
 	INIT_WORK(&ldata->work, l1ss_workqueue_function);
 	init_waitqueue_head(&ldata->cmd.notify_waitq);
 	atomic_set(&ldata->cmd.notify_registered, 0);
+
 	ldata->cmd_resp_lookup_table = cmd_resp_lookup_table;
 
 	err = alloc_chrdev_region(&ldata->dev, 0, MAX_DEV, "l1ss");
@@ -431,6 +425,14 @@ nv_guard_3lss_layer_t cmd_resp_get_current_layer_id(void)
 	return 1;
 }
 
+void l1ss_get_class_cmd_resp_from_header(cmdresp_header_t *cmdresp_h,
+		uint8_t *class, uint8_t *cmd, bool *is_resp)
+{
+	l_get_cmd_id(cmdresp_h, cmd);
+	l_get_dest_class_id(cmdresp_h, class);
+	*is_resp = l_is_resp_flag_set(*cmdresp_h);
+}
+
 /*
  * @brief Function to set CmdResp Header data members
  *
@@ -488,16 +490,16 @@ int tegra_safety_handle_cmd(cmdresp_frame_ex_t *cmd_resp,
 	uint8_t dest;
 	uint8_t cmd;
 	uint8_t dest_class;
-	bool is_resp_required = false;
+	bool is_resp = false;
 
 	l_get_src_id(cmdresp_h, &src);
 	l_get_cmd_id(cmdresp_h, &cmd);
 	l_get_dest_id(cmdresp_h, &dest);
 	l_get_dest_class_id(cmdresp_h, &dest_class);
-	is_resp_required = l_is_resp_flag_set(*cmdresp_h);
+	is_resp = l_is_resp_flag_set(*cmdresp_h);
 
-	PDEBUG("srcID %d destID %d cmdID %d ClassID %d respon_required=%d\n",
-			src, dest, cmd, dest_class, is_resp_required);
+	PDEBUG("srcID %d destID %d cmdID %d ClassID %d is_resp=%d\n",
+			src, dest, cmd, dest_class, is_resp);
 
 	if (dest_class <  CMDRESPL1_N_CLASSES && cmd <
 			CMDRESPL1_MAX_CMD_IN_CLASS) {
@@ -505,8 +507,10 @@ int tegra_safety_handle_cmd(cmdresp_frame_ex_t *cmd_resp,
 				ldata->cmd_resp_lookup_table[dest_class][cmd];
 
 		if (cmd_entry.cmd == cmd) {
-			cmd_entry.cmd_call_back(cmd_resp, ldata);
-			cmd_entry.resp_call_back(cmd_resp, ldata);
+			if (is_resp)
+				cmd_entry.resp_call_back(cmd_resp, ldata);
+			else
+				cmd_entry.cmd_call_back(cmd_resp, ldata);
 		} else {
 			PDEBUG(
 			"%s(%d)bad cmd entry class=%d cmd=%d cmd_entry=%d\n",

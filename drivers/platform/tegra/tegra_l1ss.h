@@ -1,5 +1,19 @@
-#ifndef _L1SS_H
-#define _L1SS_H
+/*
+ * Copyright (c) 2021, NVIDIA CORPORATION, All rights reserved.
+ *
+ * This software is licensed under the terms of the GNU General Public
+ * License version 2, as published by the Free Software Foundation, and
+ * may be copied, distributed, and modified under those terms.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ */
+
+#ifndef _LINUX_TEGRA_SAFETY_TEGRA_L1SS_H
+#define _LINUX_TEGRA_SAFETY_TEGRA_L1SS_H
 
 #include <linux/cdev.h>
 #include <linux/tegra-safety-ivc.h>
@@ -8,6 +22,9 @@
 #include "tegra_l1ss_cmd_resp_exec_config.h"
 
 #define PDEBUG(fmt, args...) printk(KERN_DEBUG "L1SS : " fmt, ## args)
+#define TEGRA_SAFETY_L1SS_MAJOR_VERSION 4
+#define TEGRA_SAFETY_L1SS_MINOR_VERSION 0
+#define TEGRA_SAFETY_L1SS_PATCH_VERSION 0
 
 struct l1ss_req_node {
 	struct l1ss_req_node *next;
@@ -167,5 +184,8 @@ inline void l_set_cmd_msg_id(cmdresp_header_t *const pHeader, uint16_t CmdMsgId)
 inline void l_set_src_class_id(cmdresp_header_t *const pHeader, uint8_t ClassId);
 
 nv_guard_3lss_layer_t cmd_resp_get_current_layer_id(void);
+
+void l1ss_get_class_cmd_resp_from_header(cmdresp_header_t *cmdresp_h,
+		uint8_t *class, uint8_t *cmd, bool *is_resp);
 
 #endif

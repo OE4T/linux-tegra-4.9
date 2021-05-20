@@ -29,7 +29,6 @@
 #include "tegra_l1ss.h"
 
 #define NV(p) "nvidia," #p
-#define TEGRA_SAFETY_IVC_READ_TIMEOUT	2 * HZ
 
 int ivc_chan_count;
 struct tegra_safety_ivc_chan *tegra_safety_get_ivc_chan_from_str(
@@ -60,18 +59,29 @@ static void tegra_safety_decode_cmd_resp(struct tegra_safety_ivc *safety_ivc)
 	}
 
 	ivc = &ivc_ch->ivc;
-	if (tegra_ivc_can_read(ivc)) {
-		pr_err("%s: Reading IVC channel\n", __func__);
+	mutex_lock(&safety_ivc->rlock);
+	if (tegra_ivc_can_read(ivc))
 		ivc_frame = tegra_ivc_read_get_next_frame(ivc);
-		if (ivc_frame == NULL)
-			pr_err("%s: No IVC frame to read\n", __func__);
+	mutex_unlock(&safety_ivc->rlock);
 
-		memcpy(cmd_resp, ivc_frame, sizeof(cmdresp_frame_ex_t));
-
-		tegra_ivc_read_advance(ivc);
-		tegra_safety_handle_cmd((cmdresp_frame_ex_t *)&cmd_resp,
-					safety_ivc->ldata);
+	if (ivc_frame == NULL) {
+		pr_err("%s: No IVC frame to read\n", __func__);
+		return;
 	}
+
+	memcpy(cmd_resp, ivc_frame, sizeof(cmdresp_frame_ex_t));
+
+	tegra_ivc_read_advance(ivc);
+	tegra_safety_handle_cmd((cmdresp_frame_ex_t *)&cmd_resp,
+				safety_ivc->ldata);
+}
+
+static void tegra_safety_cmdresp_work_func(struct work_struct *work)
+{
+	struct tegra_safety_ivc *safety_ivc = container_of(work,
+			struct tegra_safety_ivc, work);
+
+	tegra_safety_decode_cmd_resp(safety_ivc);
 }
 
 /* wake up cmd-resp threads */
@@ -86,34 +96,10 @@ static u32 tegra_safety_ivc_full_notify(void *data, u32 response)
 		l1ss_set_ivc_ready();
 		wake_up(&safety_ivc->cmd.response_waitq);
 		l1ss_notify_client(L1SS_READY);
-	} else if (response == 0) {
-		tegra_safety_decode_cmd_resp(safety_ivc);
-	}
-
-	return 0;
-}
-
-static void tegra_safety_ivc_empty_notify(void *data, u32 response)
-{
-	struct tegra_safety_ivc *safety_ivc = (struct tegra_safety_ivc *)data;
-	wake_up(&safety_ivc->cmd.empty_waitq);
-}
-
-static int tegra_safety_ivc_command(struct device *dev, u32 command,
-					long timeout)
-{
-	struct tegra_safety_ivc *safety_ivc = dev_get_drvdata(dev);
-
-	tegra_hsp_sm_pair_write(safety_ivc->ivc_pair, command);
-
-	timeout = wait_event_interruptible_timeout(
-			safety_ivc->cmd.empty_waitq,
-			tegra_hsp_sm_pair_is_empty(safety_ivc->ivc_pair),
-			timeout);
-	if (timeout <= 0) {
-		dev_err(dev, "Timed out waiting for empty SM");
-		return -ETIMEDOUT;
-	}
+	} else if (response == TEGRA_SAFETY_SM_CMDRESP_CH) {
+		queue_work(safety_ivc->wq, &safety_ivc->work);
+	} else
+		pr_err("%s: Invalid response %d received", __func__, response);
 
 	return 0;
 }
@@ -128,10 +114,7 @@ static int tegra_safety_ivc_setup_ready(struct device *dev)
 
 	command = SAFETY_CONF(IVC_READY, (region->dma >> 8));
 
-	ret = tegra_safety_ivc_command(dev, command,
-			TEGRA_SAFETY_IVC_READ_TIMEOUT);
-	if (ret < 0)
-		return ret;
+	tegra_hsp_sm_pair_write(safety_ivc->ivc_pair, command);
 
 	timeout = wait_event_interruptible_timeout(
 			safety_ivc->cmd.response_waitq,
@@ -151,7 +134,8 @@ static void tegra_ivc_channel_ring(struct ivc *ivc)
 		container_of(ivc, struct tegra_safety_ivc_chan, ivc);
 	struct tegra_safety_ivc *safety_ivc = ivc_chan->safety_ivc;
 
-	tegra_hsp_sm_pair_write(safety_ivc->ivc_pair, 1);
+	tegra_hsp_sm_pair_write(safety_ivc->ivc_pair,
+				TEGRA_SAFETY_SM_CMDRESP_CH);
 }
 
 static int tegra_ivc_channel_create(
@@ -325,7 +309,7 @@ static int tegra_safety_ivc_parse_hsp(struct device *dev)
 	hsp_node = of_get_child_by_name(dev->of_node, "hsp");
 	safety_ivc->ivc_pair = of_tegra_hsp_sm_pair_by_name(hsp_node,
 			"ivc-pair", tegra_safety_ivc_full_notify,
-			tegra_safety_ivc_empty_notify, safety_ivc);
+			NULL, safety_ivc);
 	of_node_put(hsp_node);
 	if (IS_ERR(safety_ivc->ivc_pair)) {
 		ret = PTR_ERR(safety_ivc->ivc_pair);
@@ -359,6 +343,7 @@ static int tegra_safety_ivc_remove(struct platform_device *pdev)
 
 	tegra_safety_ast_region_free(dev);
 	tegra_hsp_sm_pair_free(safety_ivc->ivc_pair);
+	destroy_workqueue(safety_ivc->wq);
 	ivc_chan_count = 0;
 
 	return 0;
@@ -370,7 +355,7 @@ static int tegra_safety_ivc_probe(struct platform_device *pdev)
 	struct device *dev = &pdev->dev;
 	int ret, i;
 
-	dev_info(dev, "probing sce safety driver\n");
+	dev_info(dev, "Probing sce safety driver\n");
 
 	safety_ivc = devm_kzalloc(dev, sizeof(*safety_ivc), GFP_KERNEL);
 	if (!safety_ivc)
@@ -380,6 +365,10 @@ static int tegra_safety_ivc_probe(struct platform_device *pdev)
 
 	init_waitqueue_head(&safety_ivc->cmd.response_waitq);
 	init_waitqueue_head(&safety_ivc->cmd.empty_waitq);
+	safety_ivc->wq = alloc_workqueue("safety_cmdresp", WQ_HIGHPRI, 0);
+	INIT_WORK(&safety_ivc->work, tegra_safety_cmdresp_work_func);
+	mutex_init(&safety_ivc->rlock);
+	mutex_init(&safety_ivc->wlock);
 
 	ret = tegra_safety_ivc_parse_hsp(dev);
 	if (ret) {
@@ -420,7 +409,7 @@ static int tegra_safety_ivc_probe(struct platform_device *pdev)
 		}
 	}
 
-	dev_info(dev, "successfully probed safety ivc driver\n");
+	dev_info(dev, "Successfully probed safety ivc driver\n");
 
 	return 0;
 

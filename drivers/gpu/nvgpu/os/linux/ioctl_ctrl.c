@@ -2051,7 +2051,7 @@ int gk20a_ctrl_dev_mmap(struct file *filp, struct vm_area_struct *vma)
 	return err;
 }
 
-static void alter_usermode_mapping(struct gk20a *g,
+static int alter_usermode_mapping(struct gk20a *g,
 		struct gk20a_ctrl_priv *priv,
 		bool poweroff)
 {
@@ -2059,23 +2059,34 @@ static void alter_usermode_mapping(struct gk20a *g,
 	struct vm_area_struct *vma = priv->usermode_vma.vma;
 	bool vma_mapped = priv->usermode_vma.vma_mapped;
 	u64 addr;
-	int err;
+	int err = 0;
 
 	if (!vma) {
 		/* Nothing to do - no mmap called */
-		return;
+		return 0;
 	}
 
 	addr = l->regs_bus_addr + g->ops.fifo.usermode_base(g);
-
-	down_write(&vma->vm_mm->mmap_sem);
 
 	/*
 	 * This is a no-op for the below cases
 	 * a) poweroff and !vma_mapped - > do nothing as no map exists
 	 * b) !poweroff and vmap_mapped -> do nothing as already mapped
 	 */
-	if (poweroff && vma_mapped) {
+	if (poweroff != vma_mapped) {
+		return 0;
+	}
+
+	/*
+	 * We use trylock due to lock inversion: we need to acquire
+	 * mmap_lock while holding ctrl_privs_lock. usermode_vma_close
+	 * does it in reverse order. Trylock is a way to avoid deadlock.
+	 */
+	if (!down_write_trylock(&vma->vm_mm->mmap_sem)) {
+		return -EBUSY;
+	}
+
+	if (poweroff) {
 		err = zap_vma_ptes(vma, vma->vm_start, SZ_4K);
 		if (err == 0) {
 			vma->vm_flags = VM_NONE;
@@ -2083,7 +2094,7 @@ static void alter_usermode_mapping(struct gk20a *g,
 		} else {
 			nvgpu_err(g, "can't remove usermode mapping");
 		}
-	} else if (!poweroff && !vma_mapped) {
+	} else {
 		vma->vm_flags = priv->usermode_vma.flags;
 		err = io_remap_pfn_range(vma, vma->vm_start,
 				addr >> PAGE_SHIFT,
@@ -2097,19 +2108,34 @@ static void alter_usermode_mapping(struct gk20a *g,
 	}
 
 	up_write(&vma->vm_mm->mmap_sem);
+
+	return err;
 }
 
 static void alter_usermode_mappings(struct gk20a *g, bool poweroff)
 {
 	struct gk20a_ctrl_priv *priv;
 	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
+	int err = 0;
 
-	nvgpu_mutex_acquire(&l->ctrl.privs_lock);
-	nvgpu_list_for_each_entry(priv, &l->ctrl.privs,
-			gk20a_ctrl_priv, list) {
-		alter_usermode_mapping(g, priv, poweroff);
-	}
-	nvgpu_mutex_release(&l->ctrl.privs_lock);
+	do {
+		nvgpu_mutex_acquire(&l->ctrl.privs_lock);
+		nvgpu_list_for_each_entry(priv, &l->ctrl.privs,
+				gk20a_ctrl_priv, list) {
+			err = alter_usermode_mapping(g, priv, poweroff);
+			if (err != 0) {
+				break;
+			}
+		}
+		nvgpu_mutex_release(&l->ctrl.privs_lock);
+
+		if (err == -EBUSY) {
+			nvgpu_log_info(g, "ctrl_privs_lock lock contended. retry altering usermode mappings");
+			nvgpu_udelay(10);
+		} else if (err != 0) {
+			nvgpu_err(g, "can't alter usermode mapping. err = %d", err);
+		}
+	} while (err == -EBUSY);
 }
 
 void nvgpu_hide_usermode_for_poweroff(struct gk20a *g)

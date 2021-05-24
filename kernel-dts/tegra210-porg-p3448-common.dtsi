@@ -41,7 +41,6 @@
 #include "porg-plugin-manager/tegra210-porg-plugin-manager.dtsi"
 #include <tegra210-soc/mods-simple-bus.dtsi>
 #include "porg-platforms/tegra210-porg-extcon-p3448-0000-a00.dtsi"
-#include "porg-platforms/tegra210-porg-p3448-emc-a00.dtsi"
 #include "porg-platforms/tegra210-porg-pcie.dtsi"
 #include "porg-platforms/tegra210-porg-prods.dtsi"
 #include "porg-platforms/tegra210-porg-super-module-e2614.dtsi"

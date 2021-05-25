@@ -151,6 +151,10 @@
 		};
         };
 
+	mttcan@c310000 {
+		status = "okay";
+	};
+
 	cpufreq@e070000 {
 		cpu_emc_map =
 			< 499200  204000>,

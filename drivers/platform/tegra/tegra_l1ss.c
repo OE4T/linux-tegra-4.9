@@ -543,6 +543,7 @@ static long l1ss_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		}
 
 		l1ss_submit_rq(req, true);
+		kfree(req);
 		break;
 	default:
 		PDEBUG("unknown command");
@@ -567,7 +568,17 @@ int l1ss_submit_rq(nv_guard_request_t *req, bool can_sleep)
 		return -1;
 	}
 	n->next = NULL;
-	n->req = req;
+	if (can_sleep)
+		n->req = kmalloc(sizeof(nv_guard_request_t), GFP_KERNEL);
+	else
+		n->req = kmalloc(sizeof(nv_guard_request_t), GFP_ATOMIC);
+	if (n->req == NULL) {
+		pr_err("Failed to allocate memory");
+		kfree(n);
+		return -1;
+	}
+	memcpy(n->req, req, sizeof(nv_guard_request_t));
+
 	spin_lock(&ldata->slock);
 	if (ldata->head == NULL) {
 		ldata->head = n;

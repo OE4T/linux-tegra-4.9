@@ -6233,7 +6233,6 @@ static void r8153_init(struct r8152 *tp)
 			break;
 	}
 
-
 	if (tp->version == RTL_VER_03 || tp->version == RTL_VER_04 ||
 	    tp->version == RTL_VER_05)
 		ocp_reg_write(tp, OCP_ADC_CFG, CKADSEL_L | ADC_EN | EN_EMI_L);

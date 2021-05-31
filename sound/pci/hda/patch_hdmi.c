@@ -2250,7 +2250,6 @@ static int generic_hdmi_suspend(struct hda_codec *codec)
 
 	for (pin_idx = 0; pin_idx < spec->num_pins; pin_idx++) {
 		struct hdmi_spec_per_pin *per_pin = get_pin(spec, pin_idx);
-
 		cancel_delayed_work_sync(&per_pin->work);
 	}
 	return 0;

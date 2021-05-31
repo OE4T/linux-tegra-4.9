@@ -1486,25 +1486,6 @@ int xhci_bus_suspend(struct usb_hcd *hcd)
 		writel(portsc_buf[port_index], port_array[port_index]);
 	}
 
-	/* write port settings, stopping and suspending ports if needed */
-	port_index = max_ports;
-	while (port_index--) {
-		if (!portsc_buf[port_index])
-			continue;
-		if (test_bit(port_index, &bus_state->bus_suspended)) {
-			int slot_id;
-
-			slot_id = xhci_find_slot_id_by_port(hcd, xhci,
-							    port_index + 1);
-			if (slot_id) {
-				spin_unlock_irqrestore(&xhci->lock, flags);
-				xhci_stop_device(xhci, slot_id, 1);
-				spin_lock_irqsave(&xhci->lock, flags);
-			}
-		}
-		writel(portsc_buf[port_index], port_array[port_index]);
-	}
-
 	/* Wait for port enter U3 state */
 	if (bus_state->bus_suspended) {
 		spin_unlock_irqrestore(&xhci->lock, flags);

@@ -43,6 +43,7 @@
 #endif
 			nvidia,num-lanes = <4>;
 			status = "okay";
+			nvidia,disable-clock-request;
 		};
 
 		pci@2,0 {

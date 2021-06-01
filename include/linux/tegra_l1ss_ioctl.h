@@ -85,6 +85,27 @@ typedef uint32_t nv_guard_group_id_t;
  * Denotes diagnostic tests
  */
 #define NVGUARD_SERVICECLASS_DIAG_TEST			(2U)
+/*
+ * Defines the FuSa state during initialization.
+ */
+#define NVGUARD_TEGRA_FUSASTATE_INIT			(0U)
+/*
+ * Defines the FuSa state when no error is reported to 3LSS
+ */
+#define NVGUARD_TEGRA_FUSASTATE_NOERROR			(1U)
+/*
+ * Defines the FuSa state when an error is reported to 3LSS
+ */
+#define NVGUARD_TEGRA_FUSASTATE_ERROR			(2U)
+
+/* Defines a change in the FuSa state.
+ */
+#define NVGUARD_SUPPNOTIF_FUSASTATE_CHANGE		(0U)
+
+/*
+ * Defines the availability of user data to be read.
+ */
+#define NVGUARD_SUPPNOTIF_USERMSG_READY			(1U)
 
 /*
  * Defines the maximum length of user message, in bytes.
@@ -214,6 +235,20 @@ typedef struct {
 	nv_guard_group_id_t grp_id;
 	nv_guard_group_state_t state;
 } nv_guard_query_grp_state_t;
+
+/* Holds Tegra FuSa state.
+ *
+ * @valuerange
+ * - NVGUARD_TEGRA_FUSASTATE_INIT
+ * - NVGUARD_TEGRA_FUSASTATE_NOERROR
+ * - NVGUARD_TEGRA_FUSASTATE_ERROR
+ */
+typedef uint8_t nv_guard_FuSa_state_t;
+
+/* Supplementary notification of type 'nv_guard_supplementary_notification_t'.
+ * Argument for supplementary notification callback registered by clients
+ */
+typedef uint8_t nv_guard_supplementary_notification_t;
 
 /*
  * Defines the user application message transferred to 3LSS. User messages

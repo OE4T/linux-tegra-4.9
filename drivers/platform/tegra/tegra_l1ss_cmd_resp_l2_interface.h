@@ -51,6 +51,10 @@ cmd_resp_l1_user_rcv_register_notification(
 					const cmdresp_frame_ex_t *CmdRespFrame,
 					struct l1ss_data *ldata);
 
+int cmd_resp_l1_user_rcv_FuSa_state_notification(
+					const cmdresp_frame_ex_t *cmdresp_frame,
+					struct l1ss_data *ldata);
+
 int cmd_resp_l1_user_rcv_check_aliveness(
 					 const cmdresp_frame_ex_t *CmdRespFrame,
 					 struct l1ss_data *ldata);

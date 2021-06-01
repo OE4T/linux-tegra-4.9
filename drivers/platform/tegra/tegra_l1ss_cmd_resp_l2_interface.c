@@ -58,6 +58,17 @@ int cmd_resp_l1_user_rcv_register_notification(
 
 	return 0;
 }
+int cmd_resp_l1_user_rcv_FuSa_state_notification(
+					const cmdresp_frame_ex_t *cmdresp_frame,
+					struct l1ss_data *ldata)
+{
+	const nv_guard_FuSa_state_t *l_var1;
+
+	l_var1 = (const nv_guard_FuSa_state_t *)&(cmdresp_frame->data[0]);
+	PDEBUG("%s FuSa State = %d\n", __func__, *l_var1);
+
+	return 0;
+}
 
 static void tegra_safety_create_l1ss_hb(cmdresp_frame_ex_t *l1ss_hb)
 {

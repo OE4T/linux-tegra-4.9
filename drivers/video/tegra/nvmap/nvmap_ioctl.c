@@ -49,22 +49,6 @@ static ssize_t rw_handle(struct nvmap_client *client, struct nvmap_handle *h,
 			 unsigned long sys_stride, unsigned long elem_size,
 			 unsigned long count);
 
-static bool is_allocation_possible(size_t size)
-{
-	struct sysinfo i;
-
-	si_meminfo(&i);
-
-	if (size >> PAGE_SHIFT >= i.totalram) {
-		pr_debug("Requested allocation size is more than system memory");
-		return false;
-	}
-	return true;
-}
-
-/* NOTE: Callers of this utility function must invoke nvmap_handle_put after
- * using the returned nvmap_handle.
- */
 struct nvmap_handle *nvmap_handle_get_from_fd(int fd)
 {
 	struct nvmap_handle *h;
@@ -148,7 +132,7 @@ int nvmap_ioctl_alloc(struct file *filp, void __user *arg)
 	if (!handle)
 		return -EINVAL;
 
-	if (!is_allocation_possible(handle->size))
+	if (!nvmap_memory_available(handle->size))
 		return -ENOMEM;
 
 	/* user-space handles are aligned to page boundaries, to prevent
@@ -810,11 +794,12 @@ free_mem:
 
 int nvmap_ioctl_gup_test(struct file *filp, void __user *arg)
 {
-	int i, err = -EINVAL;
+	int err = -EINVAL;
 	struct nvmap_gup_test op;
 	struct vm_area_struct *vma;
 	struct nvmap_handle *handle;
-	int nr_page;
+	size_t i;
+	size_t nr_page;
 	struct page **pages;
 
 	if (copy_from_user(&op, arg, sizeof(op)))

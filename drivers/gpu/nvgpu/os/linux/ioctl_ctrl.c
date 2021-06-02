@@ -60,7 +60,6 @@ struct gk20a_ctrl_priv {
 	struct nvgpu_list_node list;
 	struct {
 		struct vm_area_struct *vma;
-		unsigned long flags;
 		bool vma_mapped;
 	} usermode_vma;
 };
@@ -2040,7 +2039,6 @@ int gk20a_ctrl_dev_mmap(struct file *filp, struct vm_area_struct *vma)
 			vma->vm_end - vma->vm_start, vma->vm_page_prot);
 	if (!err) {
 		priv->usermode_vma.vma = vma;
-		priv->usermode_vma.flags = vma->vm_flags;
 		vma->vm_private_data = priv;
 		priv->usermode_vma.vma_mapped = true;
 	}
@@ -2089,19 +2087,16 @@ static int alter_usermode_mapping(struct gk20a *g,
 	if (poweroff) {
 		err = zap_vma_ptes(vma, vma->vm_start, SZ_4K);
 		if (err == 0) {
-			vma->vm_flags = VM_NONE;
 			priv->usermode_vma.vma_mapped = false;
 		} else {
 			nvgpu_err(g, "can't remove usermode mapping");
 		}
 	} else {
-		vma->vm_flags = priv->usermode_vma.flags;
 		err = io_remap_pfn_range(vma, vma->vm_start,
 				addr >> PAGE_SHIFT,
 				SZ_4K, vma->vm_page_prot);
 		if (err != 0) {
 			nvgpu_err(g, "can't restore usermode mapping");
-			vma->vm_flags = VM_NONE;
 		} else {
 			priv->usermode_vma.vma_mapped = true;
 		}

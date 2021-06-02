@@ -1,7 +1,7 @@
 /*
  * Tegra capture common operations
  *
- * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2021, NVIDIA CORPORATION.  All rights reserved.
  *
  * Author: Sudhir Vyas <svyas@nvidia.com>
  *
@@ -35,6 +35,11 @@ int capture_common_setup_progress_status_notifier(
 	dmabuf = dma_buf_get(mem);
 	if (IS_ERR(dmabuf))
 		return PTR_ERR(dmabuf);
+
+	if (buffer_size > (U32_MAX - mem_offset)) {
+		pr_err("%s: buffer_size or mem_offset too large\n", __func__);
+		return -EINVAL;
+	}
 
 	if ((buffer_size + mem_offset) > dmabuf->size) {
 		dma_buf_put(dmabuf);

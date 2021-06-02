@@ -1,7 +1,7 @@
 /*
  * ISP channel driver for T186
  *
- * Copyright (c) 2017-2018 NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2017-2021 NVIDIA Corporation.  All rights reserved.
  *
  * Author: Sudhir Vyas <svyas@nvidia.com>
  *
@@ -108,6 +108,8 @@ static long isp_channel_ioctl(struct file *file, unsigned int cmd,
 
 	case _IOC_NR(ISP_CAPTURE_GET_INFO): {
 		struct isp_capture_info info;
+		(void)memset(&info, 0, sizeof(info));
+
 		err = isp_capture_get_info(chan, &info);
 		if (err)
 			dev_err(chan->isp_dev, "isp capture get info failed\n");

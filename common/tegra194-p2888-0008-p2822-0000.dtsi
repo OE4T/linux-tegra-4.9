@@ -99,4 +99,10 @@
 			status = "okay";
 		};
 	};
+
+	pcie@141a0000 {
+		nvidia,plat-gpios =
+			<&tegra_main_gpio TEGRA194_MAIN_GPIO(Z, 2) GPIO_ACTIVE_HIGH	/* 3V3 */
+			&tegra_aon_gpio TEGRA194_AON_GPIO(AA, 7) GPIO_ACTIVE_LOW>;	/* 12V */
+	};
 };

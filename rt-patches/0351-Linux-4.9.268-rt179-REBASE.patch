@@ -1,0 +1,20 @@
+From 4ad2e851dfbf06e527cebfeacb8952524fdef613 Mon Sep 17 00:00:00 2001
+From: "Luis Claudio R. Goncalves" <lgoncalv@redhat.com>
+Date: Fri, 30 Apr 2021 02:07:50 -0300
+Subject: [PATCH 351/351] Linux 4.9.268-rt179 REBASE
+
+Signed-off-by: Luis Claudio R. Goncalves <lgoncalv@redhat.com>
+---
+ localversion-rt | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/localversion-rt b/localversion-rt
+index 9a218ca23053..326e314b799e 100644
+--- a/localversion-rt
++++ b/localversion-rt
+@@ -1 +1 @@
+--rt23
++-rt179
+-- 
+2.28.0
+

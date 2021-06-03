@@ -1,0 +1,78 @@
+From bc7376f7881dbc04d5efaeeae40697a816e53478 Mon Sep 17 00:00:00 2001
+From: Peter Zijlstra <peterz@infradead.org>
+Date: Wed, 6 Jun 2018 15:31:27 +0200
+Subject: [PATCH 330/351] futex: Fix more put_pi_state() vs.
+ exit_pi_state_list() races
+
+[ Upstream commit 51d00899f7e6ded15c89cb4e2cb11a35283bac81 ]
+
+Dmitry (through syzbot) reported being able to trigger the WARN in
+get_pi_state() and a use-after-free on:
+
+	raw_spin_lock_irq(&pi_state->pi_mutex.wait_lock);
+
+Both are due to this race:
+
+  exit_pi_state_list()				put_pi_state()
+
+  lock(&curr->pi_lock)
+  while() {
+	pi_state = list_first_entry(head);
+	hb = hash_futex(&pi_state->key);
+	unlock(&curr->pi_lock);
+
+						dec_and_test(&pi_state->refcount);
+
+	lock(&hb->lock)
+	lock(&pi_state->pi_mutex.wait_lock)	// uaf if pi_state free'd
+	lock(&curr->pi_lock);
+
+	....
+
+	unlock(&curr->pi_lock);
+	get_pi_state();				// WARN; refcount==0
+
+The problem is we take the reference count too late, and don't allow it
+being 0. Fix it by using inc_not_zero() and simply retrying the loop
+when we fail to get a refcount. In that case put_pi_state() should
+remove the entry from the list.
+
+Reported-by: Dmitry Vyukov <dvyukov@google.com>
+Signed-off-by: Peter Zijlstra (Intel) <peterz@infradead.org>
+Reviewed-by: Thomas Gleixner <tglx@linutronix.de>
+Cc: Gratian Crisan <gratian.crisan@ni.com>
+Cc: Linus Torvalds <torvalds@linux-foundation.org>
+Cc: Peter Zijlstra <peterz@infradead.org>
+Cc: dvhart@infradead.org
+Cc: syzbot <bot+2af19c9e1ffe4d4ee1d16c56ae7580feaee75765@syzkaller.appspotmail.com>
+Cc: syzkaller-bugs@googlegroups.com
+Cc: <stable@vger.kernel.org>
+Fixes: c74aef2d06a9 ("futex: Fix pi_state->owner serialization")
+Link: http://lkml.kernel.org/r/20171031101853.xpfh72y643kdfhjs@hirez.programming.kicks-ass.net
+Signed-off-by: Ingo Molnar <mingo@kernel.org>
+Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
+Signed-off-by: Julia Cartwright <julia@ni.com>
+---
+ kernel/futex.c | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/kernel/futex.c b/kernel/futex.c
+index 957fe9fc9b8c..e102fd0c4301 100644
+--- a/kernel/futex.c
++++ b/kernel/futex.c
+@@ -974,10 +974,12 @@ static void exit_pi_state_list(struct task_struct *curr)
+ 		 * task still owns the PI-state:
+ 		 */
+ 		if (head->next != next) {
++			/* retain curr->pi_lock for the loop invariant */
+ 			raw_spin_unlock(&curr->pi_lock);
+ 			raw_spin_unlock_irq(&pi_state->pi_mutex.wait_lock);
+ 			spin_unlock(&hb->lock);
+ 			raw_spin_lock_irq(&curr->pi_lock);
++			put_pi_state(pi_state);
+ 			continue;
+ 		}
+ 
+-- 
+2.28.0
+

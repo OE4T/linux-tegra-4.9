@@ -18,6 +18,9 @@
 #include <linux/cdev.h>
 #include <linux/tegra-safety-ivc.h>
 #include <linux/tegra_l1ss_ioctl.h>
+#include <linux/tegra_nv_guard_group_id.h>
+#include <linux/tegra_nv_guard_service_id.h>
+#include <linux/platform/tegra/l1ss_datatypes.h>
 
 #include "tegra_l1ss_cmd_resp_exec_config.h"
 

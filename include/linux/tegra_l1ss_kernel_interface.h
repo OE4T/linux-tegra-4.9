@@ -19,12 +19,7 @@
 
 #include <linux/types.h>
 #include <linux/tegra_l1ss_ioctl.h>
-
-typedef enum {
-	L1SS_NOT_READY,
-	L1SS_READY,
-	L1SS_ALIVE_CHECK,
-} l1ss_cli_callback_param;
+#include <linux/platform/tegra/l1ss_datatypes.h>
 
 typedef int (*client_callback)(l1ss_cli_callback_param, void *);
 

@@ -23,6 +23,7 @@
 /* 6s / 40ms */
 #define TEGRA_L1SS_RUN_PHASE_HB_COUNT		150
 
+static nv_guard_tegraphase_t phase = NVGUARD_TEGRA_PHASE_INITDONE;
 int l1ss_cmd_resp_send_frame(const cmdresp_frame_ex_t *pCmdPkt,
 			     nv_guard_3lss_layer_t NvGuardLayerId,
 			     struct l1ss_data *ldata);
@@ -73,21 +74,6 @@ int cmd_resp_l1_user_rcv_FuSa_state_notification(
 static void tegra_safety_create_l1ss_hb(cmdresp_frame_ex_t *l1ss_hb)
 {
 	static u16 monotonic_count;
-	static uint8_t phase = NVGUARD_TEGRA_PHASE_INIT;
-
-	/*
-	 * 40ms is the HB polling period. Change the phase to INIT_DONE after 2s
-	 * as the register notifications are completed by then. Change the phase
-	 * to run after 6s of first HB as an optimistic kernel boot time from
-	 * first HB.
-	 */
-	if ((phase == NVGUARD_TEGRA_PHASE_INIT) &&
-			(monotonic_count ==
-			 TEGRA_L1SS_INIT_DONE_PHASE_HB_COUNT))
-		phase = NVGUARD_TEGRA_PHASE_INITDONE;
-	else if ((phase == NVGUARD_TEGRA_PHASE_INITDONE) &&
-			(monotonic_count == TEGRA_L1SS_RUN_PHASE_HB_COUNT))
-		phase = NVGUARD_TEGRA_PHASE_RUN;
 
 	/* Set phase to NVGUARD_TEGRA_PHASE_INIT for Init stage */
 	l1ss_hb->data[TEGRA_3LSS_PHASE_BYTE] = l_set_hb_field(
@@ -212,5 +198,36 @@ int user_send_ist_mesg(const nv_guard_user_msg_t *var1,
 			false);
 	l1ss_cmd_resp_send_frame(&lCmdRespData, layer_id, ldata);
 
+	return 0;
+}
+
+int user_send_phase_notify(struct l1ss_data *ldata, nv_guard_3lss_layer_t layer,
+		nv_guard_tegraphase_t phase)
+{
+	static cmdresp_frame_ex_t send_phase = {0};
+	int timeout =
+		wait_event_interruptible_timeout(ldata->cmd.notify_waitq,
+						 (atomic_read(
+						 &ldata->cmd.notify_registered)
+						  == 1),
+						 10 * HZ);
+	if (timeout <= 0) {
+		PDEBUG("Done ..but timeout ... wait for register notify\n");
+		return -1;
+	}
+
+	cmd_resp_update_header(&send_phase.header, CMDRESPL1_CLASS1,
+			CMDRESPL1_PHASE_NOTIFICATION, layer, false);
+	(void)memcpy(&send_phase.data[0], &phase, sizeof(uint8_t));
+
+	pr_info("%s: Sending phase %d to L2SS\n", __func__, phase);
+	return l1ss_cmd_resp_send_frame(&send_phase, NVGUARD_LAYER_2, ldata);
+}
+
+int cmd_resp_l1_user_rcv_phase_notify(const cmdresp_frame_ex_t *cmdresp_frame,
+		struct l1ss_data *ldata)
+{
+	(void)memcpy(&phase, &(cmdresp_frame->data[0]),
+			sizeof(nv_guard_tegraphase_t));
 	return 0;
 }

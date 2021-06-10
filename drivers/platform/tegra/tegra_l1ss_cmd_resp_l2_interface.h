@@ -66,4 +66,10 @@ int user_send_service_status_notification(const nv_guard_srv_status_t *Var1,
 int user_send_ist_mesg(const nv_guard_user_msg_t *var1,
 					  nv_guard_3lss_layer_t layer_id,
 					  struct l1ss_data *ldata);
+
+int user_send_phase_notify(struct l1ss_data *ldata, nv_guard_3lss_layer_t layer,
+		nv_guard_tegraphase_t phase);
+
+int cmd_resp_l1_user_rcv_phase_notify(const cmdresp_frame_ex_t *CmdRespFrame,
+					 struct l1ss_data *ldata);
 #endif

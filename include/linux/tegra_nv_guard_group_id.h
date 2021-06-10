@@ -112,4 +112,6 @@
 #define NVGUARD_GROUPID_HV		0x458U
 #define NVGUARD_GROUPID_PLATFORM	0x459U
 #define NVGUARD_GROUPID_MAX		90U
+
+typedef uint32_t nv_guard_group_id_t;
 #endif

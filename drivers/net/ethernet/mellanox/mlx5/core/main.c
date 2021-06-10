@@ -1419,6 +1419,7 @@ static void shutdown(struct pci_dev *pdev)
 	struct mlx5_priv *priv = &dev->priv;
 
 	dev_info(&pdev->dev, "Shutdown was called\n");
+	mlx5_thermal_deinit(dev);
 	/* Notify mlx5 clients that the kernel is being shut down */
 	set_bit(MLX5_INTERFACE_STATE_SHUTDOWN, &dev->intf_state);
 	mlx5_unload_one(dev, priv, false);

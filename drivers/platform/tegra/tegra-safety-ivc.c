@@ -354,6 +354,7 @@ static int tegra_safety_ivc_probe(struct platform_device *pdev)
 	struct tegra_safety_ivc *safety_ivc;
 	struct device *dev = &pdev->dev;
 	int ret, i;
+	nv_guard_request_t req;
 
 	dev_info(dev, "Probing sce safety driver\n");
 
@@ -409,6 +410,13 @@ static int tegra_safety_ivc_probe(struct platform_device *pdev)
 		}
 	}
 
+	req.srv_id_cmd = NVGUARD_PHASE_NOTIFICATION;
+	req.phase = NVGUARD_TEGRA_PHASE_INITDONE;
+	ret = l1ss_submit_rq(&req, false);
+	if (ret) {
+		dev_err(dev, "failed to submit phase init done: %d\n", ret);
+		goto fail;
+	}
 	dev_info(dev, "Successfully probed safety ivc driver\n");
 
 	return 0;

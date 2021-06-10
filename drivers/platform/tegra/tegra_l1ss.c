@@ -123,6 +123,10 @@ static int l1ss_process_request(nv_guard_request_t *req,
 							CMDRESPEXEC_L2_LAYER_ID,
 							ldata);
 		break;
+	case NVGUARD_PHASE_NOTIFICATION:
+		ret = user_send_phase_notify(ldata, CMDRESPEXEC_L2_LAYER_ID,
+				req->phase);
+		break;
 	default:
 		PDEBUG("cmd = %d not implemented\n", req->srv_id_cmd);
 	}

@@ -2048,4 +2048,6 @@ Global Maxima Group for Hardware = TSA
 /* NVGUARD_SERVICE_INVALID_HSMERR_RSVD_478  */
 /* NVGUARD_SERVICE_INVALID_HSMERR_RSVD_479  */
 /* NVGUARD_SERVICE_INVALID_HSMERR_RSVD_480  */
+
+typedef uint32_t nv_guard_service_id_t;
 #endif

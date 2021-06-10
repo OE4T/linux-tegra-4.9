@@ -177,7 +177,7 @@
 	cmd_resp_l1_callback_not_configured, 0U},\
 	{CMDRESPL1_CMD_ID_NOTUSED, cmd_resp_l1_callback_not_configured,\
 	cmd_resp_l1_callback_not_configured, 0U},\
-	{CMDRESPL1_CMD_ID_NOTUSED, cmd_resp_l1_callback_not_configured,\
+	{CMDRESPL1_PHASE_NOTIFICATION, cmd_resp_l1_user_rcv_phase_notify,\
 	cmd_resp_l1_callback_not_configured, 0U},\
 	{CMDRESPL1_FUSA_STATE_NOTIFICATION,\
 		cmd_resp_l1_user_rcv_FuSa_state_notification,\

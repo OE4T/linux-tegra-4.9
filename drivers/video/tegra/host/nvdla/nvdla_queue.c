@@ -1203,7 +1203,7 @@ fail:
 	return err;
 }
 
-int nvdla_fill_task_desc(struct nvdla_task *task)
+int nvdla_fill_task_desc(struct nvdla_task *task, bool bypass_exec)
 {
 	int err;
 	struct dla_task_descriptor *task_desc;
@@ -1218,6 +1218,12 @@ int nvdla_fill_task_desc(struct nvdla_task *task)
 	task_desc->engine_id = DLA_ENGINE_ID;
 	task_desc->size = nvdla_get_task_desc_size();
 	task_desc->timeout = task->timeout;
+
+	task_desc->flags = 0U;
+	if (bypass_exec) {
+		task_desc->flags =
+			(task_desc->flags | DLA_DESC_FLAGS_BYPASS_EXEC);
+	}
 
 	/* update current task sequeue, make sure wrap around condition */
 	queue->sequence = queue->sequence + 1;

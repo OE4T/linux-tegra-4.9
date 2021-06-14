@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host NVDLA
  *
- * Copyright (c) 2016-2019 NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2016-2021 NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -389,14 +389,15 @@ void nvdla_task_get(struct nvdla_task *task);
 /**
  * nvdla_task_alloc()	allocate task for a give queue
  *
- * @task		Pointer to nvdla_task
+ * @task		Pointer to nvdla_task.
+ * @bypass_exec		Task is marked to bypass its execution.
  *
  * Return		allocated task in success, otherwise pointer to err
  *
  * This function allocates task desc and fills up initial task descriptor as
  * task parameter detais
  */
-int nvdla_fill_task_desc(struct nvdla_task *task);
+int nvdla_fill_task_desc(struct nvdla_task *task, bool bypass_exec);
 
 /**
  * nvdla_send_postfences()	send back fences to UMD

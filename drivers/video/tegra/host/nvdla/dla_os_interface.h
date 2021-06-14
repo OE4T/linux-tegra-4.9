@@ -25,7 +25,7 @@
  * @brief Jobs to DLA are submitted in form of task and uses @ref dla_task_descriptor
  * @{
  */
-#define DLA_DESCRIPTOR_VERSION	1
+#define DLA_DESCRIPTOR_VERSION	2U
 /** @} */
 
 /**
@@ -166,6 +166,13 @@
  *                                               first entry has to be dla_roi_array_desc
  * @num_addresses: Number of addresses in address list
  * @status: Update task status here after completion
+ * @timeout: Timeout (in us), that starts to expire after task is
+ *           scheduled for execution.
+ * @flags: Flags to minorly tweak firmware behavior.
+ *      Supported flags:
+ *          - DLA_DESC_FLAGS_BYPASS_EXEC: skips execution
+ * @reserved1: reserved for future use.
+ * @reserved2: reserved for future use.
  */
 struct dla_task_descriptor {
 	/* Common parameters */
@@ -185,6 +192,11 @@ struct dla_task_descriptor {
 	uint16_t num_addresses;
 	uint16_t status;
 	uint64_t timeout;
+#define DLA_DESC_FLAGS_BYPASS_EXEC	(1U << 0)
+	uint16_t flags;
+
+	uint64_t reserved1;
+	uint64_t reserved2;
 } __attribute__ ((packed, aligned(4)));
 
 struct dla_action_list {

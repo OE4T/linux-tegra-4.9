@@ -1021,6 +1021,7 @@ static int nvdla_submit(struct nvdla_private *priv, void *arg)
 	u32 num_tasks;
 	struct nvdla_task *task = NULL; // task under submission
 	int err = 0, i = 0;
+	bool bypass_exec;
 
 	if (!args || !priv)
 		return -EINVAL;
@@ -1043,6 +1044,9 @@ static int nvdla_submit(struct nvdla_private *priv, void *arg)
 		return -EINVAL;
 
 	nvdla_dbg_info(pdev, "num of tasks [%d]", num_tasks);
+
+	bypass_exec = ((args->flags & NVDLA_SUBMIT_FLAGS_BYPASS_EXEC) != 0U);
+	nvdla_dbg_info(pdev, "submit flags [%u]", args->flags);
 
 	/* IOCTL copy descriptors*/
 	if (copy_from_user(local_tasks, (void __user *)user_tasks,
@@ -1078,7 +1082,12 @@ static int nvdla_submit(struct nvdla_private *priv, void *arg)
 		nvdla_dbg_info(pdev, "dump task[%d] done", i + 1);
 
 		/* update task desc fields */
-		err = nvdla_fill_task_desc(task);
+		/**
+		 * Bypass execution of submission shall propagate downstream
+		 * as bypass execution of all tasks corresponding to that
+		 * submit.
+		 **/
+		err = nvdla_fill_task_desc(task, bypass_exec);
 		if (err) {
 			nvdla_dbg_err(pdev, "fail to fill task desc%d", i + 1);
 			goto fail_to_fill_task_desc;

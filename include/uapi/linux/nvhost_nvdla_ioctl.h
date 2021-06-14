@@ -96,6 +96,7 @@ struct nvdla_submit_args {
 	__u16 num_tasks;
 #define MAX_TASKS_PER_SUBMIT		16
 #define NVDLA_SUBMIT_FLAGS_ATOMIC	(1 << 0)
+#define NVDLA_SUBMIT_FLAGS_BYPASS_EXEC	(1 << 1)
 	__u16 flags;
 	__u32 version;
 };

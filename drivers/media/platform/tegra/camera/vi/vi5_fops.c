@@ -282,6 +282,8 @@ static void vi5_setup_surface(struct tegra_channel *chan,
 	u32 data_type = chan->fmtinfo->img_dt;
 	u32 nvcsi_stream = chan->port[vi_port];
 	struct capture_descriptor *desc = &chan->request[vi_port][descr_index];
+	struct capture_descriptor_memoryinfo *desc_memoryinfo =
+		&chan->tegra_vi_channel[vi_port]->capture_data->requests_memoryinfo[descr_index];
 
 	if (chan->valid_ports > NVCSI_STREAM_1){
 		height = chan->gang_height;
@@ -290,6 +292,7 @@ static void vi5_setup_surface(struct tegra_channel *chan,
 	}
 
 	memcpy(desc, &capture_template, sizeof(capture_template));
+	memset(desc_memoryinfo, 0, sizeof(*desc_memoryinfo));
 
 	desc->sequence = chan->capture_descr_sequence;
 	desc->ch_cfg.match.stream = (1u << nvcsi_stream); /* one-hot bit encoding */
@@ -301,18 +304,20 @@ static void vi5_setup_surface(struct tegra_channel *chan,
 	desc->ch_cfg.pixfmt_enable = 1;
 	desc->ch_cfg.pixfmt.format = format;
 
-	desc->ch_cfg.atomp.surface[0].offset = (u32)offset;
-	desc->ch_cfg.atomp.surface[0].offset_hi = (u32)(offset >> 32U);
+	desc_memoryinfo->surface[0].base_address = offset;
+	desc_memoryinfo->surface[0].size = chan->format.bytesperline * height;
 	desc->ch_cfg.atomp.surface_stride[0] = bpl;
 
 	if (chan->embedded_data_height > 0) {
 		desc->ch_cfg.embdata_enable = 1;
 		desc->ch_cfg.frame.embed_x = chan->embedded_data_width * BPP_MEM;
 		desc->ch_cfg.frame.embed_y = chan->embedded_data_height;
-		desc->ch_cfg.atomp.surface[VI_ATOMP_SURFACE_EMBEDDED].offset
-			= (u32)chan->vi->emb_buf;
-		desc->ch_cfg.atomp.surface[VI_ATOMP_SURFACE_EMBEDDED].offset_hi
-			= (u32)(chan->vi->emb_buf >> 32U);
+
+		desc_memoryinfo->surface[VI_ATOMP_SURFACE_EMBEDDED].base_address
+			= chan->vi->emb_buf;
+		desc_memoryinfo->surface[VI_ATOMP_SURFACE_EMBEDDED].size
+			= desc->ch_cfg.frame.embed_x * desc->ch_cfg.frame.embed_y;
+
 		desc->ch_cfg.atomp.surface_stride[VI_ATOMP_SURFACE_EMBEDDED]
 			= chan->embedded_data_width * BPP_MEM;
 	}
@@ -484,12 +489,6 @@ static int vi5_channel_error_recover(struct tegra_channel *chan,
 
 	/* stop vi channel */
 	for(vi_port = 0; vi_port < chan->valid_ports; vi_port++) {
-		err = vi_capture_release(chan->tegra_vi_channel[vi_port],
-			CAPTURE_CHANNEL_RESET_FLAG_IMMEDIATE);
-		if (err) {
-			dev_err(&chan->video->dev, "vi capture release failed\n");
-			goto done;
-		}
 		vi_channel_close_ex(chan->id, chan->tegra_vi_channel[vi_port]);
 	}
 
@@ -820,11 +819,6 @@ err_set_stream:
 		vi5_channel_stop_kthreads(chan);
 
 err_start_kthreads:
-	if (!chan->bypass)
-		for (vi_port = 0; vi_port < chan->valid_ports; vi_port++)
-			vi_capture_release(chan->tegra_vi_channel[vi_port],
-				CAPTURE_CHANNEL_RESET_FLAG_IMMEDIATE);
-
 err_setup:
 	if (!chan->bypass)
 		for (vi_port = 0; vi_port < chan->valid_ports; vi_port++) {

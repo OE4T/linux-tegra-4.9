@@ -248,7 +248,6 @@ struct tegra_channel {
 	int vnc_id[TEGRA_CSI_BLOCKS];
 	int grp_id;
 
-	struct vi_capture *capture_data;
 	struct v4l2_async_notifier notifier;
 	struct list_head entities;
 	struct device_node *endpoint_node; /* endpoint of_node in vi */

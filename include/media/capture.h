@@ -37,6 +37,10 @@ struct vi_capture {
 	struct tegra_vi_channel *vi_channel;
 	struct capture_buffer_table *buf_ctx;
 	struct capture_common_buf requests;
+	struct capture_descriptor_memoryinfo *requests_memoryinfo;
+		/**< memory info ringbuffer handle*/
+	uint64_t requests_memoryinfo_iova;
+		/**< memory info ringbuffer rtcpu iova */
 	size_t request_buf_size;
 	uint32_t queue_depth;
 	uint32_t request_size;
@@ -64,7 +68,7 @@ struct vi_capture {
 
 	struct mutex reset_lock;
 	struct mutex unpins_list_lock;
-	struct capture_common_unpins **unpins_list;
+	struct capture_common_unpins *unpins_list;
 
 	uint64_t vi_channel_mask;
 };

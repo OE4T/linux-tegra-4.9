@@ -1177,6 +1177,17 @@ static int eqos_open(struct net_device *dev)
 	}
 	phy_start(pdata->phydev);
 
+	if (pdata->wolopts) {
+		struct ethtool_wolinfo wol = { .cmd = ETHTOOL_SWOL };
+
+		wol.wolopts = WAKE_MAGIC;
+		ret = phy_ethtool_set_wol(pdata->phydev, &wol);
+		if (ret < 0) {
+			dev_err(&dev->dev, "Wol set failed\n");
+			goto err_ptp;
+		}
+	}
+
 	netif_tx_start_all_queues(pdata->dev);
 
 	pr_debug("<--%s()\n", __func__);

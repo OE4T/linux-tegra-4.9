@@ -1504,6 +1504,8 @@ int eqos_probe(struct platform_device *pdev)
 	}
 
 	eqos_clock_disable(pdata);
+	/* keep initial settings as restore disabled */
+	pdata->wolopts = 0;
 
 	/* put Ethernet PHY in reset for power save */
 	if (gpio_is_valid(pdata->phy_reset_gpio) &&
@@ -1754,6 +1756,19 @@ static int eqos_resume_noirq(struct device *dev)
 		/* Init the PHY */
 		pdata->phydev->drv->config_init(pdata->phydev);
 		phy_start(pdata->phydev);
+	}
+
+	/* restore wake on lan settings if already enabled */
+	if (pdata->wolopts) {
+		struct ethtool_wolinfo wol = { .cmd = ETHTOOL_SWOL };
+
+		wol.wolopts = WAKE_MAGIC;
+		/* set the WoL bit */
+		ret = phy_ethtool_set_wol(pdata->phydev, &wol);
+		if (ret < 0) {
+			dev_err(&pdata->pdev->dev, "WoL set failed\n");
+			return ret;
+		}
 	}
 
 	netif_tx_start_all_queues(pdata->dev);

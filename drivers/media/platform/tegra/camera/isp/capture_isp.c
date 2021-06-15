@@ -38,6 +38,10 @@ struct isp_desc_rec {
 	size_t request_buf_size;
 	uint32_t queue_depth;
 	uint32_t request_size;
+	void *requests_memoryinfo;
+		/**< memory info ringbuffer */
+	uint64_t requests_memoryinfo_iova;
+		/**< memory info ringbuffer rtcpu iova */
 
 	uint32_t progress_status_buffer_depth;
 
@@ -483,6 +487,21 @@ int isp_capture_setup(struct tegra_isp_channel *chan,
 		goto unpins_list_fail;
 	}
 
+	/* Allocate memory info ring buffer for isp capture descriptors */
+	capture->capture_desc_ctx.requests_memoryinfo =
+		dma_alloc_coherent(capture->rtcpu_dev,
+			capture->capture_desc_ctx.queue_depth *
+			sizeof(struct isp_capture_descriptor_memoryinfo),
+			&capture->capture_desc_ctx.requests_memoryinfo_iova,
+			GFP_KERNEL);
+
+	if (!capture->capture_desc_ctx.requests_memoryinfo) {
+		dev_err(chan->isp_dev,
+			"%s: capture_desc_ctx meminfo alloc failed\n",
+			__func__);
+		goto capture_meminfo_alloc_fail;
+	}
+
 	/* pin the isp program descriptor ring buffer */
 	dev_dbg(chan->isp_dev, "%s: descr buffer handle %u\n",
 			__func__, setup->isp_program_mem);
@@ -522,6 +541,21 @@ int isp_capture_setup(struct tegra_isp_channel *chan,
 		goto prog_unpins_list_fail;
 	}
 
+	/* Allocate memory info ring buffer for program descriptors */
+	capture->program_desc_ctx.requests_memoryinfo =
+		dma_alloc_coherent(capture->rtcpu_dev,
+			capture->program_desc_ctx.queue_depth *
+			sizeof(struct memoryinfo_surface),
+			&capture->program_desc_ctx.requests_memoryinfo_iova,
+			GFP_KERNEL);
+
+	if (!capture->program_desc_ctx.requests_memoryinfo) {
+		dev_err(chan->isp_dev,
+			"%s: program_desc_ctx meminfo alloc failed\n",
+			__func__);
+		goto program_meminfo_alloc_fail;
+	}
+
 	err = isp_capture_setup_syncpts(chan);
 	if (err < 0) {
 		dev_err(chan->isp_dev, "%s: syncpt setup failed\n", __func__);
@@ -547,10 +581,18 @@ int isp_capture_setup(struct tegra_isp_channel *chan,
 	config->request_queue_depth = setup->queue_depth;
 	config->request_size = setup->request_size;
 	config->requests = capture->capture_desc_ctx.requests.iova;
+	config->requests_memoryinfo =
+		capture->capture_desc_ctx.requests_memoryinfo_iova;
+	config->request_memoryinfo_size =
+		sizeof(struct isp_capture_descriptor_memoryinfo);
 
 	config->program_queue_depth = setup->isp_program_queue_depth;
 	config->program_size = setup->isp_program_request_size;
 	config->programs = capture->program_desc_ctx.requests.iova;
+	config->programs_memoryinfo =
+		capture->program_desc_ctx.requests_memoryinfo_iova;
+	config->program_memoryinfo_size =
+		sizeof(struct memoryinfo_surface);
 
 	config->progress_sp = capture->progress_sp;
 	config->stats_progress_sp = capture->stats_progress_sp;
@@ -574,7 +616,7 @@ int isp_capture_setup(struct tegra_isp_channel *chan,
 	if (resp_msg->channel_isp_setup_resp.result != CAPTURE_OK) {
 		dev_err(chan->isp_dev, "%s: control failed, errno %d", __func__,
 			resp_msg->channel_setup_resp.result);
-		err = -EINVAL;
+		err = -EIO;
 		goto submit_fail;
 	}
 
@@ -607,10 +649,22 @@ submit_fail:
 control_cb_fail:
 	isp_capture_release_syncpts(chan);
 syncpt_fail:
+	dma_free_coherent(capture->rtcpu_dev,
+		capture->program_desc_ctx.queue_depth *
+		sizeof(struct memoryinfo_surface),
+		capture->program_desc_ctx.requests_memoryinfo,
+		capture->program_desc_ctx.requests_memoryinfo_iova);
+program_meminfo_alloc_fail:
 	vfree(capture->program_desc_ctx.unpins_list);
 prog_unpins_list_fail:
 	capture_common_unpin_memory(&capture->program_desc_ctx.requests);
 prog_pin_fail:
+	dma_free_coherent(capture->rtcpu_dev,
+		capture->capture_desc_ctx.queue_depth *
+			sizeof(struct isp_capture_descriptor_memoryinfo),
+		capture->capture_desc_ctx.requests_memoryinfo,
+		capture->capture_desc_ctx.requests_memoryinfo_iova);
+capture_meminfo_alloc_fail:
 	vfree(capture->capture_desc_ctx.unpins_list);
 unpins_list_fail:
 	capture_common_unpin_memory(&capture->capture_desc_ctx.requests);
@@ -778,6 +832,18 @@ int isp_capture_release(struct tegra_isp_channel *chan,
 	capture->program_desc_ctx.unpins_list = NULL;
 	vfree(capture->capture_desc_ctx.unpins_list);
 	capture->capture_desc_ctx.unpins_list = NULL;
+
+	dma_free_coherent(capture->rtcpu_dev,
+		capture->program_desc_ctx.queue_depth *
+			sizeof(struct memoryinfo_surface),
+		capture->program_desc_ctx.requests_memoryinfo,
+		capture->program_desc_ctx.requests_memoryinfo_iova);
+
+	dma_free_coherent(capture->rtcpu_dev,
+		capture->capture_desc_ctx.queue_depth *
+			sizeof(struct isp_capture_descriptor_memoryinfo),
+		capture->capture_desc_ctx.requests_memoryinfo,
+		capture->capture_desc_ctx.requests_memoryinfo_iova);
 
 	if (capture->is_progress_status_notifier_set)
 		capture_common_release_progress_status_notifier(
@@ -1040,7 +1106,9 @@ int isp_capture_program_request(struct tegra_isp_channel *chan,
 	struct isp_capture *capture = chan->capture_data;
 	struct CAPTURE_MSG capture_msg;
 	int err = 0;
-	struct capture_common_pin_req cap_common_req;
+	struct memoryinfo_surface *meminfo;
+	struct isp_program_descriptor *desc;
+	uint32_t request_offset;
 
 	if (capture == NULL) {
 		dev_err(chan->isp_dev,
@@ -1060,11 +1128,17 @@ int isp_capture_program_request(struct tegra_isp_channel *chan,
 		return -EINVAL;
 	}
 
-	if (req->isp_program_relocs.num_relocs == 0) {
-		dev_err(chan->isp_dev,
-			"%s: req must have non-zero relocs\n", __func__);
+	if (capture->program_desc_ctx.unpins_list == NULL) {
+		dev_err(chan->isp_dev, "Channel setup incomplete\n");
 		return -EINVAL;
 	}
+
+	if (req->buffer_index >= capture->program_desc_ctx.queue_depth) {
+		dev_err(chan->isp_dev, "buffer index is out of bound\n");
+		return -EINVAL;
+	}
+
+	speculation_barrier();
 
 	mutex_lock(&capture->reset_lock);
 	if (capture->reset_capture_program_flag) {
@@ -1073,37 +1147,43 @@ int isp_capture_program_request(struct tegra_isp_channel *chan,
 			; /* do nothing */
 	}
 	capture->reset_capture_program_flag = false;
+	mutex_unlock(&capture->reset_lock);
+
+	mutex_lock(&capture->program_desc_ctx.unpins_list_lock);
+	if (capture->program_desc_ctx.unpins_list[req->buffer_index].num_unpins != 0) {
+		dev_err(chan->isp_dev,
+			"%s: program request is still in use by rtcpu\n",
+			__func__);
+		mutex_unlock(&capture->program_desc_ctx.unpins_list_lock);
+		return -EBUSY;
+	}
+
+	meminfo = &((struct memoryinfo_surface *)
+			capture->program_desc_ctx.requests_memoryinfo)
+				[req->buffer_index];
+
+	desc = (struct isp_program_descriptor *)
+		(capture->program_desc_ctx.requests.va + req->buffer_index *
+				capture->program_desc_ctx.request_size);
+
+	/* Pushbuffer 1 is located after program desc in same ringbuffer */
+	request_offset = req->buffer_index *
+			capture->program_desc_ctx.request_size;
+
+	err = capture_common_pin_and_get_iova(chan->capture_data->buffer_ctx,
+		(uint32_t)(desc->isp_pb1_mem >> 32U), /* mem handle */
+		((uint32_t)desc->isp_pb1_mem) + request_offset, /* offset */
+		&meminfo->base_address,
+		&meminfo->size,
+		&capture->program_desc_ctx.unpins_list[req->buffer_index]);
+
+	mutex_unlock(&capture->program_desc_ctx.unpins_list_lock);
 
 	memset(&capture_msg, 0, sizeof(capture_msg));
 	capture_msg.header.msg_id = CAPTURE_ISP_PROGRAM_REQUEST_REQ;
 	capture_msg.header.channel_id = capture->channel_id;
 	capture_msg.capture_isp_program_request_req.buffer_index =
 				req->buffer_index;
-
-	/* memory pin and reloc */
-	cap_common_req.table = capture->buffer_ctx;
-	cap_common_req.dev = chan->isp_dev;
-	cap_common_req.rtcpu_dev = capture->rtcpu_dev;
-	cap_common_req.unpins =
-		&capture->program_desc_ctx.unpins_list[req->buffer_index];
-	cap_common_req.requests = &capture->program_desc_ctx.requests;
-	cap_common_req.request_size = capture->program_desc_ctx.request_size;
-	cap_common_req.request_offset = req->buffer_index *
-					capture->program_desc_ctx.request_size;
-	cap_common_req.requests_mem = capture->program_desc_ctx.requests.buf;
-	cap_common_req.num_relocs = req->isp_program_relocs.num_relocs;
-	cap_common_req.reloc_user = (uint32_t __user *)
-			(uintptr_t)req->isp_program_relocs.reloc_relatives;
-
-	err = capture_common_request_pin_and_reloc(&cap_common_req);
-	if (err < 0) {
-		dev_err(chan->isp_dev, "request pin and reloc failed\n");
-		goto fail;
-	}
-
-	dev_dbg(chan->isp_dev, "%s: sending chan_id %u msg_id %u buf:%u\n",
-			__func__, capture_msg.header.channel_id,
-			capture_msg.header.msg_id, req->buffer_index);
 
 	err = tegra_capture_ivc_capture_submit(&capture_msg,
 			sizeof(capture_msg));
@@ -1159,12 +1239,132 @@ int isp_capture_program_status(struct tegra_isp_channel *chan)
 	return 0;
 }
 
+/**
+ * Pin/map buffers and save iova boundaries into corresponding
+ * memoryinfo struct.
+ */
+static int pin_isp_capture_request_buffers_locked(
+		struct tegra_isp_channel *chan,
+		struct isp_capture_req *req,
+		struct capture_common_unpins *request_unpins)
+{
+	struct isp_desc_rec *capture_desc_ctx =
+			&chan->capture_data->capture_desc_ctx;
+	struct isp_capture_descriptor *desc = (struct isp_capture_descriptor *)
+		(capture_desc_ctx->requests.va +
+			req->buffer_index * capture_desc_ctx->request_size);
+
+	struct isp_capture_descriptor_memoryinfo *desc_mem =
+		&((struct isp_capture_descriptor_memoryinfo *)
+			capture_desc_ctx->requests_memoryinfo)
+				[req->buffer_index];
+
+	struct capture_buffer_table *buffer_ctx =
+			chan->capture_data->buffer_ctx;
+	int i, j;
+	int err = 0;
+
+	/* Pushbuffer 2 is located after isp desc, in same ringbuffer */
+	uint32_t request_offset = req->buffer_index *
+			capture_desc_ctx->request_size;
+
+	err = capture_common_pin_and_get_iova(buffer_ctx,
+			(uint32_t)(desc->isp_pb2_mem >> 32U),
+			((uint32_t)desc->isp_pb2_mem) + request_offset,
+			&desc_mem->isp_pb2_mem.base_address,
+			&desc_mem->isp_pb2_mem.size,
+			request_unpins);
+
+	if (err) {
+		dev_err(chan->isp_dev, "%s: get pushbuffer2 iova failed\n",
+			__func__);
+		goto fail;
+	}
+
+	for (i = 0; i < ISP_MAX_INPUT_SURFACES; i++) {
+		err = capture_common_pin_and_get_iova(buffer_ctx,
+			desc->input_mr_surfaces[i].offset_hi,
+			desc->input_mr_surfaces[i].offset,
+			&desc_mem->input_mr_surfaces[i].base_address,
+			&desc_mem->input_mr_surfaces[i].size,
+			request_unpins);
+
+		if (err) {
+			dev_err(chan->isp_dev,
+				"%s: get input_mr_surfaces iova failed\n",
+				__func__);
+			goto fail;
+		}
+	}
+
+	for (i = 0; i < ISP_MAX_OUTPUTS; i++) {
+		for (j = 0; j < ISP_MAX_OUTPUT_SURFACES; j++) {
+			err = capture_common_pin_and_get_iova(buffer_ctx,
+				desc->outputs_mw[i].surfaces[j].offset_hi,
+				desc->outputs_mw[i].surfaces[j].offset,
+				&desc_mem->outputs_mw[i].surfaces[j].base_address,
+				&desc_mem->outputs_mw[i].surfaces[j].size,
+				request_unpins);
+
+			if (err) {
+				dev_err(chan->isp_dev,
+					"%s: get outputs_mw iova failed\n",
+					__func__);
+				goto fail;
+			}
+		}
+	}
+
+	/* Pin stats surfaces */
+	{
+		struct stats_surface *stats_surfaces[] = {
+			&desc->fb_surface,	&desc->fm_surface,
+			&desc->afm_surface,	&desc->lac0_surface,
+			&desc->lac1_surface,	&desc->h0_surface,
+			&desc->h1_surface,
+			&desc->pru_bad_surface,	&desc->ltm_surface,
+		};
+
+		struct memoryinfo_surface *meminfo_surfaces[] = {
+			&desc_mem->fb_surface,	&desc_mem->fm_surface,
+			&desc_mem->afm_surface,	&desc_mem->lac0_surface,
+			&desc_mem->lac1_surface,	&desc_mem->h0_surface,
+			&desc_mem->h1_surface,
+			&desc_mem->pru_bad_surface,	&desc_mem->ltm_surface,
+		};
+
+		BUILD_BUG_ON(ARRAY_SIZE(stats_surfaces) !=
+				ARRAY_SIZE(meminfo_surfaces));
+
+		for (i = 0; i < ARRAY_SIZE(stats_surfaces); i++) {
+			err = capture_common_pin_and_get_iova(buffer_ctx,
+					stats_surfaces[i]->offset_hi,
+					stats_surfaces[i]->offset,
+					&meminfo_surfaces[i]->base_address,
+					&meminfo_surfaces[i]->size,
+					request_unpins);
+			if (err)
+				goto fail;
+		}
+	}
+
+	/* pin engine status surface */
+	err = capture_common_pin_and_get_iova(buffer_ctx,
+			desc->engine_status.offset_hi,
+			desc->engine_status.offset,
+			&desc_mem->engine_status.base_address,
+			&desc_mem->engine_status.size,
+			request_unpins);
+fail:
+	/* Unpin cleanup is done in isp_capture_request_unpin() */
+	return err;
+}
+
 int isp_capture_request(struct tegra_isp_channel *chan,
 		struct isp_capture_req *req)
 {
 	struct isp_capture *capture = chan->capture_data;
 	struct CAPTURE_MSG capture_msg;
-	struct capture_common_pin_req cap_common_req;
 	uint32_t request_offset;
 	int err = 0;
 
@@ -1186,11 +1386,17 @@ int isp_capture_request(struct tegra_isp_channel *chan,
 		return -EINVAL;
 	}
 
-	if (req->isp_relocs.num_relocs == 0) {
-		dev_err(chan->isp_dev,
-			"%s: req must have non-zero relocs\n", __func__);
+	if (capture->capture_desc_ctx.unpins_list == NULL) {
+		dev_err(chan->isp_dev, "Channel setup incomplete\n");
 		return -EINVAL;
 	}
+
+	if (req->buffer_index >= capture->capture_desc_ctx.queue_depth) {
+		dev_err(chan->isp_dev, "buffer index is out of bound\n");
+		return -EINVAL;
+	}
+
+	speculation_barrier();
 
 	mutex_lock(&capture->reset_lock);
 	if (capture->reset_capture_flag) {
@@ -1199,6 +1405,7 @@ int isp_capture_request(struct tegra_isp_channel *chan,
 			; /* do nothing */
 	}
 	capture->reset_capture_flag = false;
+	mutex_unlock(&capture->reset_lock);
 
 	memset(&capture_msg, 0, sizeof(capture_msg));
 	capture_msg.header.msg_id = CAPTURE_ISP_REQUEST_REQ;
@@ -1220,23 +1427,23 @@ int isp_capture_request(struct tegra_isp_channel *chan,
 		goto fail;
 	}
 
-	/* pin and reloc */
-	cap_common_req.table = capture->buffer_ctx;
-	cap_common_req.dev = chan->isp_dev;
-	cap_common_req.rtcpu_dev = capture->rtcpu_dev;
-	cap_common_req.unpins =
-		&capture->capture_desc_ctx.unpins_list[req->buffer_index];
-	cap_common_req.requests = &capture->capture_desc_ctx.requests;
-	cap_common_req.request_size = capture->capture_desc_ctx.request_size;
-	cap_common_req.request_offset = request_offset;
-	cap_common_req.requests_mem = capture->capture_desc_ctx.requests.buf;
-	cap_common_req.num_relocs = req->isp_relocs.num_relocs;
-	cap_common_req.reloc_user = (uint32_t __user *)
-			(uintptr_t)req->isp_relocs.reloc_relatives;
+	mutex_lock(&capture->capture_desc_ctx.unpins_list_lock);
+	if (capture->capture_desc_ctx.unpins_list[req->buffer_index].num_unpins != 0U) {
+		dev_err(chan->isp_dev,
+			"%s: descriptor is still in use by rtcpu\n",
+			__func__);
+		mutex_unlock(&capture->capture_desc_ctx.unpins_list_lock);
+		return -EBUSY;
+	}
 
-	err = capture_common_request_pin_and_reloc(&cap_common_req);
+	err = pin_isp_capture_request_buffers_locked(chan, req,
+		&capture->capture_desc_ctx.unpins_list[req->buffer_index]);
+
+	mutex_unlock(&capture->capture_desc_ctx.unpins_list_lock);
+
 	if (err < 0) {
-		dev_err(chan->isp_dev, "request pin and reloc failed\n");
+		dev_err(chan->isp_dev, "%s failed to pin request buffers\n",
+			__func__);
 		goto fail;
 	}
 
@@ -1258,12 +1465,9 @@ int isp_capture_request(struct tegra_isp_channel *chan,
 		goto fail;
 	}
 
-	mutex_unlock(&capture->reset_lock);
-
 	return 0;
 
 fail:
-	mutex_unlock(&capture->reset_lock);
 	isp_capture_request_unpin(chan, req->buffer_index);
 	return err;
 }

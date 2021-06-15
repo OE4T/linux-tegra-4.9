@@ -1,13 +1,14 @@
 /*
- * Tegra capture common operations
+ * Copyright (c) 2017-2021 NVIDIA Corporation.  All rights reserved.
  *
- * Copyright (c) 2017-2019, NVIDIA CORPORATION.  All rights reserved.
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms and conditions of the GNU General Public License,
+ * version 2, as published by the Free Software Foundation.
  *
- * Author: Sudhir Vyas <svyas@nvidia.com>
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
+ * This program is distributed in the hope it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
  */
 
 #include <media/mc_common.h>
@@ -63,19 +64,6 @@ struct capture_common_unpins {
 	struct capture_mapping *data[MAX_PIN_BUFFER_PER_REQUEST]; /**< Surface buffers to unpin */
 };
 
-struct capture_common_pin_req {
-	struct device *dev;
-	struct device *rtcpu_dev;
-	struct capture_buffer_table *table;
-	struct capture_common_unpins *unpins;
-	struct capture_common_buf *requests;
-	uint32_t request_size;
-	uint32_t request_offset;
-	struct dma_buf *requests_mem;
-	uint32_t num_relocs;
-	uint32_t __user *reloc_user;
-};
-
 struct capture_common_status_notifier {
 	struct dma_buf *buf;
 	void *va;
@@ -100,8 +88,6 @@ int capture_common_pin_memory(struct device *dev,
 		uint32_t mem, struct capture_common_buf *unpin_data);
 
 void capture_common_unpin_memory(struct capture_common_buf *unpin_data);
-
-int capture_common_request_pin_and_reloc(struct capture_common_pin_req *req);
 
 /**
  * @brief Pins (maps) the physical address for provided capture surface address

@@ -263,11 +263,11 @@ static int isp_channel_open(struct inode *inode, struct file *file)
 	chan->ops = chan_drv->ops;
 	chan->priv = file;
 
-	err = isp_channel_power_on(chan);
+	err = isp_capture_init(chan);
 	if (err < 0)
 		goto error;
 
-	err = isp_capture_init(chan);
+	err = isp_channel_power_on(chan);
 	if (err < 0)
 		goto init_err;
 
@@ -286,9 +286,9 @@ static int isp_channel_open(struct inode *inode, struct file *file)
 	return nonseekable_open(inode, file);
 
 chan_err:
-	isp_capture_shutdown(chan);
-init_err:
 	isp_channel_power_off(chan);
+init_err:
+	isp_capture_shutdown(chan);
 error:
 	kfree(chan);
 	return err;
@@ -300,8 +300,8 @@ static int isp_channel_release(struct inode *inode, struct file *file)
 	unsigned channel = iminor(inode);
 	struct isp_channel_drv *chan_drv = chan->drv;
 
-	isp_capture_shutdown(chan);
 	isp_channel_power_off(chan);
+	isp_capture_shutdown(chan);
 
 	mutex_lock(&chan_drv->lock);
 

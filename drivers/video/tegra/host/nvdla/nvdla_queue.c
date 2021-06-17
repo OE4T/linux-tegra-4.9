@@ -290,32 +290,32 @@ static void nvdla_task_syncpt_reset(struct nvhost_syncpt *syncpt,
 
 static inline int nvdla_get_max_preaction_size(void)
 {
-	return (((MAX_NUM_NVDLA_PREFENCES + MAX_NUM_NVDLA_IN_TASK_STATUS +
-			MAX_NUM_NVDLA_OUT_TASK_STATUS +
-			MAX_NUM_NVDLA_OUT_TIMESTAMP) *
+	return (((MAX_NVDLA_PREFENCES_PER_TASK + MAX_NVDLA_IN_STATUS_PER_TASK +
+			MAX_NVDLA_OUT_STATUS_PER_TASK +
+			MAX_NVDLA_OUT_TIMESTAMPS_PER_TASK) *
 		sizeof(struct dla_action_opcode)) +
-		(MAX_NUM_NVDLA_PREFENCES *
+		(MAX_NVDLA_PREFENCES_PER_TASK *
 			sizeof(struct dla_action_semaphore)) +
-		((MAX_NUM_NVDLA_IN_TASK_STATUS + MAX_NUM_NVDLA_OUT_TASK_STATUS) *
+		((MAX_NVDLA_IN_STATUS_PER_TASK + MAX_NVDLA_OUT_STATUS_PER_TASK) *
 			sizeof(struct dla_action_task_status)) +
-		(MAX_NUM_NVDLA_OUT_TIMESTAMP *
+		(MAX_NVDLA_OUT_TIMESTAMPS_PER_TASK *
 			sizeof(struct dla_action_timestamp)) +
 		sizeof(struct dla_action_opcode));
 }
 
 static inline int nvdla_get_max_postaction_size(void)
 {
-	return (((MAX_NUM_NVDLA_POSTFENCES +
-				MAX_NUM_NVDLA_OUT_TASK_STATUS +
-				MAX_NUM_NVDLA_OUT_TIMESTAMP +
+	return (((MAX_NVDLA_POSTFENCES_PER_TASK +
+				MAX_NVDLA_OUT_STATUS_PER_TASK +
+				MAX_NVDLA_OUT_TIMESTAMPS_PER_TASK +
 				NUM_PROFILING_POSTACTION) *
 		sizeof(struct dla_action_opcode)) +
-		(MAX_NUM_NVDLA_POSTFENCES *
+		(MAX_NVDLA_POSTFENCES_PER_TASK *
 			sizeof(struct dla_action_semaphore)) +
-		((MAX_NUM_NVDLA_OUT_TASK_STATUS +
+		((MAX_NVDLA_OUT_STATUS_PER_TASK +
 			NUM_PROFILING_POSTACTION) *
 			sizeof(struct dla_action_task_status)) +
-		(MAX_NUM_NVDLA_OUT_TIMESTAMP *
+		(MAX_NVDLA_OUT_TIMESTAMPS_PER_TASK *
 			sizeof(struct dla_action_timestamp)) +
 		sizeof(struct dla_action_opcode));
 }
@@ -1308,8 +1308,8 @@ static int nvdla_send_cmd_channel(struct platform_device *pdev,
 	uint32_t method_id = cmd_data->method_id;
 	uint32_t method_data = cmd_data->method_data;
 	bool wait = cmd_data->wait;
-	u32 syncpt_wait_ids[MAX_NUM_NVDLA_PREFENCES];
-	u32 syncpt_wait_thresh[MAX_NUM_NVDLA_PREFENCES];
+	u32 syncpt_wait_ids[MAX_NVDLA_PREFENCES_PER_TASK];
+	u32 syncpt_wait_thresh[MAX_NVDLA_PREFENCES_PER_TASK];
 	u32 cmdbuf[3];
 	int err = 0, i;
 

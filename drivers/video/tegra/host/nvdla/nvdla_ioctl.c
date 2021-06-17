@@ -646,44 +646,44 @@ size_t nvdla_get_max_task_size(void)
 
 static int nvdla_val_task_submit_input(struct nvdla_ioctl_submit_task *in_task)
 {
-	if (in_task->num_prefences > MAX_NUM_NVDLA_PREFENCES) {
+	if (in_task->num_prefences > MAX_NVDLA_PREFENCES_PER_TASK) {
 		pr_err("num_prefences[%u] crossing expected[%d]\n",
-			in_task->num_prefences, MAX_NUM_NVDLA_PREFENCES);
+			in_task->num_prefences, MAX_NVDLA_PREFENCES_PER_TASK);
 		return -EINVAL;
 	}
-	if (in_task->num_postfences > MAX_NUM_NVDLA_POSTFENCES) {
+	if (in_task->num_postfences > MAX_NVDLA_POSTFENCES_PER_TASK) {
 		pr_err("num_postfences[%u] crossing expected[%d]\n",
-			in_task->num_postfences, MAX_NUM_NVDLA_POSTFENCES);
+			in_task->num_postfences, MAX_NVDLA_POSTFENCES_PER_TASK);
 		return -EINVAL;
 	}
-	if (in_task->num_input_task_status > MAX_NUM_NVDLA_IN_TASK_STATUS) {
+	if (in_task->num_input_task_status > MAX_NVDLA_IN_STATUS_PER_TASK) {
 		pr_err("in task status[%u] crossing expected[%d]\n",
 			in_task->num_input_task_status,
-			MAX_NUM_NVDLA_IN_TASK_STATUS);
+			MAX_NVDLA_IN_STATUS_PER_TASK);
 		return -EINVAL;
 	}
-	if (in_task->num_sof_task_status > MAX_NUM_NVDLA_OUT_TASK_STATUS) {
+	if (in_task->num_sof_task_status > MAX_NVDLA_OUT_STATUS_PER_TASK) {
 		pr_err("sof task status[%u] crossing expected[%d]\n",
 			in_task->num_sof_task_status,
-			MAX_NUM_NVDLA_OUT_TASK_STATUS);
+			MAX_NVDLA_OUT_STATUS_PER_TASK);
 		return -EINVAL;
 	}
-	if (in_task->num_eof_task_status > MAX_NUM_NVDLA_OUT_TASK_STATUS) {
+	if (in_task->num_eof_task_status > MAX_NVDLA_OUT_STATUS_PER_TASK) {
 		pr_err("eof task status[%u] crossing expected[%d]\n",
 			in_task->num_eof_task_status,
-			MAX_NUM_NVDLA_OUT_TASK_STATUS);
+			MAX_NVDLA_OUT_STATUS_PER_TASK);
 		return -EINVAL;
 	}
-	if (in_task->num_sof_timestamps > MAX_NUM_NVDLA_OUT_TIMESTAMP) {
+	if (in_task->num_sof_timestamps > MAX_NVDLA_OUT_TIMESTAMPS_PER_TASK) {
 		pr_err("sof timestamps[%u] crossing expected[%d]\n",
 			in_task->num_sof_timestamps,
-			MAX_NUM_NVDLA_OUT_TIMESTAMP);
+			MAX_NVDLA_OUT_TIMESTAMPS_PER_TASK);
 		return -EINVAL;
 	}
-	if (in_task->num_eof_timestamps > MAX_NUM_NVDLA_OUT_TIMESTAMP) {
+	if (in_task->num_eof_timestamps > MAX_NVDLA_OUT_TIMESTAMPS_PER_TASK) {
 		pr_err("eof timestamps[%u] crossing expected[%d]\n",
 			in_task->num_eof_timestamps,
-			MAX_NUM_NVDLA_OUT_TIMESTAMP);
+			MAX_NVDLA_OUT_TIMESTAMPS_PER_TASK);
 		return -EINVAL;
 	}
 	if (in_task->num_addresses < 1) {
@@ -860,7 +860,7 @@ static int nvdla_emu_task_submit(struct nvdla_private *priv, void *arg)
 	struct nvdla_submit_args *args =
 			(struct nvdla_submit_args *)arg;
 	struct nvdla_ioctl_emu_submit_task __user *user_tasks;
-	struct nvdla_ioctl_emu_submit_task local_tasks[MAX_TASKS_PER_SUBMIT];
+	struct nvdla_ioctl_emu_submit_task local_tasks[MAX_NVDLA_TASKS_PER_SUBMIT];
 	struct platform_device *pdev;
 	struct nvdla_queue *queue;
 	struct nvdla_emu_task task;
@@ -886,7 +886,7 @@ static int nvdla_emu_task_submit(struct nvdla_private *priv, void *arg)
 		return -EINVAL;
 
 	num_tasks = args->num_tasks;
-	if (num_tasks == 0 || num_tasks > MAX_TASKS_PER_SUBMIT)
+	if (num_tasks == 0 || num_tasks > MAX_NVDLA_TASKS_PER_SUBMIT)
 		return -EINVAL;
 
 	nvdla_dbg_info(pdev, "num of emulator tasks [%d]", num_tasks);
@@ -1014,7 +1014,7 @@ static int nvdla_submit(struct nvdla_private *priv, void *arg)
 	struct nvdla_submit_args *args =
 			(struct nvdla_submit_args *)arg;
 	struct nvdla_ioctl_submit_task __user *user_tasks;
-	struct nvdla_ioctl_submit_task local_tasks[MAX_TASKS_PER_SUBMIT];
+	struct nvdla_ioctl_submit_task local_tasks[MAX_NVDLA_TASKS_PER_SUBMIT];
 	struct platform_device *pdev;
 	struct nvdla_queue *queue;
 	struct nvdla_buffers *buffers;
@@ -1040,7 +1040,7 @@ static int nvdla_submit(struct nvdla_private *priv, void *arg)
 		return -EINVAL;
 
 	num_tasks = args->num_tasks;
-	if (num_tasks == 0 || num_tasks > MAX_TASKS_PER_SUBMIT)
+	if (num_tasks == 0 || num_tasks > MAX_NVDLA_TASKS_PER_SUBMIT)
 		return -EINVAL;
 
 	nvdla_dbg_info(pdev, "num of tasks [%d]", num_tasks);

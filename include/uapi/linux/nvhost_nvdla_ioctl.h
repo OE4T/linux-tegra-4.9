@@ -29,6 +29,17 @@
 #endif
 
 /**
+ * Limits exposed to userspace
+ */
+#define MAX_NVDLA_PREFENCES_PER_TASK		32
+#define MAX_NVDLA_POSTFENCES_PER_TASK		32
+#define MAX_NVDLA_EMU_PREFENCES_PER_TASK	16
+#define MAX_NVDLA_EMU_POSTFENCES_PER_TASK	16
+#define MAX_NVDLA_IN_STATUS_PER_TASK		MAX_NVDLA_PREFENCES_PER_TASK
+#define MAX_NVDLA_OUT_STATUS_PER_TASK		MAX_NVDLA_POSTFENCES_PER_TASK
+#define MAX_NVDLA_OUT_TIMESTAMPS_PER_TASK	32
+
+/**
  * struct nvdla_queue_stat_args strcture
  *
  * @status		queue status flags
@@ -94,7 +105,7 @@ struct nvdla_pin_unpin_args {
 struct nvdla_submit_args {
 	__u64 tasks;
 	__u16 num_tasks;
-#define MAX_TASKS_PER_SUBMIT		16
+#define MAX_NVDLA_TASKS_PER_SUBMIT	16
 #define NVDLA_SUBMIT_FLAGS_ATOMIC	(1 << 0)
 #define NVDLA_SUBMIT_FLAGS_BYPASS_EXEC	(1 << 1)
 	__u16 flags;

@@ -839,9 +839,15 @@ static int nvdla_fill_signal_fence_action(struct nvdla_task *task,
 			break;
 		}
 
-		next = add_fence_action(next, ACTION_WRITE_SEM,
-			dma_addr + fence->semaphore_offset,
-			fence->semaphore_value);
+		if (fence->action == NVDEV_FENCE_SIGNAL_STRIDE) {
+			next = add_fence_action(next, ACTION_INCREMENT_SEM,
+				dma_addr + fence->semaphore_offset,
+				fence->semaphore_value);
+		} else {
+			next = add_fence_action(next, ACTION_WRITE_SEM,
+				dma_addr + fence->semaphore_offset,
+				fence->semaphore_value);
+		}
 		break;
 	}
 	case NVDEV_FENCE_TYPE_SEMAPHORE_TS: {
@@ -1175,7 +1181,8 @@ static int nvdla_fill_preactions(struct nvdla_task *task)
 	/* fill all preactions signals */
 	for (i = 0; i < task->num_prefences; i++) {
 		/* update action */
-		if (task->prefences[i].action != NVDEV_FENCE_SIGNAL)
+		if ((task->prefences[i].action != NVDEV_FENCE_SIGNAL) &&
+			(task->prefences[i].action != NVDEV_FENCE_SIGNAL_STRIDE))
 			continue;
 
 		err = nvdla_fill_signal_fence_action(task,

@@ -86,6 +86,7 @@
 
 /* write actions */
 #define ACTION_WRITE_SEM	0x80
+#define ACTION_INCREMENT_SEM	0x82
 #define ACTION_WRITE_TS_SEM	0x83
 #define ACTION_WRITE_TIMESTAMP	0x87
 #define ACTION_WRITE_GOS	0xA0
@@ -211,10 +212,10 @@ struct dla_action_opcode {
 /**
  * Semaphore action structure
  *
- * OPCODE = 0x90/0x80/0x92/0x83
+ * OPCODE = 0x90/0x80/0x92/0x83/0x82
  *
- * @address: Address to read or write value
- * @value: Value to compare
+ * @address: Address to read/write/increment value
+ * @value: Value to compare/write/increment
  */
 struct dla_action_semaphore {
 	uint64_t address;

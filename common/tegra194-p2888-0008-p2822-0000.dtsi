@@ -84,25 +84,10 @@
 		};
 	};
 
-	gpio@2200000 {
-		pcie-12v-enable {
-			status = "disabled";
+	fixed-regulators {
+		/* Override PCIe 12V regulator GPIO for AGX Industrial. */
+		regulator@116 {
+			gpio = <&tegra_aon_gpio TEGRA194_AON_GPIO(AA, 7) 1>;
 		};
-	};
-
-	gpio@c2f0000 {
-		pcie-12v-enable {
-			gpio-hog;
-			gpios = <TEGRA194_AON_GPIO(AA, 7) GPIO_ACTIVE_LOW>;
-			label = "pcie_12v_reg";
-			output-high;
-			status = "okay";
-		};
-	};
-
-	pcie@141a0000 {
-		nvidia,plat-gpios =
-			<&tegra_main_gpio TEGRA194_MAIN_GPIO(Z, 2) GPIO_ACTIVE_HIGH	/* 3V3 */
-			&tegra_aon_gpio TEGRA194_AON_GPIO(AA, 7) GPIO_ACTIVE_LOW>;	/* 12V */
 	};
 };

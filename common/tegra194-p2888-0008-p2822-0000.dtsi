@@ -90,4 +90,8 @@
 			gpio = <&tegra_aon_gpio TEGRA194_AON_GPIO(AA, 7) 1>;
 		};
 	};
+
+	pwm-fan {
+		regulator-name = "vdd-12v-pcie";
+	};
 };

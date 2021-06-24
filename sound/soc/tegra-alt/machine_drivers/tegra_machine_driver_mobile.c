@@ -765,6 +765,11 @@ static int tegra_machine_driver_probe(struct platform_device *pdev)
 				 &machine->audio_clock.mclk_scale) < 0)
 		dev_dbg(&pdev->dev, "Missing property mclk-fs\n");
 
+	if (of_property_read_bool(np, "fixed-pll")) {
+		machine->audio_clock.fixed_pll = true;
+		dev_info(&pdev->dev, "PLL configuration is fixed from DT\n");
+	}
+
 	tegra_machine_dma_set_mask(pdev);
 
 	ret = add_dai_links(pdev);

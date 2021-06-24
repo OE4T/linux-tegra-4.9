@@ -62,6 +62,7 @@ struct tegra_asoc_audio_clock_info {
 	u32 set_pll_out_rate;
 	u32 set_aud_mclk_rate;
 	u32 mclk_scale;
+	bool fixed_pll;
 
 	/* FIXME: below would be removed going ahead */
 	u32 clk_rates[MAX_NUM_RATES];

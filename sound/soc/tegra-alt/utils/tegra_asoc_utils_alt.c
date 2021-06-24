@@ -114,6 +114,9 @@ int tegra_alt_asoc_utils_set_rate(struct tegra_asoc_audio_clock_info *data,
 	unsigned int new_pll_base, req_bclk;
 	int err;
 
+	if (data->fixed_pll)
+		goto update_mclk_rate;
+
 	switch (srate) {
 	case 11025:
 	case 22050:
@@ -147,9 +150,6 @@ int tegra_alt_asoc_utils_set_rate(struct tegra_asoc_audio_clock_info *data,
 		return err;
 	}
 
-	if (data->mclk_scale)
-		aud_mclk = srate * data->mclk_scale;
-
 	if (data->set_pll_base_rate != new_pll_base) {
 		err = clk_set_rate(data->clk_pll_base, new_pll_base);
 		if (err) {
@@ -170,6 +170,10 @@ int tegra_alt_asoc_utils_set_rate(struct tegra_asoc_audio_clock_info *data,
 
 		data->set_pll_out_rate = pll_out;
 	}
+
+update_mclk_rate:
+	if (data->mclk_scale)
+		aud_mclk = srate * data->mclk_scale;
 
 	if (data->set_aud_mclk_rate != aud_mclk) {
 		err = clk_set_rate(data->clk_aud_mclk, aud_mclk);

@@ -163,6 +163,7 @@ struct fan_dev_data {
 	enum pwm_polarity fan_pwm_polarity;
 	int suspend_state;
 	const char *name;
+	const char *regulator_name;
 	struct regulator *fan_reg;
 	bool is_fan_reg_enabled;
 	struct dentry *debugfs_root;

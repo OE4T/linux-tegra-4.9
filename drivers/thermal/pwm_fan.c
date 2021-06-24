@@ -1349,7 +1349,13 @@ static int pwm_fan_probe(struct platform_device *pdev)
 
 	fan_data->dev = &pdev->dev;
 
-	fan_data->fan_reg = regulator_get(fan_data->dev, "vdd-fan");
+	of_property_read_string(node,
+				"regulator-name", &fan_data->regulator_name);
+
+	fan_data->fan_reg = fan_data->regulator_name ?
+		regulator_get(fan_data->dev, fan_data->regulator_name) :
+		regulator_get(fan_data->dev, "vdd-fan");
+
 	if (IS_ERR_OR_NULL(fan_data->fan_reg)) {
 		pr_err("FAN: coudln't get the regulator\n");
 		devm_kfree(&pdev->dev, (void *)fan_data);

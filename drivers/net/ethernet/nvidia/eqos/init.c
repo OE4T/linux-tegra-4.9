@@ -62,6 +62,9 @@
 #include <linux/workqueue.h>
 #include <linux/tegra_prod.h>
 #include <linux/of_net.h>
+#ifdef FILTER_DEBUGFS
+#include <linux/debugfs.h>
+#endif
 
 #define LP_SUPPORTED 0
 static const struct of_device_id eqos_of_match[] = {
@@ -182,8 +185,9 @@ void get_dt_u32_array(struct eqos_prv_data *pdata, char *pdt_prop, u32 *pval,
 	ret = of_property_read_u32_array(pnode, pdt_prop, pval, num_entries);
 
 	if (ret < 0) {
-		pr_err("%s(): \"%s\" read failed %d. Using default\n",
-			__func__, pdt_prop, ret);
+		if (ret != -EINVAL)
+			pr_err("%s(): \"%s\" read failed %d. Using default\n",
+				__func__, pdt_prop, ret);
 		for (i = 0; i < num_entries; i++)
 			pval[i] = val_def;
 	}
@@ -1137,6 +1141,13 @@ int eqos_probe(struct platform_device *pdev)
 	pdata->pdev = pdev;
 
 	pdata->dev = ndev;
+#ifdef FILTER_DEBUGFS
+	pdata->d_root = debugfs_create_dir(dev_name(&pdev->dev), NULL);
+	if (IS_ERR_OR_NULL(pdata->d_root))
+		dev_warn(&pdev->dev, "debugfs_create_dir failed: %ld\n",
+						PTR_ERR(pdata->d_root));
+	INIT_LIST_HEAD(&pdata->d_head);
+#endif
 
 	for (i = 0; i < num_chans; i++)
 		spin_lock_init(&pdata->chan_irq_lock[i]);
@@ -1233,12 +1244,10 @@ int eqos_probe(struct platform_device *pdev)
 	ret = hw_if->pad_calibrate(pdata);
 	if (ret < 0)
 		goto err_out_pad_calibrate_failed;
-
 #ifdef EQOS_CONFIG_DEBUGFS
-	/* to give prv data to debugfs */
+	/* To give prv data to debugfs */
 	eqos_get_pdata(pdata);
 #endif
-
 	ndev->irq = irq;
 	pdata->common_irq = irq;
 
@@ -1291,6 +1300,8 @@ int eqos_probe(struct platform_device *pdev)
 			RXQ_CTRL_DEFAULT, RXQ_CTRL_MAX, 4);
 	get_dt_u32_array(pdata, "nvidia,queue_prio", pdt_cfg->q_prio,
 			QUEUE_PRIO_DEFAULT, QUEUE_PRIO_MAX, 4);
+	get_dt_u32_array(pdata, "nvidia,queue_dma_map", pdt_cfg->q_dma_map,
+			STATIC_Q_DMA_MAP, DYNAMIC_Q_DMA_MAP, 4);
 	get_dt_u32(pdata, "nvidia,iso_bw", &pdt_cfg->iso_bw, ISO_BW_DEFAULT,
 		ISO_BW_DEFAULT);
 	get_dt_u32(pdata, "nvidia,eth_iso_enable", &pdt_cfg->eth_iso_enable, 0,
@@ -1300,7 +1311,7 @@ int eqos_probe(struct platform_device *pdev)
 			   &pdt_cfg->slot_intvl_val,
 			   SLOT_INTVL_DEFAULT, SLOT_INTVL_MAX);
 	pdata->dt_cfg.phy_apd_mode = of_property_read_bool(node,
-							   "nvidia,brcm_phy_apd_mode");
+					   "nvidia,brcm_phy_apd_mode");
 	eqos_get_slot_num_check_queues(pdata, pdt_cfg->slot_num_check);
 
 #ifndef DISABLE_TRISTATE
@@ -1452,7 +1463,7 @@ int eqos_probe(struct platform_device *pdev)
 			dev_err(&pdata->pdev->dev,
 				"Failed to register attributes: %d\n", ret);
 			goto err_sysfs_create_failed;
-			}
+		}
 	}
 
 	spin_lock_init(&pdata->lock);
@@ -1554,6 +1565,10 @@ int eqos_probe(struct platform_device *pdev)
 	if (!tegra_platform_is_unit_fpga())
 		eqos_regulator_deinit(pdata);
  err_out_regulator_en_failed:
+#ifdef FILTER_DEBUGFS
+	if (!IS_ERR_OR_NULL(pdata->d_root))
+		debugfs_remove_recursive(pdata->d_root);
+#endif
 	free_netdev(ndev);
 	platform_set_drvdata(pdev, NULL);
 
@@ -1594,6 +1609,10 @@ int eqos_remove(struct platform_device *pdev)
 
 	ndev = platform_get_drvdata(pdev);
 	pdata = netdev_priv(ndev);
+#ifdef FILTER_DEBUGFS
+	if (!IS_ERR_OR_NULL(pdata->d_root))
+		debugfs_remove_recursive(pdata->d_root);
+#endif
 	pdt_cfg = (struct eqos_cfg *)&pdata->dt_cfg;
 	desc_if = &(pdata->desc_if);
 

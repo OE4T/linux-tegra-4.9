@@ -4110,6 +4110,14 @@ static int enable_slot_regulators(struct tegra_pcie_dw *pcie)
 		}
 	}
 
+	/*
+	 * According to PCI Express Card Electromechanical Specification
+	 * Revision 1.1, Table-2.4, T_PVPERL (Power stable to PERST# inactive)
+	 * should be a minimum of 100ms.
+	 */
+	if (pcie->slot_ctl_3v3 || pcie->slot_ctl_12v)
+		msleep(100);
+
 	return 0;
 }
 

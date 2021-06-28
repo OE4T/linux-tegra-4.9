@@ -66,6 +66,10 @@
 static struct task_struct *tegra_vse_task;
 static bool vse_thread_start;
 static bool is_rng1_registered;
+static bool is_aes0_registered;
+static bool is_aes1_registered;
+static bool is_sha_registered;
+static bool is_rsa_registered;
 
 /* Security Engine Linked List */
 struct tegra_virtual_se_ll {
@@ -3700,6 +3704,7 @@ static int tegra_vse_kthread(void *unused)
 			default:
 				dev_err(se_dev->dev, "Unknown command\n");
 			}
+			complete(&tegra_vse_complete);
 		}
 	}
 	kfree(ivc_resp_msg);
@@ -3792,6 +3797,7 @@ static int tegra_hv_vse_probe(struct platform_device *pdev)
 				"rng alg register failed. Err %d\n", err);
 			goto exit;
 		}
+		is_aes0_registered = true;
 	}
 
 	if (engine_id == VIRTUAL_SE_AES1) {
@@ -3840,6 +3846,7 @@ static int tegra_hv_vse_probe(struct platform_device *pdev)
 				"cmac alg register failed. Err %d\n", err);
 			goto exit;
 		}
+		is_aes1_registered = true;
 	}
 
 	if (engine_id == VIRTUAL_SE_SHA) {
@@ -3851,6 +3858,7 @@ static int tegra_hv_vse_probe(struct platform_device *pdev)
 				goto exit;
 			}
 		}
+		is_sha_registered = true;
 	}
 
 	if (engine_id == VIRTUAL_SE_RSA) {
@@ -3862,6 +3870,7 @@ static int tegra_hv_vse_probe(struct platform_device *pdev)
 				goto exit;
 			}
 		}
+		is_rsa_registered = true;
 	}
 
 	if (engine_id == VIRTUAL_SE_RNG1) {
@@ -3906,18 +3915,34 @@ static int tegra_hv_vse_remove(struct platform_device *pdev)
 	int i;
 	struct tegra_virtual_se_dev *se_dev = platform_get_drvdata(pdev);
 
-	for (i = 0; i < ARRAY_SIZE(sha_algs); i++)
-		crypto_unregister_ahash(&sha_algs[i]);
+	complete_all(&tegra_vse_complete);
+	kthread_stop(tegra_vse_task);
+	if (is_aes0_registered)
+		crypto_unregister_rng(&rng_alg[0]);
 
-	for (i = 0; i < ARRAY_SIZE(rsa_algs); i++)
-		crypto_unregister_ahash(&rsa_algs[i]);
+	if (is_aes1_registered) {
+		crypto_unregister_ahash(&cmac_alg);
+		for (i = 0; i < (ARRAY_SIZE(aes_algs)); i++)
+			crypto_unregister_alg(&aes_algs[i]);
+	}
+
+	if (is_sha_registered) {
+		for (i = 0; i < ARRAY_SIZE(sha_algs); i++)
+			crypto_unregister_ahash(&sha_algs[i]);
+	}
+
+	if (is_rsa_registered) {
+		for (i = 0; i < ARRAY_SIZE(rsa_algs); i++)
+			crypto_unregister_ahash(&rsa_algs[i]);
+	}
 
 	if (is_rng1_registered)
 		crypto_unregister_rng(&rng1_trng_alg[0]);
 
+	tegra_hv_ivc_unreserve(g_ivck);
 	mempool_destroy(se_dev->priv_pool);
 	mempool_destroy(se_dev->req_pool);
-	kfree(se_dev);
+	devm_kfree(&pdev->dev, se_dev);
 
 	return 0;
 }

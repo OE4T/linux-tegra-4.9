@@ -13,6 +13,10 @@
 
 / {
 	plugin-manager {
+		/delete-node/ fragment-pcie-c1-rp;
+		/delete-node/ fragment-pcie-older-than-p2822-B00;
+		/delete-node/ fragment-disable-uphy-rx-idle;
+
 		fragment-pcie-c5-rp {
 			odm-anded-override;
 			odm-data = "disable-pcie-c5-endpoint",

@@ -32,6 +32,18 @@
 					nvidia,disable-aspm-states = <0xf>;
 				};
 			};
+			override@1 {
+				target = <&p2822_vdd_3v3_pcie>;
+				_overlay_ {
+					delete-target-property = "gpio";
+				};
+			};
+			override@2 {
+				target = <&p2822_vdd_12v_pcie>;
+				_overlay_ {
+					delete-target-property = "gpio";
+				};
+			};
 		};
 
 		fragment-disable-uphy-rx-idle {

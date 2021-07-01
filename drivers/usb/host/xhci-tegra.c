@@ -3776,6 +3776,10 @@ static int tegra_xusb_remove(struct platform_device *pdev)
 		usb_put_hcd(xhci->shared_hcd);
 		usb_remove_hcd(tegra->hcd);
 
+		disable_irq(tegra->xhci_irq);
+		disable_irq(tegra->padctl_irq);
+		disable_irq(tegra->mbox_irq);
+
 		devm_iounmap(&pdev->dev, tegra->fpci_base);
 		devm_release_mem_region(&pdev->dev, tegra->fpci_start,
 			tegra->fpci_len);
@@ -3792,8 +3796,6 @@ static int tegra_xusb_remove(struct platform_device *pdev)
 
 		fw_log_deinit(tegra);
 	}
-
-	tegra_xusb_host_vbus_power_off(tegra);
 
 	tegra_xusb_phy_disable(tegra);
 	if (!tegra->soc->is_xhci_vf) {
@@ -3814,6 +3816,8 @@ static int tegra_xusb_remove(struct platform_device *pdev)
 		devm_free_irq(&pdev->dev, tegra->padctl_irq, tegra);
 		devm_free_irq(&pdev->dev, tegra->mbox_irq, tegra);
 	}
+
+	tegra_xusb_host_vbus_power_off(tegra);
 
 	tegra_xusb_debugfs_deinit(tegra);
 

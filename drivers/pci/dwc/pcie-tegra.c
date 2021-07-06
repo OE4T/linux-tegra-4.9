@@ -520,6 +520,7 @@ struct tegra_pcie_dw {
 	u32 target_speed;
 	void *cpu_virt_addr;
 	bool disable_clock_request;
+	bool enable_srns;
 	bool power_down_en;
 	bool is_safety_platform;
 	bool td_bit;
@@ -3201,6 +3202,9 @@ static int tegra_pcie_dw_parse_dt(struct tegra_pcie_dw *pcie)
 		pcie->disabled_aspm_states = 0xF;
 	}
 
+	pcie->enable_srns = of_property_read_bool(pcie->dev->of_node,
+						  "nvidia,enable-srns");
+
 	if (pcie->mode == DW_PCIE_RC_TYPE) {
 		ret = of_property_read_u32(np, "nvidia,preset-init",
 					   &pcie->preset_init);
@@ -3483,7 +3487,8 @@ static void pex_ep_event_pex_rst_assert(struct tegra_pcie_dw *pcie)
 	if (ret < 0)
 		dev_err(pcie->dev, "runtime suspend failed: %d\n", ret);
 
-	if (!(pcie->cid == CTRL_4 && pcie->num_lanes == 1)) {
+	if (!(pcie->cid == CTRL_4 && pcie->num_lanes == 1) &&
+	    !pcie->enable_srns) {
 		/* Resets PLL CAL_VALID and RCAL_VALID */
 		ret = uphy_bpmp_pcie_ep_controller_pll_off(pcie->cid);
 		if (ret)
@@ -3511,7 +3516,8 @@ static void pex_ep_event_pex_rst_deassert(struct tegra_pcie_dw *pcie)
 		return;
 	}
 
-	if (!(pcie->cid == CTRL_4 && pcie->num_lanes == 1)) {
+	if (!(pcie->cid == CTRL_4 && pcie->num_lanes == 1) &&
+	    !pcie->enable_srns) {
 		ret = uphy_bpmp_pcie_ep_controller_pll_init(pcie->cid);
 		if (ret) {
 			dev_err(pcie->dev, "UPHY init failed for PCIe EP:%d\n",
@@ -4816,6 +4822,14 @@ static int tegra_pcie_dw_resume_noirq(struct device *dev)
 	val |= APPL_CFG_MISC_SLV_EP_MODE;
 	val |= (APPL_CFG_MISC_ARCACHE_VAL << APPL_CFG_MISC_ARCACHE_SHIFT);
 	writel(val, pcie->appl_base + APPL_CFG_MISC);
+
+	if (pcie->enable_srns) {
+		/* Cut the REFCLK to EP as it is using its internal clock */
+		val = readl(pcie->appl_base + APPL_PINMUX);
+		val |= APPL_PINMUX_CLK_OUTPUT_IN_OVERRIDE_EN;
+		val &= ~APPL_PINMUX_CLK_OUTPUT_IN_OVERRIDE;
+		writel(val, pcie->appl_base + APPL_PINMUX);
+	}
 
 	if (pcie->disable_clock_request) {
 		val = readl(pcie->appl_base + APPL_PINMUX);

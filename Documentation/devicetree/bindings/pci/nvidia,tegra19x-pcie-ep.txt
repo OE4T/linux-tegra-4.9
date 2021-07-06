@@ -89,6 +89,9 @@ Optional properties:
 - "nvidia,tsa-config" : Add TSA configuration register address to configure MC
     with production settings for PCIe. Note:- this is applicable only for C5
 - "nvidia,mods" : Add to indicate NVidia specific MODs configuration
+- nvidia,enable-srns: This property needs to be present if the platform has SRNS
+   (Separate Reference clocks with No Spread-spectrum clocking) configuration
+   implemented. This property initializes PLLs with the internal clock source.
 
 Power supplies for Tegra194:
 //TODO

@@ -521,6 +521,7 @@ struct tegra_pcie_dw {
 	void *cpu_virt_addr;
 	bool disable_clock_request;
 	bool enable_srns;
+	bool ep_mode_slot_supplies_en;
 	bool power_down_en;
 	bool is_safety_platform;
 	bool td_bit;
@@ -3314,6 +3315,10 @@ static int tegra_pcie_dw_parse_dt(struct tegra_pcie_dw *pcie)
 			dev_err(pcie->dev, "pex-rst-gpio is missing\n");
 			return pcie->pex_rst_gpio;
 		}
+
+		pcie->ep_mode_slot_supplies_en =
+			of_property_read_bool(pcie->dev->of_node,
+					      "nvidia,enable-slot-supplies");
 	}
 
 	return 0;
@@ -3981,6 +3986,72 @@ fail_pinctrl:
 	return;
 }
 
+static void get_slot_regulators(struct tegra_pcie_dw *pcie)
+{
+	if (pcie->cid != CTRL_5)
+		return;
+
+	pcie->slot_ctl_3v3 = devm_regulator_get_optional(pcie->dev, "vpcie3v3");
+	if (IS_ERR(pcie->slot_ctl_3v3))
+		dev_info(pcie->dev, "Failed to get 3V slot regulator: %ld\n",
+			 PTR_ERR(pcie->slot_ctl_3v3));
+
+	pcie->slot_ctl_12v = devm_regulator_get_optional(pcie->dev, "vpcie12v");
+	if (IS_ERR(pcie->slot_ctl_12v))
+		dev_info(pcie->dev, "Failed to get 12V slot regulator: %ld\n",
+			 PTR_ERR(pcie->slot_ctl_12v));
+}
+
+static int enable_slot_regulators(struct tegra_pcie_dw *pcie)
+{
+	int ret;
+
+	if (pcie->cid != CTRL_5)
+		return 0;
+
+	if (!IS_ERR(pcie->slot_ctl_3v3)) {
+		ret = regulator_enable(pcie->slot_ctl_3v3);
+		if (ret < 0) {
+			dev_err(pcie->dev,
+				"Enabling 3V3 supply to slot failed: %d\n",
+				ret);
+			return ret;
+		}
+	}
+
+	if (!IS_ERR(pcie->slot_ctl_12v)) {
+		ret = regulator_enable(pcie->slot_ctl_12v);
+		if (ret < 0) {
+			dev_err(pcie->dev,
+				"Enabling 12V supply to slot failed: %d\n",
+				ret);
+			regulator_disable(pcie->slot_ctl_3v3);
+			return ret;
+		}
+	}
+
+	/*
+	 * According to PCI Express Card Electromechanical Specification
+	 * Revision 1.1, Table-2.4, T_PVPERL (Power stable to PERST# inactive)
+	 * should be a minimum of 100ms.
+	 */
+	if (pcie->slot_ctl_3v3 || pcie->slot_ctl_12v)
+		msleep(100);
+
+	return 0;
+}
+
+static void disable_slot_regulators(struct tegra_pcie_dw *pcie)
+{
+	if (pcie->cid != CTRL_5)
+		return;
+
+	if (!IS_ERR(pcie->slot_ctl_3v3))
+		regulator_disable(pcie->slot_ctl_12v);
+	if (!IS_ERR(pcie->slot_ctl_12v))
+		regulator_disable(pcie->slot_ctl_3v3);
+}
+
 static int tegra_pcie_raise_legacy_irq(struct tegra_pcie_dw *pcie)
 {
 	/* There is no support from HW to raise a legacy irq apart from
@@ -4061,81 +4132,25 @@ static int tegra_pcie_config_ep(struct tegra_pcie_dw *pcie,
 	ep->addr_size = resource_size(res);
 	ep->page_size = SZ_64K;
 
+	if (pcie->ep_mode_slot_supplies_en) {
+		ret = enable_slot_regulators(pcie);
+		if (ret)
+			return ret;
+	}
+
 	ret = dw_pcie_ep_init(ep);
 	if (ret) {
 		dev_err(dev, "failed to initialize endpoint\n");
-		return ret;
+		goto fail_disable_regulators;
 	}
 
 	return 0;
-}
 
-static void get_slot_regulators(struct tegra_pcie_dw *pcie)
-{
-	if (pcie->cid != CTRL_5)
-		return;
+fail_disable_regulators:
+	if (pcie->ep_mode_slot_supplies_en)
+		disable_slot_regulators(pcie);
 
-	pcie->slot_ctl_3v3 = devm_regulator_get_optional(pcie->dev, "vpcie3v3");
-	if (IS_ERR(pcie->slot_ctl_3v3))
-		dev_info(pcie->dev, "Failed to get 3V slot regulator: %ld\n",
-			 PTR_ERR(pcie->slot_ctl_3v3));
-
-	pcie->slot_ctl_12v = devm_regulator_get_optional(pcie->dev, "vpcie12v");
-	if (IS_ERR(pcie->slot_ctl_12v))
-		dev_info(pcie->dev, "Failed to get 12V slot regulator: %ld\n",
-			 PTR_ERR(pcie->slot_ctl_12v));
-
-	return;
-}
-
-static int enable_slot_regulators(struct tegra_pcie_dw *pcie)
-{
-	int ret;
-
-	if (pcie->cid != CTRL_5)
-		return 0;
-
-	if (!IS_ERR(pcie->slot_ctl_3v3)) {
-		ret = regulator_enable(pcie->slot_ctl_3v3);
-		if (ret < 0) {
-			dev_err(pcie->dev,
-				"Enabling 3V3 supply to slot failed: %d\n",
-				ret);
-			return ret;
-		}
-	}
-
-	if (!IS_ERR(pcie->slot_ctl_12v)) {
-		ret = regulator_enable(pcie->slot_ctl_12v);
-		if (ret < 0) {
-			dev_err(pcie->dev,
-				"Enabling 12V supply to slot failed: %d\n",
-				ret);
-			regulator_disable(pcie->slot_ctl_3v3);
-			return ret;
-		}
-	}
-
-	/*
-	 * According to PCI Express Card Electromechanical Specification
-	 * Revision 1.1, Table-2.4, T_PVPERL (Power stable to PERST# inactive)
-	 * should be a minimum of 100ms.
-	 */
-	if (pcie->slot_ctl_3v3 || pcie->slot_ctl_12v)
-		msleep(100);
-
-	return 0;
-}
-
-static void disable_slot_regulators(struct tegra_pcie_dw *pcie)
-{
-	if (pcie->cid != CTRL_5)
-		return;
-
-	if (!IS_ERR(pcie->slot_ctl_3v3))
-		regulator_disable(pcie->slot_ctl_12v);
-	if (!IS_ERR(pcie->slot_ctl_12v))
-		regulator_disable(pcie->slot_ctl_3v3);
+	return ret;
 }
 
 static const struct tegra_pcie_of_data tegra_pcie_rc_of_data = {
@@ -4526,6 +4541,8 @@ static int tegra_pcie_dw_remove(struct platform_device *pdev)
 
 		if (pcie->cid != CTRL_5)
 			uphy_bpmp_pcie_controller_state_set(pcie->cid, false);
+		if (pcie->ep_mode_slot_supplies_en)
+			disable_slot_regulators(pcie);
 	}
 	tegra_bwmgr_unregister(pcie->emc_bw);
 

@@ -29,7 +29,7 @@
  * DAMAGE.
  * ========================================================================= */
 /*
- * Copyright (c) 2015-2020, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2021, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -3265,7 +3265,7 @@ static INT eqos_car_reset(struct eqos_prv_data *pdata)
 
 	/* deassert rst line */
 	if (!IS_ERR_OR_NULL(pdata->eqos_rst))
-		reset_control_deassert(pdata->eqos_rst);
+		reset_control_reset(pdata->eqos_rst);
 
 	/* add delay of 10 usec */
 	udelay(10);

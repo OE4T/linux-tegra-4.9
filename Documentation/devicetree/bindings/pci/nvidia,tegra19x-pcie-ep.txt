@@ -92,6 +92,9 @@ Optional properties:
 - nvidia,enable-srns: This property needs to be present if the platform has SRNS
    (Separate Reference clocks with No Spread-spectrum clocking) configuration
    implemented. This property initializes PLLs with the internal clock source.
+- nvidia,enable-slot-supplies: This property needs to be present if the
+  slots that are owned by controllers operating in the endpoint mode need to be
+  supplied with slot power.
 
 Power supplies for Tegra194:
 //TODO

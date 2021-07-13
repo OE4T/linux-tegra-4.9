@@ -1189,7 +1189,6 @@ static int l2cap_sock_release(struct socket *sock)
 {
 	struct sock *sk = sock->sk;
 	int err;
-	struct l2cap_chan *chan;
 
 	BT_DBG("sock %p, sk %p", sock, sk);
 
@@ -1199,17 +1198,9 @@ static int l2cap_sock_release(struct socket *sock)
 	bt_sock_unlink(&l2cap_sk_list, sk);
 
 	err = l2cap_sock_shutdown(sock, 2);
-	chan = l2cap_pi(sk)->chan;
-
-	l2cap_chan_hold(chan);
-	l2cap_chan_lock(chan);
 
 	sock_orphan(sk);
 	l2cap_sock_kill(sk);
-
-	l2cap_chan_unlock(chan);
-	l2cap_chan_put(chan);
-
 	return err;
 }
 
@@ -1227,15 +1218,12 @@ static void l2cap_sock_cleanup_listen(struct sock *parent)
 		BT_DBG("child chan %p state %s", chan,
 		       state_to_string(chan->state));
 
-		l2cap_chan_hold(chan);
 		l2cap_chan_lock(chan);
-
 		__clear_chan_timer(chan);
 		l2cap_chan_close(chan, ECONNRESET);
-		l2cap_sock_kill(sk);
-
 		l2cap_chan_unlock(chan);
-		l2cap_chan_put(chan);
+
+		l2cap_sock_kill(sk);
 	}
 }
 
@@ -1339,6 +1327,7 @@ static void l2cap_sock_teardown_cb(struct l2cap_chan *chan, int err)
 	lock_sock_nested(sk, atomic_read(&chan->nesting));
 
 	parent = bt_sk(sk)->parent;
+	sock_set_flag(sk, SOCK_ZAPPED);
 
 	switch (chan->state) {
 	case BT_OPEN:
@@ -1367,9 +1356,6 @@ static void l2cap_sock_teardown_cb(struct l2cap_chan *chan, int err)
 		break;
 	}
 	release_sock(sk);
-
-	/* Only zap after cleanup to avoid use after free race */
-	sock_set_flag(sk, SOCK_ZAPPED);
 
 }
 

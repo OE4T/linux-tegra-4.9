@@ -128,7 +128,7 @@ int cmd_resp_l1_user_rcv_check_aliveness(const
 
 	if (first_hb) {
 		first_hb = false;
-		pr_err("Sending first HB\n");
+		pr_info("Sending first HB\n");
 	}
 
 	return 0;

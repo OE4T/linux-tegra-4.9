@@ -33,4 +33,8 @@
 	tegra-hsp@b150000 {
 		status = "okay";
 	};
+
+	psci {
+		nvidia,system-lp0-disable;
+	};
 };

@@ -1746,7 +1746,8 @@ static int eqos_resume_noirq(struct device *dev)
 	ret = eqos_clock_enable(pdata);
 	if (ret < 0) {
 		dev_err(&pdata->pdev->dev, "resume clocks not enabled\n");
-		return -EINVAL;
+		ret = -EINVAL;
+		goto err_clk;
 	}
 
 	if (device_may_wakeup(&ndev->dev)) {
@@ -1755,7 +1756,8 @@ static int eqos_resume_noirq(struct device *dev)
 		ret = hw_if->car_reset(pdata);
 		if (ret < 0) {
 			dev_err(&pdata->pdev->dev, "WoL Failed to reset MAC\n");
-			return -ENODEV;
+			ret = -ENODEV;
+			goto err_mac_rst;
 		}
 		eqos_start_dev(pdata);
 	} else {
@@ -1771,7 +1773,8 @@ static int eqos_resume_noirq(struct device *dev)
 		ret = hw_if->car_reset(pdata);
 		if (ret < 0) {
 			dev_err(&pdata->pdev->dev, "Failed to reset MAC\n");
-			return -ENODEV;
+			ret = -ENODEV;
+			goto err_mac_rst;
 		}
 
 		eqos_start_dev(pdata);
@@ -1790,7 +1793,7 @@ static int eqos_resume_noirq(struct device *dev)
 		ret = phy_ethtool_set_wol(pdata->phydev, &wol);
 		if (ret < 0) {
 			dev_err(&pdata->pdev->dev, "WoL set failed\n");
-			return ret;
+			goto err_wol;
 		}
 	}
 
@@ -1800,6 +1803,18 @@ static int eqos_resume_noirq(struct device *dev)
 	pdata->hw_stopped = false;
 
 	return 0;
+
+err_wol:
+	phy_stop(pdata->phydev);
+	eqos_stop_dev(pdata);
+
+err_mac_rst:
+	eqos_clock_disable(pdata);
+
+err_clk:
+	eqos_regulator_deinit(pdata);
+
+	return ret;
 }
 
 static const struct dev_pm_ops eqos_pm_ops = {

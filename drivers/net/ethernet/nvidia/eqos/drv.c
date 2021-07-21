@@ -1129,14 +1129,17 @@ static int eqos_open(struct net_device *dev)
 	}
 
 	ret = eqos_clock_enable(pdata);
-	if (ret)
+	if (ret) {
+		dev_err(&dev->dev, "failed to enable clocks\n");
 		return ret;
+	}
 
 	/* issue CAR reset to device */
 	ret = hw_if->car_reset(pdata);
 	if (ret < 0) {
+		ret = -ENODEV;
 		dev_err(&dev->dev, "Failed to reset MAC\n");
-		return -ENODEV;
+		goto err_mac_rst;
 	}
 
 	/* PHY initialisation */
@@ -1144,7 +1147,7 @@ static int eqos_open(struct net_device *dev)
 	if (ret) {
 		dev_err(&dev->dev, "%s: Cannot attach to PHY (error: %d)\n",
 			__func__, ret);
-		return ret;
+		goto err_phy_init;
 	}
 
 	ret = request_txrx_irqs(pdata);
@@ -1176,9 +1179,8 @@ static int eqos_open(struct net_device *dev)
 	if (!pdata->resv_skb || pdata->resv_dma == 0) {
 		dev_err(&dev->dev, "failed to reserve SKB\n");
 		ret = -ENOMEM;
-		goto err_ptp;
+		goto err_mac;
 	}
-	phy_start(pdata->phydev);
 
 	if (pdata->wolopts) {
 		struct ethtool_wolinfo wol = { .cmd = ETHTOOL_SWOL };
@@ -1187,22 +1189,37 @@ static int eqos_open(struct net_device *dev)
 		ret = phy_ethtool_set_wol(pdata->phydev, &wol);
 		if (ret < 0) {
 			dev_err(&dev->dev, "Wol set failed\n");
-			goto err_ptp;
+			goto err_mac;
 		}
 	}
 
+	phy_start(pdata->phydev);
 	netif_tx_start_all_queues(pdata->dev);
 
 	pr_debug("<--%s()\n", __func__);
 	return Y_SUCCESS;
 
- err_ptp:
+err_mac:
+	eqos_stop_dev(pdata);
+
+err_ptp:
 	desc_if->free_buff_and_desc(pdata);
 
- err_out_desc_buf_alloc_failed:
+err_out_desc_buf_alloc_failed:
 	free_txrx_irqs(pdata);
 
- err_irq_0:
+err_irq_0:
+	if (pdata->phydev)
+		phy_disconnect(pdata->phydev);
+
+err_phy_init:
+	pdata->hw_stopped = true;
+	/* Assert MAC RST gpio */
+	if (pdata->eqos_rst)
+		reset_control_assert(pdata->eqos_rst);
+
+err_mac_rst:
+	eqos_clock_disable(pdata);
 	pr_debug("<--%s()\n", __func__);
 	return ret;
 }

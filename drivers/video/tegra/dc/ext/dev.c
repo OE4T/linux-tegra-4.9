@@ -1,7 +1,7 @@
 /*
  * dev.c: Device interface for tegradc ext.
  *
- * Copyright (c) 2011-2019, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2011-2021, NVIDIA CORPORATION, All rights reserved.
  *
  * Author: Robert Morell <rmorell@nvidia.com>
  * Some code based on fbdev extensions written by:
@@ -2635,7 +2635,7 @@ static int tegra_dc_get_caps(struct tegra_dc_ext_user *user,
 
 		case TEGRA_DC_EXT_CAP_TYPE_HDR_SINK:
 		{
-			struct tegra_dc_ext_hdr_caps hdr_cap_info;
+			struct tegra_dc_ext_hdr_caps hdr_cap_info = {0};
 
 			ret = tegra_dc_get_cap_hdr_info(user, &hdr_cap_info);
 
@@ -2648,7 +2648,7 @@ static int tegra_dc_get_caps(struct tegra_dc_ext_user *user,
 		}
 		case TEGRA_DC_EXT_CAP_TYPE_QUANT_SELECTABLE:
 		{
-			struct tegra_dc_ext_quant_caps quant_cap_info;
+			struct tegra_dc_ext_quant_caps quant_cap_info = {0};
 
 			ret = tegra_dc_get_cap_quant_info(user, &quant_cap_info);
 			if (copy_to_user((void __user *)(uintptr_t)

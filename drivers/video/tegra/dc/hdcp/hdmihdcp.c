@@ -2402,10 +2402,13 @@ static long nvhdcp_dev_ioctl(struct file *filp,
 	case TEGRAIO_NVHDCP_RECV_CAPABLE:
 		{
 			__u32 recv_capable = tegra_nvhdcp_recv_capable(nvhdcp);
+			e = 0;
+			pkt = NULL;
 			if (copy_to_user((void __user *)arg, &recv_capable,
-				sizeof(recv_capable)))
-				return -EFAULT;
-			return 0;
+				sizeof(recv_capable))) {
+				e = -EFAULT;
+			}
+			return e;
 		}
 	}
 

@@ -1,7 +1,7 @@
 /*
  * NVIDIA Tegra Video Input Device
  *
- * Copyright (c) 2015-2020, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2021, NVIDIA CORPORATION.  All rights reserved.
  *
  * Author: Bryan Wu <pengw@nvidia.com>
  *
@@ -1012,9 +1012,10 @@ tegra_channel_enum_framesizes(struct file *file, void *fh,
 	int ret = 0;
 
 	/* Convert v4l2 pixel format (fourcc) into media bus format code */
-	fse.code = tegra_core_get_code_by_fourcc(chan, sizes->pixel_format, 0);
-	if (fse.code < 0)
+	ret = tegra_core_get_code_by_fourcc(chan, sizes->pixel_format, 0);
+	if (ret < 0)
 		return -EINVAL;
+	fse.code = ret;
 	fse.index = sizes->index;
 
 	ret = v4l2_subdev_call(sd, pad, enum_frame_size, NULL, &fse);
@@ -1038,10 +1039,11 @@ tegra_channel_enum_frameintervals(struct file *file, void *fh,
 	int ret = 0;
 
 	/* Convert v4l2 pixel format (fourcc) into media bus format code */
-	fie.code = tegra_core_get_code_by_fourcc(
+	ret = tegra_core_get_code_by_fourcc(
 		chan, intervals->pixel_format, 0);
-	if (fie.code < 0)
+	if (ret < 0)
 		return -EINVAL;
+	fie.code = ret;
 	fie.index = intervals->index;
 	fie.width = intervals->width;
 	fie.height = intervals->height;

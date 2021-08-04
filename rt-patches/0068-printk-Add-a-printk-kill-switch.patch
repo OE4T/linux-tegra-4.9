@@ -146,10 +146,9 @@ diff --git a/kernel/watchdog_hld.c b/kernel/watchdog_hld.c
 index e5709b8..398df55 100644
 --- a/kernel/watchdog_hld.c
 +++ b/kernel/watchdog_hld.c
-@@ -20,6 +20,8 @@
+@@ -20,5 +20,7 @@
  static DEFINE_PER_CPU(bool, hard_watchdog_warn);
  static DEFINE_PER_CPU(bool, watchdog_nmi_touch);
- static DEFINE_PER_CPU(struct perf_event *, watchdog_ev);
 +static DEFINE_RAW_SPINLOCK(watchdog_output_lock);
 +
  static DEFINE_PER_CPU(unsigned long, hrtimer_interrupts_saved);

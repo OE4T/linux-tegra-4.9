@@ -991,7 +991,7 @@ int camera_common_initialize(struct camera_common_data *s_data,
 		const char *dev_name)
 {
 	int err = 0;
-	char debugfs_name[10];
+	char debugfs_name[35];
 
 	if (s_data->dev == NULL)
 		return -EINVAL;

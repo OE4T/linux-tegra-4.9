@@ -2149,9 +2149,10 @@ static int tegra_se_rng_drbg_get_random(struct crypto_rng *tfm, const u8 *src,
 			       TEGRA_SE_RNG_DT_SIZE);
 	}
 
-	if (!ret)
-		ret = dlen;
-
+	/*
+	 * According to include/crypto/rng.h, this function should
+	 * return 0 for success, < 0 errorcode otherwise.
+	 */
 	mutex_unlock(&se_dev->mtx);
 	devm_kfree(se_dev->dev, req_ctx);
 

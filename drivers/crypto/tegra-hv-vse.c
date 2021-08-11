@@ -96,6 +96,8 @@ struct tegra_vse_rng1_data {
 	u32 bytes_returned;
 	u8 data[TEGRA_VIRTUAL_SE_RNG1_SIZE];
 };
+/* Timeout response from SE server in status field */
+#define TEGRA_VSE_STATUS_TIMEOUT    (-13)
 
 struct tegra_vse_priv_data {
 	struct ablkcipher_request *reqs[TEGRA_HV_VSE_MAX_TASKS_PER_SUBMIT];
@@ -2950,7 +2952,7 @@ static int tegra_hv_vse_rng_drbg_get_random(struct crypto_rng *tfm,
 				sizeof(*ivc_req_msg),
 				GFP_KERNEL);
 	if (!ivc_req_msg)
-		return 0;
+		return -ENOMEM;
 
 	ivc_tx = &ivc_req_msg->d[0].tx;
 	ivc_req_msg->hdr.num_reqs = 1;
@@ -2958,7 +2960,7 @@ static int tegra_hv_vse_rng_drbg_get_random(struct crypto_rng *tfm,
 	if (!priv) {
 		dev_err(se_dev->dev, "Priv Data allocation failed\n");
 		devm_kfree(se_dev->dev, ivc_req_msg);
-		return 0;
+		return -ENOMEM;
 	}
 
 	for (j = 0; j <= num_blocks; j++) {
@@ -2980,14 +2982,14 @@ static int tegra_hv_vse_rng_drbg_get_random(struct crypto_rng *tfm,
 		/* Return error if engine is in suspended state */
 		if (atomic_read(&se_dev->se_suspended)) {
 			mutex_unlock(&se_dev->server_lock);
-			dlen = 0;
+			dlen = -ENODEV;
 			goto exit;
 		}
 		err = tegra_hv_vse_send_ivc(se_dev, pivck, ivc_req_msg,
 				sizeof(struct tegra_virtual_se_ivc_msg_t));
 		if (err) {
 			mutex_unlock(&se_dev->server_lock);
-			dlen = 0;
+			dlen = err;
 			goto exit;
 		}
 
@@ -2996,7 +2998,7 @@ static int tegra_hv_vse_rng_drbg_get_random(struct crypto_rng *tfm,
 		mutex_unlock(&se_dev->server_lock);
 		if (time_left == 0) {
 			dev_err(se_dev->dev, "%s timeout\n", __func__);
-			dlen = 0;
+			dlen = -ETIMEDOUT;
 			goto exit;
 		}
 
@@ -3010,6 +3012,11 @@ static int tegra_hv_vse_rng_drbg_get_random(struct crypto_rng *tfm,
 				TEGRA_VIRTUAL_SE_RNG_DT_SIZE);
 		}
 	}
+	/*
+	 * According to include/crypto/rng.h, this function should
+	 * return 0 for success, < 0 errorcode otherwise.
+	 */
+	dlen = 0;
 exit:
 	devm_kfree(se_dev->dev, priv);
 	devm_kfree(se_dev->dev, ivc_req_msg);
@@ -3046,7 +3053,7 @@ static int tegra_hv_vse_rng1_get_trng(struct crypto_rng *tfm,
 				sizeof(*ivc_req_msg),
 				GFP_KERNEL);
 	if (!ivc_req_msg)
-		return 0;
+		return -ENOMEM;
 
 	ivc_tx = &ivc_req_msg->d[0].tx;
 	ivc_req_msg->hdr.num_reqs = 1;
@@ -3054,7 +3061,7 @@ static int tegra_hv_vse_rng1_get_trng(struct crypto_rng *tfm,
 	if (!priv) {
 		dev_err(se_dev->dev, "Priv Data allocation failed\n");
 		devm_kfree(se_dev->dev, ivc_req_msg);
-		return 0;
+		return -ENOMEM;
 	}
 
 	for (j = 0; j <= num_blocks; j++) {
@@ -3078,23 +3085,33 @@ static int tegra_hv_vse_rng1_get_trng(struct crypto_rng *tfm,
 		mutex_lock(&se_dev->server_lock);
 		if (atomic_read(&se_dev->se_suspended)) {
 			mutex_unlock(&se_dev->server_lock);
-			dlen = 0;
+			dlen = -ENODEV;
 			goto exit;
 		}
 		err = tegra_hv_vse_send_ivc(se_dev, pivck, ivc_req_msg,
 				sizeof(struct tegra_virtual_se_ivc_msg_t));
 		if (err) {
 			mutex_unlock(&se_dev->server_lock);
-			dlen = 0;
+			dlen = err;
 			goto exit;
 		}
 
 		time_left = wait_for_completion_timeout(&priv->alg_complete,
 				TEGRA_HV_VSE_TIMEOUT);
 		mutex_unlock(&se_dev->server_lock);
-		if ((time_left == 0) || (priv->rng1.status)) {
-			dev_err(se_dev->dev, "%s rng1 failed\n", __func__);
-			dlen = 0;
+		if (time_left == 0) {
+			dev_err(se_dev->dev, "%s server timeout\n", __func__);
+			dlen = -ETIMEDOUT;
+			goto exit;
+		}
+		else if (priv->rng1.status == (u8)TEGRA_VSE_STATUS_TIMEOUT) {
+			dev_dbg(se_dev->dev, "%s rng1 hw busy\n", __func__);
+			dlen = -EAGAIN;
+			goto exit;
+		} else if (priv->rng1.status) {
+			dev_err(se_dev->dev, "%s rng1 err %x\n", __func__,
+					priv->rng1.status);
+			dlen = -ENODATA;
 			goto exit;
 		}
 		rdata_addr =
@@ -3108,6 +3125,11 @@ static int tegra_hv_vse_rng1_get_trng(struct crypto_rng *tfm,
 		}
 		total -= TEGRA_VIRTUAL_SE_RNG1_SIZE;
 	}
+	/*
+	 * According to include/crypto/rng.h, this function should
+	 * return 0 for success, < 0 errorcode otherwise.
+	 */
+	dlen = 0;
 exit:
 	devm_kfree(se_dev->dev, priv);
 	devm_kfree(se_dev->dev, ivc_req_msg);

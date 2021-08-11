@@ -1670,12 +1670,11 @@ static long tegra_crypto_dev_ioctl(struct file *filp,
 				rng_req.nbytes);
 		}
 
-		if (ret != rng_req.nbytes) {
+		if (ret != 0) {
 			if (rng_req.type == RNG_DRBG)
 				pr_err("rng_drbg failed");
 			else
 				pr_err("rng failed");
-			ret = -ENODATA;
 			goto free_tfm;
 		}
 		ret = copy_to_user((void __user *)rng_req.rdata,
@@ -1869,9 +1868,8 @@ rng_out:
 		ret = crypto_rng_get_bytes(ctx->rng, rng,
 				rng_req.nbytes);
 
-		if (ret != rng_req.nbytes) {
+		if (ret != 0) {
 			pr_err("rng failed");
-			ret = -ENODATA;
 			goto free_rng1_tfm;
 		}
 

@@ -3925,6 +3925,12 @@ static int tegra_se_elp_rng_get_random(struct crypto_rng *tfm,
 	}
 
 	ret = tegra_se_elp_rng_get(tfm, rdata, dlen);
+	/*
+	 * According to include/crypto/rng.h, this function should
+	 * return 0 for success, < 0 errorcode otherwise.
+	 */
+    if (ret == dlen)
+        ret = 0;
 
 rel_mutex:
 	tegra_se_release_rng1_mutex(se_dev);

@@ -1651,6 +1651,8 @@ static void nvgpu_remove_pmu_support(struct nvgpu_pmu *pmu)
 
 	nvgpu_dma_unmap_free(vm, &pmu->super_surface_buf);
 
+	nvgpu_kill_task_pg_init(g);
+
 	nvgpu_mutex_destroy(&pmu->elpg_mutex);
 	nvgpu_mutex_destroy(&pmu->pg_mutex);
 	nvgpu_mutex_destroy(&pmu->isr_mutex);

@@ -1599,6 +1599,7 @@ int eqos_remove(struct platform_device *pdev)
 	struct desc_if_struct *desc_if;
 	int i, ret_val = 0;
 	struct eqos_cfg *pdt_cfg;
+	struct device_attribute *attr = NULL;
 
 	pr_debug("--> eqos_remove\n");
 
@@ -1654,8 +1655,6 @@ int eqos_remove(struct platform_device *pdev)
 
 		if (!IS_ERR_OR_NULL(pdata->eqos_rst))
 			reset_control_assert(pdata->eqos_rst);
-		devm_gpio_free(&pdev->dev, pdata->phy_reset_gpio);
-		devm_gpio_free(&pdev->dev, pdata->phy_intr_gpio);
 		eqos_regulator_deinit(pdata);
 	}
 
@@ -1664,6 +1663,11 @@ int eqos_remove(struct platform_device *pdev)
 	platform_set_drvdata(pdev, NULL);
 
 	devm_iounmap(&pdev->dev, (void *) eqos_base_addr);
+
+	for (i = 0; i < ARRAY_SIZE(eqos_sysfs_attrs); i++) {
+		attr = eqos_sysfs_attrs[i];
+		device_remove_file(&pdata->pdev->dev, attr);
+	}
 
 	pr_debug("<-- eqos_remove\n");
 

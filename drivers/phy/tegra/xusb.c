@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2019, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2021, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -658,6 +658,7 @@ static int tegra_xusb_add_usb2_port(struct tegra_xusb_padctl *padctl,
 
 	/* overcurrent disabled by default */
 	usb2->oc_pin = -1;
+	usb2->hs_txeq = -1;
 
 	usb2->base.ops = padctl->soc->ports.usb2.ops;
 

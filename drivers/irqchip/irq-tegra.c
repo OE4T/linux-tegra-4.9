@@ -515,8 +515,8 @@ static int __init tegra_ictlr_init(struct device_node *node,
 			break;
 
 		doorbells[idx].hwirq = irq_to_desc(irq)->irq_data.hwirq - 32;
-		err = request_irq(doorbells[idx].irq, doorbell_handler, 0,
-				  "doorbell", &doorbells[idx]);
+		err = request_irq(doorbells[idx].irq, doorbell_handler,
+				IRQF_NO_THREAD, "doorbell", &doorbells[idx]);
 		if (err < 0) {
 			pr_err("doorbell %d irq %d request failure\n",
 				idx, irq);

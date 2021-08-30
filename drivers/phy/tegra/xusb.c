@@ -137,8 +137,10 @@ tegra_xusb_lane_lookup_function(struct tegra_xusb_lane *lane,
 int tegra_xusb_lane_parse_dt(struct tegra_xusb_lane *lane,
 			     struct device_node *np)
 {
+	struct tegra_xusb_usb2_lane *usb2 = to_usb2_lane(lane);
 	struct device *dev = &lane->pad->dev;
 	const char *function;
+	s32 offset;
 	int err;
 
 	err = of_property_read_string(np, "nvidia,function", &function);
@@ -153,6 +155,14 @@ int tegra_xusb_lane_parse_dt(struct tegra_xusb_lane *lane,
 	}
 
 	lane->function = err;
+
+	err = of_property_read_s32(np, "nvidia,hs_curr_level_offset", &offset);
+	if (err == 0)
+		usb2->hs_curr_level_offset = offset;
+
+	/* this property is optional, ignore -EINVAL error */
+	if (err == -EINVAL)
+		err = 0;
 
 	return 0;
 }

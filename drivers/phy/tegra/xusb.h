@@ -70,7 +70,7 @@ to_usb3_lane(struct tegra_xusb_lane *lane)
 struct tegra_xusb_usb2_lane {
 	struct tegra_xusb_lane base;
 
-	u32 hs_curr_level_offset;
+	s32 hs_curr_level_offset;
 	bool powered_on;
 };
 

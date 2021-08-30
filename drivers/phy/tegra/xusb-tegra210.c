@@ -1628,8 +1628,23 @@ static int tegra210_usb2_phy_power_on(struct phy *phy)
 	value = padctl_readl(padctl, XUSB_PADCTL_USB2_OTG_PADX_CTL_0(index));
 	value &= ~USB2_OTG_PD_ZI;
 	value &= ~HS_CURR_LEVEL(~0);
-	value |= HS_CURR_LEVEL(priv->fuse.hs_curr_level[index] +
-				usb2->hs_curr_level_offset);
+	if (usb2->hs_curr_level_offset) {
+		int hs_current_level;
+
+		dev_dbg(&phy->dev, "UTMI port %d apply hs_curr_level_offset %d\n",
+			index, usb2->hs_curr_level_offset);
+
+		hs_current_level = (int) priv->fuse.hs_curr_level[index] +
+			usb2->hs_curr_level_offset;
+
+		if (hs_current_level < 0)
+			hs_current_level = 0;
+		if (hs_current_level > 0x3f)
+			hs_current_level = 0x3f;
+
+		value |= HS_CURR_LEVEL(hs_current_level);
+	} else
+		value |= HS_CURR_LEVEL(priv->fuse.hs_curr_level[index]);
 	padctl_writel(padctl, value, XUSB_PADCTL_USB2_OTG_PADX_CTL_0(index));
 
 	value = padctl_readl(padctl, XUSB_PADCTL_USB2_OTG_PADX_CTL_1(index));

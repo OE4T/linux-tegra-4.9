@@ -5321,7 +5321,7 @@ int gk20a_gr_handle_fecs_error(struct gk20a *g, struct channel_gk20a *ch,
 	} else {
 		nvgpu_err(g,
 			"unhandled fecs error interrupt 0x%08x for channel %u",
-			gr_fecs_intr, ch->chid);
+			gr_fecs_intr, chid);
 		gk20a_fecs_dump_falcon_stats(g);
 	}
 

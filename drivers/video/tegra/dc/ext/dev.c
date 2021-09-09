@@ -2338,6 +2338,11 @@ static int tegra_dc_ext_set_nvdisp_cmu(struct tegra_dc_ext_user *user,
 	if (!nvdisp_cmu)
 		return -ENOMEM;
 
+	if (args->lut_size < 0)
+		return -ERANGE;
+	if (args->lut_size > nvdisp_cmu->size / sizeof(u64))
+		return -E2BIG;
+
 	tegra_dc_scrncapt_disp_pause_lock(dc);
 	dc->pdata->cmu_enable = args->cmu_enable;
 	lut_size = args->lut_size;

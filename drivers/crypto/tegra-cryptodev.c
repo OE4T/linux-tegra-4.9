@@ -357,16 +357,22 @@ static int process_crypt_req(struct file *filp, struct tegra_crypto_ctx *ctx,
 			/* crypto driver is asynchronous */
 			ret = wait_for_completion_timeout(&tcrypt_complete.restart,
 						msecs_to_jiffies(5000));
-			if (ret == 0)
+			if (ret == 0) {
+				pr_err("%scrypt timed out\n",
+					crypt_req->encrypt ? "en" : "de");
+				ret = -ENODATA;
 				goto process_req_buf_out;
+			}
 
 			if (tcrypt_complete.req_err < 0) {
 				ret = tcrypt_complete.req_err;
+				pr_err("%scrypt failed (%d)\n",
+					crypt_req->encrypt ? "en" : "de", ret);
 				goto process_req_buf_out;
 			}
 		} else if (ret < 0) {
-			pr_debug("%scrypt failed (%d)\n",
-				crypt_req->encrypt ? "en" : "de", ret);
+			pr_err("%scrypt failed (%d)\n",
+					crypt_req->encrypt ? "en" : "de", ret);
 			goto process_req_buf_out;
 		}
 

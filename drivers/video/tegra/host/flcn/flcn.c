@@ -1,7 +1,7 @@
 /*
 * Tegra flcn common driver
 *
-* Copyright (c) 2011-2018, NVIDIA CORPORATION.  All rights reserved.
+* Copyright (c) 2011-2021, NVIDIA CORPORATION.  All rights reserved.
 *
 * This program is free software; you can redistribute it and/or modify it
 * under the terms and conditions of the GNU General Public License,
@@ -553,9 +553,11 @@ static int nvhost_flcn_init_sw(struct platform_device *dev)
 	set_flcn(dev, v);
 	nvhost_dbg_fn("primed dev:%p v:%p", dev, v);
 	err = flcn_read_ucode(dev, pdata->firmware_name, v);
-	if (err || !v->valid)
+	if (err || !v->valid) {
+		kfree(v);
+		set_flcn(dev, NULL);
 		goto clean_up;
-
+	}
 	return 0;
 
  clean_up:

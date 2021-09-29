@@ -2329,8 +2329,15 @@ static int process_rx_completions(struct eqos_rx_queue *rx_queue, int quota)
 #ifdef EQOS_ENABLE_RX_DESC_DUMP
 		dump_rx_desc(qinx, prx_desc, entry);
 #endif
+
+		/* Process rx packets which takes only 1 rx desc buffer
+		 * and drop other packets which are spread across
+		 * descriptors due to MTU mismatch. Do not free the
+		 * buffers but reuse the mapped skb buffer again.
+		 */
 		if (likely(!(status & EQOS_RDESC3_ES_BITS) &&
-			   (status & EQOS_RDESC3_LD))) {
+			   (status & EQOS_RDESC3_LD) &&
+			   (status & EQOS_RDESC3_FD))) {
 			/* Unmap the SKB */
 			skb = prx_swcx_desc->skb;
 			prx_swcx_desc->skb = NULL;
@@ -2364,10 +2371,8 @@ static int process_rx_completions(struct eqos_rx_queue *rx_queue, int quota)
 			}
 
 			eqos_receive_skb(pdata, dev, skb, qinx);
-		} else {
+		} else
 			eqos_update_rx_errors(dev, status);
-			dev_kfree_skb_any(prx_swcx_desc->skb);
-		}
 
 		received++;
 		if (eqos_rx_dirty(prx_ring) >=

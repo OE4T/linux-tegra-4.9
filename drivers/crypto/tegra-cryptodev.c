@@ -3,7 +3,7 @@
  *
  * crypto dev node for NVIDIA tegra aes hardware
  *
- * Copyright (c) 2010-2021, NVIDIA Corporation. All Rights Reserved.
+ * Copyright (c) 2010-2023, NVIDIA Corporation. All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -355,13 +355,14 @@ static int process_crypt_req(struct file *filp, struct tegra_crypto_ctx *ctx,
 			crypto_skcipher_decrypt(req);
 		if ((ret == -EINPROGRESS) || (ret == -EBUSY)) {
 			/* crypto driver is asynchronous */
-			ret = wait_for_completion_timeout(&tcrypt_complete.restart,
-						msecs_to_jiffies(5000));
-			if (ret == 0) {
-				pr_err("%scrypt timed out\n",
+			ret = wait_for_completion_interruptible(
+					&tcrypt_complete.restart);
+			if (ret != 0) {
+				pr_err("%scrypt wait interrupted\n",
 					crypt_req->encrypt ? "en" : "de");
-				ret = -ENODATA;
-				goto process_req_buf_out;
+				/* Do not free buffers, which might be in
+				 * active use */
+				goto free_tfm;
 			}
 
 			if (tcrypt_complete.req_err < 0) {

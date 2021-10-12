@@ -4,7 +4,7 @@
  * This code is based on drivers/scsi/ufs/ufshcd.c
  * Copyright (C) 2011-2013 Samsung India Software Operations
  * Copyright (c) 2013-2016, The Linux Foundation. All rights reserved.
- * Copyright (c) 2015-2019, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2022, NVIDIA CORPORATION.  All rights reserved.
  *
  * Authors:
  *	Santosh Yaraganavi <santosh.sy@samsung.com>
@@ -5265,6 +5265,26 @@ out:
 	return ret;
 }
 
+int ufs_get_device_specversion(struct ufs_hba *hba, u16 *spec)
+{
+	int err;
+	u8 desc_buf[hba->desc_size.dev_desc];
+
+	err = ufshcd_read_device_desc(hba, desc_buf, hba->desc_size.dev_desc);
+	if (err) {
+		dev_err(hba->dev, "%s: Failed reading Device Desc. err = %d\n",
+			__func__, err);
+		goto out;
+	}
+
+	*spec = desc_buf[DEVICE_DESC_PARAM_SPEC_VER + 1] | \
+			 (desc_buf[DEVICE_DESC_PARAM_SPEC_VER] << 8);
+	dev_info(hba->dev, "spec version: 0x%x\n", *spec);
+
+out:
+	return err;
+}
+
 static int ufs_get_device_desc(struct ufs_hba *hba,
 			       struct ufs_dev_desc *dev_desc)
 {
@@ -7422,6 +7442,19 @@ int ufshcd_alloc_host(struct ufs_hba *hba)
 }
 EXPORT_SYMBOL(ufshcd_alloc_host);
 
+
+static int ufshcd_late_init(struct ufs_hba *hba)
+{
+	int ret = 0;
+
+	ret = ufshcd_vops_late_init(hba);
+	if (ret)
+		dev_err(hba->dev, "%s: %d error is %d\n",
+					__func__, __LINE__, ret);
+
+	return ret;
+}
+
 static int ufshcd_scale_clks(struct ufs_hba *hba, bool scale_up)
 {
 	int ret = 0;
@@ -7586,6 +7619,7 @@ int ufshcd_init(struct ufs_hba *hba, void __iomem *mmio_base, unsigned int irq)
 	int err;
 	struct Scsi_Host *host = hba->host;
 	struct device *dev = hba->dev;
+	async_cookie_t cookie;
 
 	if (!mmio_base) {
 		dev_err(hba->dev,
@@ -7736,7 +7770,11 @@ int ufshcd_init(struct ufs_hba *hba, void __iomem *mmio_base, unsigned int irq)
 	 */
 	ufshcd_set_ufs_dev_active(hba);
 
-	async_schedule(ufshcd_async_scan, hba);
+	cookie = async_schedule(ufshcd_async_scan, hba);
+	async_synchronize_cookie(cookie + 1);
+
+	ufshcd_late_init(hba);
+
 	hba->card_enumerated = 1;
 
 	return 0;

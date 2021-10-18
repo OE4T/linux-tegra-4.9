@@ -276,13 +276,20 @@ static const struct eqos_stats eqos_mmc[] = {
 static int eqos_get_ts_info(struct net_device *net,
 			    struct ethtool_ts_info *info)
 {
+	struct eqos_prv_data *pdata = netdev_priv(net);
+
 	info->so_timestamping =
 	    SOF_TIMESTAMPING_TX_SOFTWARE |
 	    SOF_TIMESTAMPING_RX_SOFTWARE |
 	    SOF_TIMESTAMPING_SOFTWARE |
 	    SOF_TIMESTAMPING_TX_HARDWARE |
 	    SOF_TIMESTAMPING_RX_HARDWARE | SOF_TIMESTAMPING_RAW_HARDWARE;
-	info->phc_index = 0;
+
+	if (pdata && pdata->ptp_clock)
+	    info->phc_index = ptp_clock_index(pdata->ptp_clock);
+	else
+	    info->phc_index = -1;
+
 
 	info->tx_types = (1 << HWTSTAMP_TX_OFF) | (1 << HWTSTAMP_TX_ON);
 

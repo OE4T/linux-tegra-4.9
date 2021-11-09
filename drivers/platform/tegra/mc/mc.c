@@ -2,7 +2,7 @@
  * arch/arm/mach-tegra/mc.c
  *
  * Copyright (C) 2010 Google, Inc.
- * Copyright (C) 2011-2018, NVIDIA Corporation.  All rights reserved.
+ * Copyright (C) 2011-2021, NVIDIA Corporation.  All rights reserved.
  *
  * Author:
  *	Erik Gilling <konkers@google.com>
@@ -451,6 +451,12 @@ static int tegra_mc_probe(struct platform_device *pdev)
 	return 0;
 }
 
+static int tegra_mc_resume_early(struct device *dev)
+{
+	tegra_mcerr_resume();
+	return 0;
+}
+
 u32 __weak tegra_get_dvfs_clk_change_latency_nsec(unsigned long emc_freq_khz)
 {
 	return 2000;
@@ -461,11 +467,16 @@ static int tegra_mc_remove(struct platform_device *pdev)
 	return 0;
 }
 
+static const struct dev_pm_ops tegra_mc_pm_ops = {
+	.resume_early = tegra_mc_resume_early,
+};
+
 static struct platform_driver mc_driver = {
 	.driver = {
 		.name	= "nv-tegra-mc",
 		.of_match_table = tegra_mc_of_ids,
 		.owner	= THIS_MODULE,
+		.pm     = &tegra_mc_pm_ops,
 	},
 
 	.probe		= tegra_mc_probe,

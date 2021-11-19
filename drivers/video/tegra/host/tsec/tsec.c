@@ -737,10 +737,12 @@ int nvhost_tsec_prepare_poweroff(struct platform_device *dev)
 	if (m)
 		m->is_booted = false;
 
+	mutex_lock(&tegra_tsec_lock);
 	if (channel) {
 		nvhost_putchannel(channel, 1);
 		channel = NULL;
 	}
+	mutex_unlock(&tegra_tsec_lock);
 
 	return 0;
 }

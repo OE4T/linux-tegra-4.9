@@ -847,7 +847,6 @@ static int get_srm_signature(struct hdcp_context_t *hdcp_context,
 #else
 	err = te_launch_trusted_oper(pkt, PKT_SIZE, HDCP_CMD_GEN_CMAC, ta_ctx);
 #endif
-
 	if (err)
 		nvhdcp_err("te launch operation failed with error %d\n", err);
 	return err;
@@ -1035,6 +1034,51 @@ static int get_repeater_info(struct tegra_nvhdcp *nvhdcp)
 	}
 
 	return 0;
+}
+
+static int nvhdcp_te_open(struct tegra_nvhdcp *nvhdcp)
+{
+	int err = 0;
+
+#ifdef CONFIG_TRUSTED_LITTLE_KERNEL
+	/* differentiate between TLK and trusty */
+	if (te_is_secos_dev_enabled()) {
+		err = te_open_trusted_session_tlk(hdcp_uuid, sizeof(hdcp_uuid),
+					&session_id);
+	} else {
+		nvhdcp->ta_ctx = NULL;
+		/* Open a trusted sesion with HDCP TA */
+		err = te_open_trusted_session(HDCP_PORT_NAME, &nvhdcp->ta_ctx);
+	}
+#else
+	nvhdcp->ta_ctx = NULL;
+	/* Open a trusted sesion with HDCP TA */
+	err = te_open_trusted_session(HDCP_PORT_NAME, &nvhdcp->ta_ctx);
+#endif
+	return err;
+}
+
+static void nvhdcp_te_close(struct tegra_nvhdcp *nvhdcp)
+{
+#ifdef CONFIG_TRUSTED_LITTLE_KERNEL
+	if (te_is_secos_dev_enabled()) {
+		if (session_id) {
+			te_close_trusted_session_tlk(session_id, hdcp_uuid,
+			sizeof(hdcp_uuid));
+			session_id = 0;
+		}
+	} else {
+		if (nvhdcp->ta_ctx) {
+			te_close_trusted_session(nvhdcp->ta_ctx);
+			nvhdcp->ta_ctx = NULL;
+		}
+	}
+#else
+	if (nvhdcp->ta_ctx) {
+		te_close_trusted_session(nvhdcp->ta_ctx);
+		nvhdcp->ta_ctx = NULL;
+	}
+#endif
 }
 
 static int nvhdcp_ake_init_send(struct tegra_nvhdcp *nvhdcp, u8 *buf)
@@ -1286,22 +1330,7 @@ static int tsec_hdcp_authentication(struct tegra_nvhdcp *nvhdcp,
 	if (err)
 		goto exit;
 
-#ifdef CONFIG_TRUSTED_LITTLE_KERNEL
-	/* differentiate between TLK and trusty */
-	if (te_is_secos_dev_enabled()) {
-		err = te_open_trusted_session_tlk(hdcp_uuid, sizeof(hdcp_uuid),
-					&session_id);
-	} else {
-		nvhdcp->ta_ctx = NULL;
-		/* Open a trusted sesion with HDCP TA */
-		err = te_open_trusted_session(HDCP_PORT_NAME, &nvhdcp->ta_ctx);
-	}
-#else
-	nvhdcp->ta_ctx = NULL;
-	/* Open a trusted sesion with HDCP TA */
-	err = te_open_trusted_session(HDCP_PORT_NAME, &nvhdcp->ta_ctx);
-#endif
-
+	err = nvhdcp_te_open(nvhdcp);
 	if (err) {
 		nvhdcp_err("Error opening trusted session\n");
 		goto exit;
@@ -1476,27 +1505,7 @@ exit:
 	if (err)
 		nvhdcp_err("HDCP authentication failed with err %d\n", err);
 	kfree(pkt);
-
-#ifdef CONFIG_TRUSTED_LITTLE_KERNEL
-	if (te_is_secos_dev_enabled()) {
-		if (session_id) {
-			te_close_trusted_session_tlk(session_id, hdcp_uuid,
-			sizeof(hdcp_uuid));
-			session_id = 0;
-		}
-	} else {
-		if (nvhdcp->ta_ctx) {
-			te_close_trusted_session(nvhdcp->ta_ctx);
-			nvhdcp->ta_ctx = NULL;
-		}
-	}
-#else
-	if (nvhdcp->ta_ctx) {
-		te_close_trusted_session(nvhdcp->ta_ctx);
-		nvhdcp->ta_ctx = NULL;
-	}
-#endif
-
+	nvhdcp_te_close(nvhdcp);
 	return err;
 }
 
@@ -1594,11 +1603,7 @@ static void nvhdcp1_downstream_worker(struct work_struct *work)
 	nvhdcp_vdbg("read Bcaps = 0x%02x\n", b_caps);
 
 	nvhdcp->ta_ctx = NULL;
-	e = te_open_trusted_session(HDCP_PORT_NAME, &nvhdcp->ta_ctx);
-	if (e) {
-		nvhdcp_err("Error opening trusted session\n");
-		goto failure;
-	}
+	e = nvhdcp_te_open(nvhdcp);
 
 	if (tegra_dc_is_nvdisplay()) {
 		/* if session successfully opened, launch operations
@@ -1929,19 +1934,13 @@ lost_hdmi:
 err:
 	mutex_unlock(&nvhdcp->lock);
 	kfree(pkt);
-	if (nvhdcp->ta_ctx) {
-		te_close_trusted_session(nvhdcp->ta_ctx);
-		nvhdcp->ta_ctx = NULL;
-	}
+	nvhdcp_te_close(nvhdcp);
 	tegra_dc_io_end(dc);
 	return;
 disable:
 	nvhdcp->state = STATE_OFF;
 	kfree(pkt);
-	if (nvhdcp->ta_ctx) {
-		te_close_trusted_session(nvhdcp->ta_ctx);
-		nvhdcp->ta_ctx = NULL;
-	}
+	nvhdcp_te_close(nvhdcp);
 	nvhdcp_set_plugged(nvhdcp, false);
 	mutex_unlock(&nvhdcp->lock);
 	tegra_dc_io_end(dc);
@@ -1986,21 +1985,7 @@ static int link_integrity_check(struct tegra_nvhdcp *nvhdcp,
 							msecs_to_jiffies(10));
 			goto exit;
 		}
-#ifdef CONFIG_TRUSTED_LITTLE_KERNEL
-		/* differentiate between TLK and trusty */
-		if (te_is_secos_dev_enabled()) {
-			err = te_open_trusted_session_tlk(hdcp_uuid, sizeof(hdcp_uuid),
-					&session_id);
-		} else {
-			nvhdcp->ta_ctx = NULL;
-			/* Open a trusted sesion with HDCP TA */
-			err = te_open_trusted_session(HDCP_PORT_NAME, &nvhdcp->ta_ctx);
-		}
-#else
-		nvhdcp->ta_ctx = NULL;
-		/* Open a trusted sesion with HDCP TA */
-		err = te_open_trusted_session(HDCP_PORT_NAME, &nvhdcp->ta_ctx);
-#endif
+		err = nvhdcp_te_open(nvhdcp);
 		if (err) {
 			nvhdcp_err("Error opening trusted session\n");
 			goto exit;
@@ -2026,10 +2011,7 @@ static int link_integrity_check(struct tegra_nvhdcp *nvhdcp,
 		err = (rx_status & HDCP_RX_STATUS_MSG_REAUTH_REQ);
 exit:
 	kfree(pkt);
-	if (nvhdcp->ta_ctx) {
-		te_close_trusted_session(nvhdcp->ta_ctx);
-		nvhdcp->ta_ctx = NULL;
-	}
+	nvhdcp_te_close(nvhdcp);
 	return err;
 }
 
@@ -2423,7 +2405,22 @@ static int nvhdcp_dev_open(struct inode *inode, struct file *filp)
 	struct miscdevice *miscdev = filp->private_data;
 	struct tegra_nvhdcp *nvhdcp =
 		container_of(miscdev, struct tegra_nvhdcp, miscdev);
+#ifndef CONFIG_ANDROID
+	int err = 0;
+#endif
 	filp->private_data = nvhdcp;
+
+/* enable policy only if HDCP TA is ready */
+#ifndef CONFIG_ANDROID
+	if (!nvhdcp->policy_initialized) {
+		nvhdcp->policy_initialized = true;
+		err = nvhdcp_te_open(nvhdcp);
+		if (!err)
+			tegra_nvhdcp_set_policy(nvhdcp,
+				TEGRA_DC_HDCP_POLICY_ALWAYS_ON);
+		nvhdcp_te_close(nvhdcp);
+	}
+#endif
 	return 0;
 }
 

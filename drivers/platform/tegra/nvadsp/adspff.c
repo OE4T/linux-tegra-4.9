@@ -655,6 +655,16 @@ int adspff_init(struct platform_device *pdev)
 		return -1;
 	}
 
+	adspff_kthread = kthread_create(adspff_kthread_fn,
+		NULL, "adspp_kthread");
+	if ((adspff_kthread == ERR_PTR(-ENOMEM)) ||
+			(adspff_kthread == ERR_PTR(-EINTR))) {
+		pr_err("adspff kthread_create failed, error = %s\n",
+			(adspff_kthread == ERR_PTR(-ENOMEM)) ?
+					"-ENOMEM" : "-EINTR");
+		return -1;
+	}
+
 	adspff = ADSPFF_SHARED_STATE(app_info->mem.shared);
 
 	ret = nvadsp_mbox_open(&rx_mbox, &adspff->mbox_id,
@@ -674,10 +684,8 @@ int adspff_init(struct platform_device *pdev)
 	INIT_LIST_HEAD(&adspff_kthread_msgq_head);
 	INIT_LIST_HEAD(&file_list);
 
-	// kthread inIt
 	init_waitqueue_head(&wait_queue);
-	adspff_kthread = kthread_create(adspff_kthread_fn,
-		NULL, "adspp_kthread");
+
 	sched_setscheduler(adspff_kthread, SCHED_FIFO, &param);
 	get_task_struct(adspff_kthread);
 	wake_up_process(adspff_kthread);

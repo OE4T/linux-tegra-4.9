@@ -2,7 +2,7 @@
  * tegra_pcm.h - Definitions for Tegra PCM driver
  *
  * Author: Stephen Warren <swarren@nvidia.com>
- * Copyright (C) 2010,2012 - NVIDIA, Inc.
+ * Copyright (C) 2010-2021, NVIDIA CORPORATION.  All rights reserved.
  *
  * Based on code copyright/by:
  *
@@ -30,6 +30,8 @@
 
 #ifndef __TEGRA_PCM_H__
 #define __TEGRA_PCM_H__
+
+#define CHAN_NAME_WIDTH		8
 
 struct snd_dmaengine_pcm_config;
 

@@ -61,7 +61,7 @@
 					nvidia,function = HDR40_SPI;
 					nvidia,pull = <TEGRA_PIN_PULL_DOWN>;
 					nvidia,tristate = <TEGRA_PIN_DISABLE>;
-					nvidia,enable-input = <TEGRA_PIN_DISABLE>;
+					nvidia,enable-input = <TEGRA_PIN_ENABLE>;
 				};
 				hdr40-pin21 {
 					nvidia,pins = HDR40_PIN21;
@@ -82,14 +82,14 @@
 					nvidia,function = HDR40_SPI;
 					nvidia,pull = <TEGRA_PIN_PULL_UP>;
 					nvidia,tristate = <TEGRA_PIN_DISABLE>;
-					nvidia,enable-input = <TEGRA_PIN_DISABLE>;
+					nvidia,enable-input = <TEGRA_PIN_ENABLE>;
 				};
 				hdr40-pin26 {
 					nvidia,pins = HDR40_PIN26;
 					nvidia,function = HDR40_SPI;
 					nvidia,pull = <TEGRA_PIN_PULL_UP>;
 					nvidia,tristate = <TEGRA_PIN_DISABLE>;
-					nvidia,enable-input = <TEGRA_PIN_DISABLE>;
+					nvidia,enable-input = <TEGRA_PIN_ENABLE>;
 				};
 			};
 		};

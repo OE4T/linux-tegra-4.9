@@ -2,7 +2,7 @@
  * tegra_pcm.c - Tegra PCM driver
  *
  * Author: Stephen Warren <swarren@nvidia.com>
- * Copyright (C) 2010-2021, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (C) 2010,2012 - NVIDIA, Inc.
  *
  * Based on code copyright/by:
  *
@@ -58,9 +58,6 @@ static const struct snd_dmaengine_pcm_config tegra_dmaengine_pcm_config = {
 
 int tegra_pcm_platform_register(struct device *dev)
 {
-	if (!dev)
-		return -ENOMEM;
-
 	return snd_dmaengine_pcm_register(dev, &tegra_dmaengine_pcm_config, 0);
 }
 EXPORT_SYMBOL_GPL(tegra_pcm_platform_register);
@@ -69,21 +66,10 @@ int tegra_pcm_platform_register_with_chan_names(struct device *dev,
 				struct snd_dmaengine_pcm_config *config,
 				char *txdmachan, char *rxdmachan)
 {
-	if (!dev || !config)
-		return -ENOMEM;
-
 	*config = tegra_dmaengine_pcm_config;
 	config->dma_dev = dev->parent;
-
-	if (txdmachan && (strlen(txdmachan) < CHAN_NAME_WIDTH))
-		config->chan_names[0] = txdmachan;
-	else
-		return -ENOMEM;
-
-	if (rxdmachan && (strlen(rxdmachan) < CHAN_NAME_WIDTH))
-		config->chan_names[1] = rxdmachan;
-	else
-		return -ENOMEM;
+	config->chan_names[0] = txdmachan;
+	config->chan_names[1] = rxdmachan;
 
 	return snd_dmaengine_pcm_register(dev, config, 0);
 }
@@ -91,9 +77,6 @@ EXPORT_SYMBOL_GPL(tegra_pcm_platform_register_with_chan_names);
 
 void tegra_pcm_platform_unregister(struct device *dev)
 {
-	if (!dev)
-		return;
-
 	return snd_dmaengine_pcm_unregister(dev);
 }
 EXPORT_SYMBOL_GPL(tegra_pcm_platform_unregister);

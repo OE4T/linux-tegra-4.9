@@ -1,6 +1,7 @@
 /*
  * Copyright (C) 2010-2011 Canonical Ltd <jeremy.kerr@canonical.com>
  * Copyright (C) 2011-2012 Linaro Ltd <mturquette@linaro.org>
+ * Copyright (c) 2022, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -1380,6 +1381,41 @@ unsigned long clk_get_rate(struct clk *clk)
 	return clk_core_get_rate(clk->core);
 }
 EXPORT_SYMBOL_GPL(clk_get_rate);
+
+/**
+ * clk_get_rate_cached_no_dvfs - optimization to return the cached clk_rate
+ * without acquiring a lock. Useful to use in drivers which are known to not
+ * vary the clocks dynamically. This way, the time to acquire mutex can be
+ * saved.
+ * @clk: the clk whose rate is being returned
+ *
+ * Simply returns the cached rate of the clk if it is cached, else goes through
+ * regular clk_get_rate call. If clk is NULL then returns 0.
+ */
+unsigned long clk_get_rate_cached_no_dvfs(struct clk *clk)
+{
+	struct clk_core *core = NULL;
+
+	if (!clk)
+		return 0;
+
+	core = clk->core;
+	if (core && (core->flags & CLK_GET_RATE_NOCACHE)) {
+		/*  If the get rate is not cached, there is a chance that
+		 *  the cached value may be altered, hence we need to
+		 *  acquire a lock before we change it. Hence go through
+		 *  the regular clk_get_rate call.
+		 */
+		return clk_get_rate(clk);
+	}
+	/*  This is a special case where the get clk rate is cached
+	 *  and the caller driver is aware that there is no DVFS,
+	 *  hence we return the cached value immediately,
+	 *  thereby saving time.
+	 */
+	return clk_core_get_rate_nolock(core);
+}
+EXPORT_SYMBOL_GPL(clk_get_rate_cached_no_dvfs);
 
 static int clk_fetch_parent_index(struct clk_core *core,
 				  struct clk_core *parent)

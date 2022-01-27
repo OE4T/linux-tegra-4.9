@@ -4,6 +4,7 @@
  *  Copyright (C) 2004 ARM Limited.
  *  Written by Deep Blue Solutions Limited.
  *  Copyright (C) 2011-2012 Linaro Ltd <mturquette@linaro.org>
+ *  Copyright (c) 2022, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -305,6 +306,15 @@ void clk_disable(struct clk *clk);
  * @clk: clock source
  */
 unsigned long clk_get_rate(struct clk *clk);
+
+/**
+ * clk_get_rate_cached_no_dvfs - obtain the current clock rate (in Hz)
+ *		  for a clock source. This is only valid once the clock
+ *		  source has been enabled. To be used only if known that
+ *		  the clk has no dvfs.
+ * @clk: clock source
+ */
+unsigned long clk_get_rate_cached_no_dvfs(struct clk *clk);
 
 /**
  * clk_put	- "free" the clock source

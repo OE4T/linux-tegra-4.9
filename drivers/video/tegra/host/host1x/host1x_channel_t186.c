@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host Channel
  *
- * Copyright (c) 2010-2018, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2010-2022, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -343,10 +343,19 @@ static void set_mlock_timeout(struct nvhost_channel *ch)
 	struct nvhost_master *host = nvhost_get_host(ch->dev);
 	struct nvhost_device_data *pdata = platform_get_drvdata(ch->dev);
 	struct nvhost_device_data *host_pdata = platform_get_drvdata(host->dev);
+	u64 clk_rate_khz = 0;
 
 	/* set mlock timeout */
 	if (host->info.vmserver_owns_engines) {
-		u64 clk_rate_khz = clk_get_rate(host_pdata->clk[0]) / 1000;
+		/* Host1x clock rate has no dvfs,
+		 * so we optimize the time by calling a
+		 * no_dvfs call instead of clk_get_rate.
+		 * If in future this is not the case,
+		 * then this must be revisited.
+		 */
+		clk_rate_khz =
+				clk_get_rate_cached_no_dvfs(
+					host_pdata->clk[0]) / 1000;
 		mlock_timeout = clk_rate_khz * MLOCK_TIMEOUT_MS;
 
 		if (pdata->mlock_timeout_factor)

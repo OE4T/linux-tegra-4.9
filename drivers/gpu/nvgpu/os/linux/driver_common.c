@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2021, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2022, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -18,6 +18,7 @@
 #include <linux/dma-mapping.h>
 #include <linux/mm.h>
 #include <linux/slab.h>
+#include <linux/of_platform.h>
 #include <uapi/linux/nvgpu.h>
 
 #include <nvgpu/defaults.h>
@@ -241,6 +242,8 @@ int nvgpu_probe(struct gk20a *g,
 	struct device *dev = dev_from_gk20a(g);
 	struct gk20a_platform *platform = dev_get_drvdata(dev);
 	int err = 0;
+	struct device_node *np = dev->of_node;
+	bool disable_l3_alloc = false;
 
 	nvgpu_init_vars(g);
 	nvgpu_init_gr_vars(g);
@@ -263,6 +266,12 @@ int nvgpu_probe(struct gk20a *g,
 		else
 			nvgpu_err(g, "platform probe failed");
 		return err;
+	}
+
+	disable_l3_alloc = of_property_read_bool(np, "disable_l3_alloc");
+	if (disable_l3_alloc) {
+		nvgpu_log_info(g, "L3 alloc is disabled\n");
+		__nvgpu_set_enabled(g, NVGPU_DISABLE_L3_SUPPORT, true);
 	}
 
 	nvgpu_init_mm_vars(g);

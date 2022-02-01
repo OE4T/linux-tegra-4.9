@@ -2,7 +2,7 @@
  * arch/arm/mach-tegra/mc.c
  *
  * Copyright (C) 2010 Google, Inc.
- * Copyright (C) 2011-2021, NVIDIA Corporation.  All rights reserved.
+ * Copyright (C) 2011-2022, NVIDIA Corporation.  All rights reserved.
  *
  * Author:
  *	Erik Gilling <konkers@google.com>
@@ -320,6 +320,7 @@ static void enable_mssnvlinks(struct platform_device *pdev)
 	void __iomem *regs;
 	int ret = 0, i;
 	u32 reg_val;
+	bool disable_l3_alloc_hint = false;
 
 	/* MSSNVLINK support is available in silicon or fpga only */
 	if (!tegra_platform_is_silicon())
@@ -346,6 +347,8 @@ static void enable_mssnvlinks(struct platform_device *pdev)
 		goto err_out;
 	}
 
+	disable_l3_alloc_hint = of_property_read_bool(dn, "disable-nvlink-l3-alloc-hint");
+
 	for (i = 0; i < mssnvlink_hubs; i++) {
 		regs = of_iomap(dn, i);
 		if (!regs) {
@@ -355,7 +358,8 @@ static void enable_mssnvlinks(struct platform_device *pdev)
 		}
 		mssnvlink_regs[i] = regs;
 		reg_val = __raw_readl(regs + MSSNVLINK_CYA_DESIGN_MODES);
-		reg_val |=  MSS_NVLINK_L3_ALLOC_HINT;
+		if (!disable_l3_alloc_hint)
+			reg_val |=  MSS_NVLINK_L3_ALLOC_HINT;
 		__raw_writel(reg_val, regs + MSSNVLINK_CYA_DESIGN_MODES);
 		nvlink_reg_val[i] = reg_val;
 	}

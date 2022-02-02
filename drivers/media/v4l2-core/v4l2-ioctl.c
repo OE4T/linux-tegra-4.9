@@ -2918,19 +2918,9 @@ video_usercopy(struct file *file, unsigned int cmd, unsigned long arg,
 		if (array_buf == NULL)
 			goto out_array_args;
 		err = -EFAULT;
-		/* during 32-bit userspace app to 64-bit kernel conversion,
-		 * v4l2 core driver prepare kernel space memory for pass-in
-		 * arg and user space memory for array inside, set fs to
-		 * KERNEL_DS and call native_ioctl here. So set it back to
-		 * USER_DS for user space copy to avoid break access policy.
-		 */
-		set_fs(USER_DS);
-		if (copy_from_user(mbuf, user_ptr, array_size)) {
-			set_fs(old_fs);
+		if (copy_from_user(array_buf, user_ptr, array_size))
 			goto out_array_args;
-		}
-		set_fs(old_fs);
-		*kernel_ptr = mbuf;
+		*kernel_ptr = array_buf;
 	}
 
 	/* Handles IOCTL */
@@ -2949,8 +2939,7 @@ video_usercopy(struct file *file, unsigned int cmd, unsigned long arg,
 
 	if (has_array_args) {
 		*kernel_ptr = (void __force *)user_ptr;
-		set_fs(USER_DS);
-		if (copy_to_user(user_ptr, mbuf, array_size))
+		if (copy_to_user(user_ptr, array_buf, array_size))
 			err = -EFAULT;
 		set_fs(old_fs);
 		goto out_array_args;

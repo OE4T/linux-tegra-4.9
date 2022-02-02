@@ -47,6 +47,7 @@ typedef unsigned long mm_segment_t;
 struct thread_info {
 	unsigned long		flags;		/* low level flags */
 	mm_segment_t		addr_limit;	/* address limit */
+	struct task_struct	*task;		/* main task structure */
 #ifdef CONFIG_ARM64_SW_TTBR0_PAN
 	u64			ttbr0;		/* saved TTBR0_EL1 */
 #endif
@@ -55,6 +56,8 @@ struct thread_info {
 
 #define INIT_THREAD_INFO(tsk)						\
 {									\
+	.task		= &tsk,						\
+	.flags		= 0,						\
 	.preempt_count	= INIT_PREEMPT_COUNT,				\
 	.addr_limit	= KERNEL_DS,					\
 }

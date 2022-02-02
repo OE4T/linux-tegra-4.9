@@ -363,8 +363,8 @@ struct ion_handle *ion_handle_get_by_id_nolock(struct ion_client *client,
 	return ERR_PTR(-EINVAL);
 }
 
-static bool ion_handle_validate(struct ion_client *client,
-				struct ion_handle *handle)
+bool ion_handle_validate(struct ion_client *client,
+			 struct ion_handle *handle)
 {
 	WARN_ON(!mutex_is_locked(&client->lock));
 	return idr_find(&client->idr, handle->id) == handle;
@@ -401,9 +401,9 @@ static int ion_handle_add(struct ion_client *client, struct ion_handle *handle)
 	return 0;
 }
 
-struct ion_handle *ion_alloc(struct ion_client *client, size_t len,
-			     size_t align, unsigned int heap_id_mask,
-			     unsigned int flags)
+struct ion_handle *__ion_alloc(struct ion_client *client, size_t len,
+			       size_t align, unsigned int heap_id_mask,
+			       unsigned int flags, bool grab_handle)
 {
 	struct ion_handle *handle;
 	struct ion_device *dev = client->dev;
@@ -453,6 +453,8 @@ struct ion_handle *ion_alloc(struct ion_client *client, size_t len,
 		return handle;
 
 	mutex_lock(&client->lock);
+	if (grab_handle)
+		ion_handle_get(handle);
 	ret = ion_handle_add(client, handle);
 	mutex_unlock(&client->lock);
 	if (ret) {
@@ -461,6 +463,13 @@ struct ion_handle *ion_alloc(struct ion_client *client, size_t len,
 	}
 
 	return handle;
+}
+
+struct ion_handle *ion_alloc(struct ion_client *client, size_t len,
+			     size_t align, unsigned int heap_id_mask,
+			     unsigned int flags)
+{
+	return __ion_alloc(client, len, align, heap_id_mask, flags, false);
 }
 EXPORT_SYMBOL(ion_alloc);
 
@@ -489,6 +498,9 @@ static void *ion_buffer_kmap_get(struct ion_buffer *buffer)
 	void *vaddr;
 
 	if (buffer->kmap_cnt) {
+		if (buffer->kmap_cnt == INT_MAX)
+			return ERR_PTR(-EOVERFLOW);
+
 		buffer->kmap_cnt++;
 		return buffer->vaddr;
 	}
@@ -509,6 +521,9 @@ static void *ion_handle_kmap_get(struct ion_handle *handle)
 	void *vaddr;
 
 	if (handle->kmap_cnt) {
+		if (handle->kmap_cnt == INT_MAX)
+			return ERR_PTR(-EOVERFLOW);
+
 		handle->kmap_cnt++;
 		return buffer->vaddr;
 	}
@@ -969,32 +984,41 @@ static void ion_dma_buf_release(struct dma_buf *dmabuf)
 static void *ion_dma_buf_kmap(struct dma_buf *dmabuf, unsigned long offset)
 {
 	struct ion_buffer *buffer = dmabuf->priv;
+	void *vaddr;
 
-	return buffer->vaddr + offset * PAGE_SIZE;
+	if (!buffer->heap->ops->map_kernel) {
+		pr_err("%s: map kernel is not implemented by this heap.\n",
+		       __func__);
+		return ERR_PTR(-ENOTTY);
+	}
+	mutex_lock(&buffer->lock);
+	vaddr = ion_buffer_kmap_get(buffer);
+	mutex_unlock(&buffer->lock);
+
+	if (IS_ERR(vaddr))
+		return vaddr;
+
+	return vaddr + offset * PAGE_SIZE;
 }
 
 static void ion_dma_buf_kunmap(struct dma_buf *dmabuf, unsigned long offset,
 			       void *ptr)
 {
+	struct ion_buffer *buffer = dmabuf->priv;
+
+	if (buffer->heap->ops->map_kernel) {
+		mutex_lock(&buffer->lock);
+		ion_buffer_kmap_put(buffer);
+		mutex_unlock(&buffer->lock);
+	}
+
 }
 
 static int ion_dma_buf_begin_cpu_access(struct dma_buf *dmabuf, size_t start,
 					size_t len,
 					enum dma_data_direction direction)
 {
-	struct ion_buffer *buffer = dmabuf->priv;
-	void *vaddr;
-
-	if (!buffer->heap->ops->map_kernel) {
-		pr_err("%s: map kernel is not implemented by this heap.\n",
-		       __func__);
-		return -ENODEV;
-	}
-
-	mutex_lock(&buffer->lock);
-	vaddr = ion_buffer_kmap_get(buffer);
-	mutex_unlock(&buffer->lock);
-	return PTR_ERR_OR_ZERO(vaddr);
+	return 0;
 }
 
 static void ion_dma_buf_end_cpu_access(struct dma_buf *dmabuf, size_t start,

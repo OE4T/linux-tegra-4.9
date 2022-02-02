@@ -176,8 +176,6 @@ static inline bool red_check_params(u32 qth_min, u32 qth_max, u8 Wlog,
 		return false;
 	if (Scell_log >= 32)
 		return false;
-	if (Scell_log >= 32)
-		return false;
 	if (qth_max < qth_min)
 		return false;
 	if (stab) {

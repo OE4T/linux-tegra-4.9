@@ -923,6 +923,9 @@ static int tegra_dc_hdmi_hpd_init(struct tegra_dc *dc)
 			"hdmi: hpd gpio_request failed %d\n", err);
 	gpio_direction_input(hotplug_gpio);
 
+	INIT_DELAYED_WORK(&hdmi->hpd_worker, tegra_hdmi_hpd_worker);
+	mutex_init(&hdmi->hpd_lock);
+
 	err = request_threaded_irq(hotplug_irq,
 				NULL, tegra_hdmi_hpd_irq_handler,
 				(IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING |
@@ -942,10 +945,6 @@ static int tegra_dc_hdmi_hpd_init(struct tegra_dc *dc)
 	}
 
 skip_gpio_irq_settings:
-	INIT_DELAYED_WORK(&hdmi->hpd_worker, tegra_hdmi_hpd_worker);
-
-	mutex_init(&hdmi->hpd_lock);
-
 	return 0;
 fail:
 	gpio_free(hotplug_gpio);

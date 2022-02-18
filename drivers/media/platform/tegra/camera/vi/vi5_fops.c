@@ -96,8 +96,14 @@ static int tegra_vi5_g_volatile_ctrl(struct v4l2_ctrl *ctrl)
 	struct v4l2_subdev *sd = chan->subdev_on_csi;
 	struct camera_common_data *s_data =
 				to_camera_common_data(sd->dev);
-	struct tegracam_ctrl_handler *handler = s_data->tegracam_ctrl_hdl;
-	struct tegracam_sensor_data *sensor_data = &handler->sensor_data;
+	struct tegracam_ctrl_handler *handler;
+	struct tegracam_sensor_data *sensor_data;
+
+	if (!s_data || !s_data->tegracam_ctrl_hdl)
+		goto no_support;
+
+	handler = s_data->tegracam_ctrl_hdl;
+	sensor_data = &handler->sensor_data;
 
 	/* TODO: Support reading blobs for multiple devices */
 	switch (ctrl->id) {
@@ -124,6 +130,7 @@ static int tegra_vi5_g_volatile_ctrl(struct v4l2_ctrl *ctrl)
 		return -EINVAL;
 	}
 
+no_support:
 	return 0;
 }
 

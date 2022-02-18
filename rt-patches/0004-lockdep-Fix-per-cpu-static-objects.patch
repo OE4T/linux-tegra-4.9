@@ -1,7 +1,7 @@
-From 60f8ebe8322feaf9b5ebeb05b91b61197c0c8bda Mon Sep 17 00:00:00 2001
+From 9f34a2bda4b9432d7fb07f692ffe2d51ae48d5a8 Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Mon, 20 Mar 2017 12:26:55 +0100
-Subject: [PATCH 004/351] lockdep: Fix per-cpu static objects
+Subject: [PATCH 004/352] lockdep: Fix per-cpu static objects
 
 Since commit 383776fa7527 ("locking/lockdep: Handle statically initialized
 PER_CPU locks properly") we try to collapse per-cpu locks into a single
@@ -42,7 +42,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  4 files changed, 27 insertions(+), 2 deletions(-)
 
 diff --git a/include/linux/smp.h b/include/linux/smp.h
-index 8e0cb7a0f836..68123c1fe549 100644
+index 8e0cb7a..68123c1 100644
 --- a/include/linux/smp.h
 +++ b/include/linux/smp.h
 @@ -120,6 +120,13 @@ extern unsigned int setup_max_cpus;
@@ -72,7 +72,7 @@ index 8e0cb7a0f836..68123c1fe549 100644
  
  /*
 diff --git a/kernel/cpu.c b/kernel/cpu.c
-index 41dd49aa526d..c135d54a50bb 100644
+index 41dd49a..c135d54 100644
 --- a/kernel/cpu.c
 +++ b/kernel/cpu.c
 @@ -1396,6 +1396,8 @@ core_initcall(cpu_hotplug_pm_sync_init);
@@ -96,7 +96,7 @@ index 41dd49aa526d..c135d54a50bb 100644
  
  /*
 diff --git a/kernel/module.c b/kernel/module.c
-index b3b5fc09be62..40028f82f35a 100644
+index b3b5fc0..40028f8 100644
 --- a/kernel/module.c
 +++ b/kernel/module.c
 @@ -677,8 +677,12 @@ bool __is_module_percpu_address(unsigned long addr, unsigned long *can_addr)
@@ -114,7 +114,7 @@ index b3b5fc09be62..40028f82f35a 100644
  				return true;
  			}
 diff --git a/mm/percpu.c b/mm/percpu.c
-index 16bb5f561e53..39b329891d27 100644
+index 16bb5f5..39b3298 100644
 --- a/mm/percpu.c
 +++ b/mm/percpu.c
 @@ -1296,8 +1296,11 @@ bool __is_kernel_percpu_address(unsigned long addr, unsigned long *can_addr)
@@ -131,5 +131,5 @@ index 16bb5f561e53..39b329891d27 100644
  		}
  	}
 -- 
-2.28.0
+2.7.4
 

@@ -1,0 +1,20 @@
+From da0c2885b269f360883e6e77644f2321a96be42d Mon Sep 17 00:00:00 2001
+From: Mark Gross <markgross@kernel.org>
+Date: Fri, 14 Jan 2022 12:29:46 -0800
+Subject: [PATCH 345/352] Linux 4.9.297-rt191 REBASE
+
+Signed-off-by: Mark Gross <markgross@kernel.org>
+---
+ localversion-rt | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/localversion-rt b/localversion-rt
+index 9a218ca..d68f944 100644
+--- a/localversion-rt
++++ b/localversion-rt
+@@ -1 +1 @@
+--rt23
++-rt191
+-- 
+2.7.4
+

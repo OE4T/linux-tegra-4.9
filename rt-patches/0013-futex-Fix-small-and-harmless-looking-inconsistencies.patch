@@ -1,0 +1,42 @@
+From 50e9bcab05ac6dc980423b250cef971c3452930f Mon Sep 17 00:00:00 2001
+From: Peter Zijlstra <peterz@infradead.org>
+Date: Fri, 7 Apr 2017 09:04:07 +0200
+Subject: [PATCH 013/352] futex: Fix small (and harmless looking)
+ inconsistencies
+
+Upstream commit 94ffac5d847cfd790bb37b7cef1cad803743985e
+
+During (post-commit) review Darren spotted a few minor things. One
+(harmless AFAICT) type inconsistency and a comment that wasn't as
+clear as hoped.
+
+Reported-by: Darren Hart (VMWare) <dvhart@infradead.org>
+Signed-off-by: Peter Zijlstra (Intel) <peterz@infradead.org>
+Reviewed-by: Darren Hart (VMware) <dvhart@infradead.org>
+Cc: Linus Torvalds <torvalds@linux-foundation.org>
+Cc: Peter Zijlstra <peterz@infradead.org>
+Cc: Thomas Gleixner <tglx@linutronix.de>
+Cc: linux-kernel@vger.kernel.org
+Signed-off-by: Ingo Molnar <mingo@kernel.org>
+Signed-off-by: Luis Claudio R. Goncalves <lgoncalv@redhat.com>
+---
+ kernel/futex.c | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/kernel/futex.c b/kernel/futex.c
+index ef7c5d3..27cf808 100644
+--- a/kernel/futex.c
++++ b/kernel/futex.c
+@@ -1092,7 +1092,8 @@ static int attach_to_pi_state(u32 __user *uaddr, u32 uval,
+ 			      struct futex_pi_state **ps)
+ {
+ 	pid_t pid = uval & FUTEX_TID_MASK;
+-	int ret, uval2;
++	u32 uval2;
++	int ret;
+ 
+ 	/*
+ 	 * Userspace might have messed up non-PI and PI futexes [3]
+-- 
+2.7.4
+

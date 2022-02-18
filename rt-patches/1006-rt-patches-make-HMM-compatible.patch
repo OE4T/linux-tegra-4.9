@@ -1,0 +1,40 @@
+From 032f16e59d2184eb642a1fe374e7bc07e9e52b00 Mon Sep 17 00:00:00 2001
+From: Chaitanya Namuduri <snamuduri@nvidia.com>
+Date: Wed, 16 Feb 2022 17:05:30 +0530
+Subject: [PATCH 352/352] rt-patches: make HMM compatible
+
+Default kernel patches reverting uncharge_batch to upstream.
+Changed to make function HMM compatible.
+
+Change-Id: Id3c1fb8f21efa389646417b37bffef39ab2001a6
+Signed-off-by: Chaitanya Namuduri <snamuduri@nvidia.com>
+---
+ mm/memcontrol.c | 12 ++++++------
+ 1 file changed, 6 insertions(+), 6 deletions(-)
+
+diff --git a/mm/memcontrol.c b/mm/memcontrol.c
+index d41fd40..cd8b037 100644
+--- a/mm/memcontrol.c
++++ b/mm/memcontrol.c
+@@ -5620,12 +5620,12 @@ static void uncharge_batch(const struct uncharge_gather *ug)
+ 	}
+ 
+ 	local_lock_irqsave(event_lock, flags);
+-	__this_cpu_sub(memcg->stat->count[MEM_CGROUP_STAT_RSS], nr_anon);
+-	__this_cpu_sub(memcg->stat->count[MEM_CGROUP_STAT_CACHE], nr_file);
+-	__this_cpu_sub(memcg->stat->count[MEM_CGROUP_STAT_RSS_HUGE], nr_huge);
+-	__this_cpu_add(memcg->stat->events[MEM_CGROUP_EVENTS_PGPGOUT], pgpgout);
+-	__this_cpu_add(memcg->stat->nr_page_events, nr_pages);
+-	memcg_check_events(memcg, dummy_page);
++	__this_cpu_sub(ug->memcg->stat->count[MEM_CGROUP_STAT_RSS], ug->nr_anon);
++	__this_cpu_sub(ug->memcg->stat->count[MEM_CGROUP_STAT_CACHE], ug->nr_file);
++	__this_cpu_sub(ug->memcg->stat->count[MEM_CGROUP_STAT_RSS_HUGE], ug->nr_huge);
++	__this_cpu_add(ug->memcg->stat->events[MEM_CGROUP_EVENTS_PGPGOUT], ug->pgpgout);
++	__this_cpu_add(ug->memcg->stat->nr_page_events, nr_pages);
++	memcg_check_events(ug->memcg, ug->dummy_page);
+ 	local_unlock_irqrestore(event_lock, flags);
+ 
+ 	if (!mem_cgroup_is_root(ug->memcg))
+-- 
+2.7.4
+

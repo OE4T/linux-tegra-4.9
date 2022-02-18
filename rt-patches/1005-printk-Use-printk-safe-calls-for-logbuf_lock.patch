@@ -1,8 +1,7 @@
-From cdab094e6826d7566f98398795c61533331705ce Mon Sep 17 00:00:00 2001
+From 391a4c9599032bce36ee551fdfc6ca4cc973c74a Mon Sep 17 00:00:00 2001
 From: Sumit Gupta <sumitg@nvidia.com>
 Date: Fri, 9 Apr 2021 11:30:49 +0530
-Subject: [PATCH 371/371] printk: Use printk-safe calls for logbuf_lock
-X-NVConfidentiality: public
+Subject: [PATCH 351/352] printk: Use printk-safe calls for logbuf_lock
 
 Use printk-safe calls for logbuf_lock to fix error coming
 from console_unlock() on enabling CONFIG_DEBUG_PREEMPT macro.
@@ -23,10 +22,10 @@ Change-Id: I161b02201aa7c48efcf65ddf1125c2223cb123d1
  1 file changed, 14 insertions(+), 12 deletions(-)
 
 diff --git a/kernel/printk/printk.c b/kernel/printk/printk.c
-index a558b0b..d3bc5d9 100644
+index 9cc6862..3befe7f 100644
 --- a/kernel/printk/printk.c
 +++ b/kernel/printk/printk.c
-@@ -1456,8 +1456,8 @@ static int syslog_print_all(char __user *buf, int size, bool clear)
+@@ -1457,8 +1457,8 @@ static int syslog_print_all(char __user *buf, int size, bool clear)
  			num_msg++;
  			if (num_msg > 5) {
  				num_msg = 0;
@@ -37,7 +36,7 @@ index a558b0b..d3bc5d9 100644
  				if (clear_seq < log_first_seq)
  					goto try_again;
  			}
-@@ -1475,8 +1475,8 @@ static int syslog_print_all(char __user *buf, int size, bool clear)
+@@ -1476,8 +1476,8 @@ static int syslog_print_all(char __user *buf, int size, bool clear)
  			num_msg++;
  			if (num_msg > 5) {
  				num_msg = 0;
@@ -48,7 +47,7 @@ index a558b0b..d3bc5d9 100644
  				if (clear_seq < log_first_seq)
  					goto try_again;
  			}
-@@ -2307,7 +2307,8 @@ static void console_cont_flush(char *text, size_t size)
+@@ -2321,7 +2321,8 @@ static void console_cont_flush(char *text, size_t size)
  	unsigned long flags;
  	size_t len;
  
@@ -58,7 +57,7 @@ index a558b0b..d3bc5d9 100644
  
  	if (!cont.len)
  		goto out;
-@@ -2328,19 +2329,20 @@ static void console_cont_flush(char *text, size_t size)
+@@ -2342,19 +2343,20 @@ static void console_cont_flush(char *text, size_t size)
  		goto out;
  
  	len = cont_print_text(text, size);
@@ -83,7 +82,7 @@ index a558b0b..d3bc5d9 100644
  }
  
  /**
-@@ -2462,12 +2464,12 @@ void console_unlock(void)
+@@ -2476,12 +2478,12 @@ void console_unlock(void)
  		}
  		console_idx = log_next(console_idx);
  		console_seq++;

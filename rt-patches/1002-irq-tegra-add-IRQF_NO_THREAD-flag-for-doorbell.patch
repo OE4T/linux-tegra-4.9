@@ -1,8 +1,7 @@
-From 535f6789ef3fdfc1b0752e5779d8a8b1934fec9d Mon Sep 17 00:00:00 2001
+From eeb2bec8e125b0e930f9f8e4ba7cf3aa40742e20 Mon Sep 17 00:00:00 2001
 From: Sumit Gupta <sumitg@nvidia.com>
 Date: Mon, 14 Oct 2019 18:27:33 +0530
-Subject: [PATCH 368/371] irq: tegra: add IRQF_NO_THREAD flag for doorbell
-X-NVConfidentiality: public
+Subject: [PATCH 348/352] irq: tegra: add IRQF_NO_THREAD flag for doorbell
 
 Doorbell irq's are used for communication with BPMP.
 Adding IRQF_NO_THREAD flag in request_irq() for doorbell

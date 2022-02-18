@@ -1,0 +1,118 @@
+From dd898e157dca4e1e8cd098fe1d2a38f7f8d1289b Mon Sep 17 00:00:00 2001
+From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
+Date: Thu, 21 Mar 2013 19:01:05 +0100
+Subject: [PATCH 230/352] printk: Drop the logbuf_lock more often
+
+The lock is hold with irgs off. The latency drops 500us+ on my arm bugs
+with a "full" buffer after executing "dmesg" on the shell.
+
+Change-Id: Iaef99d8675e1c02065509a27a4b408d9c13ffc66
+Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
+---
+ kernel/printk/printk.c | 55 ++++++++++++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 55 insertions(+)
+
+diff --git a/kernel/printk/printk.c b/kernel/printk/printk.c
+index 90f3e93..9cc6862 100644
+--- a/kernel/printk/printk.c
++++ b/kernel/printk/printk.c
+@@ -375,6 +375,34 @@ __packed __aligned(4)
+  */
+ DEFINE_RAW_SPINLOCK(logbuf_lock);
+ 
++/*
++ * Helper macros to lock/unlock logbuf_lock and switch between
++ * printk-safe/unsafe modes.
++ */
++#define logbuf_lock_irq()              \
++    do {                        \
++        printk_safe_enter_irq();        \
++        raw_spin_lock(&logbuf_lock);        \
++    } while (0)
++
++#define logbuf_unlock_irq()                \
++    do {                        \
++        raw_spin_unlock(&logbuf_lock);      \
++        printk_safe_exit_irq();         \
++    } while (0)
++
++#define logbuf_lock_irqsave(flags)         \
++    do {                        \
++        printk_safe_enter_irqsave(flags);   \
++        raw_spin_lock(&logbuf_lock);        \
++    } while (0)
++
++#define logbuf_unlock_irqrestore(flags)        \
++    do {                        \
++        raw_spin_unlock(&logbuf_lock);      \
++        printk_safe_exit_irqrestore(flags); \
++    } while (0)
++
+ #ifdef CONFIG_EARLY_PRINTK
+ struct console *early_console;
+ 
+@@ -1394,6 +1422,7 @@ static int syslog_print_all(char __user *buf, int size, bool clear)
+ {
+ 	char *text;
+ 	int len = 0;
++	int attempts = 0;
+ 
+ 	text = kmalloc(LOG_LINE_MAX + PREFIX_MAX, GFP_KERNEL);
+ 	if (!text)
+@@ -1404,6 +1433,14 @@ static int syslog_print_all(char __user *buf, int size, bool clear)
+ 		u64 next_seq;
+ 		u64 seq;
+ 		u32 idx;
++		int num_msg;
++try_again:
++		attempts++;
++		if (attempts > 10) {
++			len = -EBUSY;
++			goto out;
++		}
++		num_msg = 0;
+ 
+ 		/*
+ 		 * Find first record that fits, including all following records,
+@@ -1417,6 +1454,14 @@ static int syslog_print_all(char __user *buf, int size, bool clear)
+ 			len += msg_print_text(msg, true, NULL, 0);
+ 			idx = log_next(idx);
+ 			seq++;
++			num_msg++;
++			if (num_msg > 5) {
++				num_msg = 0;
++				raw_spin_unlock_irq(&logbuf_lock);
++				raw_spin_lock_irq(&logbuf_lock);
++				if (clear_seq < log_first_seq)
++					goto try_again;
++			}
+ 		}
+ 
+ 		/* move first record forward until length fits into the buffer */
+@@ -1428,6 +1473,14 @@ static int syslog_print_all(char __user *buf, int size, bool clear)
+ 			len -= msg_print_text(msg, true, NULL, 0);
+ 			idx = log_next(idx);
+ 			seq++;
++			num_msg++;
++			if (num_msg > 5) {
++				num_msg = 0;
++				raw_spin_unlock_irq(&logbuf_lock);
++				raw_spin_lock_irq(&logbuf_lock);
++				if (clear_seq < log_first_seq)
++					goto try_again;
++			}
+ 		}
+ 
+ 		/* last message fitting into this dump */
+@@ -1467,6 +1520,8 @@ static int syslog_print_all(char __user *buf, int size, bool clear)
+ 		clear_idx = log_next_idx;
+ 	}
+ 	logbuf_unlock_irq();
++out:
++	raw_spin_unlock_irq(&logbuf_lock);
+ 
+ 	kfree(text);
+ 	return len;
+-- 
+2.7.4
+

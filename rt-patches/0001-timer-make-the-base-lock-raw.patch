@@ -1,7 +1,7 @@
-From 201eec548e3bd1b67fe906f630797a609a026955 Mon Sep 17 00:00:00 2001
+From a1d5c2a9985d7682b16a52bb4d0fca4c9caeada3 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Wed, 13 Jul 2016 18:22:23 +0200
-Subject: [PATCH 001/351] timer: make the base lock raw
+Subject: [PATCH 001/352] timer: make the base lock raw
 
 The part where the base lock is held got more predictable / shorter after the
 timer rework. One reason is the lack of re-cascading.
@@ -9,11 +9,11 @@ That means the lock can be made raw and held in IRQ context.
 
 Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 ---
- kernel/time/timer.c | 48 ++++++++++++++++++++++-----------------------
+ kernel/time/timer.c | 48 ++++++++++++++++++++++++------------------------
  1 file changed, 24 insertions(+), 24 deletions(-)
 
 diff --git a/kernel/time/timer.c b/kernel/time/timer.c
-index c9325a1e30d0..0133a7160f11 100644
+index c9325a1..0133a71 100644
 --- a/kernel/time/timer.c
 +++ b/kernel/time/timer.c
 @@ -194,7 +194,7 @@ EXPORT_SYMBOL(jiffies_64);
@@ -184,5 +184,5 @@ index c9325a1e30d0..0133a7160f11 100644
  	}
  }
 -- 
-2.28.0
+2.7.4
 

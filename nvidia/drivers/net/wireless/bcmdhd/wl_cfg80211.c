@@ -8652,6 +8652,11 @@ wl_cfg80211_reg_notifier(
 		(request->initiator != NL80211_REGDOM_SET_BY_COUNTRY_IE)) {
 		WL_ERR(("reg_notifier for intiator:%d not supported : set default\n",
 			request->initiator));
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(3, 10, 0))
+		return -EINVAL;
+#else
+		return;
+#endif /* kernel version < 3.10.0 */
 		/* in case of no supported country by regdb
 		     lets driver setup platform default Locale
 		*/

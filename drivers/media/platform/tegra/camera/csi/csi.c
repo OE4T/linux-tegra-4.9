@@ -1,7 +1,7 @@
 /*
  * NVIDIA Tegra CSI Device
  *
- * Copyright (c) 2015-2019, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2022, NVIDIA CORPORATION.  All rights reserved.
  *
  * Author: Bryan Wu <pengw@nvidia.com>
  *
@@ -481,8 +481,14 @@ static struct v4l2_mbus_framefmt tegra_csi_tpg_fmts[] = {
 		MEDIA_BUS_FMT_RGB888_1X32_PADHI,
 		V4L2_FIELD_NONE,
 		V4L2_COLORSPACE_SRGB
-	}
-
+	},
+	{
+		TEGRA_DEF_WIDTH,
+		TEGRA_DEF_HEIGHT,
+		MEDIA_BUS_FMT_UYVY8_1X16,
+		V4L2_FIELD_NONE,
+		V4L2_COLORSPACE_SRGB
+	},
 };
 
 static struct v4l2_frmsize_discrete tegra_csi_tpg_sizes[] = {
@@ -716,6 +722,17 @@ static int tegra_csi_g_frame_interval(struct v4l2_subdev *sd,
 	return 0;
 }
 
+static int tegra_csi_enum_mbus_code(struct v4l2_subdev *sd,
+				struct v4l2_subdev_pad_config *cfg,
+				struct v4l2_subdev_mbus_code_enum *code)
+{
+	if (code->index >= ARRAY_SIZE(tegra_csi_tpg_fmts))
+		return -EINVAL;
+
+	code->code = tegra_csi_tpg_fmts[code->index].code;
+	return 0;
+}
+
 /* -----------------------------------------------------------------------------
  * V4L2 Subdevice Operations
  */
@@ -728,6 +745,7 @@ static struct v4l2_subdev_video_ops tegra_csi_video_ops = {
 static struct v4l2_subdev_pad_ops tegra_csi_pad_ops = {
 	.get_fmt	= tegra_csi_get_format,
 	.set_fmt	= tegra_csi_set_format,
+	.enum_mbus_code = tegra_csi_enum_mbus_code,
 	.enum_frame_size = tegra_csi_enum_framesizes,
 	.enum_frame_interval = tegra_csi_enum_frameintervals,
 };

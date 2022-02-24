@@ -1,7 +1,7 @@
 /*
  * Tegra Video Input 5 device common APIs
  *
- * Copyright (c) 2016-2021, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2022, NVIDIA CORPORATION.  All rights reserved.
  *
  * Author: Frank Chen <frank@nvidia.com>
  *
@@ -262,6 +262,9 @@ static int tegra_channel_capture_setup(struct tegra_channel *chan, unsigned int 
 		setup.slvsec_stream_sub = SLVSEC_STREAM_DISABLED;
 	}
 
+	if (chan->fmtinfo->fourcc == V4L2_PIX_FMT_NV16)
+		setup.channel_flags |= CAPTURE_CHANNEL_FLAG_SEMI_PLANAR;
+
 	err = vi_capture_setup(chan->tegra_vi_channel[vi_port], &setup);
 	if (err) {
 		dev_err(chan->vi->dev, "vi capture setup failed\n");
@@ -307,6 +310,11 @@ static void vi5_setup_surface(struct tegra_channel *chan,
 	desc_memoryinfo->surface[0].base_address = offset;
 	desc_memoryinfo->surface[0].size = chan->format.bytesperline * height;
 	desc->ch_cfg.atomp.surface_stride[0] = bpl;
+	if (chan->fmtinfo->fourcc == V4L2_PIX_FMT_NV16) {
+		desc_memoryinfo->surface[1].base_address = offset + chan->format.sizeimage / 2;
+		desc_memoryinfo->surface[1].size = chan->format.bytesperline * height;
+		desc->ch_cfg.atomp.surface_stride[1] = bpl;
+	}
 
 	if (chan->embedded_data_height > 0) {
 		desc->ch_cfg.embdata_enable = 1;

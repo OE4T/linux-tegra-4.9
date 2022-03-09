@@ -46,6 +46,8 @@
 	| CAPTURE_STATUS_CHANSEL_NOMATCH \
 	| CAPTURE_STATUS_ABORTED)
 
+#define ATOMP_SURFACE_ALIGNMENT	256
+
 static const struct vi_capture_setup default_setup = {
 	.channel_flags = 0
 	| CAPTURE_CHANNEL_FLAG_VIDEO
@@ -964,6 +966,12 @@ static void vi5_power_off(struct tegra_channel *chan)
 	nvhost_module_remove_client(vi->ndev, &chan->video);
 }
 
+static void vi5_stride_align(unsigned int *bpl)
+{
+	*bpl = ((*bpl + (ATOMP_SURFACE_ALIGNMENT) - 1) &
+			~((ATOMP_SURFACE_ALIGNMENT) - 1));
+}
+
 struct tegra_vi_fops vi5_fops = {
 	.vi_power_on = vi5_power_on,
 	.vi_power_off = vi5_power_off,
@@ -973,4 +981,5 @@ struct tegra_vi_fops vi5_fops = {
 	.vi_error_recover = vi5_channel_error_recover,
 	.vi_add_ctrls = vi5_add_ctrls,
 	.vi_init_video_formats = vi5_init_video_formats,
+	.vi_stride_align = vi5_stride_align,
 };

@@ -6,7 +6,7 @@ if HW_RANDOM
 
 config HW_RANDOM_TEGRA
        tristate "Tegra Random Number Generator support"
-       depends on HW_RANDOM && CRYPTO_DEV_TEGRA_VIRTUAL_SE_INTERFACE
+       depends on HW_RANDOM && (CRYPTO_DEV_TEGRA_ELLIPTIC_SE || CRYPTO_DEV_TEGRA_VIRTUAL_SE_INTERFACE)
        default HW_RANDOM
        ---help---
          This driver provides kernel-side support for the Random Number

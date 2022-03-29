@@ -1,7 +1,7 @@
 /*
  * "drivers/staging/mttcan/m_ttcan_linux_ivc.c"
  *
- * Copyright (c) 2015-2017, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2015-2022, NVIDIA CORPORATION. All rights reserved.
  *
  * Parts of code are taken from "drivers/staging/mttcan/m_ttcan_linux.c"
  *
@@ -109,7 +109,13 @@ static int mttcan_read_rcv_list(struct net_device *dev,
 				return 0;
 			}
 			frame->can_id =  rx->msg.can_id;
-			frame->can_dlc = rx->msg.d_len;
+			if (rx->msg.d_len > CAN_MAX_DLEN) {
+				netdev_warn(dev, "PF_CAN: invalid datalen %d\n",
+					    rx->msg.d_len);
+				frame->can_dlc = CAN_MAX_DLEN;
+			} else {
+				frame->can_dlc = rx->msg.d_len;
+			}
 			memcpy(frame->data, &rx->msg.data, frame->can_dlc);
 			stats->rx_bytes += frame->can_dlc;
 		}

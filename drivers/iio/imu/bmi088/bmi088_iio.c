@@ -196,11 +196,11 @@ int bmi_iio_push_buf(struct iio_dev *indio_dev, unsigned char *data, u64 ts)
 
 	data_chan_n = indio_dev->num_channels - 1;
 	for (i = 0; i < data_chan_n; i++) {
-		if (st->ch[i].i >= 0) {
+		if (st->ch[i].i >= 0)
 			memcpy(&st->buf[st->ch[i].i], &data[src_i],
 			       st->ch[i].n);
-			src_i += st->ch[i].n;
-		}
+
+		src_i += st->ch[i].n;
 	}
 
 	if (ts) {

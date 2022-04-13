@@ -1,7 +1,7 @@
 /*
  * GV11B PMU
  *
- * Copyright (c) 2016-2021, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2022, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -530,4 +530,29 @@ int gv11b_pg_set_subfeature_mask(struct gk20a *g, u32 pg_engine_id)
 	}
 
 	return 0;
+}
+
+int gv11b_pmu_pg_process_pg_event(struct gk20a *g, void *pmumsg)
+{
+	int err = 0;
+	struct pmu_msg *msg = (struct pmu_msg *) pmumsg;
+	struct nvgpu_pmu *pmu = &g->pmu;
+
+	switch (msg->msg.pg.async_cmd_resp.msg_id) {
+	case PMU_PG_MSG_ASYNC_CMD_DISALLOW:
+		if (msg->msg.pg.async_cmd_resp.ctrl_id ==
+					PMU_PG_ELPG_ENGINE_ID_GRAPHICS) {
+			pmu->disallow_state = PMU_ELPG_STAT_OFF;
+		} else {
+			nvgpu_err(g, "Invalid engine id");
+			err = -EINVAL;
+		}
+		break;
+	default:
+		nvgpu_err(g, "Invalid message id: %d",
+			msg->msg.pg.async_cmd_resp.msg_id);
+		err = -EINVAL;
+		break;
+	}
+	return err;
 }

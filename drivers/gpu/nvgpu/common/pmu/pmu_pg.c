@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2019, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2022, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -28,25 +28,8 @@
 #include <nvgpu/utils.h>
 #include <nvgpu/gk20a.h>
 
-/* state transition :
- * OFF => [OFF_ON_PENDING optional] => ON_PENDING => ON => OFF
- * ON => OFF is always synchronized
- */
-/* elpg is off */
-#define PMU_ELPG_STAT_OFF	0U
-/* elpg is on */
-#define PMU_ELPG_STAT_ON	1U
-/* elpg is off, ALLOW cmd has been sent, wait for ack */
-#define PMU_ELPG_STAT_ON_PENDING	2U
-/* elpg is on, DISALLOW cmd has been sent, wait for ack */
-#define PMU_ELPG_STAT_OFF_PENDING	3U
-/* elpg is off, caller has requested on, but ALLOW
- * cmd hasn't been sent due to ENABLE_ALLOW delay
- */
-#define PMU_ELPG_STAT_OFF_ON_PENDING	4U
-
 #define PMU_PGENG_GR_BUFFER_IDX_INIT	(0)
-#define PMU_PGENG_GR_BUFFER_IDX_ZBC		(1)
+#define PMU_PGENG_GR_BUFFER_IDX_ZBC	(1)
 #define PMU_PGENG_GR_BUFFER_IDX_FECS	(2)
 
 static void pmu_handle_pg_elpg_msg(struct gk20a *g, struct pmu_msg *msg,
@@ -324,6 +307,10 @@ int nvgpu_pmu_disable_elpg(struct gk20a *g)
 
 			if (pg_engine_id == PMU_PG_ELPG_ENGINE_ID_GRAPHICS) {
 				pmu->elpg_stat = PMU_ELPG_STAT_OFF_PENDING;
+				if (g->ops.pmu.pmu_process_pg_event != NULL) {
+					pmu->disallow_state =
+						PMU_ELPG_STAT_OFF_PENDING;
+				}
 			} else if (pg_engine_id == PMU_PG_ELPG_ENGINE_ID_MS) {
 				pmu->mscg_transition_state =
 					PMU_ELPG_STAT_OFF_PENDING;
@@ -348,6 +335,24 @@ int nvgpu_pmu_disable_elpg(struct gk20a *g)
 					nvgpu_pmu_dump_falcon_stats(pmu);
 				ret = -EBUSY;
 				goto exit_unlock;
+			}
+
+			/*
+			 * PMU will send ASYNC_CMD_RESP when disallow
+			 * command is successfully completed and ELPG
+			 * is exited.
+			 * Wait for DISALLOW_ACK RPC event from
+			 * PMU.
+			 */
+			if (g->ops.pmu.pmu_process_pg_event != NULL) {
+				ptr = &pmu->disallow_state;
+				pmu_wait_message_cond(pmu,
+					gk20a_get_gr_idle_timeout(g),
+					ptr, PMU_ELPG_STAT_OFF);
+				if (*ptr != PMU_ELPG_STAT_OFF) {
+					nvgpu_err(g, "DISALLOW_ACK failed");
+					goto exit_unlock;
+				}
 			}
 		}
 	}

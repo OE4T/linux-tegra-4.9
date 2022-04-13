@@ -1,7 +1,7 @@
 /*
  * GV11B PMU
  *
- * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2022, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -35,6 +35,7 @@ int gv11b_pg_set_subfeature_mask(struct gk20a *g, u32 pg_engine_id);
 bool gv11b_is_lazy_bootstrap(u32 falcon_id);
 bool gv11b_is_priv_load(u32 falcon_id);
 int gv11b_pmu_setup_elpg(struct gk20a *g);
+int gv11b_pmu_pg_process_pg_event(struct gk20a *g, void *pmumsg);
 
 u32 gv11b_pmu_get_irqdest(struct gk20a *g);
 void gv11b_pmu_handle_ext_irq(struct gk20a *g, u32 intr0);

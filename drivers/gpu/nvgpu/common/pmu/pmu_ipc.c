@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2022, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -617,6 +617,12 @@ static int pmu_handle_event(struct nvgpu_pmu *pmu, struct pmu_msg *msg)
 		break;
 	case PMU_UNIT_THERM:
 		err = nvgpu_pmu_handle_therm_event(pmu, &msg->msg.therm);
+		break;
+	case PMU_UNIT_PG:
+		if (g->ops.pmu.pmu_process_pg_event != NULL) {
+			err = g->ops.pmu.pmu_process_pg_event(g,
+				(void *)&msg->hdr);
+		}
 		break;
 	default:
 		break;

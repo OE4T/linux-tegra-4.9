@@ -1,7 +1,7 @@
 /*
  * GV11B Tegra HAL interface
  *
- * Copyright (c) 2016-2020, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2022, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -741,6 +741,7 @@ static const struct gpu_ops gv11b_ops = {
 		.pmu_pg_init_param = gv11b_pg_gr_init,
 		.pmu_pg_supported_engines_list = gk20a_pmu_pg_engines_list,
 		.pmu_pg_engines_feature_list = gk20a_pmu_pg_feature_list,
+		.pmu_process_pg_event = gv11b_pmu_pg_process_pg_event,
 		.dump_secure_fuses = pmu_dump_security_fuses_gm20b,
 		.reset_engine = gp106_pmu_engine_reset,
 		.is_engine_in_reset = gp106_pmu_is_engine_in_reset,

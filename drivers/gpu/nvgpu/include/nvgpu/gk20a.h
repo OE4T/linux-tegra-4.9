@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2021, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2022, NVIDIA CORPORATION.  All rights reserved.
  *
  * GK20A Graphics
  *
@@ -1079,6 +1079,7 @@ struct gpu_ops {
 		u32 (*pmu_pg_supported_engines_list)(struct gk20a *g);
 		u32 (*pmu_pg_engines_feature_list)(struct gk20a *g,
 			u32 pg_engine_id);
+		int (*pmu_process_pg_event)(struct gk20a *g, void *pmumsg);
 		bool (*pmu_is_lpwr_feature_supported)(struct gk20a *g,
 			u32 feature_id);
 		int (*pmu_lpwr_enable_pg)(struct gk20a *g, bool pstate_lock);

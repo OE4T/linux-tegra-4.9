@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2019, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2022, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -93,6 +93,23 @@
 #define PMU_STATE_LOADING_ZBC		6U /* Loading ZBC buf */
 #define PMU_STATE_STARTED		7U /* Fully unitialized */
 #define PMU_STATE_EXIT			8U /* Exit PMU state machine */
+
+/* state transition :
+ * OFF => [OFF_ON_PENDING optional] => ON_PENDING => ON => OFF
+ * ON => OFF is always synchronized
+ */
+/* elpg is off */
+#define PMU_ELPG_STAT_OFF               0U
+/* elpg is on */
+#define PMU_ELPG_STAT_ON                1U
+/* elpg is off, ALLOW cmd has been sent, wait for ack */
+#define PMU_ELPG_STAT_ON_PENDING        2U
+/* elpg is on, DISALLOW cmd has been sent, wait for ack */
+#define PMU_ELPG_STAT_OFF_PENDING       3U
+/* elpg is off, caller has requested on, but ALLOW
+ * cmd hasn't been sent due to ENABLE_ALLOW delay
+ */
+#define PMU_ELPG_STAT_OFF_ON_PENDING    4U
 
 #define GK20A_PMU_UCODE_NB_MAX_OVERLAY	    32U
 #define GK20A_PMU_UCODE_NB_MAX_DATE_LENGTH  64U
@@ -351,6 +368,7 @@ struct nvgpu_pmu {
 	u32 stat_dmem_offset[PMU_PG_ELPG_ENGINE_ID_INVALID_ENGINE];
 
 	u32 elpg_stat;
+	u32 disallow_state;
 
 	u32 mscg_stat;
 	u32 mscg_transition_state;

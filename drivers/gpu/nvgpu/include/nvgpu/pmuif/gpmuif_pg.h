@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017-2018, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2022, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -32,6 +32,11 @@
 #define PMU_PG_ELPG_ENGINE_ID_MS       		(0x00000004U)
 #define PMU_PG_ELPG_ENGINE_ID_INVALID_ENGINE 	(0x00000005U)
 #define PMU_PG_ELPG_ENGINE_MAX    PMU_PG_ELPG_ENGINE_ID_INVALID_ENGINE
+
+/* Async PG message IDs */
+enum {
+        PMU_PG_MSG_ASYNC_CMD_DISALLOW,
+};
 
 /* PG message */
 enum {
@@ -73,12 +78,19 @@ struct pmu_pg_msg_eng_buf_stat {
 	u8 status;
 };
 
+struct pmu_pg_msg_async_cmd_resp {
+	u8 msg_type;
+	u8 ctrl_id;
+	u8 msg_id;
+};
+
 struct pmu_pg_msg {
 	union {
 		u8 msg_type;
 		struct pmu_pg_msg_elpg_msg elpg_msg;
 		struct pmu_pg_msg_stat stat;
 		struct pmu_pg_msg_eng_buf_stat eng_buf_stat;
+		struct pmu_pg_msg_async_cmd_resp async_cmd_resp;
 		/* TBD: other pg messages */
 		union pmu_ap_msg ap_msg;
 		struct nv_pmu_rppg_msg rppg_msg;

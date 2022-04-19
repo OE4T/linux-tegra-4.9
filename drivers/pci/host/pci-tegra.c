@@ -5,7 +5,7 @@
  * Author: Mike Rapoport <mike@compulab.co.il>
  *
  * Based on NVIDIA PCIe driver
- * Copyright (c) 2008-2018, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2008-2022, NVIDIA Corporation. All rights reserved.
  *
  * Bits taken from arch/arm/mach-dove/pcie.c
  *
@@ -635,6 +635,7 @@ static void __iomem *tegra_pcie_conf_address(struct pci_bus *bus,
 		      (PCI_FUNC(devfn) << 8) | (where & 0xff);
 		addr = (val & (SZ_4K - 1)) + addr;
 		val = val & ~(SZ_4K - 1);
+		afi_writel(pcie, SZ_4K >> 12, AFI_AXI_BAR0_SZ);
 		afi_writel(pcie, pcie->cs->start - val, AFI_AXI_BAR0_START);
 		afi_writel(pcie, (val + SZ_4K) >> 12, AFI_AXI_BAR0_SZ);
 	}

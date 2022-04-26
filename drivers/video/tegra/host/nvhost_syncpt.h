@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host Syncpoints
  *
- * Copyright (c) 2010-2020, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2010-2022, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -151,7 +151,7 @@ void nvhost_syncpt_save(struct nvhost_syncpt *sp);
 
 const char *nvhost_syncpt_get_last_client(struct platform_device *pdev, int id);
 
-void nvhost_syncpt_reset(struct nvhost_syncpt *sp);
+void nvhost_syncpt_reset(struct nvhost_syncpt *sp, bool from_reg);
 void nvhost_syncpt_initialize_unused(struct nvhost_syncpt *sp);
 void nvhost_syncpt_reset_client(struct platform_device *pdev);
 

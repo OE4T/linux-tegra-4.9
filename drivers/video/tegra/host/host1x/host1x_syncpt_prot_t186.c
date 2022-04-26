@@ -1,7 +1,7 @@
 /*
  * Tegra Graphics Host Syncpt Protection
  *
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2022, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -26,6 +26,9 @@ static void t186_syncpt_reset(struct nvhost_syncpt *sp, u32 id)
 {
 	struct nvhost_master *dev = syncpt_to_dev(sp);
 	int min = nvhost_syncpt_read_min(sp, id);
+	if (min)
+		nvhost_dbg_info("initializing syncpoint id %d with min %d\n",
+				 id, min);
 
 	/* restore current min value */
 	host1x_writel(dev->dev, (host1x_sync_syncpt_0_r() + id * 4), min);

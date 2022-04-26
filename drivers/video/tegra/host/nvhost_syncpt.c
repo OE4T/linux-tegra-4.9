@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host Syncpoints
  *
- * Copyright (c) 2010-2021, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2010-2022, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -54,13 +54,18 @@ static const char *max_name = "max";
 /**
  * Resets syncpoint values to sw shadows
  */
-void nvhost_syncpt_reset(struct nvhost_syncpt *sp)
+void nvhost_syncpt_reset(struct nvhost_syncpt *sp, bool from_reg)
 {
 	u32 i;
 
 	for (i = nvhost_syncpt_pts_base(sp);
-			i < nvhost_syncpt_pts_limit(sp); i++)
+			i < nvhost_syncpt_pts_limit(sp); i++) {
+		if (from_reg)
+			nvhost_syncpt_set_max(sp,
+					      i,
+					      syncpt_op().update_min(sp, i));
 		syncpt_op().reset(sp, i);
+	}
 	wmb();
 }
 

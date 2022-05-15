@@ -3,6 +3,7 @@ NIC_SELECT = RTL8192U
 ccflags-y := -std=gnu89
 ccflags-y += -O2
 
+ccflags-y += $(call cc-option, -Wno-dangling-pointer)
 ccflags-y += -DCONFIG_FORCE_HARD_FLOAT=y
 ccflags-y += -DJACKSON_NEW_8187 -DJACKSON_NEW_RX
 ccflags-y += -DTHOMAS_BEACON -DTHOMAS_TASKLET -DTHOMAS_SKB -DTHOMAS_TURBO

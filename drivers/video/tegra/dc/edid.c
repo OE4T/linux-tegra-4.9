@@ -296,7 +296,6 @@ static int tegra_edid_parse_ext_block(const u8 *raw, int idx,
 	u8 tmp;
 	u8 code;
 	int len;
-	int i;
 	bool basic_audio = false;
 
 	if (!edid) {
@@ -351,15 +350,15 @@ static int tegra_edid_parse_ext_block(const u8 *raw, int idx,
 		switch (code) {
 		case CEA_DATA_BLOCK_AUDIO:
 		{
-			int sad_n = edid->eld.sad_count * 3;
-			edid->eld.sad_count += len / 3;
-			pr_debug("%s: incrementing eld.sad_count by %d to %d\n",
-				 __func__, len / 3, edid->eld.sad_count);
+			int sad_n = min(len,
+				ELD_MAX_SAD_BYTES - edid->eld.sad_count * 3);
 			edid->eld.conn_type = 0x00;
 			edid->eld.support_hdcp = 0x00;
-			for (i = 0; (i < len) && (sad_n < ELD_MAX_SAD_BYTES);
-			     i++, sad_n++)
-				edid->eld.sad[sad_n] = ptr[i + 1];
+			memcpy(&edid->eld.sad[edid->eld.sad_count * 3],
+					&ptr[1], sad_n);
+			edid->eld.sad_count += sad_n / 3;
+			pr_debug("%s: incrementing eld.sad_count to %d\n",
+				 __func__, edid->eld.sad_count);
 			len++;
 			ptr += len; /* adding the header */
 			/* Got an audio data block so enable audio */

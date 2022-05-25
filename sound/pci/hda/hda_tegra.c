@@ -2,7 +2,7 @@
  *
  * Implementation of primary ALSA driver code base for NVIDIA Tegra HDA.
  *
- * Copyright (c) 2014-2019, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2014-2022, NVIDIA CORPORATION, All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -652,7 +652,7 @@ static int hda_tegra_probe(struct platform_device *pdev)
 	struct hda_tegra *hda;
 	int err;
 
-#if defined(CONFIG_ANDROID)
+#if defined(CONFIG_TEGRA_ANDROID)
 	driver_flags |= AZX_DCAPS_PM_RUNTIME;
 #endif
 

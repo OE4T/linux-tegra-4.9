@@ -5,7 +5,7 @@
  * Copyright (C) 2011 Texas Instruments, Inc.
  * Copyright (C) 2011 Google, Inc.
  *
- * Copyright (C) 2014-2020, NVIDIA Corporation. All rights reserved.
+ * Copyright (C) 2014-2022, NVIDIA Corporation. All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -704,7 +704,7 @@ static int nvadsp_firmware_load(struct platform_device *pdev)
 				NVADSP_FIRMWARE, ret);
 		goto end;
 	}
-#ifdef CONFIG_ANDROID
+#ifdef CONFIG_TEGRA_ANDROID
 	ret = create_global_symbol_table(fw);
 	if (ret) {
 		dev_err(dev, "unable to create global symbol table\n");

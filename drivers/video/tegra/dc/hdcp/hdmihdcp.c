@@ -2403,13 +2403,13 @@ static int nvhdcp_dev_open(struct inode *inode, struct file *filp)
 	struct miscdevice *miscdev = filp->private_data;
 	struct tegra_nvhdcp *nvhdcp =
 		container_of(miscdev, struct tegra_nvhdcp, miscdev);
-#ifndef CONFIG_ANDROID
+#ifndef CONFIG_TEGRA_ANDROID
 	int err = 0;
 #endif
 	filp->private_data = nvhdcp;
 
 /* enable policy only if HDCP TA is ready */
-#ifndef CONFIG_ANDROID
+#ifndef CONFIG_TEGRA_ANDROID
 	if (!nvhdcp->policy_initialized) {
 		nvhdcp->policy_initialized = true;
 		err = nvhdcp_te_open(nvhdcp);

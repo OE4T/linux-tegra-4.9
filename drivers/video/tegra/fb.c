@@ -6,7 +6,7 @@
  *         Colin Cross <ccross@android.com>
  *         Travis Geiselbrecht <travis@palm.com>
  *
- * Copyright (c) 2010-2021, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2010-2022, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -56,7 +56,7 @@
 #define user_ptr(p) (p)
 #endif
 
-#ifdef CONFIG_ANDROID
+#ifdef CONFIG_TEGRA_ANDROID
 #define FB_BUFFERING_FACTOR 2
 #else /* L4T and other OSes */
 #define FB_BUFFERING_FACTOR 1
@@ -529,7 +529,7 @@ static int tegra_fb_pan_display(struct fb_var_screeninfo *var,
 	/*
 	 * Do nothing if display parameters are same as current values.
 	 */
-#if defined(CONFIG_ANDROID)
+#if defined(CONFIG_TEGRA_ANDROID)
 	if ((var->xoffset == tegra_fb->curr_xoffset) &&
 	    (var->yoffset == tegra_fb->curr_yoffset) &&
 	    !(var->activate & FB_ACTIVATE_FORCE))

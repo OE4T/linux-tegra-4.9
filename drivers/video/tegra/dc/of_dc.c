@@ -1,7 +1,7 @@
 /*
  * of_dc.c: tegra dc of interface.
  *
- * Copyright (c) 2013-2021, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013-2022, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -653,7 +653,7 @@ static int parse_disp_default_out(struct platform_device *ndev,
 		OF_DC_LOG("hdcp_policy = %u\n", default_out->hdcp_policy);
 	} else {
 		pdata->default_out->hdcp_policy =
-#if defined(CONFIG_ANDROID)
+#if defined(CONFIG_TEGRA_ANDROID)
 			TEGRA_DC_HDCP_POLICY_ALWAYS_ON;
 #else
 			TEGRA_DC_HDCP_POLICY_ALWAYS_OFF;

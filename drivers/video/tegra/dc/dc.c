@@ -4,7 +4,7 @@
  * Copyright (C) 2010 Google, Inc.
  * Author: Erik Gilling <konkers@android.com>
  *
- * Copyright (c) 2010-2020, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2010-2022, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -4071,7 +4071,7 @@ static int tegra_dc_set_out(struct tegra_dc *dc, struct tegra_dc_out *out,
  * in bootloader for L4T usecase.
  * Bug 200122858
  */
-#ifdef CONFIG_ANDROID
+#ifdef CONFIG_TEGRA_ANDROID
 	/*
 	 * Seamless supporting panels can work in seamless mode
 	 * only if BL initializes DC/DSI. If not, panel should

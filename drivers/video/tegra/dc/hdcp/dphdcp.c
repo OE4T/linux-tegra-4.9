@@ -1,7 +1,7 @@
 /*
  * dphdcp.c: dp hdcp driver.
  *
- * Copyright (c) 2015-2021, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2015-2022, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -2196,13 +2196,13 @@ static int dphdcp_dev_open(struct inode *inode, struct file *filp)
 	struct miscdevice *miscdev = filp->private_data;
 	struct tegra_dphdcp *dphdcp =
 		container_of(miscdev, struct tegra_dphdcp, miscdev);
-#ifndef CONFIG_ANDROID
+#ifndef CONFIG_TEGRA_ANDROID
 	int err = 0;
 #endif
 	filp->private_data = dphdcp;
 
 /* enable policy only if HDCP TA is ready */
-#ifndef CONFIG_ANDROID
+#ifndef CONFIG_TEGRA_ANDROID
 	if (!dphdcp->policy_initialized) {
 		dphdcp->policy_initialized = true;
 

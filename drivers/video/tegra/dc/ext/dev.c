@@ -1,7 +1,7 @@
 /*
  * dev.c: Device interface for tegradc ext.
  *
- * Copyright (c) 2011-2021, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2011-2022, NVIDIA CORPORATION, All rights reserved.
  *
  * Author: Robert Morell <rmorell@nvidia.com>
  * Some code based on fbdev extensions written by:
@@ -1300,7 +1300,7 @@ static void tegra_dc_ext_flip_worker(struct kthread_work *work)
 
 	/* unpin and deref previous front buffers */
 	tegra_dc_ext_unpin_handles(unpin_handles, nr_unpin);
-#ifdef CONFIG_ANDROID
+#ifdef CONFIG_TEGRA_ANDROID
 	/* now DC has submitted buffer for display, try to release fbmem */
 	tegra_fb_release_fbmem(ext->dc->fb);
 #endif
@@ -1984,7 +1984,7 @@ static int tegra_dc_ext_flip(struct tegra_dc_ext_user *user,
 		ret = -EINVAL;
 		goto unlock;
 	}
-#ifdef CONFIG_ANDROID
+#ifdef CONFIG_TEGRA_ANDROID
 	work_index = ffs(ext->dc->valid_windows);
 	if (!work_index) {
 		dev_err(&ext->dc->ndev->dev, "no valid window\n");
@@ -2015,7 +2015,7 @@ static int tegra_dc_ext_flip(struct tegra_dc_ext_user *user,
 		tegra_dc_flip_trace(data, trace_flip_rcvd_syncpt_upd);
 
 	/* Avoid queueing timestamps on Android, to disable skipping flips */
-#ifndef CONFIG_ANDROID
+#ifndef CONFIG_TEGRA_ANDROID
 	if (has_timestamp) {
 		mutex_lock(&ext->win[work_index].queue_lock);
 		list_add_tail(&data->timestamp_node, &ext->win[work_index].timestamp_queue);

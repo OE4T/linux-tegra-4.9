@@ -14,3 +14,12 @@ config TEGRA_PROC_POWER_MODEL
 	  collating various chip specific data including voltage,
 	  frequency, and number of cores. This driver is used by
 	  various other drivers including EDP.
+
+config TEGRA_ANDROID
+	bool "Tegra native Android support"
+	default n
+	depends on ARCH_TEGRA
+	help
+          Use to let NVIDIA Tegra drivers run the Native Android specific
+          subroutines. This Config to separate the cases of Android Container
+          and native Android.

@@ -835,18 +835,22 @@ static void parse_spd_infoframe(struct platform_device *ndev,
 	spd_np = of_get_child_by_name(np, "spd-infoframe");
 	if (spd_np) {
 		if (!of_property_read_string(spd_np, "vendor-name",
-					&temp_str0))
+					&temp_str0)) {
+			memset(spd->vendor_name, 0, sizeof(spd->vendor_name));
 			strlcpy(spd->vendor_name, temp_str0,
 					sizeof(spd->vendor_name));
-		else
+		} else {
 			OF_DC_LOG("spd vendor-name is not defined\n");
+		}
 
 		if (!of_property_read_string(spd_np, "product-description",
-					&temp_str0))
+					&temp_str0)) {
+			memset(spd->prod_desc, 0, sizeof(spd->prod_desc));
 			strlcpy(spd->prod_desc, temp_str0,
 					sizeof(spd->prod_desc));
-		else
+		} else {
 			OF_DC_LOG("spd product-description is not defined\n");
+		}
 
 		if (!of_property_read_u32(spd_np, "source-information", &temp))
 			spd->source_information = (u32)temp;

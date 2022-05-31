@@ -260,6 +260,7 @@ struct hdmi_hdr_infoframe {
 	u32 max_frame_avg_light_level_lsb:8;
 	u32 min_frame_avg_light_level_msb:8;
 
+	u32 reg_hole4:16;
 } __packed;
 
 enum {
@@ -321,6 +322,7 @@ struct hdmi_spd_infoframe {
 
 	/* PB25 : Source Information */
 	u32 source_information:8;
+	u32 reg_hole4:24;
 } __packed;
 
 enum {
@@ -394,6 +396,7 @@ struct hdmi_vendor_infoframe {
 	/* PB6 */
 	u32 res3:4;
 	u32 ext_data_3d:4;
+	u32 reg_hole:8;
 } __packed;
 
 enum {

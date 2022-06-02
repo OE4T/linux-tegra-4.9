@@ -1,7 +1,7 @@
 /*
  * GV11B Tegra Platform Interface
  *
- * Copyright (c) 2016-2018, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2022, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -322,7 +322,7 @@ struct gk20a_platform gv11b_tegra_platform = {
 
 	.honors_aperture = true,
 	.unified_memory = true,
-	.dma_mask = DMA_BIT_MASK(36),
+	.dma_mask = DMA_BIT_MASK(38),
 
 	.reset_assert = gp10b_tegra_reset_assert,
 	.reset_deassert = gp10b_tegra_reset_deassert,

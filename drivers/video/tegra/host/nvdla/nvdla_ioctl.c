@@ -903,6 +903,22 @@ static int nvdla_emu_task_submit(struct nvdla_private *priv, void *arg)
 
 		nvdla_dbg_info(pdev, "submit [%d]th task", i + 1);
 
+		if (local_tasks[i].num_prefences > MAX_NVDLA_EMU_PREFENCES_PER_TASK) {
+			nvdla_dbg_err(pdev, "#prefences[%u] > expected[%d]\n",
+				local_tasks[i].num_prefences,
+				MAX_NVDLA_EMU_PREFENCES_PER_TASK);
+			err = -EINVAL;
+			goto exit;
+		}
+
+		if (local_tasks[i].num_postfences > MAX_NVDLA_EMU_POSTFENCES_PER_TASK) {
+			nvdla_dbg_err(pdev, "#postfences[%u] > expected[%d]\n",
+				local_tasks[i].num_postfences,
+				MAX_NVDLA_EMU_POSTFENCES_PER_TASK);
+			err = -EINVAL;
+			goto exit;
+		}
+
 		task.num_prefences = local_tasks[i].num_prefences;
 		task.num_postfences = local_tasks[i].num_postfences;
 

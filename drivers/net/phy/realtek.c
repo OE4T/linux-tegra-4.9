@@ -62,6 +62,7 @@
 #define RTL8211F_WOL_SET_PACKET_LEN		BIT(15)
 #define RTL8211F_WOL_ENABLE_MAGIC_PACKET	BIT(12)
 #define RTL8211F_WOL_ENABLE_PMEB_EVENT		BIT(7)
+#define RTL8211F_VD_CG_WOL_ENABLE_PMEB_EVENT	BIT(12)
 
 #define BIT_SHIFT_8 8
 #define MAC_ADDRESS_BYTE_0 0
@@ -131,9 +132,11 @@ static int rtl8211f_ack_interrupt(struct phy_device *phydev)
 
 	/* ack the WOL interrupt and toggle the WOL specific registers
 	 * to enable PME pin for WOL trigger events for next time
-	 * until disabled from ethtool ioctl
+	 * until it is disabled from ethtool ioctl
 	 */
-	if (err & RTL8211F_WOL_ENABLE_PMEB_EVENT) {
+	if (((phydev->drv->phy_id == 0x001cc878) &&
+	     (err & RTL8211F_VD_CG_WOL_ENABLE_PMEB_EVENT)) ||
+	     (err & RTL8211F_WOL_ENABLE_PMEB_EVENT)) {
 		ret = rtl8211f_wol_settings(phydev, false);
 		if (ret < 0)
 			return ret;
@@ -178,14 +181,19 @@ static int rtl8211f_config_intr(struct phy_device *phydev)
 {
 	int err;
 	u16 reg;
+	u16 pmeb_event;
 
 	err = phy_write(phydev, RTL8211F_PAGE_SELECT, RTL8211F_DEFAULT_PAGE);
 	if (err)
 		return err;
 
+	if (phydev->drv->phy_id == 0x001cc878)
+		pmeb_event = RTL8211F_VD_CG_WOL_ENABLE_PMEB_EVENT;
+	else
+		pmeb_event = RTL8211F_WOL_ENABLE_PMEB_EVENT;
+
 	if (phydev->interrupts == PHY_INTERRUPT_ENABLED)
-		reg = (RTL8211F_INER_LINK_STATUS |
-			RTL8211F_WOL_ENABLE_PMEB_EVENT);
+		reg = (RTL8211F_INER_LINK_STATUS | pmeb_event);
 	else
 		reg = 0;
 
@@ -230,6 +238,10 @@ static int rtl8211f_config_init(struct phy_device *phydev)
 			RTL8211F_ALDPS_PLL_OFF);
 	if (ret)
 		return ret;
+
+	/* CLKOUT Enable bit is NA for RTL8211F_VD_CG phy IC
+	 * so keeping programming as it is, since no effect in new phy IC
+	 */
 
 	reg = phy_read(phydev, RTL8211F_PHYCR2_REG);
 	if (reg < 0)
@@ -378,6 +390,22 @@ static struct phy_driver realtek_drvs[] = {
 		.suspend	= genphy_suspend,
 		.resume		= genphy_resume,
 	}, {
+		.phy_id		= 0x001cc878,
+		.name		= "RTL8211F VD-CG Gigabit Ethernet",
+		.phy_id_mask	= 0x001fffff,
+		.features	= PHY_GBIT_FEATURES,
+		.flags		= PHY_HAS_INTERRUPT,
+		.config_aneg	= &genphy_config_aneg,
+		.config_init	= &rtl8211f_config_init,
+		.read_status	= &genphy_read_status,
+		.ack_interrupt	= &rtl8211f_ack_interrupt,
+		.config_intr	= &rtl8211f_config_intr,
+		.get_wol	= &rtl8211f_get_wol,
+		.set_wol	= &rtl8211f_set_wol,
+		.suspend	= genphy_suspend,
+		.resume		= genphy_resume,
+	}, {
+
 		.phy_id		= 0x001cc916,
 		.name		= "RTL8211F Gigabit Ethernet",
 		.phy_id_mask	= 0x001fffff,

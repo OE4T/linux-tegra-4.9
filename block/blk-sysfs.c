@@ -695,18 +695,16 @@ int blk_register_queue(struct gendisk *disk)
 	if (ret)
 		return ret;
 
-	if (q->mq_ops)
-		blk_mq_register_dev(dev, q);
-
-	mutex_lock(&q->sysfs_lock);
-
 	ret = kobject_add(&q->kobj, kobject_get(&dev->kobj), "%s", "queue");
 	if (ret < 0) {
 		blk_trace_remove_sysfs(dev);
-		goto unlock;
+		return ret;
 	}
 
 	kobject_uevent(&q->kobj, KOBJ_ADD);
+
+	if (q->mq_ops)
+		blk_mq_register_dev(dev, q);
 
 	if (!q->request_fn)
 		return 0;
@@ -717,13 +715,10 @@ int blk_register_queue(struct gendisk *disk)
 		kobject_del(&q->kobj);
 		blk_trace_remove_sysfs(dev);
 		kobject_put(&dev->kobj);
-		goto unlock;
+		return ret;
 	}
 
-	ret = 0;
-unlock:
-	mutex_unlock(&q->sysfs_lock);
-	return ret;
+	return 0;
 }
 
 void blk_unregister_queue(struct gendisk *disk)

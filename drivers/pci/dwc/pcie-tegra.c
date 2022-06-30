@@ -3709,6 +3709,13 @@ static void pex_ep_event_pex_rst_deassert(struct tegra_pcie_dw *pcie)
 		writel(val, pci->dbi_base + EP_CFG_LINK_CAP);
 	}
 
+	if (pcie->init_speed >= 1 && pcie->init_speed <= 4) {
+		dw_pcie_read(pci->dbi_base + CFG_LINK_STATUS_CONTROL_2, 4, &val);
+		val &= ~CFG_LINK_STATUS_CONTROL_2_TARGET_LS_MASK;
+		val |= pcie->init_speed;
+		dw_pcie_write(pci->dbi_base + CFG_LINK_STATUS_CONTROL_2, 4, val);
+	}
+
 	writew(PCI_CLASS_MEMORY_OTHER,
 	       pci->dbi_base + PCI_CLASS_DEVICE);
 

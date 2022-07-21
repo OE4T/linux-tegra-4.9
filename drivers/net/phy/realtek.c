@@ -122,12 +122,28 @@ static int rtl821x_ack_interrupt(struct phy_device *phydev)
 
 static int rtl8211f_ack_interrupt(struct phy_device *phydev)
 {
-	int err;
+	int err, ret;
 
 	phy_write(phydev, RTL8211F_PAGE_SELECT, 0xa43);
 	err = phy_read(phydev, RTL8211F_INSR);
 	/* restore to default page 0 */
 	phy_write(phydev, RTL8211F_PAGE_SELECT, 0x0);
+
+	/* ack the WOL interrupt and toggle the WOL specific registers
+	 * to enable PME pin for WOL trigger events for next time
+	 * until disabled from ethtool ioctl
+	 */
+	if (err & RTL8211F_WOL_ENABLE_PMEB_EVENT) {
+		ret = rtl8211f_wol_settings(phydev, false);
+		if (ret < 0)
+			return ret;
+
+		ret = rtl8211f_wol_settings(phydev, true);
+		if (ret < 0)
+			return ret;
+
+		return 0;
+	}
 
 	return (err < 0) ? err : 0;
 }

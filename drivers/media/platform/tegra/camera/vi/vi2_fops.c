@@ -802,11 +802,23 @@ static int tegra_channel_kthread_capture_start(void *data)
 		if (err)
 			continue;
 
-		buf = dequeue_buffer(chan, !chan->low_latency);
-		if (!buf)
-			continue;
-
-		err = tegra_channel_capture_frame(chan, buf);
+		/* Check the depth of FIFO before dequeuing a buffer */
+		if (chan->low_latency) {
+			if (atomic_read(&chan->syncpt_depth) <
+			    SYNCPT_FIFO_DEPTH) {
+				buf = dequeue_buffer(chan, !chan->low_latency);
+				if (!buf)
+					continue;
+				err = tegra_channel_capture_frame(chan, buf);
+			} else {
+				usleep_range(1000, 1010);
+			}
+		} else {
+			buf = dequeue_buffer(chan, !chan->low_latency);
+			if (!buf)
+				continue;
+			err = tegra_channel_capture_frame(chan, buf);
+		}
 	}
 
 	return 0;

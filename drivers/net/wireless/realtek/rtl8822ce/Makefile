@@ -91,7 +91,7 @@ CONFIG_RTW_DEBUG = y
 # please refer to "How_to_set_driver_debug_log_level.doc" to set the available level.
 CONFIG_RTW_LOG_LEVEL = 0
 ######################## Wake On Lan ##########################
-CONFIG_WOWLAN = n
+CONFIG_WOWLAN = y
 #bit2: deauth, bit1: unicast, bit0: magic pkt.
 CONFIG_WAKEUP_TYPE = 0x7
 CONFIG_WOW_LPS_MODE = default

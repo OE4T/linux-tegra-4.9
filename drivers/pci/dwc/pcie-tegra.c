@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017 - 2021, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017 - 2022, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -639,7 +639,6 @@ static unsigned int pcie_gen_freq[] = {
 	GEN4_CORE_CLK_FREQ
 };
 
-static void tegra_pcie_downstream_dev_to_D0(struct tegra_pcie_dw *pcie);
 static int tegra_pcie_dw_pme_turnoff(struct tegra_pcie_dw *pcie);
 static int tegra_pcie_dw_runtime_suspend(struct device *dev);
 static int tegra_pcie_dw_runtime_resume(struct device *dev);
@@ -1641,8 +1640,6 @@ static int apply_speed_change(struct seq_file *s, void *data)
 static int apply_pme_turnoff(struct seq_file *s, void *data)
 {
 	struct tegra_pcie_dw *pcie = (struct tegra_pcie_dw *)(s->private);
-
-	tegra_pcie_downstream_dev_to_D0(pcie);
 
 	if (!tegra_pcie_dw_pme_turnoff(pcie))
 		seq_puts(s, "PME_TurnOff sent and Link is in L2 state\n");
@@ -4433,26 +4430,6 @@ static int tegra_pcie_try_link_l2(struct tegra_pcie_dw *pcie)
 				 1, PME_ACK_TIMEOUT);
 }
 
-static void tegra_pcie_downstream_dev_to_D0(struct tegra_pcie_dw *pcie)
-{
-	struct pci_dev *pdev = NULL;
-	struct pci_bus *child;
-	struct pcie_port *pp = &pcie->pci.pp;
-
-	list_for_each_entry(child, &pp->bus->children, node) {
-		/* Bring downstream devices to D0 if they are not already in */
-		if (child->parent == pp->bus) {
-			pdev = pci_get_slot(child, PCI_DEVFN(0, 0));
-			pci_dev_put(pdev);
-			if (!pdev)
-				break;
-
-			if (pci_set_power_state(pdev, PCI_D0))
-				dev_err(pcie->dev, "D0 transition failed\n");
-		}
-	}
-}
-
 static int tegra_pcie_dw_pme_turnoff(struct tegra_pcie_dw *pcie)
 {
 	u32 data;
@@ -4562,8 +4539,6 @@ static int tegra_pcie_dw_runtime_suspend(struct device *dev)
 
 	if (pcie->mode == DW_PCIE_EP_TYPE)
 		return 0;
-
-	tegra_pcie_downstream_dev_to_D0(pcie);
 
 	dw_pcie_host_deinit(&pcie->pci.pp);
 
@@ -4739,7 +4714,6 @@ static int tegra_pcie_dw_suspend_noirq(struct device *dev)
 		     &pcie->msi_ctrl_int);
 	if (pcie->is_safety_platform)
 		clk_disable_unprepare(pcie->core_clk_m);
-	tegra_pcie_downstream_dev_to_D0(pcie);
 	tegra_pcie_dw_pme_turnoff(pcie);
 	reset_control_assert(pcie->core_rst);
 	tegra_pcie_disable_phy(pcie);
@@ -4934,7 +4908,6 @@ static void tegra_pcie_dw_shutdown(struct platform_device *pdev)
 
 		destroy_dma_test_debugfs(pcie);
 		debugfs_remove_recursive(pcie->debugfs);
-		tegra_pcie_downstream_dev_to_D0(pcie);
 
 		if (pcie->is_safety_platform)
 			clk_disable_unprepare(pcie->core_clk_m);

@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host VI
  *
- * Copyright (c) 2017-2021, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2022, NVIDIA CORPORATION.  All rights reserved.
  *
  * Author: David Wang <davidw@nvidia.com>
  *
@@ -205,8 +205,10 @@ void vi_capture_shutdown(struct tegra_vi_channel *chan)
 		}
 
 		capture_common_unpin_memory(&capture->requests);
-		if (capture->buf_ctx != NULL)
+		if (capture->buf_ctx != NULL) {
 			destroy_buffer_table(capture->buf_ctx);
+			capture->buf_ctx = NULL;
+		}
 
 		vfree(capture->unpins_list);
 		capture->unpins_list = NULL;

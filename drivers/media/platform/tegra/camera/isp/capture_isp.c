@@ -3,7 +3,7 @@
  *
  * Tegra NvCapture ISP KMD
  *
- * Copyright (c) 2017-2021, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2022, NVIDIA CORPORATION.  All rights reserved.
  *
  * Author: Sudhir Vyas <svyas@nvidia.com>
  *
@@ -850,6 +850,7 @@ int isp_capture_release(struct tegra_isp_channel *chan,
 			&capture->progress_status_notifier);
 
 	destroy_buffer_table(capture->buffer_ctx);
+	capture->buffer_ctx = NULL;
 
 	capture->channel_id = CAPTURE_CHANNEL_ISP_INVALID_ID;
 

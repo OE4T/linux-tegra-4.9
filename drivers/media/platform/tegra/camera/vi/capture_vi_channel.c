@@ -1,7 +1,7 @@
 /*
  * VI channel driver for T186/T194
  *
- * Copyright (c) 2017-2020 NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2017-2022 NVIDIA Corporation.  All rights reserved.
  *
  * Author: Sudhir Vyas <svyas@nvidia.com>
  *
@@ -148,6 +148,11 @@ static long vi_channel_ioctl(struct file *file, unsigned int cmd,
 			return -EINVAL;
 		}
 
+		if (capture->buf_ctx) {
+			dev_err(chan->dev, "vi buffer setup already done");
+			return -EFAULT;
+		}
+
 		capture->buf_ctx = create_buffer_table(chan->dev);
 		if (capture->buf_ctx == NULL) {
 			dev_err(chan->dev, "vi buffer setup failed");
@@ -160,6 +165,7 @@ static long vi_channel_ioctl(struct file *file, unsigned int cmd,
 		if (err < 0) {
 			dev_err(chan->dev, "%s: memory setup failed\n", __func__);
 			destroy_buffer_table(capture->buf_ctx);
+			capture->buf_ctx = NULL;
 			return -EFAULT;
 		}
 
@@ -171,6 +177,7 @@ static long vi_channel_ioctl(struct file *file, unsigned int cmd,
 				__func__);
 			capture_common_unpin_memory(&capture->requests);
 			destroy_buffer_table(capture->buf_ctx);
+			capture->buf_ctx = NULL;
 			return -ENOMEM;
 		}
 
@@ -180,6 +187,7 @@ static long vi_channel_ioctl(struct file *file, unsigned int cmd,
 			dev_err(chan->dev, "vi capture setup failed\n");
 			capture_common_unpin_memory(&capture->requests);
 			destroy_buffer_table(capture->buf_ctx);
+			capture->buf_ctx = NULL;
 			return err;
 		}
 		break;
@@ -219,6 +227,7 @@ static long vi_channel_ioctl(struct file *file, unsigned int cmd,
 			vfree(capture->unpins_list);
 			capture->unpins_list = NULL;
 			destroy_buffer_table(capture->buf_ctx);
+			capture->buf_ctx = NULL;
 		}
 		break;
 	}

@@ -1,7 +1,7 @@
 /*
  * Tegra capture common operations
  *
- * Copyright (c) 2017-2021, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2022, NVIDIA CORPORATION.  All rights reserved.
  *
  * Author: Sudhir Vyas <svyas@nvidia.com>
  *         Ziqi Qing <zqing@nvidia.com>
@@ -184,6 +184,11 @@ get_mapping(
 	struct dma_buf *buf;
 	void *err;
 
+	if (unlikely(tab == NULL)) {
+		pr_err("%s: invalid buffer table\n", __func__);
+		return ERR_PTR(-EINVAL);
+	}
+
 	buf = dma_buf_get((int)fd);
 	if (IS_ERR(buf)) {
 		dev_err(tab->dev, fmt("invalid memfd %u; errno %ld"),
@@ -272,6 +277,11 @@ int capture_buffer_request(
 	struct dma_buf *buf;
 	bool add = (bool)(flag & BUFFER_ADD);
 	int err = 0;
+
+	if (unlikely(tab == NULL)) {
+		pr_err("%s: invalid buffer table\n", __func__);
+		return -EINVAL;
+	}
 
 	mutex_lock(&req_lock);
 

@@ -10,9 +10,13 @@
  * published by the Free Software Foundation.
  */
 
+#include <linux/syscalls.h>
+#include <linux/fs.h>
+#include <asm/segment.h>
 #include <linux/freezer.h>
 #include <linux/kthread.h>
 #include <linux/nvhost.h>
+#include <linux/errno.h>
 #include <linux/tegra-powergate.h>
 #include <linux/semaphore.h>
 #include <media/tegra_camera_platform.h>
@@ -32,6 +36,9 @@
 #define VI_CSI_CLK_SCALE	110
 #define PG_BITRATE		32
 #define SLVSEC_STREAM_MAIN	0U
+
+#define VI_CHANNEL_DEV "/dev/capture-vi-channel"
+#define VI_CHAN_PATH_MAX 40
 
 #define CAPTURE_TIMEOUT_MS	2500
 #define CAPTURE_CORRECTABLE_ERRORS	\
@@ -231,6 +238,55 @@ static int vi5_add_ctrls(struct tegra_channel *chan)
 	}
 
 	return 0;
+}
+
+/*
+ * Find a free VI channel to open. Synchronize vi capture channel sharing
+ * with other clients.
+ */
+static int vi5_channel_open(struct tegra_channel *chan, u32 vi_port)
+{
+	bool found = false;
+	char chanFilePath[VI_CHAN_PATH_MAX];
+	int channel = 0;
+	mm_segment_t oldfs;
+	struct file *filp = NULL;
+	long err = 0;
+
+	while (!found) {
+		sprintf(chanFilePath, "%s%u", VI_CHANNEL_DEV, channel);
+
+		oldfs = get_fs();
+		set_fs(get_ds());
+		filp = filp_open(chanFilePath, O_RDONLY, 0);
+		set_fs(oldfs);
+
+		if (IS_ERR(filp)) {
+			err = PTR_ERR(filp);
+			/* Retry with the next available channel. Opening
+			 * a channel number greater than the ones supported
+			 * by the platform will trigger a ENODEV from the
+			 * VI capture channel driver
+			 */
+			if (err == -EBUSY)
+				channel++;
+			else {
+				dev_err(&chan->video->dev,
+					"Error opening VI capture channel \
+					node %s with err: %ld \n", \
+					chanFilePath, err);
+				return -ENODEV;
+			}
+		} else
+			found = true;
+	}
+
+	err = 0;
+	chan->vi_channel_id[vi_port] = channel;
+
+	chan->tegra_vi_channel[vi_port] = filp->private_data;
+
+	return err;
 }
 
 static int vi5_channel_setup_queue(struct tegra_channel *chan,
@@ -506,7 +562,8 @@ static int vi5_channel_error_recover(struct tegra_channel *chan,
 
 	/* stop vi channel */
 	for(vi_port = 0; vi_port < chan->valid_ports; vi_port++) {
-		vi_channel_close_ex(chan->id, chan->tegra_vi_channel[vi_port]);
+		vi_channel_close_ex(chan->vi_channel_id[vi_port],
+					chan->tegra_vi_channel[vi_port]);
 	}
 
 	/* release all previously-enqueued capture buffers to v4l2 */
@@ -541,7 +598,7 @@ static int vi5_channel_error_recover(struct tegra_channel *chan,
 
 	/* restart vi channel */
 	for(vi_port = 0; vi_port < chan->valid_ports; vi_port++) {
-		chan->tegra_vi_channel[vi_port] = vi_channel_open_ex(chan->id + vi_port, false);
+		err = vi5_channel_open(chan, vi_port);
 		if (IS_ERR(chan->tegra_vi_channel[vi_port])) {
 			err = PTR_ERR(chan);
 			goto done;
@@ -734,11 +791,10 @@ static int vi5_channel_start_streaming(struct vb2_queue *vq, u32 count)
 	/* Skip in bypass mode */
 	if (!chan->bypass) {
 		for (vi_port = 0; vi_port < chan->valid_ports; vi_port++) {
-			chan->tegra_vi_channel[vi_port] = vi_channel_open_ex(chan->id + vi_port, false);
-			if (IS_ERR(chan->tegra_vi_channel[vi_port])) {
-				ret = PTR_ERR(chan);
+			int err = vi5_channel_open(chan, vi_port);
+
+			if (err)
 				goto err_open_ex;
-			}
 
 			spin_lock_irqsave(&chan->capture_state_lock, flags);
 			chan->capture_state = CAPTURE_IDLE;
@@ -839,7 +895,8 @@ err_start_kthreads:
 err_setup:
 	if (!chan->bypass)
 		for (vi_port = 0; vi_port < chan->valid_ports; vi_port++) {
-			vi_channel_close_ex(chan->id + vi_port, chan->tegra_vi_channel[vi_port]);
+			vi_channel_close_ex(chan->vi_channel_id[vi_port],
+						chan->tegra_vi_channel[vi_port]);
 		}
 err_open_ex:
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
@@ -873,7 +930,8 @@ static int vi5_channel_stop_streaming(struct vb2_queue *vq)
 				dev_err(&chan->video->dev,
 					"vi capture release failed\n");
 
-			vi_channel_close_ex(chan->id + vi_port, chan->tegra_vi_channel[vi_port]);
+			vi_channel_close_ex(chan->vi_channel_id[vi_port],
+						chan->tegra_vi_channel[vi_port]);
 		}
 
 		/* release all remaining buffers to v4l2 */

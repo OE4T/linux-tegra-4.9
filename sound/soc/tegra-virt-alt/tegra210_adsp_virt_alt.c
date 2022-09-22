@@ -627,6 +627,11 @@ static int tegra210_adsp_send_connect_msg(struct tegra210_adsp_app *src,
 			__func__, src, dst);
 		return -1;
 	}
+	if ((src->plugin == NULL) || (dst->plugin == NULL)) {
+		pr_err("%s: src->plugin = %p or dst->plugin = %p is NULL\n",
+			__func__, src->plugin, dst->plugin);
+		return -1;
+	}
 
 	apm_msg.msgq_msg.size = MSGQ_MSG_WSIZE(apm_fx_connect_params_t);
 	apm_msg.msg.call_params.size = sizeof(apm_fx_connect_params_t);

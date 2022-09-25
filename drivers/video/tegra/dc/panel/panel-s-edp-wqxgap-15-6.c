@@ -1,7 +1,7 @@
 /*
  * panel-s-edp-wqxgap-15-6.c: Panel driver for s-edp-wqxgap-15-6 panel.
  *
- * Copyright (c) 2012-2018, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2012-2022, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -311,5 +311,3 @@ struct tegra_panel __initdata edp_s_wqxgap_15_6 = {
 	.register_bl_dev = edp_s_wqxgap_15_6_register_bl_dev,
 	.set_disp_device = edp_s_wqxgap_15_6_set_disp_device,
 };
-EXPORT_SYMBOL(edp_s_wqxgap_15_6);
-

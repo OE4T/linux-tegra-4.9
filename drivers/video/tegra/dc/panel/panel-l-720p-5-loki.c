@@ -1,7 +1,7 @@
 /*
  * panel-l-720p-5-loki.c: Panel driver for l-720p-5-loki panel.
  *
- * Copyright (c) 2011-2018, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2011-2022, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -666,4 +666,3 @@ struct tegra_panel __initdata dsi_l_720p_5_loki = {
 	.register_bl_dev = dsi_l_720p_5_loki_register_bl_dev,
 	.init_cmu_data = dsi_l_720p_5_loki_cmu_init,
 };
-EXPORT_SYMBOL(dsi_l_720p_5_loki);

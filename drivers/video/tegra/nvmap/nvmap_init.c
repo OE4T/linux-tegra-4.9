@@ -503,7 +503,6 @@ finish:
 	nvmap_init_time += sched_clock() - start;
 	return ret;
 }
-EXPORT_SYMBOL(nvmap_co_setup);
 RESERVEDMEM_OF_DECLARE(nvmap_co, "nvidia,generic_carveout", nvmap_co_setup);
 RESERVEDMEM_OF_DECLARE(nvmap_ivm_co, "nvidia,ivm_carveout", nvmap_co_setup);
 RESERVEDMEM_OF_DECLARE(nvmap_iram_co, "nvidia,iram-carveout", nvmap_co_setup);

@@ -3,7 +3,7 @@
  *
  * High-speed serial driver for NVIDIA Tegra SoCs
  *
- * Copyright (c) 2012-2021, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2012-2022, NVIDIA CORPORATION.  All rights reserved.
  *
  * Author: Laxman Dewangan <ldewangan@nvidia.com>
  *
@@ -774,6 +774,14 @@ static void tegra_uart_rx_error_handle_timer(unsigned long _data)
 	tup->ier_shadow = ier;
 	tegra_uart_write(tup, ier, UART_IER);
 	spin_unlock_irqrestore(&u->lock, flags);
+
+	/* Start DMA and set RTS as active */
+	if (!tup->use_rx_pio)
+		tegra_uart_start_rx_dma(tup);
+
+	if (tup->rts_active && tup->is_hw_flow_enabled)
+		set_rts(tup, true);
+
 }
 
 static int tegra_uart_copy_rx_to_tty(struct tegra_uart_port *tup,
@@ -853,6 +861,7 @@ static void tegra_uart_rx_dma_complete(void *args)
 	enum dma_status status;
 	struct dma_async_tx_descriptor *prev_rx_dma_desc;
 	int rx_level = 0;
+	int ret;
 
 	spin_lock_irqsave(&u->lock, flags);
 
@@ -868,7 +877,15 @@ static void tegra_uart_rx_dma_complete(void *args)
 	if (tup->rts_active && tup->is_hw_flow_enabled)
 		set_rts(tup, false);
 
-	tegra_uart_rx_buffer_push(tup, 0);
+	ret = tegra_uart_rx_buffer_push(tup, 0);
+	if (ret) {
+		/*
+		 * If we are here, then tty buffer is full. Keep RTS and DMA
+		 * disabled. They are enabled later by error handler.
+		 */
+		async_tx_ack(prev_rx_dma_desc);
+		goto done;
+	}
 
 	if (tup->enable_rx_buffer_throttle) {
 		rx_level = tty_buffer_get_level(port);
@@ -914,6 +931,14 @@ static int tegra_uart_handle_rx_dma(struct tegra_uart_port *tup)
 	prev_rx_dma_desc = tup->rx_dma_desc;
 
 	ret = tegra_uart_rx_buffer_push(tup, state.residue);
+	if (ret) {
+		/*
+		 * If we are here, then tty buffer is full. Keep RTS and DMA
+		 * disabled. They are enabled later by error handler.
+		 */
+		async_tx_ack(prev_rx_dma_desc);
+		return ret;
+	}
 
 	if (tup->enable_rx_buffer_throttle) {
 		rx_level = tty_buffer_get_level(port);

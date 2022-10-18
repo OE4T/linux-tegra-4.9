@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2018, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2012-2022, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -38,7 +38,7 @@
 #define FUSE_OPT_FAB_CODE_MASK		0x3f
 #define FUSE_OPT_LOT_CODE_0		0x108
 #define FUSE_OPT_LOT_CODE_1		0x10c
-#define FUSE_OPT_WAFER_ID		0x118
+#define FUSE_OPT_WAFER_ID		0x110
 #define FUSE_OPT_WAFER_ID_MASK		0x3f
 #define FUSE_OPT_X_COORDINATE		0x114
 #define FUSE_OPT_X_COORDINATE_MASK	0x1ff

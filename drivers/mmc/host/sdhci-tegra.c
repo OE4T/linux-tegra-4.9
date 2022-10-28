@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2010 Google, Inc.
- * Copyright (c) 2012-2018, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2012-2022, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -2474,6 +2474,8 @@ static int tegra_sdhci_resume(struct sdhci_host *host)
 
 	if (host->mmc->rem_card_present == false)
 		tegra_host->tuning_status = TUNING_STATUS_RETUNE;
+
+	tegra_host->pad_calib_required = true;
 
 	/* Set min identificaion clock of 400 KHz */
 	tegra_sdhci_set_clock(host, 400000);

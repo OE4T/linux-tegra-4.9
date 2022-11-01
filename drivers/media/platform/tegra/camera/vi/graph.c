@@ -1,7 +1,7 @@
 /*
  * NVIDIA Media controller graph management
  *
- * Copyright (c) 2015-2020, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2023, NVIDIA CORPORATION.  All rights reserved.
  *
  * Author: Bryan Wu <pengw@nvidia.com>
  *
@@ -348,22 +348,6 @@ static int tegra_vi_graph_build_links(struct tegra_channel *chan)
 	return 0;
 }
 
-static void tegra_vi_graph_remove_links(struct tegra_channel *chan)
-{
-	struct tegra_vi_graph_entity *entity;
-
-	/* remove entity links and subdev for nvcsi */
-	entity = list_first_entry(&chan->entities,
-			struct tegra_vi_graph_entity, list);
-	if (entity->entity != NULL) {
-		media_entity_remove_links(entity->entity);
-		video_unregister_device(entity->subdev->devnode);
-	}
-
-	/* remove video node for vi */
-	tegra_channel_remove_subdevices(chan);
-}
-
 static int tegra_vi_graph_notify_complete(struct v4l2_async_notifier *notifier)
 {
 	struct tegra_channel *chan =
@@ -474,7 +458,8 @@ static void tegra_vi_graph_notify_unbind(struct v4l2_async_notifier *notifier,
 
 	/* cleanup for complete */
 	if (chan->link_status) {
-		tegra_vi_graph_remove_links(chan);
+		/* remove video node for vi */
+		tegra_channel_remove_subdevices(chan);
 		tegra_channel_cleanup_video(chan);
 		chan->link_status--;
 	}

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2020, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2018-2022, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -51,6 +51,8 @@ enum blk_cmd_op {
 	VS_BLK_WRITE = 2,
 	VS_BLK_FLUSH = 3,
 	VS_BLK_IOCTL = 4,
+	VS_BLK_SECURE_ERASE = 5,
+	VS_BLK_DISCARD = 6,
 	VS_BLK_INVAL_REQ = 32,
 	VS_UNKNOWN_BLK_CMD = 0xffffffff,
 };
@@ -60,6 +62,8 @@ enum blk_cmd_op {
 #define VS_BLK_WRITE_OP_F         (1 << VS_BLK_WRITE)
 #define VS_BLK_FLUSH_OP_F         (1 << VS_BLK_FLUSH)
 #define VS_BLK_IOCTL_OP_F         (1 << VS_BLK_IOCTL)
+#define VS_BLK_SECURE_ERASE_OP_F  (1 << VS_BLK_SECURE_ERASE)
+#define VS_BLK_DISCARD_OP_F       (1 << VS_BLK_DISCARD)
 
 #pragma pack(push)
 #pragma pack(1)

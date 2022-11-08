@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2021, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2022, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -43,6 +43,15 @@
 #include "tegra_vblk.h"
 
 static int vblk_major;
+
+/**
+ * verify that request is "ERASE"
+ */
+static inline bool bio_is_erase(struct request *bio)
+{
+	return req_op(bio) == REQ_OP_SECURE_ERASE ||
+	       req_op(bio) == REQ_OP_DISCARD;
+}
 
 /**
  * vblk_get_req: Get a handle to free vsc request.
@@ -299,7 +308,8 @@ static bool complete_bio_req(struct vblk_dev *vblkdev)
 				goto put_req;
 			}
 
-			if (req_op(bio_req) != REQ_OP_FLUSH) {
+			if (req_op(bio_req) != REQ_OP_FLUSH &&
+			    !bio_is_erase(bio_req)) {
 				if (vs_req->blkdev_req.blk_req.num_blks !=
 						req_resp->blkdev_resp.blk_resp.num_blks) {
 					req_error_handler(vblkdev,
@@ -374,7 +384,6 @@ static bool bio_req_sanity_check(struct vblk_dev *vblkdev,
 	uint64_t start_offset = (blk_rq_pos(bio_req) * (uint64_t)SECTOR_SIZE);
 	uint64_t req_bytes = blk_rq_bytes(bio_req);
 
-
 	if ((start_offset >= vblkdev->size) || (req_bytes > vblkdev->size) ||
 		((start_offset + req_bytes) > vblkdev->size))
 	{
@@ -397,7 +406,8 @@ static bool bio_req_sanity_check(struct vblk_dev *vblkdev,
 		return false;
 	}
 
-	if (req_bytes > (uint64_t)vsc_req->mempool_len) {
+	if (!bio_is_erase(bio_req) &&
+	    req_bytes > (uint64_t)vsc_req->mempool_len) {
 		dev_err(vblkdev->device, "Req bytes %llx greater than %x!\n",
 			req_bytes, vsc_req->mempool_len);
 		return false;
@@ -484,15 +494,29 @@ static bool submit_bio_req(struct vblk_dev *vblkdev)
 			error = -ENOTSUPP;
 			goto bio_exit;
 		}
-		if (req_op(bio_req) == REQ_OP_READ) {
+
+		switch (req_op(bio_req)) {
+		case REQ_OP_READ:
 			vs_req->blkdev_req.req_op = VS_BLK_READ;
-		} else if (req_op(bio_req) == REQ_OP_WRITE) {
+			break;
+		case REQ_OP_WRITE:
 			vs_req->blkdev_req.req_op = VS_BLK_WRITE;
-		} else if (req_op(bio_req) == REQ_OP_FLUSH) {
+			break;
+		case REQ_OP_FLUSH:
 			vs_req->blkdev_req.req_op = VS_BLK_FLUSH;
-		} else {
-			dev_err(vblkdev->device,
-				"Request direction is not read/write!\n");
+			break;
+		case REQ_OP_DISCARD:
+			vs_req->blkdev_req.req_op = VS_BLK_DISCARD;
+			break;
+		case REQ_OP_SECURE_ERASE:
+			vs_req->blkdev_req.req_op = VS_BLK_SECURE_ERASE;
+			break;
+		case REQ_OP_WRITE_SAME:
+			dev_err(vblkdev->device, "Unsupported request\n");
+			goto bio_exit;
+		default:
+			dev_err(vblkdev->device, "Unexpected request %d\n",
+					(int)req_op(bio_req));
 			goto bio_exit;
 		}
 
@@ -647,6 +671,7 @@ const struct block_device_operations vblk_ops = {
 static void setup_device(struct vblk_dev *vblkdev)
 {
 	uint32_t max_io_bytes;
+	uint32_t max_hw_sectors;
 	uint32_t req_id;
 	uint32_t max_requests;
 	struct vsc_request *req;
@@ -691,6 +716,7 @@ static void setup_device(struct vblk_dev *vblkdev)
 		dev_err(vblkdev->device, "Maximum io bytes value is 0!\n");
 		return;
 	}
+	max_hw_sectors = max_io_bytes / SECTOR_SIZE;
 
 	max_requests = ((vblkdev->ivmk->size) / max_io_bytes);
 
@@ -743,8 +769,11 @@ static void setup_device(struct vblk_dev *vblkdev)
 	mutex_init(&vblkdev->req_lock);
 
 	vblkdev->max_requests = max_requests;
-	blk_queue_max_hw_sectors(vblkdev->queue, max_io_bytes / SECTOR_SIZE);
+	blk_queue_max_hw_sectors(vblkdev->queue, max_hw_sectors);
 	queue_flag_set_unlocked(QUEUE_FLAG_NONROT, vblkdev->queue);
+	queue_flag_set_unlocked(QUEUE_FLAG_DISCARD, vblkdev->queue);
+	blk_queue_max_discard_sectors(vblkdev->queue, max_hw_sectors);
+
 
 	/* And the gendisk structure. */
 	vblkdev->gd = alloc_disk(VBLK_MINORS);

@@ -9,8 +9,10 @@ are configurable at compile, boot or run time.
 .. toctree::
    :maxdepth: 1
 
+   spectre
    l1tf
    mds
    tsx_async_abort
    multihit
    special-register-buffer-data-sampling
+   processor_mmio_stale_data

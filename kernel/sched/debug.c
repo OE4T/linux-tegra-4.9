@@ -269,14 +269,14 @@ sd_alloc_ctl_energy_table(struct sched_group_energy *sge)
 		return NULL;
 
 	set_table_entry(&table[0], "nr_idle_states", &sge->nr_idle_states,
-			sizeof(int), 0644, proc_dointvec_minmax, false);
+			sizeof(int), 0444, proc_dointvec_minmax, false);
 	set_table_entry(&table[1], "idle_states", &sge->idle_states[0].power,
-			sge->nr_idle_states*sizeof(struct idle_state), 0644,
+			sge->nr_idle_states*sizeof(struct idle_state), 0444,
 			proc_doulongvec_minmax, false);
 	set_table_entry(&table[2], "nr_cap_states", &sge->nr_cap_states,
-			sizeof(int), 0644, proc_dointvec_minmax, false);
+			sizeof(int), 0444, proc_dointvec_minmax, false);
 	set_table_entry(&table[3], "cap_states", &sge->cap_states[0].cap,
-			sge->nr_cap_states*sizeof(struct capacity_state), 0644,
+			sge->nr_cap_states*sizeof(struct capacity_state), 0444,
 			proc_doulongvec_minmax, false);
 
 	return table;
@@ -899,17 +899,8 @@ void print_numa_stats(struct seq_file *m, int node, unsigned long tsf,
 static void sched_show_numa(struct task_struct *p, struct seq_file *m)
 {
 #ifdef CONFIG_NUMA_BALANCING
-	struct mempolicy *pol;
-
 	if (p->mm)
 		P(mm->numa_scan_seq);
-
-	task_lock(p);
-	pol = p->mempolicy;
-	if (pol && !(pol->flags & MPOL_F_MORON))
-		pol = NULL;
-	mpol_get(pol);
-	task_unlock(p);
 
 	P(numa_pages_migrated);
 	P(numa_preferred_nid);
@@ -917,7 +908,6 @@ static void sched_show_numa(struct task_struct *p, struct seq_file *m)
 	SEQ_printf(m, "current_node=%d, numa_group_id=%d\n",
 			task_node(p), task_numa_group_id(p));
 	show_numa_stats(p, m);
-	mpol_put(pol);
 #endif
 }
 

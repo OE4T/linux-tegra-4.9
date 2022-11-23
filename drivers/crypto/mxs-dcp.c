@@ -247,12 +247,6 @@ static int mxs_dcp_run_aes(struct dcp_async_ctx *actx,
 		goto aes_done_run;
 	}
 
-	if (actx->fill % AES_BLOCK_SIZE) {
-		dev_err(sdcp->dev, "Invalid block size!\n");
-		ret = -EINVAL;
-		goto aes_done_run;
-	}
-
 	/* Fill in the DMA descriptor. */
 	desc->control0 = MXS_DCP_CONTROL0_DECR_SEMAPHORE |
 		    MXS_DCP_CONTROL0_INTERRUPT |
@@ -334,7 +328,7 @@ static int mxs_dcp_aes_block_crypt(struct crypto_async_request *arq)
 		memset(key + AES_KEYSIZE_128, 0, AES_KEYSIZE_128);
 	}
 
-	for_each_sg(req->src, src, sg_nents(src), i) {
+	for_each_sg(req->src, src, sg_nents(req->src), i) {
 		src_buf = sg_virt(src);
 		len = sg_dma_len(src);
 		tlen += len;

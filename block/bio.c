@@ -854,6 +854,9 @@ int bio_add_page(struct bio *bio, struct page *page,
 	bio->bi_vcnt++;
 done:
 	bio->bi_iter.bi_size += len;
+
+	if (!bio_flagged(bio, BIO_WORKINGSET) && unlikely(PageWorkingset(page)))
+		bio_set_flag(bio, BIO_WORKINGSET);
 	return len;
 }
 EXPORT_SYMBOL(bio_add_page);
@@ -1542,7 +1545,7 @@ struct bio *bio_copy_kern(struct request_queue *q, void *data, unsigned int len,
 		if (bytes > len)
 			bytes = len;
 
-		page = alloc_page(q->bounce_gfp | gfp_mask);
+		page = alloc_page(q->bounce_gfp | __GFP_ZERO | gfp_mask);
 		if (!page)
 			goto cleanup;
 

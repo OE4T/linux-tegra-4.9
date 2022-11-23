@@ -170,12 +170,6 @@ static netdev_tx_t lapbeth_xmit(struct sk_buff *skb,
 	if (skb->len < 1)
 		goto drop;
 
-	/* There should be a pseudo header of 1 byte added by upper layers.
-	 * Check to make sure it is there before reading it.
-	 */
-	if (skb->len < 1)
-		goto drop;
-
 	switch (skb->data[0]) {
 	case X25_IFACE_DATA:
 		break;

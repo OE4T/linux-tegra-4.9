@@ -2206,8 +2206,12 @@ static void sci_set_termios(struct uart_port *port, struct ktermios *termios,
 	unsigned long max_freq = 0;
 	int best_clk = -1;
 
-	if ((termios->c_cflag & CSIZE) == CS7)
+	if ((termios->c_cflag & CSIZE) == CS7) {
 		smr_val |= SCSMR_CHR;
+	} else {
+		termios->c_cflag &= ~CSIZE;
+		termios->c_cflag |= CS8;
+	}
 	if (termios->c_cflag & PARENB)
 		smr_val |= SCSMR_PE;
 	if (termios->c_cflag & PARODD)
@@ -2377,6 +2381,10 @@ done:
 
 		serial_port_out(port, SCFCR, ctrl);
 	}
+	if (port->flags & UPF_HARD_FLOW) {
+		/* Refresh (Auto) RTS */
+		sci_set_mctrl(port, port->mctrl);
+	}
 
 	scr_val |= s->cfg->scscr & ~(SCSCR_CKE1 | SCSCR_CKE0);
 	dev_dbg(port->dev, "SCSCR 0x%x\n", scr_val);
@@ -2390,10 +2398,6 @@ done:
 		 * bit time x serial data number) after setting SCSCR.RE = 1.
 		 */
 		udelay(DIV_ROUND_UP(10 * 1000000, baud));
-	}
-	if (port->flags & UPF_HARD_FLOW) {
-		/* Refresh (Auto) RTS */
-		sci_set_mctrl(port, port->mctrl);
 	}
 
 #ifdef CONFIG_SERIAL_SH_SCI_DMA

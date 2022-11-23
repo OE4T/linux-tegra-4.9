@@ -99,7 +99,7 @@ void rose_start_idletimer(struct sock *sk)
 {
 	struct rose_sock *rose = rose_sk(sk);
 
-	sk_stop_timer(sk, &rose->idletimer);
+	sk_stop_timer(sk, &rose->timer);
 
 	if (rose->idle > 0) {
 		rose->idletimer.data     = (unsigned long)sk;

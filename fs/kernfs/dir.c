@@ -473,7 +473,7 @@ static void kernfs_drain(struct kernfs_node *kn)
 		rwsem_release(&kn->dep_map, 1, _RET_IP_);
 	}
 
-	kernfs_unmap_bin_file(kn);
+	kernfs_drain_open_files(kn);
 
 	mutex_lock(&kernfs_mutex);
 }
@@ -1415,8 +1415,11 @@ int kernfs_remove_by_name_ns(struct kernfs_node *parent, const char *name,
 	mutex_lock(&kernfs_mutex);
 
 	kn = kernfs_find_ns(parent, name, ns);
-	if (kn)
+	if (kn) {
+		kernfs_get(kn);
 		__kernfs_remove(kn);
+		kernfs_put(kn);
+	}
 
 	mutex_unlock(&kernfs_mutex);
 

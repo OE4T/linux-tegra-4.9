@@ -189,6 +189,12 @@ ssize_t cpu_show_l1tf(struct device *dev, struct device_attribute *attr, char *b
 }
 #endif
 
+ssize_t cpu_show_l1tf(struct device *dev, struct device_attribute *attr, char *buf)
+{
+	return cpu_show_meltdown(dev, attr, buf);
+}
+#endif
+
 ssize_t cpu_show_spectre_v1(struct device *dev, struct device_attribute *attr, char *buf)
 {
 	struct seq_buf s;

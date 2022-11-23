@@ -3635,7 +3635,6 @@ static int apply_link_speed(struct seq_file *s, void *data)
 	tegra_pcie_link_speed(pcie);
 	seq_printf(s, "Done\n");
 	return 0;
-
 }
 
 static int check_d3hot(struct seq_file *s, void *data)

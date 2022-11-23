@@ -4462,16 +4462,13 @@ regulator_register(const struct regulator_desc *regulator_desc,
 		    (unsigned long) atomic_inc_return(&regulator_no));
 
 	/* set regulator constraints */
-	if (init_data) {
+	if (init_data)
 		rdev->constraints = kmemdup(&init_data->constraints,
 					    sizeof(*rdev->constraints),
 					    GFP_KERNEL);
-		rdev->machine_constraints = true;
-	} else {
+	else
 		rdev->constraints = kzalloc(sizeof(*rdev->constraints),
 					    GFP_KERNEL);
-	}
-
 	if (!rdev->constraints) {
 		ret = -ENOMEM;
 		goto wash;

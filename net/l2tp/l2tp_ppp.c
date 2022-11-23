@@ -185,25 +185,6 @@ out:
  * Receive data handling
  *****************************************************************************/
 
-static int pppol2tp_recv_payload_hook(struct sk_buff *skb)
-{
-	/* Skip PPP header, if present.	 In testing, Microsoft L2TP clients
-	 * don't send the PPP header (PPP header compression enabled), but
-	 * other clients can include the header. So we cope with both cases
-	 * here. The PPP header is always FF03 when using L2TP.
-	 *
-	 * Note that skb->data[] isn't dereferenced from a u16 ptr here since
-	 * the field may be unaligned.
-	 */
-	if (!pskb_may_pull(skb, 2))
-		return 1;
-
-	if ((skb->data[0] == PPP_ALLSTATIONS) && (skb->data[1] == PPP_UI))
-		skb_pull(skb, 2);
-
-	return 0;
-}
-
 /* Receive message. This is the recvmsg for the PPPoL2TP socket.
  */
 static int pppol2tp_recvmsg(struct socket *sock, struct msghdr *msg,
@@ -249,6 +230,17 @@ static void pppol2tp_recv(struct l2tp_session *session, struct sk_buff *skb, int
 	sk = rcu_dereference(ps->sk);
 	if (sk == NULL)
 		goto no_sock;
+
+	/* If the first two bytes are 0xFF03, consider that it is the PPP's
+	 * Address and Control fields and skip them. The L2TP module has always
+	 * worked this way, although, in theory, the use of these fields should
+	 * be negociated and handled at the PPP layer. These fields are
+	 * constant: 0xFF is the All-Stations Address and 0x03 the Unnumbered
+	 * Information command with Poll/Final bit set to zero (RFC 1662).
+	 */
+	if (pskb_may_pull(skb, 2) && skb->data[0] == PPP_ALLSTATIONS &&
+	    skb->data[1] == PPP_UI)
+		skb_pull(skb, 2);
 
 	if (sk->sk_state & PPPOX_BOUND) {
 		struct pppox_sock *po;
@@ -435,20 +427,28 @@ abort:
  * Session (and tunnel control) socket create/destroy.
  *****************************************************************************/
 
+static void pppol2tp_put_sk(struct rcu_head *head)
+{
+	struct pppol2tp_session *ps;
+
+	ps = container_of(head, typeof(*ps), rcu);
+	sock_put(ps->__sk);
+}
+
 /* Called by l2tp_core when a session socket is being closed.
  */
 static void pppol2tp_session_close(struct l2tp_session *session)
 {
-	struct sock *sk;
+	struct pppol2tp_session *ps;
 
-	BUG_ON(session->magic != L2TP_SESSION_MAGIC);
-
-	sk = pppol2tp_session_get_sock(session);
-	if (sk) {
-		if (sk->sk_socket)
-			inet_shutdown(sk->sk_socket, SEND_SHUTDOWN);
-		sock_put(sk);
-	}
+	ps = l2tp_session_priv(session);
+	mutex_lock(&ps->sk_lock);
+	ps->__sk = rcu_dereference_protected(ps->sk,
+					     lockdep_is_held(&ps->sk_lock));
+	RCU_INIT_POINTER(ps->sk, NULL);
+	if (ps->__sk)
+		call_rcu(&ps->rcu, pppol2tp_put_sk);
+	mutex_unlock(&ps->sk_lock);
 }
 
 /* Really kill the session socket. (Called from sock_put() if
@@ -499,26 +499,17 @@ static int pppol2tp_release(struct socket *sock)
 	sock_orphan(sk);
 	sock->sk = NULL;
 
+	/* If the socket is associated with a session,
+	 * l2tp_session_delete will call pppol2tp_session_close which
+	 * will drop the session's ref on the socket.
+	 */
 	session = pppol2tp_sock_to_session(sk);
-
-	if (session != NULL) {
-		struct pppol2tp_session *ps;
-
+	if (session) {
 		l2tp_session_delete(session);
-
-		ps = l2tp_session_priv(session);
-		mutex_lock(&ps->sk_lock);
-		ps->__sk = rcu_dereference_protected(ps->sk,
-						     lockdep_is_held(&ps->sk_lock));
-		RCU_INIT_POINTER(ps->sk, NULL);
-		mutex_unlock(&ps->sk_lock);
-		call_rcu(&ps->rcu, pppol2tp_put_sk);
-
-		/* Rely on the sock_put() call at the end of the function for
-		 * dropping the reference held by pppol2tp_sock_to_session().
-		 * The last reference will be dropped by pppol2tp_put_sk().
-		 */
+		/* drop the ref obtained by pppol2tp_sock_to_session */
+		sock_put(sk);
 	}
+
 	release_sock(sk);
 
 	/* This will delete the session context via
@@ -743,9 +734,6 @@ static int pppol2tp_connect(struct socket *sock, struct sockaddr *uservaddr,
 			goto end;
 	}
 
-	if (tunnel->recv_payload_hook == NULL)
-		tunnel->recv_payload_hook = pppol2tp_recv_payload_hook;
-
 	if (tunnel->peer_tunnel_id == 0)
 		tunnel->peer_tunnel_id = peer_tunnel_id;
 
@@ -827,6 +815,7 @@ static int pppol2tp_connect(struct socket *sock, struct sockaddr *uservaddr,
 
 out_no_ppp:
 	/* This is how we get the session context from the socket. */
+	sock_hold(sk);
 	sk->sk_user_data = session;
 	rcu_assign_pointer(ps->sk, sk);
 	mutex_unlock(&ps->sk_lock);

@@ -936,6 +936,7 @@ static const char *const head_sections[] = { ".head.text*", NULL };
 static const char *const linker_symbols[] =
 	{ "__init_begin", "_sinittext", "_einittext", NULL };
 static const char *const optim_symbols[] = { "*.constprop.*", NULL };
+static const char *const cfi_symbols[] = { "*.cfi", NULL };
 
 enum mismatch {
 	TEXT_TO_ANY_INIT,
@@ -1060,7 +1061,7 @@ static const struct sectioncheck sectioncheck[] = {
 },
 /* Do not export init/exit functions or data */
 {
-	.fromsec = { "__ksymtab*", NULL },
+	.fromsec = { "___ksymtab*", NULL },
 	.bad_tosec = { INIT_SECTIONS, EXIT_SECTIONS, NULL },
 	.mismatch = EXPORT_TO_INIT_EXIT,
 	.symbol_white_list = { DEFAULT_SYMBOL_WHITE_LIST, NULL },
@@ -1165,6 +1166,17 @@ static const struct sectioncheck *section_mismatch(
  *   whitelisting, which relies on pattern-matching against symbol
  *   names to work.  (One situation where gcc can autogenerate ELF
  *   local symbols is when "-fsection-anchors" is used.)
+ *
+ * Pattern 7:
+ *   With CONFIG_CFI_CLANG, clang appends .cfi to all indirectly called
+ *   functions and creates a function stub with the original name. This
+ *   stub is always placed in .text, even if the actual function with the
+ *   .cfi postfix is in .init.text or .exit.text.
+ *   This pattern is identified by
+ *   tosec   = init or exit section
+ *   fromsec = text section
+ *   tosym   = *.cfi
+ *
  **/
 static int secref_whitelist(const struct sectioncheck *mismatch,
 			    const char *fromsec, const char *fromsym,
@@ -1207,12 +1219,19 @@ static int secref_whitelist(const struct sectioncheck *mismatch,
 	if (strstarts(fromsym, ".L"))
 		return 0;
 
+	/* Check for pattern 7 */
+	if (match(fromsec, text_sections) &&
+	    match(tosec, init_exit_sections) &&
+	    match(tosym, cfi_symbols))
+		return 0;
+
 	return 1;
 }
 
 static inline int is_arm_mapping_symbol(const char *str)
 {
-	return str[0] == '$' && strchr("axtd", str[1])
+	return str[0] == '$' &&
+	       (str[1] == 'a' || str[1] == 'd' || str[1] == 't' || str[1] == 'x')
 	       && (str[2] == '\0' || str[2] == '.');
 }
 
@@ -1932,7 +1951,7 @@ static char *remove_dot(char *s)
 
 	if (n && s[n]) {
 		size_t m = strspn(s + n + 1, "0123456789");
-		if (m && (s[n + m] == '.' || s[n + m] == 0))
+		if (m && (s[n + m + 1] == '.' || s[n + m + 1] == 0))
 			s[n] = 0;
 	}
 	return s;
@@ -2147,7 +2166,7 @@ static void add_intree_flag(struct buffer *b, int is_intree)
 /* Cannot check for assembler */
 static void add_retpoline(struct buffer *b)
 {
-	buf_printf(b, "\n#ifdef RETPOLINE\n");
+	buf_printf(b, "\n#ifdef CONFIG_RETPOLINE\n");
 	buf_printf(b, "MODULE_INFO(retpoline, \"Y\");\n");
 	buf_printf(b, "#endif\n");
 }

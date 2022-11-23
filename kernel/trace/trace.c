@@ -228,6 +228,10 @@ __setup("trace_clock=", set_trace_boot_clock);
 
 static int __init set_tracepoint_printk(char *str)
 {
+	/* Ignore the "tp_printk_stop_on_boot" param */
+	if (*str == '_')
+		return 0;
+
 	if ((strcmp(str, "=0") != 0 && strcmp(str, "=off") != 0))
 		tracepoint_printk = 1;
 	return 1;
@@ -1073,10 +1077,12 @@ static int __init set_buf_size(char *str)
 	if (!str)
 		return 0;
 	buf_size = memparse(str, &str);
-	/* nr_entries can not be zero */
-	if (buf_size == 0)
-		return 0;
-	trace_buf_size = buf_size;
+	/*
+	 * nr_entries can not be zero and the startup
+	 * tests require some buffer space. Therefore
+	 * ensure we have at least 4096 bytes of buffer.
+	 */
+	trace_buf_size = max(4096UL, buf_size);
 	return 1;
 }
 __setup("trace_buf_size=", set_buf_size);
@@ -1607,11 +1613,11 @@ void tracing_reset_all_online_cpus(void)
 
 #define SAVED_CMDLINES_DEFAULT 128
 #define NO_CMDLINE_MAP UINT_MAX
-static unsigned saved_tgids[SAVED_CMDLINES_DEFAULT];
 static arch_spinlock_t trace_cmdline_lock = __ARCH_SPIN_LOCK_UNLOCKED;
 struct saved_cmdlines_buffer {
 	unsigned map_pid_to_cmdline[PID_MAX_DEFAULT+1];
 	unsigned *map_cmdline_to_pid;
+	unsigned *map_cmdline_to_tgid;
 	unsigned cmdline_num;
 	int cmdline_idx;
 	char *saved_cmdlines;
@@ -1642,12 +1648,23 @@ static int allocate_cmdlines_buffer(unsigned int val,
 		return -ENOMEM;
 	}
 
+	s->map_cmdline_to_tgid = kmalloc_array(val,
+					       sizeof(*s->map_cmdline_to_tgid),
+					       GFP_KERNEL);
+	if (!s->map_cmdline_to_tgid) {
+		kfree(s->map_cmdline_to_pid);
+		kfree(s->saved_cmdlines);
+		return -ENOMEM;
+	}
+
 	s->cmdline_idx = 0;
 	s->cmdline_num = val;
 	memset(&s->map_pid_to_cmdline, NO_CMDLINE_MAP,
 	       sizeof(s->map_pid_to_cmdline));
 	memset(s->map_cmdline_to_pid, NO_CMDLINE_MAP,
 	       val * sizeof(*s->map_cmdline_to_pid));
+	memset(s->map_cmdline_to_tgid, NO_CMDLINE_MAP,
+	       val * sizeof(*s->map_cmdline_to_tgid));
 
 	return 0;
 }
@@ -1816,14 +1833,17 @@ static int trace_save_cmdline(struct task_struct *tsk)
 
 	tpid = tsk->pid & (PID_MAX_DEFAULT - 1);
 
+	preempt_disable();
 	/*
 	 * It's not the end of the world if we don't get
 	 * the lock, but we also don't want to spin
 	 * nor do we want to disable interrupts,
 	 * so if we miss here, then better luck next time.
 	 */
-	if (!arch_spin_trylock(&trace_cmdline_lock))
+	if (!arch_spin_trylock(&trace_cmdline_lock)) {
+		preempt_enable();
 		return 0;
+	}
 
 	idx = savedcmd->map_pid_to_cmdline[tpid];
 	if (idx == NO_CMDLINE_MAP) {
@@ -1835,8 +1855,9 @@ static int trace_save_cmdline(struct task_struct *tsk)
 
 	savedcmd->map_cmdline_to_pid[idx] = tsk->pid;
 	set_cmdline(idx, tsk->comm);
-	saved_tgids[idx] = tsk->tgid;
+	savedcmd->map_cmdline_to_tgid[idx] = tsk->tgid;
 	arch_spin_unlock(&trace_cmdline_lock);
+	preempt_enable();
 
 	return 1;
 }
@@ -1879,18 +1900,28 @@ void trace_find_cmdline(int pid, char comm[])
 	preempt_enable();
 }
 
-int trace_find_tgid(int pid)
+static int __find_tgid_locked(int pid)
 {
 	unsigned map;
 	int tgid;
 
-	preempt_disable();
-	arch_spin_lock(&trace_cmdline_lock);
 	map = savedcmd->map_pid_to_cmdline[pid];
 	if (map != NO_CMDLINE_MAP)
-		tgid = saved_tgids[map];
+		tgid = savedcmd->map_cmdline_to_tgid[map];
 	else
 		tgid = -1;
+
+	return tgid;
+}
+
+int trace_find_tgid(int pid)
+{
+	int tgid;
+
+	preempt_disable();
+	arch_spin_lock(&trace_cmdline_lock);
+
+	tgid = __find_tgid_locked(pid);
 
 	arch_spin_unlock(&trace_cmdline_lock);
 	preempt_enable();
@@ -4400,10 +4431,15 @@ tracing_saved_cmdlines_size_read(struct file *filp, char __user *ubuf,
 {
 	char buf[64];
 	int r;
+	unsigned int n;
 
+	preempt_disable();
 	arch_spin_lock(&trace_cmdline_lock);
-	r = scnprintf(buf, sizeof(buf), "%u\n", savedcmd->cmdline_num);
+	n = savedcmd->cmdline_num;
 	arch_spin_unlock(&trace_cmdline_lock);
+	preempt_enable();
+
+	r = scnprintf(buf, sizeof(buf), "%u\n", n);
 
 	return simple_read_from_buffer(ubuf, cnt, ppos, buf, r);
 }
@@ -4412,6 +4448,7 @@ static void free_saved_cmdlines_buffer(struct saved_cmdlines_buffer *s)
 {
 	kfree(s->saved_cmdlines);
 	kfree(s->map_cmdline_to_pid);
+	kfree(s->map_cmdline_to_tgid);
 	kfree(s);
 }
 
@@ -4428,10 +4465,12 @@ static int tracing_resize_saved_cmdlines(unsigned int val)
 		return -ENOMEM;
 	}
 
+	preempt_disable();
 	arch_spin_lock(&trace_cmdline_lock);
 	savedcmd_temp = savedcmd;
 	savedcmd = s;
 	arch_spin_unlock(&trace_cmdline_lock);
+	preempt_enable();
 	free_saved_cmdlines_buffer(savedcmd_temp);
 
 	return 0;
@@ -4650,33 +4689,61 @@ tracing_saved_tgids_read(struct file *file, char __user *ubuf,
 	char *file_buf;
 	char *buf;
 	int len = 0;
-	int pid;
 	int i;
+	int *pids;
+	int n = 0;
 
-	file_buf = kmalloc(SAVED_CMDLINES_DEFAULT*(16+1+16), GFP_KERNEL);
-	if (!file_buf)
+	preempt_disable();
+	arch_spin_lock(&trace_cmdline_lock);
+
+	pids = kmalloc_array(savedcmd->cmdline_num, 2*sizeof(int), GFP_KERNEL);
+	if (!pids) {
+		arch_spin_unlock(&trace_cmdline_lock);
+		preempt_enable();
 		return -ENOMEM;
+	}
 
-	buf = file_buf;
-
-	for (i = 0; i < SAVED_CMDLINES_DEFAULT; i++) {
-		int tgid;
-		int r;
+	for (i = 0; i < savedcmd->cmdline_num; i++) {
+		int pid;
 
 		pid = savedcmd->map_cmdline_to_pid[i];
 		if (pid == -1 || pid == NO_CMDLINE_MAP)
 			continue;
 
-		tgid = trace_find_tgid(pid);
-		r = sprintf(buf, "%d %d\n", pid, tgid);
+		pids[n] = pid;
+		pids[n+1] = __find_tgid_locked(pid);
+		n += 2;
+	}
+	arch_spin_unlock(&trace_cmdline_lock);
+	preempt_enable();
+
+	if (n == 0) {
+		kfree(pids);
+		return 0;
+	}
+
+	/* enough to hold max pair of pids + space, lr and nul */
+	len = n * 12;
+	file_buf = kmalloc(len, GFP_KERNEL);
+	if (!file_buf) {
+		kfree(pids);
+		return -ENOMEM;
+	}
+
+	buf = file_buf;
+	for (i = 0; i < n && len > 0; i += 2) {
+		int r;
+
+		r = snprintf(buf, len, "%d %d\n", pids[i], pids[i+1]);
 		buf += r;
-		len += r;
+		len -= r;
 	}
 
 	len = simple_read_from_buffer(ubuf, cnt, ppos,
-				      file_buf, len);
+				      file_buf, buf - file_buf);
 
 	kfree(file_buf);
+	kfree(pids);
 
 	return len;
 }
@@ -4881,10 +4948,16 @@ static void tracing_set_nop(struct trace_array *tr)
 	tr->current_trace = &nop_trace;
 }
 
+static bool tracer_options_updated;
+
 static void add_tracer_options(struct trace_array *tr, struct tracer *t)
 {
 	/* Only enable if the directory has been created already. */
 	if (!tr->dir)
+		return;
+
+	/* Only create trace option files after update_tracer_options finish */
+	if (!tracer_options_updated)
 		return;
 
 	create_trace_option_files(tr, t);
@@ -7165,6 +7238,7 @@ static void __update_tracer_options(struct trace_array *tr)
 static void update_tracer_options(struct trace_array *tr)
 {
 	mutex_lock(&trace_types_lock);
+	tracer_options_updated = true;
 	__update_tracer_options(tr);
 	mutex_unlock(&trace_types_lock);
 }

@@ -24,7 +24,8 @@
 
 DEFINE_PER_CPU(int, bpf_prog_active);
 
-int sysctl_unprivileged_bpf_disabled __read_mostly;
+int sysctl_unprivileged_bpf_disabled __read_mostly =
+	IS_BUILTIN(CONFIG_BPF_UNPRIV_DEFAULT_OFF) ? 2 : 0;
 
 static LIST_HEAD(bpf_map_types);
 
@@ -651,19 +652,39 @@ static void free_used_maps(struct bpf_prog_aux *aux)
 	kfree(aux->used_maps);
 }
 
+int __bpf_prog_charge(struct user_struct *user, u32 pages)
+{
+	unsigned long memlock_limit = rlimit(RLIMIT_MEMLOCK) >> PAGE_SHIFT;
+	unsigned long user_bufs;
+
+	if (user) {
+		user_bufs = atomic_long_add_return(pages, &user->locked_vm);
+		if (user_bufs > memlock_limit) {
+			atomic_long_sub(pages, &user->locked_vm);
+			return -EPERM;
+		}
+	}
+
+	return 0;
+}
+
+void __bpf_prog_uncharge(struct user_struct *user, u32 pages)
+{
+	if (user)
+		atomic_long_sub(pages, &user->locked_vm);
+}
+
 static int bpf_prog_charge_memlock(struct bpf_prog *prog)
 {
 	struct user_struct *user = get_current_user();
-	unsigned long memlock_limit;
+	int ret;
 
-	memlock_limit = rlimit(RLIMIT_MEMLOCK) >> PAGE_SHIFT;
-
-	atomic_long_add(prog->pages, &user->locked_vm);
-	if (atomic_long_read(&user->locked_vm) > memlock_limit) {
-		atomic_long_sub(prog->pages, &user->locked_vm);
+	ret = __bpf_prog_charge(user, prog->pages);
+	if (ret) {
 		free_uid(user);
-		return -EPERM;
+		return ret;
 	}
+
 	prog->aux->user = user;
 	return 0;
 }
@@ -672,7 +693,7 @@ static void bpf_prog_uncharge_memlock(struct bpf_prog *prog)
 {
 	struct user_struct *user = prog->aux->user;
 
-	atomic_long_sub(prog->pages, &user->locked_vm);
+	__bpf_prog_uncharge(user, prog->pages);
 	free_uid(user);
 }
 
@@ -894,6 +915,9 @@ static int bpf_obj_get(const union bpf_attr *attr)
 
 #define BPF_PROG_ATTACH_LAST_FIELD attach_flags
 
+#define BPF_F_ATTACH_MASK \
+	(BPF_F_ALLOW_OVERRIDE | BPF_F_ALLOW_MULTI)
+
 static int bpf_prog_attach(const union bpf_attr *attr)
 {
 	struct bpf_prog *prog;
@@ -906,7 +930,7 @@ static int bpf_prog_attach(const union bpf_attr *attr)
 	if (CHECK_ATTR(BPF_PROG_ATTACH))
 		return -EINVAL;
 
-	if (attr->attach_flags & ~BPF_F_ALLOW_OVERRIDE)
+	if (attr->attach_flags & ~BPF_F_ATTACH_MASK)
 		return -EINVAL;
 
 	switch (attr->attach_type) {
@@ -923,8 +947,8 @@ static int bpf_prog_attach(const union bpf_attr *attr)
 			return PTR_ERR(cgrp);
 		}
 
-		ret = cgroup_bpf_update(cgrp, prog, attr->attach_type,
-					attr->attach_flags & BPF_F_ALLOW_OVERRIDE);
+		ret = cgroup_bpf_attach(cgrp, prog, attr->attach_type,
+					attr->attach_flags);
 		if (ret)
 			bpf_prog_put(prog);
 		cgroup_put(cgrp);
@@ -941,6 +965,8 @@ static int bpf_prog_attach(const union bpf_attr *attr)
 
 static int bpf_prog_detach(const union bpf_attr *attr)
 {
+	enum bpf_prog_type ptype;
+	struct bpf_prog *prog;
 	struct cgroup *cgrp;
 	int ret;
 
@@ -953,18 +979,25 @@ static int bpf_prog_detach(const union bpf_attr *attr)
 	switch (attr->attach_type) {
 	case BPF_CGROUP_INET_INGRESS:
 	case BPF_CGROUP_INET_EGRESS:
-		cgrp = cgroup_get_from_fd(attr->target_fd);
-		if (IS_ERR(cgrp))
-			return PTR_ERR(cgrp);
-
-		ret = cgroup_bpf_update(cgrp, NULL, attr->attach_type, false);
-		cgroup_put(cgrp);
+		ptype = BPF_PROG_TYPE_CGROUP_SKB;
 		break;
 
 	default:
 		return -EINVAL;
 	}
 
+	cgrp = cgroup_get_from_fd(attr->target_fd);
+	if (IS_ERR(cgrp))
+		return PTR_ERR(cgrp);
+
+	prog = bpf_prog_get_type(attr->attach_bpf_fd, ptype);
+	if (IS_ERR(prog))
+		prog = NULL;
+
+	ret = cgroup_bpf_detach(cgrp, prog, attr->attach_type, 0);
+	if (prog)
+		bpf_prog_put(prog);
+	cgroup_put(cgrp);
 	return ret;
 }
 #endif /* CONFIG_CGROUP_BPF */

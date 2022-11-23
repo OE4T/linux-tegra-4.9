@@ -995,6 +995,15 @@ int verity_ctr(struct dm_target *ti, unsigned argc, char **argv)
 		v->tfm = NULL;
 		goto bad;
 	}
+
+	/*
+	 * dm-verity performance can vary greatly depending on which hash
+	 * algorithm implementation is used.  Help people debug performance
+	 * problems by logging the ->cra_driver_name.
+	 */
+	DMINFO("%s using implementation \"%s\"", v->alg_name,
+	       crypto_shash_alg(v->tfm)->base.cra_driver_name);
+
 	v->digest_size = crypto_shash_digestsize(v->tfm);
 	if ((1 << v->hash_dev_block_bits) < v->digest_size * 2) {
 		ti->error = "Digest size too big";
@@ -1130,6 +1139,7 @@ EXPORT_SYMBOL_GPL(verity_ctr);
 
 static struct target_type verity_target = {
 	.name		= "verity",
+	.features	= DM_TARGET_IMMUTABLE,
 	.version	= {1, 4, 0},
 	.module		= THIS_MODULE,
 	.ctr		= verity_ctr,

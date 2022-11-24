@@ -574,6 +574,12 @@ asmlinkage __visible void __init start_kernel(void)
 	timekeeping_init();
 	time_init();
 
+	/* moving SYSTEM_BOOTING state
+	 * before this we were in SYSTEM_BOOTING_SINGLECORE
+	 */
+
+	system_state = SYSTEM_BOOTING;
+
 	/*
 	 * For best initial stack canary entropy, prepare it after:
 	 * - setup_arch() for any UEFI RNG entropy and boot cmdline access

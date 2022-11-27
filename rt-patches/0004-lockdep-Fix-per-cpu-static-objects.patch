@@ -1,7 +1,7 @@
-From 9f34a2bda4b9432d7fb07f692ffe2d51ae48d5a8 Mon Sep 17 00:00:00 2001
+From 595fbde634fc7c6e39cfe5e43a644692c0726a1f Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Mon, 20 Mar 2017 12:26:55 +0100
-Subject: [PATCH 004/352] lockdep: Fix per-cpu static objects
+Subject: [PATCH 004/364] lockdep: Fix per-cpu static objects
 
 Since commit 383776fa7527 ("locking/lockdep: Handle statically initialized
 PER_CPU locks properly") we try to collapse per-cpu locks into a single
@@ -72,10 +72,10 @@ index 8e0cb7a..68123c1 100644
  
  /*
 diff --git a/kernel/cpu.c b/kernel/cpu.c
-index 41dd49a..c135d54 100644
+index 9c62fa5..f7dc3ea 100644
 --- a/kernel/cpu.c
 +++ b/kernel/cpu.c
-@@ -1396,6 +1396,8 @@ core_initcall(cpu_hotplug_pm_sync_init);
+@@ -1397,6 +1397,8 @@ core_initcall(cpu_hotplug_pm_sync_init);
  
  #endif /* CONFIG_PM_SLEEP_SMP */
  
@@ -84,7 +84,7 @@ index 41dd49a..c135d54 100644
  #endif /* CONFIG_SMP */
  
  /* Boot processor state steps */
-@@ -2245,6 +2247,10 @@ void __init boot_cpu_init(void)
+@@ -2256,6 +2258,10 @@ void __init boot_cpu_init(void)
  	set_cpu_active(cpu, true);
  	set_cpu_present(cpu, true);
  	set_cpu_possible(cpu, true);

@@ -1,7 +1,7 @@
-From 50f4f9338ed6d3750865c77f715e97a295d7d3f7 Mon Sep 17 00:00:00 2001
+From 6c15287f86b27c7c3691f2fcd5a8eddfdf924aff Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Sun, 18 Apr 2021 23:24:14 +0200
-Subject: [PATCH 149/352] futex: Ensure lock/unlock symetry versus pi_lock and
+Subject: [PATCH 149/364] futex: Ensure lock/unlock symetry versus pi_lock and
  hash bucket lock
 
 In exit_pi_state_list() we have the following locking construct:

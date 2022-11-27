@@ -1,7 +1,7 @@
-From a69cdebf4ccd033e294506d3211cb8970617159c Mon Sep 17 00:00:00 2001
+From 9c354013b260c0c36effae6e83112471069ddab6 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Fri, 3 Jul 2009 08:44:31 -0500
-Subject: [PATCH 106/352] hrtimer: Fixup hrtimer callback changes for
+Subject: [PATCH 106/364] hrtimer: Fixup hrtimer callback changes for
  preempt-rt
 
 In preempt-rt we can not call the callbacks which take sleeping locks
@@ -68,10 +68,10 @@ index b9a14f3..74532c5 100644
  	unsigned int			active_bases;
  	unsigned int			clock_was_set_seq;
 diff --git a/kernel/sched/core.c b/kernel/sched/core.c
-index 74e08bd..ef3216c 100644
+index c2bbc78..1c4d16a 100644
 --- a/kernel/sched/core.c
 +++ b/kernel/sched/core.c
-@@ -360,6 +360,7 @@ static void init_rq_hrtick(struct rq *rq)
+@@ -347,6 +347,7 @@ static void init_rq_hrtick(struct rq *rq)
  
  	hrtimer_init(&rq->hrtick_timer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
  	rq->hrtick_timer.function = hrtick;
@@ -80,7 +80,7 @@ index 74e08bd..ef3216c 100644
  #else	/* CONFIG_SCHED_HRTICK */
  static inline void hrtick_clear(struct rq *rq)
 diff --git a/kernel/sched/rt.c b/kernel/sched/rt.c
-index e73b9d7..503172c 100644
+index 8409ac7..b47f345 100644
 --- a/kernel/sched/rt.c
 +++ b/kernel/sched/rt.c
 @@ -50,6 +50,7 @@ void init_rt_bandwidth(struct rt_bandwidth *rt_b, u64 period, u64 runtime)

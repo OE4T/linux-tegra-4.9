@@ -1,0 +1,101 @@
+From a10f1d4eb35d5224b2a7293cd4aafc474adf50e6 Mon Sep 17 00:00:00 2001
+From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
+Date: Fri, 19 Aug 2022 11:24:38 +0200
+Subject: [PATCH 347/364] random: Bring back the local_locks
+
+As part of the backports the random code lost its local_lock_t type and
+the whole operation became a local_irq_{disable|enable}() simply because
+the older kernel did not provide those primitives.
+
+RT as of v4.9 has a slightly different variant of local_locks.
+Replace the local_irq_*() operations with matching local_lock_irq*()
+operations which were there as part of commit
+   77760fd7f7ae3 ("random: remove batched entropy locking")
+
+Change-Id: I518887bb752c998c867a05f60ea2e4f11e7bd11d
+Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
+Signed-off-by: Mark Gross <markgross@kernel.org>
+---
+ drivers/char/random.c | 16 +++++++++++-----
+ 1 file changed, 11 insertions(+), 5 deletions(-)
+
+diff --git a/drivers/char/random.c b/drivers/char/random.c
+index ce24ce3..1397650 100644
+--- a/drivers/char/random.c
++++ b/drivers/char/random.c
+@@ -54,6 +54,8 @@
+ #include <linux/siphash.h>
+ #include <linux/uio.h>
+ #include <crypto/chacha.h>
++#include <linux/locallock.h>
++#include <crypto/chacha20.h>
+ #include <crypto/blake2s.h>
+ #include <asm/processor.h>
+ #include <asm/uaccess.h>
+@@ -230,10 +232,12 @@ static struct {
+ struct crng {
+ 	u8 key[CHACHA20_KEY_SIZE];
+ 	unsigned long generation;
++	struct local_irq_lock lock;
+ };
+ 
+ static DEFINE_PER_CPU(struct crng, crngs) = {
+-	.generation = ULONG_MAX
++	.generation = ULONG_MAX,
++	.lock.lock = __SPIN_LOCK_UNLOCKED(crngs.lock.lock),
+ };
+ 
+ /* Used by crng_reseed() and crng_make_state() to extract a new seed from the input pool. */
+@@ -363,7 +367,7 @@ static void crng_make_state(u32 chacha_state[CHACHA20_BLOCK_SIZE / sizeof(u32)],
+ 	if (unlikely(crng_has_old_seed()))
+ 		crng_reseed();
+ 
+-	local_irq_save(flags);
++	local_lock_irqsave(crngs.lock, flags);
+ 	crng = raw_cpu_ptr(&crngs);
+ 
+ 	/*
+@@ -388,7 +392,7 @@ static void crng_make_state(u32 chacha_state[CHACHA20_BLOCK_SIZE / sizeof(u32)],
+ 	 * should wind up here immediately.
+ 	 */
+ 	crng_fast_key_erasure(crng->key, chacha_state, random_data, random_data_len);
+-	local_irq_restore(flags);
++	local_unlock_irqrestore(crngs.lock, flags);
+ }
+ 
+ static void _get_random_bytes(void *buf, size_t len)
+@@ -506,11 +510,13 @@ struct batch_ ##type {								\
+ 	 * formula of (integer_blocks + 0.5) * CHACHA20_BLOCK_SIZE.		\
+ 	 */									\
+ 	type entropy[CHACHA20_BLOCK_SIZE * 3 / (2 * sizeof(type))];		\
++	struct local_irq_lock lock;						\
+ 	unsigned long generation;						\
+ 	unsigned int position;							\
+ };										\
+ 										\
+ static DEFINE_PER_CPU(struct batch_ ##type, batched_entropy_ ##type) = {	\
++	.lock.lock = __SPIN_LOCK_UNLOCKED(batched_entropy_ ##type.lock.lock),	\
+ 	.position = UINT_MAX							\
+ };										\
+ 										\
+@@ -528,7 +534,7 @@ type get_random_ ##type(void)							\
+ 		return ret;							\
+ 	}									\
+ 										\
+-	local_irq_save(flags);		\
++	local_lock_irqsave(batched_entropy_ ##type.lock, flags);		\
+ 	batch = raw_cpu_ptr(&batched_entropy_##type);				\
+ 										\
+ 	next_gen = READ_ONCE(base_crng.generation);				\
+@@ -542,7 +548,7 @@ type get_random_ ##type(void)							\
+ 	ret = batch->entropy[batch->position];					\
+ 	batch->entropy[batch->position] = 0;					\
+ 	++batch->position;							\
+-	local_irq_restore(flags);		\
++	local_unlock_irqrestore(batched_entropy_ ##type.lock, flags);		\
+ 	return ret;								\
+ }										\
+ EXPORT_SYMBOL(get_random_ ##type);
+-- 
+2.7.4
+

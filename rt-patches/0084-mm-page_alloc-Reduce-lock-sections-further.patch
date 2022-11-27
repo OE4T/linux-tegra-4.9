@@ -1,7 +1,7 @@
-From 8980b9061f1be671aef6e9209ff9a86175295c08 Mon Sep 17 00:00:00 2001
+From afc701b4133417ffcdf83402f12665f654c11168 Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Fri, 3 Jul 2009 08:44:37 -0500
-Subject: [PATCH 084/352] mm: page_alloc: Reduce lock sections further
+Subject: [PATCH 084/364] mm: page_alloc: Reduce lock sections further
 
 Split out the pages which are to be freed into a separate list and
 call free_pages_bulk() outside of the percpu page allocator locks.
@@ -13,10 +13,10 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  1 file changed, 66 insertions(+), 33 deletions(-)
 
 diff --git a/mm/page_alloc.c b/mm/page_alloc.c
-index b52eabd..0d6d65b 100644
+index 86fa0f5..4010ffc 100644
 --- a/mm/page_alloc.c
 +++ b/mm/page_alloc.c
-@@ -1118,7 +1118,7 @@ static bool bulkfree_pcp_prepare(struct page *page)
+@@ -1119,7 +1119,7 @@ static bool bulkfree_pcp_prepare(struct page *page)
  #endif /* CONFIG_DEBUG_VM */
  
  /*
@@ -25,7 +25,7 @@ index b52eabd..0d6d65b 100644
   * Assumes all pages on list are in same zone, and of same order.
   * count is the number of pages to free.
   *
-@@ -1129,24 +1129,58 @@ static bool bulkfree_pcp_prepare(struct page *page)
+@@ -1130,24 +1130,58 @@ static bool bulkfree_pcp_prepare(struct page *page)
   * pinned" detection logic.
   */
  static void free_pcppages_bulk(struct zone *zone, int count,
@@ -93,7 +93,7 @@ index b52eabd..0d6d65b 100644
  	while (count) {
  		struct page *page;
  		struct list_head *list;
-@@ -1162,7 +1196,7 @@ static void free_pcppages_bulk(struct zone *zone, int count,
+@@ -1163,7 +1197,7 @@ static void free_pcppages_bulk(struct zone *zone, int count,
  			batch_free++;
  			if (++migratetype == MIGRATE_PCPTYPES)
  				migratetype = 0;
@@ -102,7 +102,7 @@ index b52eabd..0d6d65b 100644
  		} while (list_empty(list));
  
  		/* This is the only non-empty list. Free them all. */
-@@ -1170,27 +1204,12 @@ static void free_pcppages_bulk(struct zone *zone, int count,
+@@ -1171,27 +1205,12 @@ static void free_pcppages_bulk(struct zone *zone, int count,
  			batch_free = count;
  
  		do {
@@ -131,7 +131,7 @@ index b52eabd..0d6d65b 100644
  }
  
  static void free_one_page(struct zone *zone,
-@@ -1199,7 +1218,9 @@ static void free_one_page(struct zone *zone,
+@@ -1200,7 +1219,9 @@ static void free_one_page(struct zone *zone,
  				int migratetype)
  {
  	unsigned long nr_scanned;
@@ -142,7 +142,7 @@ index b52eabd..0d6d65b 100644
  	nr_scanned = node_page_state(zone->zone_pgdat, NR_PAGES_SCANNED);
  	if (nr_scanned)
  		__mod_node_page_state(zone->zone_pgdat, NR_PAGES_SCANNED, -nr_scanned);
-@@ -1209,7 +1230,7 @@ static void free_one_page(struct zone *zone,
+@@ -1210,7 +1231,7 @@ static void free_one_page(struct zone *zone,
  		migratetype = get_pfnblock_migratetype(page, pfn);
  	}
  	__free_one_page(page, pfn, zone, order, migratetype);
@@ -151,7 +151,7 @@ index b52eabd..0d6d65b 100644
  }
  
  static void __meminit __init_single_page(struct page *page, unsigned long pfn,
-@@ -2314,16 +2335,18 @@ static int rmqueue_bulk(struct zone *zone, unsigned int order,
+@@ -2315,16 +2336,18 @@ static int rmqueue_bulk(struct zone *zone, unsigned int order,
  void drain_zone_pages(struct zone *zone, struct per_cpu_pages *pcp)
  {
  	unsigned long flags;
@@ -171,7 +171,7 @@ index b52eabd..0d6d65b 100644
  }
  #endif
  
-@@ -2339,16 +2362,21 @@ static void drain_pages_zone(unsigned int cpu, struct zone *zone)
+@@ -2340,16 +2363,21 @@ static void drain_pages_zone(unsigned int cpu, struct zone *zone)
  	unsigned long flags;
  	struct per_cpu_pageset *pset;
  	struct per_cpu_pages *pcp;
@@ -195,7 +195,7 @@ index b52eabd..0d6d65b 100644
  }
  
  /*
-@@ -2531,8 +2559,13 @@ void free_hot_cold_page(struct page *page, bool cold)
+@@ -2532,8 +2560,13 @@ void free_hot_cold_page(struct page *page, bool cold)
  	pcp->count++;
  	if (pcp->count >= pcp->high) {
  		unsigned long batch = READ_ONCE(pcp->batch);

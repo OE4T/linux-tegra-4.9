@@ -1,7 +1,7 @@
-From b0c7d6edbd18d4786f2d9091fcf97aef5b012ed2 Mon Sep 17 00:00:00 2001
+From 6ade91ac7b9fd694be03fe88f1c3a03d5dc7902d Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Fri, 17 Feb 2017 19:44:39 +0100
-Subject: [PATCH 002/352] lockdep: Handle statically initialized PER_CPU locks
+Subject: [PATCH 002/364] lockdep: Handle statically initialized PER_CPU locks
  proper
 
 If a PER_CPU struct which contains a spin_lock is statically initialized
@@ -45,7 +45,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  5 files changed, 67 insertions(+), 36 deletions(-)
 
 diff --git a/include/linux/module.h b/include/linux/module.h
-index 49f0aae..ee6f07f 100644
+index 70e49db..858088e 100644
 --- a/include/linux/module.h
 +++ b/include/linux/module.h
 @@ -501,6 +501,7 @@ static inline int module_is_live(struct module *mod)

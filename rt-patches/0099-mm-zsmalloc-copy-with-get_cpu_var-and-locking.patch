@@ -1,7 +1,7 @@
-From 195fccd286eab652a6bafe859d269c1caa0ac114 Mon Sep 17 00:00:00 2001
+From 16d90ce8a08bd3dacc66755728cdd92df0823170 Mon Sep 17 00:00:00 2001
 From: Mike Galbraith <umgwanakikbuti@gmail.com>
 Date: Tue, 22 Mar 2016 11:16:09 +0100
-Subject: [PATCH 099/352] mm/zsmalloc: copy with get_cpu_var() and locking
+Subject: [PATCH 099/364] mm/zsmalloc: copy with get_cpu_var() and locking
 
 get_cpu_var() disables preemption and triggers a might_sleep() splat later.
 This is replaced with get_locked_var().
@@ -17,7 +17,7 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  1 file changed, 74 insertions(+), 6 deletions(-)
 
 diff --git a/mm/zsmalloc.c b/mm/zsmalloc.c
-index 50dec23..adb1135 100644
+index d44993b..079e57c 100644
 --- a/mm/zsmalloc.c
 +++ b/mm/zsmalloc.c
 @@ -54,6 +54,7 @@
@@ -52,7 +52,7 @@ index 50dec23..adb1135 100644
  /*
   * Object location (<PFN>, <obj_idx>) is encoded as
   * as single (unsigned long) handle value.
-@@ -333,7 +347,7 @@ static void SetZsPageMovable(struct zs_pool *pool, struct zspage *zspage) {}
+@@ -334,7 +348,7 @@ static void SetZsPageMovable(struct zs_pool *pool, struct zspage *zspage) {}
  
  static int create_cache(struct zs_pool *pool)
  {
@@ -61,7 +61,7 @@ index 50dec23..adb1135 100644
  					0, 0, NULL);
  	if (!pool->handle_cachep)
  		return 1;
-@@ -357,10 +371,27 @@ static void destroy_cache(struct zs_pool *pool)
+@@ -358,10 +372,27 @@ static void destroy_cache(struct zs_pool *pool)
  
  static unsigned long cache_alloc_handle(struct zs_pool *pool, gfp_t gfp)
  {
@@ -91,7 +91,7 @@ index 50dec23..adb1135 100644
  static void cache_free_handle(struct zs_pool *pool, unsigned long handle)
  {
  	kmem_cache_free(pool->handle_cachep, (void *)handle);
-@@ -379,12 +410,18 @@ static void cache_free_zspage(struct zs_pool *pool, struct zspage *zspage)
+@@ -380,12 +411,18 @@ static void cache_free_zspage(struct zs_pool *pool, struct zspage *zspage)
  
  static void record_obj(unsigned long handle, unsigned long obj)
  {
@@ -110,7 +110,7 @@ index 50dec23..adb1135 100644
  }
  
  /* zpool driver */
-@@ -473,6 +510,7 @@ MODULE_ALIAS("zpool-zsmalloc");
+@@ -474,6 +511,7 @@ MODULE_ALIAS("zpool-zsmalloc");
  
  /* per-cpu VM mapping areas for zspage accesses that cross page boundaries */
  static DEFINE_PER_CPU(struct mapping_area, zs_map_area);
@@ -118,7 +118,7 @@ index 50dec23..adb1135 100644
  
  static bool is_zspage_isolated(struct zspage *zspage)
  {
-@@ -911,7 +949,13 @@ static unsigned long location_to_obj(struct page *page, unsigned int obj_idx)
+@@ -912,7 +950,13 @@ static unsigned long location_to_obj(struct page *page, unsigned int obj_idx)
  
  static unsigned long handle_to_obj(unsigned long handle)
  {
@@ -132,7 +132,7 @@ index 50dec23..adb1135 100644
  }
  
  static unsigned long obj_to_head(struct page *page, void *obj)
-@@ -925,22 +969,46 @@ static unsigned long obj_to_head(struct page *page, void *obj)
+@@ -926,22 +970,46 @@ static unsigned long obj_to_head(struct page *page, void *obj)
  
  static inline int testpin_tag(unsigned long handle)
  {
@@ -179,7 +179,7 @@ index 50dec23..adb1135 100644
  }
  
  static void reset_page(struct page *page)
-@@ -1432,7 +1500,7 @@ void *zs_map_object(struct zs_pool *pool, unsigned long handle,
+@@ -1433,7 +1501,7 @@ void *zs_map_object(struct zs_pool *pool, unsigned long handle,
  	class = pool->size_class[class_idx];
  	off = (class->size * obj_idx) & ~PAGE_MASK;
  
@@ -188,7 +188,7 @@ index 50dec23..adb1135 100644
  	area->vm_mm = mm;
  	if (off + class->size <= PAGE_SIZE) {
  		/* this object is contained entirely within a page */
-@@ -1486,7 +1554,7 @@ void zs_unmap_object(struct zs_pool *pool, unsigned long handle)
+@@ -1487,7 +1555,7 @@ void zs_unmap_object(struct zs_pool *pool, unsigned long handle)
  
  		__zs_unmap_object(area, pages, off, class->size);
  	}

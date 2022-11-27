@@ -1,7 +1,7 @@
-From be8f9967980f2ac5c5716f2609557f6426baf711 Mon Sep 17 00:00:00 2001
+From eb431a2e9b736379ba771f6577b04719873e6d1b Mon Sep 17 00:00:00 2001
 From: Frank Rowand <frank.rowand@am.sony.com>
 Date: Sat, 1 Oct 2011 18:58:13 -0700
-Subject: [PATCH 088/352] ARM: Initialize split page table locks for vector
+Subject: [PATCH 088/364] ARM: Initialize split page table locks for vector
  page
 
 Without this patch, ARM can not use SPLIT_PTLOCK_CPUS if
@@ -36,10 +36,10 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  1 file changed, 24 insertions(+)
 
 diff --git a/arch/arm/kernel/process.c b/arch/arm/kernel/process.c
-index 38ad8b9..c8dcbd22 100644
+index aae93b4..3bd6889 100644
 --- a/arch/arm/kernel/process.c
 +++ b/arch/arm/kernel/process.c
-@@ -397,6 +397,30 @@ unsigned long arch_randomize_brk(struct mm_struct *mm)
+@@ -324,6 +324,30 @@ unsigned long arch_randomize_brk(struct mm_struct *mm)
  }
  
  #ifdef CONFIG_MMU

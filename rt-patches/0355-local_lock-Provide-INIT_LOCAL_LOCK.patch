@@ -1,0 +1,67 @@
+From a90448e9ebafd0d753ea8ae75f41361b07177f0b Mon Sep 17 00:00:00 2001
+From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
+Date: Thu, 13 Oct 2022 18:36:24 -0700
+Subject: [PATCH 355/364] local_lock: Provide INIT_LOCAL_LOCK().
+
+The original code was using INIT_LOCAL_LOCK() and I tried to sneak
+around it and forgot that this code also needs to compile on !RT
+platforms.
+
+Provide INIT_LOCAL_LOCK() to initialize properly on RT and do nothing on
+!RT. Let random.c use which is the only user so far and oes not compile
+on !RT otherwise.
+
+Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
+---
+ drivers/char/random.c     | 4 ++--
+ include/linux/locallock.h | 5 +++++
+ 2 files changed, 7 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/char/random.c b/drivers/char/random.c
+index 1397650..909d8f7 100644
+--- a/drivers/char/random.c
++++ b/drivers/char/random.c
+@@ -237,7 +237,7 @@ struct crng {
+ 
+ static DEFINE_PER_CPU(struct crng, crngs) = {
+ 	.generation = ULONG_MAX,
+-	.lock.lock = __SPIN_LOCK_UNLOCKED(crngs.lock.lock),
++	.lock = INIT_LOCAL_LOCK(crngs.lock),
+ };
+ 
+ /* Used by crng_reseed() and crng_make_state() to extract a new seed from the input pool. */
+@@ -516,7 +516,7 @@ struct batch_ ##type {								\
+ };										\
+ 										\
+ static DEFINE_PER_CPU(struct batch_ ##type, batched_entropy_ ##type) = {	\
+-	.lock.lock = __SPIN_LOCK_UNLOCKED(batched_entropy_ ##type.lock.lock),	\
++	.lock = INIT_LOCAL_LOCK(batched_entropy_ ##type.lock),			\
+ 	.position = UINT_MAX							\
+ };										\
+ 										\
+diff --git a/include/linux/locallock.h b/include/linux/locallock.h
+index 0c3ff5b..70af9a1 100644
+--- a/include/linux/locallock.h
++++ b/include/linux/locallock.h
+@@ -22,6 +22,8 @@ struct local_irq_lock {
+ 	unsigned long		flags;
+ };
+ 
++#define INIT_LOCAL_LOCK(lvar)			{ .lock = __SPIN_LOCK_UNLOCKED((lvar).lock.lock) }
++
+ #define DEFINE_LOCAL_IRQ_LOCK(lvar)					\
+ 	DEFINE_PER_CPU(struct local_irq_lock, lvar) = {			\
+ 		.lock = __SPIN_LOCK_UNLOCKED((lvar).lock) }
+@@ -256,6 +258,9 @@ static inline int __local_unlock_irqrestore(struct local_irq_lock *lv,
+ 
+ #else /* PREEMPT_RT_BASE */
+ 
++struct local_irq_lock { };
++#define INIT_LOCAL_LOCK(lvar)			{ }
++
+ #define DEFINE_LOCAL_IRQ_LOCK(lvar)		__typeof__(const int) lvar
+ #define DECLARE_LOCAL_IRQ_LOCK(lvar)		extern __typeof__(const int) lvar
+ 
+-- 
+2.7.4
+

@@ -1,0 +1,46 @@
+From 103b989b99b2287c91cc901f8508f34bad0d103c Mon Sep 17 00:00:00 2001
+From: Ingo Molnar <mingo@elte.hu>
+Date: Wed, 14 Dec 2011 13:05:54 +0100
+Subject: [PATCH 173/364] rt: Improve the serial console PASS_LIMIT
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Beyond the warning:
+
+ drivers/tty/serial/8250/8250.c:1613:6: warning: unused variable ‘pass_counter’ [-Wunused-variable]
+
+the solution of just looping infinitely was ugly - up it to 1 million to
+give it a chance to continue in some really ugly situation.
+
+Change-Id: Iebb53dde8def48dd9349474e7c7201eada947abc
+Signed-off-by: Ingo Molnar <mingo@elte.hu>
+Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
+---
+ drivers/tty/serial/8250/8250_core.c | 9 +++++----
+ 1 file changed, 5 insertions(+), 4 deletions(-)
+
+diff --git a/drivers/tty/serial/8250/8250_core.c b/drivers/tty/serial/8250/8250_core.c
+index e68f0b7..0d0318c 100644
+--- a/drivers/tty/serial/8250/8250_core.c
++++ b/drivers/tty/serial/8250/8250_core.c
+@@ -62,11 +62,12 @@ static unsigned int skip_txen_test; /* force skip of txen test at init time */
+  * On -rt we can have a more delays, and legitimately
+  * so - so don't drop work spuriously and spam the
+  * syslog:
+- *
+- * Even in non-rt environment (under hypervisor) this constant might be
+- * too small
+  */
+-#define PASS_LIMIT	1000000
++#ifdef CONFIG_PREEMPT_RT_FULL
++# define PASS_LIMIT	1000000
++#else
++# define PASS_LIMIT	512
++#endif
+ 
+ #include <asm/serial.h>
+ /*
+-- 
+2.7.4
+

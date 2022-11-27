@@ -1,7 +1,7 @@
-From 90b2d315ff639694f0c5be100076dbef180ef797 Mon Sep 17 00:00:00 2001
+From 4bab49a02bf63575d05ff030fe5b0e1215a4f807 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Tue, 31 May 2011 16:59:16 +0200
-Subject: [PATCH 112/352] sched: Move task_struct cleanup to RCU
+Subject: [PATCH 112/364] sched: Move task_struct cleanup to RCU
 
 __put_task_struct() does quite some expensive work. We don't want to
 burden random tasks with that.
@@ -13,10 +13,10 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  2 files changed, 27 insertions(+), 1 deletion(-)
 
 diff --git a/include/linux/sched.h b/include/linux/sched.h
-index 962147e..5fad672 100644
+index 8f25ee1e..1195f00 100644
 --- a/include/linux/sched.h
 +++ b/include/linux/sched.h
-@@ -2145,6 +2145,9 @@ struct task_struct {
+@@ -2094,6 +2094,9 @@ struct task_struct {
  	unsigned int	sequential_io;
  	unsigned int	sequential_io_avg;
  #endif
@@ -26,7 +26,7 @@ index 962147e..5fad672 100644
  #ifdef CONFIG_DEBUG_ATOMIC_SLEEP
  	unsigned long	task_state_change;
  #endif
-@@ -2406,6 +2409,15 @@ extern struct pid *cad_pid;
+@@ -2355,6 +2358,15 @@ extern struct pid *cad_pid;
  extern void free_task(struct task_struct *tsk);
  #define get_task_struct(tsk) do { atomic_inc(&(tsk)->usage); } while(0)
  
@@ -42,7 +42,7 @@ index 962147e..5fad672 100644
  extern void __put_task_struct(struct task_struct *t);
  
  static inline void put_task_struct(struct task_struct *t)
-@@ -2413,6 +2425,7 @@ static inline void put_task_struct(struct task_struct *t)
+@@ -2362,6 +2374,7 @@ static inline void put_task_struct(struct task_struct *t)
  	if (atomic_dec_and_test(&t->usage))
  		__put_task_struct(t);
  }
@@ -51,10 +51,10 @@ index 962147e..5fad672 100644
  struct task_struct *task_rcu_dereference(struct task_struct **ptask);
  struct task_struct *try_get_task_struct(struct task_struct **ptask);
 diff --git a/kernel/fork.c b/kernel/fork.c
-index 71cc100..cec952e 100644
+index 773cc91..790cb91 100644
 --- a/kernel/fork.c
 +++ b/kernel/fork.c
-@@ -386,7 +386,9 @@ static inline void put_signal_struct(struct signal_struct *sig)
+@@ -388,7 +388,9 @@ static inline void put_signal_struct(struct signal_struct *sig)
  	if (atomic_dec_and_test(&sig->sigcnt))
  		free_signal_struct(sig);
  }
@@ -65,7 +65,7 @@ index 71cc100..cec952e 100644
  void __put_task_struct(struct task_struct *tsk)
  {
  	WARN_ON(!tsk->exit_state);
-@@ -403,7 +405,18 @@ void __put_task_struct(struct task_struct *tsk)
+@@ -405,7 +407,18 @@ void __put_task_struct(struct task_struct *tsk)
  	if (!profile_handoff_task(tsk))
  		free_task(tsk);
  }

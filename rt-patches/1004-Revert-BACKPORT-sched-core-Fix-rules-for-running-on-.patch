@@ -1,7 +1,7 @@
-From 092754084575e1334bea46f2709335c3de2f992e Mon Sep 17 00:00:00 2001
+From 40cdbffdec6bd054946fb423c545348502892cac Mon Sep 17 00:00:00 2001
 From: Sumit Gupta <sumitg@nvidia.com>
 Date: Thu, 22 Apr 2021 10:46:11 +0530
-Subject: [PATCH 350/352] Revert "BACKPORT: sched/core: Fix rules for running
+Subject: [PATCH 361/364] Revert "BACKPORT: sched/core: Fix rules for running
  on online && !active CPUs"
 
 This reverts commit e363fcd2ad4a5f4597f01512732204d5200cc123.
@@ -12,10 +12,10 @@ Bug 200671224
  1 file changed, 12 insertions(+), 30 deletions(-)
 
 diff --git a/kernel/sched/core.c b/kernel/sched/core.c
-index f1d4a86..89ad734 100644
+index bb3bd43..6e99302 100644
 --- a/kernel/sched/core.c
 +++ b/kernel/sched/core.c
-@@ -1045,33 +1045,6 @@ void check_preempt_curr(struct rq *rq, struct task_struct *p, int flags)
+@@ -1036,33 +1036,6 @@ void check_preempt_curr(struct rq *rq, struct task_struct *p, int flags)
  }
  
  #ifdef CONFIG_SMP
@@ -49,7 +49,7 @@ index f1d4a86..89ad734 100644
  /*
   * This is how migration works:
   *
-@@ -1129,8 +1102,16 @@ struct migration_arg {
+@@ -1120,8 +1093,16 @@ struct migration_arg {
   */
  static struct rq *__migrate_task(struct rq *rq, struct task_struct *p, int dest_cpu)
  {
@@ -67,7 +67,7 @@ index f1d4a86..89ad734 100644
  		return rq;
  
  	rq = move_queued_task(rq, p, dest_cpu);
-@@ -1757,9 +1738,10 @@ static int select_fallback_rq(int cpu, struct task_struct *p)
+@@ -1748,9 +1729,10 @@ static int select_fallback_rq(int cpu, struct task_struct *p)
  	for (;;) {
  		/* Any allowed, online CPU? */
  		for_each_cpu(dest_cpu, tsk_cpus_allowed(p)) {

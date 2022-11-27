@@ -1,7 +1,7 @@
-From 6ba5d11d138f5c19fdf5e6cc66097d47b519204a Mon Sep 17 00:00:00 2001
+From f2e3efab236a62d2ed9d58a5f7c56d544b64195a Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Tue, 9 May 2017 17:11:10 +0200
-Subject: [PATCH 164/352] futex/rtmutex: Cure RT double blocking issue
+Subject: [PATCH 164/364] futex/rtmutex: Cure RT double blocking issue
 
 RT has a problem when the wait on a futex/rtmutex got interrupted by a
 timeout or a signal. task->pi_blocked_on is still set when returning from

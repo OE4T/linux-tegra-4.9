@@ -1,7 +1,7 @@
-From 31ac80abad4a42443378f47643b200338861aec7 Mon Sep 17 00:00:00 2001
+From ac346c89968a7c3015068db61f1e5c3f015eb388 Mon Sep 17 00:00:00 2001
 From: Ingo Molnar <mingo@elte.hu>
 Date: Fri, 3 Jul 2009 08:29:37 -0500
-Subject: [PATCH 083/352] mm: page_alloc: rt-friendly per-cpu pages
+Subject: [PATCH 083/364] mm: page_alloc: rt-friendly per-cpu pages
 
 rt-friendly per-cpu pages: convert the irqs-off per-cpu locking
 method into a preemptible, explicit-per-cpu-locks method.
@@ -10,7 +10,7 @@ Contains fixes from:
 	 Peter Zijlstra <a.p.zijlstra@chello.nl>
 	 Thomas Gleixner <tglx@linutronix.de>
 
-Change-Id: I4bcc7ad3dd623de3534b2b7a2551ff3b8a9d83d4
+Change-Id: I6436af041bc3dcb0af366cc27db52d0c4d50219a
 Signed-off-by: Ingo Molnar <mingo@elte.hu>
 Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
 ---
@@ -18,7 +18,7 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  1 file changed, 43 insertions(+), 17 deletions(-)
 
 diff --git a/mm/page_alloc.c b/mm/page_alloc.c
-index 8d5f6a1..b52eabd 100644
+index 8456dc6..86fa0f5 100644
 --- a/mm/page_alloc.c
 +++ b/mm/page_alloc.c
 @@ -61,6 +61,7 @@
@@ -29,7 +29,7 @@ index 8d5f6a1..b52eabd 100644
  #include <linux/page_owner.h>
  #include <linux/kthread.h>
  #include <linux/memcontrol.h>
-@@ -294,6 +295,18 @@ EXPORT_SYMBOL(nr_node_ids);
+@@ -295,6 +296,18 @@ EXPORT_SYMBOL(nr_node_ids);
  EXPORT_SYMBOL(nr_online_nodes);
  #endif
  
@@ -48,7 +48,7 @@ index 8d5f6a1..b52eabd 100644
  int page_group_by_mobility_disabled __read_mostly;
  
  #ifdef CONFIG_DEFERRED_STRUCT_PAGE_INIT
-@@ -1282,10 +1295,10 @@ static void __free_pages_ok(struct page *page, unsigned int order)
+@@ -1283,10 +1296,10 @@ static void __free_pages_ok(struct page *page, unsigned int order)
  		return;
  
  	migratetype = get_pfnblock_migratetype(page, pfn);
@@ -61,7 +61,7 @@ index 8d5f6a1..b52eabd 100644
  }
  
  static void __init __free_pages_boot_core(struct page *page, unsigned int order)
-@@ -2303,14 +2316,14 @@ void drain_zone_pages(struct zone *zone, struct per_cpu_pages *pcp)
+@@ -2304,14 +2317,14 @@ void drain_zone_pages(struct zone *zone, struct per_cpu_pages *pcp)
  	unsigned long flags;
  	int to_drain, batch;
  
@@ -78,7 +78,7 @@ index 8d5f6a1..b52eabd 100644
  }
  #endif
  
-@@ -2327,7 +2340,7 @@ static void drain_pages_zone(unsigned int cpu, struct zone *zone)
+@@ -2328,7 +2341,7 @@ static void drain_pages_zone(unsigned int cpu, struct zone *zone)
  	struct per_cpu_pageset *pset;
  	struct per_cpu_pages *pcp;
  
@@ -87,7 +87,7 @@ index 8d5f6a1..b52eabd 100644
  	pset = per_cpu_ptr(zone->pageset, cpu);
  
  	pcp = &pset->pcp;
-@@ -2335,7 +2348,7 @@ static void drain_pages_zone(unsigned int cpu, struct zone *zone)
+@@ -2336,7 +2349,7 @@ static void drain_pages_zone(unsigned int cpu, struct zone *zone)
  		free_pcppages_bulk(zone, pcp->count, pcp);
  		pcp->count = 0;
  	}
@@ -96,7 +96,7 @@ index 8d5f6a1..b52eabd 100644
  }
  
  /*
-@@ -2422,7 +2435,17 @@ void drain_all_pages(struct zone *zone)
+@@ -2423,7 +2436,17 @@ void drain_all_pages(struct zone *zone)
  		else
  			cpumask_clear_cpu(cpu, &cpus_with_pcps);
  	}
@@ -115,7 +115,7 @@ index 8d5f6a1..b52eabd 100644
  }
  
  #ifdef CONFIG_HIBERNATION
-@@ -2482,7 +2505,7 @@ void free_hot_cold_page(struct page *page, bool cold)
+@@ -2483,7 +2506,7 @@ void free_hot_cold_page(struct page *page, bool cold)
  
  	migratetype = get_pfnblock_migratetype(page, pfn);
  	set_pcppage_migratetype(page, migratetype);
@@ -124,7 +124,7 @@ index 8d5f6a1..b52eabd 100644
  	__count_vm_event(PGFREE);
  
  	/*
-@@ -2513,7 +2536,7 @@ void free_hot_cold_page(struct page *page, bool cold)
+@@ -2514,7 +2537,7 @@ void free_hot_cold_page(struct page *page, bool cold)
  	}
  
  out:
@@ -133,7 +133,7 @@ index 8d5f6a1..b52eabd 100644
  }
  
  /*
-@@ -2648,7 +2671,7 @@ struct page *buffered_rmqueue(struct zone *preferred_zone,
+@@ -2649,7 +2672,7 @@ struct page *buffered_rmqueue(struct zone *preferred_zone,
  		struct per_cpu_pages *pcp;
  		struct list_head *list;
  
@@ -142,7 +142,7 @@ index 8d5f6a1..b52eabd 100644
  		do {
  			pcp = &this_cpu_ptr(zone->pageset)->pcp;
  			list = &pcp->lists[migratetype];
-@@ -2675,7 +2698,7 @@ struct page *buffered_rmqueue(struct zone *preferred_zone,
+@@ -2676,7 +2699,7 @@ struct page *buffered_rmqueue(struct zone *preferred_zone,
  		 * allocate greater than order-1 page units with __GFP_NOFAIL.
  		 */
  		WARN_ON_ONCE((gfp_flags & __GFP_NOFAIL) && (order > 1));
@@ -151,7 +151,7 @@ index 8d5f6a1..b52eabd 100644
  
  		do {
  			page = NULL;
-@@ -2687,22 +2710,24 @@ struct page *buffered_rmqueue(struct zone *preferred_zone,
+@@ -2688,22 +2711,24 @@ struct page *buffered_rmqueue(struct zone *preferred_zone,
  			if (!page)
  				page = __rmqueue(zone, order, migratetype);
  		} while (page && check_new_pages(page, order));
@@ -180,7 +180,7 @@ index 8d5f6a1..b52eabd 100644
  	return NULL;
  }
  
-@@ -6602,6 +6627,7 @@ static int page_alloc_cpu_notify(struct notifier_block *self,
+@@ -6630,6 +6655,7 @@ static int page_alloc_cpu_notify(struct notifier_block *self,
  void __init page_alloc_init(void)
  {
  	hotcpu_notifier(page_alloc_cpu_notify, 0);
@@ -188,7 +188,7 @@ index 8d5f6a1..b52eabd 100644
  }
  
  /*
-@@ -7445,7 +7471,7 @@ void zone_pcp_reset(struct zone *zone)
+@@ -7473,7 +7499,7 @@ void zone_pcp_reset(struct zone *zone)
  	struct per_cpu_pageset *pset;
  
  	/* avoid races with drain_pages()  */
@@ -197,7 +197,7 @@ index 8d5f6a1..b52eabd 100644
  	if (zone->pageset != &boot_pageset) {
  		for_each_online_cpu(cpu) {
  			pset = per_cpu_ptr(zone->pageset, cpu);
-@@ -7454,7 +7480,7 @@ void zone_pcp_reset(struct zone *zone)
+@@ -7482,7 +7508,7 @@ void zone_pcp_reset(struct zone *zone)
  		free_percpu(zone->pageset);
  		zone->pageset = &boot_pageset;
  	}

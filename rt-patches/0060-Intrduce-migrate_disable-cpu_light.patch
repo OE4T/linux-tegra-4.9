@@ -1,7 +1,7 @@
-From 7e3238bc316d90dd04707b12639b8d5cc1769fcd Mon Sep 17 00:00:00 2001
+From f1362b454d6cdc353c30b5a5fafd91ca9198fadc Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Fri, 17 Jun 2011 15:42:38 +0200
-Subject: [PATCH 060/352] Intrduce migrate_disable() + cpu_light()
+Subject: [PATCH 060/364] Intrduce migrate_disable() + cpu_light()
 
 Introduce migrate_disable(). The task can't be pushed to another CPU but can
 be preempted.
@@ -29,23 +29,23 @@ it uses migrate_disable() instead of preempt_disable(). That means the user
 remains on the same CPU but the function using it may be preempted and
 invoked again from another caller on the same CPU.
 
-Change-Id: Ib0c68ddab55fabafd04e1ae548a798cae7458966
+Change-Id: I148889c6ff0c77186d0597001263c423c326b379
 Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
 ---
  include/linux/cpu.h     |  3 +++
  include/linux/preempt.h |  9 +++++++
- include/linux/sched.h   | 39 ++++++++++++++++++++-------
+ include/linux/sched.h   | 38 ++++++++++++++++++++-------
  include/linux/smp.h     |  3 +++
  kernel/sched/core.c     | 70 ++++++++++++++++++++++++++++++++++++++++++++++++-
  kernel/sched/debug.c    |  7 +++++
  lib/smp_processor_id.c  |  5 ++--
- 7 files changed, 123 insertions(+), 13 deletions(-)
+ 7 files changed, 123 insertions(+), 12 deletions(-)
 
 diff --git a/include/linux/cpu.h b/include/linux/cpu.h
-index cf9ebc5..e1fe7c9 100644
+index 7139ecb5..50bf7e3 100644
 --- a/include/linux/cpu.h
 +++ b/include/linux/cpu.h
-@@ -191,6 +191,9 @@ static inline void cpu_notifier_register_done(void)
+@@ -195,6 +195,9 @@ static inline void cpu_notifier_register_done(void)
  #endif /* CONFIG_SMP */
  extern struct bus_type cpu_subsys;
  
@@ -81,10 +81,10 @@ index 26e0eaa..64f1488 100644
  
  #ifdef CONFIG_PREEMPT_NOTIFIERS
 diff --git a/include/linux/sched.h b/include/linux/sched.h
-index 9feb7b8..691fa69 100644
+index bd5f39b..50a9206 100644
 --- a/include/linux/sched.h
 +++ b/include/linux/sched.h
-@@ -1691,6 +1691,12 @@ struct task_struct {
+@@ -1631,6 +1631,12 @@ struct task_struct {
  #endif
  
  	unsigned int policy;
@@ -97,7 +97,7 @@ index 9feb7b8..691fa69 100644
  	int nr_cpus_allowed;
  	cpumask_t cpus_allowed;
  
-@@ -2174,14 +2180,6 @@ static inline struct vm_struct *task_stack_vm_area(const struct task_struct *t)
+@@ -2123,14 +2129,6 @@ static inline struct vm_struct *task_stack_vm_area(const struct task_struct *t)
  }
  #endif
  
@@ -112,7 +112,7 @@ index 9feb7b8..691fa69 100644
  #define TNF_MIGRATED	0x01
  #define TNF_NO_GROUP	0x02
  #define TNF_SHARED	0x04
-@@ -3743,9 +3741,31 @@ static inline void set_task_cpu(struct task_struct *p, unsigned int cpu)
+@@ -3686,9 +3684,31 @@ static inline void set_task_cpu(struct task_struct *p, unsigned int cpu)
  
  #endif /* CONFIG_SMP */
  
@@ -160,10 +160,10 @@ index 68123c1..891c533 100644
   * Callback to arch code if there's nosmp or maxcpus=0 on the
   * boot command line:
 diff --git a/kernel/sched/core.c b/kernel/sched/core.c
-index 252903d..dd2a949 100644
+index e2c0ede..394a117 100644
 --- a/kernel/sched/core.c
 +++ b/kernel/sched/core.c
-@@ -1141,6 +1141,11 @@ void do_set_cpus_allowed(struct task_struct *p, const struct cpumask *new_mask)
+@@ -1132,6 +1132,11 @@ void do_set_cpus_allowed(struct task_struct *p, const struct cpumask *new_mask)
  
  	lockdep_assert_held(&p->pi_lock);
  
@@ -175,7 +175,7 @@ index 252903d..dd2a949 100644
  	queued = task_on_rq_queued(p);
  	running = task_current(rq, p);
  
-@@ -1222,7 +1227,7 @@ static int __set_cpus_allowed_ptr(struct task_struct *p,
+@@ -1213,7 +1218,7 @@ static int __set_cpus_allowed_ptr(struct task_struct *p,
  	}
  
  	/* Can the task run on the task's current CPU? If so, we're done */
@@ -184,7 +184,7 @@ index 252903d..dd2a949 100644
  		goto out;
  
  	if (task_running(rq, p) || p->state == TASK_WAKING) {
-@@ -3369,6 +3374,69 @@ static inline void schedule_debug(struct task_struct *prev)
+@@ -3362,6 +3367,69 @@ static inline void schedule_debug(struct task_struct *prev)
  	schedstat_inc(this_rq()->sched_count);
  }
  
@@ -255,7 +255,7 @@ index 252903d..dd2a949 100644
   * Pick up the highest-prio task:
   */
 diff --git a/kernel/sched/debug.c b/kernel/sched/debug.c
-index 59e38cd..a7edaab 100644
+index 8b4b587..63c482f 100644
 --- a/kernel/sched/debug.c
 +++ b/kernel/sched/debug.c
 @@ -621,6 +621,9 @@ void print_rt_rq(struct seq_file *m, int cpu, struct rt_rq *rt_rq)
@@ -268,7 +268,7 @@ index 59e38cd..a7edaab 100644
  
  #undef PN
  #undef P
-@@ -1042,6 +1045,10 @@ void proc_sched_show_task(struct task_struct *p, struct seq_file *m)
+@@ -1032,6 +1035,10 @@ void proc_sched_show_task(struct task_struct *p, struct seq_file *m)
  #endif
  	P(policy);
  	P(prio);

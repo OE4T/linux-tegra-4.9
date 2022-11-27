@@ -1,7 +1,7 @@
-From 032f16e59d2184eb642a1fe374e7bc07e9e52b00 Mon Sep 17 00:00:00 2001
+From e02442cc79606d5bb2dc539985208530ec99b0f5 Mon Sep 17 00:00:00 2001
 From: Chaitanya Namuduri <snamuduri@nvidia.com>
 Date: Wed, 16 Feb 2022 17:05:30 +0530
-Subject: [PATCH 352/352] rt-patches: make HMM compatible
+Subject: [PATCH 363/364] rt-patches: make HMM compatible
 
 Default kernel patches reverting uncharge_batch to upstream.
 Changed to make function HMM compatible.
@@ -13,7 +13,7 @@ Signed-off-by: Chaitanya Namuduri <snamuduri@nvidia.com>
  1 file changed, 6 insertions(+), 6 deletions(-)
 
 diff --git a/mm/memcontrol.c b/mm/memcontrol.c
-index d41fd40..cd8b037 100644
+index 89cbbb1..0853149 100644
 --- a/mm/memcontrol.c
 +++ b/mm/memcontrol.c
 @@ -5620,12 +5620,12 @@ static void uncharge_batch(const struct uncharge_gather *ug)

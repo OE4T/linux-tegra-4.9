@@ -1,7 +1,7 @@
-From eeb2bec8e125b0e930f9f8e4ba7cf3aa40742e20 Mon Sep 17 00:00:00 2001
+From 790b98581d36ccb16bd1de08f21d52d138b4307f Mon Sep 17 00:00:00 2001
 From: Sumit Gupta <sumitg@nvidia.com>
 Date: Mon, 14 Oct 2019 18:27:33 +0530
-Subject: [PATCH 348/352] irq: tegra: add IRQF_NO_THREAD flag for doorbell
+Subject: [PATCH 359/364] irq: tegra: add IRQF_NO_THREAD flag for doorbell
 
 Doorbell irq's are used for communication with BPMP.
 Adding IRQF_NO_THREAD flag in request_irq() for doorbell
@@ -18,7 +18,7 @@ Signed-off-by: Sumit Gupta <sumitg@nvidia.com>
  1 file changed, 2 insertions(+), 2 deletions(-)
 
 diff --git a/drivers/irqchip/irq-tegra.c b/drivers/irqchip/irq-tegra.c
-index 2311084..0e5f4fa 100644
+index dcd948e..88729ba 100644
 --- a/drivers/irqchip/irq-tegra.c
 +++ b/drivers/irqchip/irq-tegra.c
 @@ -515,8 +515,8 @@ static int __init tegra_ictlr_init(struct device_node *node,

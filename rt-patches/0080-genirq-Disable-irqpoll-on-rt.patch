@@ -1,7 +1,7 @@
-From 1942acece238f3c14956a037c6925d25d32d1b2c Mon Sep 17 00:00:00 2001
+From 0b88b2022354ce225e8ec1df0194797c6ff1edd0 Mon Sep 17 00:00:00 2001
 From: Ingo Molnar <mingo@elte.hu>
 Date: Fri, 3 Jul 2009 08:29:57 -0500
-Subject: [PATCH 080/352] genirq: Disable irqpoll on -rt
+Subject: [PATCH 080/364] genirq: Disable irqpoll on -rt
 
 Creates long latencies for no value
 

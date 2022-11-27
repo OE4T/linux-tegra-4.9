@@ -1,0 +1,180 @@
+From d7f5c675aa0a939000641cd77fd659b8ed8b7a30 Mon Sep 17 00:00:00 2001
+From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
+Date: Fri, 19 Aug 2022 11:24:44 +0200
+Subject: [PATCH 352/364] rcu: Intrdroduce rcuwait.
+
+This is an all in one commit backporting rcuwait:
+- update.c, rcuwait.h as of commit
+   58d4292bd037b ("rcu: Uninline multi-use function: finish_rcuwait()")
+- exit.c as of commit
+   9d9a6ebfea329 ("rcuwait: Let rcuwait_wake_up() return whether or not a task was awoken")
+
+Change-Id: I6c59fe4f1998075086cc97c535d111f053064ddd
+Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
+Signed-off-by: Mark Gross <markgross@kernel.org>
+---
+ include/linux/rcuwait.h | 76 +++++++++++++++++++++++++++++++++++++++++++++++++
+ kernel/exit.c           | 30 +++++++++++++++++++
+ kernel/rcu/update.c     |  8 ++++++
+ 3 files changed, 114 insertions(+)
+ create mode 100644 include/linux/rcuwait.h
+
+diff --git a/include/linux/rcuwait.h b/include/linux/rcuwait.h
+new file mode 100644
+index 0000000..12a9d1a
+--- /dev/null
++++ b/include/linux/rcuwait.h
+@@ -0,0 +1,76 @@
++/* SPDX-License-Identifier: GPL-2.0 */
++#ifndef _LINUX_RCUWAIT_H_
++#define _LINUX_RCUWAIT_H_
++
++#include <linux/rcupdate.h>
++#include <linux/sched.h>
++
++/*
++ * rcuwait provides a way of blocking and waking up a single
++ * task in an rcu-safe manner.
++ *
++ * The only time @task is non-nil is when a user is blocked (or
++ * checking if it needs to) on a condition, and reset as soon as we
++ * know that the condition has succeeded and are awoken.
++ */
++struct rcuwait {
++	struct task_struct __rcu *task;
++};
++
++#define __RCUWAIT_INITIALIZER(name)		\
++	{ .task = NULL, }
++
++static inline void rcuwait_init(struct rcuwait *w)
++{
++	w->task = NULL;
++}
++
++/*
++ * Note: this provides no serialization and, just as with waitqueues,
++ * requires care to estimate as to whether or not the wait is active.
++ */
++static inline int rcuwait_active(struct rcuwait *w)
++{
++	return !!rcu_access_pointer(w->task);
++}
++
++extern int rcuwait_wake_up(struct rcuwait *w);
++
++/*
++ * The caller is responsible for locking around rcuwait_wait_event(),
++ * and [prepare_to/finish]_rcuwait() such that writes to @task are
++ * properly serialized.
++ */
++
++static inline void prepare_to_rcuwait(struct rcuwait *w)
++{
++	rcu_assign_pointer(w->task, current);
++}
++
++extern void finish_rcuwait(struct rcuwait *w);
++
++#define rcuwait_wait_event(w, condition, state)				\
++({									\
++	int __ret = 0;							\
++	prepare_to_rcuwait(w);						\
++	for (;;) {							\
++		/*							\
++		 * Implicit barrier (A) pairs with (B) in		\
++		 * rcuwait_wake_up().					\
++		 */							\
++		set_current_state(state);				\
++		if (condition)						\
++			break;						\
++									\
++		if (signal_pending_state(state, current)) {		\
++			__ret = -EINTR;					\
++			break;						\
++		}							\
++									\
++		schedule();						\
++	}								\
++	finish_rcuwait(w);						\
++	__ret;								\
++})
++
++#endif /* _LINUX_RCUWAIT_H_ */
+diff --git a/kernel/exit.c b/kernel/exit.c
+index 4afab4b..643f403 100644
+--- a/kernel/exit.c
++++ b/kernel/exit.c
+@@ -56,6 +56,7 @@
+ #include <linux/tegra_profiler.h>
+ 
+ #include "sched/tune.h"
++#include <linux/rcuwait.h>
+ 
+ #include <asm/uaccess.h>
+ #include <asm/unistd.h>
+@@ -288,6 +289,35 @@ struct task_struct *try_get_task_struct(struct task_struct **ptask)
+ 	return task;
+ }
+ 
++int rcuwait_wake_up(struct rcuwait *w)
++{
++	int ret = 0;
++	struct task_struct *task;
++
++	rcu_read_lock();
++
++	/*
++	 * Order condition vs @task, such that everything prior to the load
++	 * of @task is visible. This is the condition as to why the user called
++	 * rcuwait_wake() in the first place. Pairs with set_current_state()
++	 * barrier (A) in rcuwait_wait_event().
++	 *
++	 *    WAIT                WAKE
++	 *    [S] tsk = current   [S] cond = true
++	 *        MB (A)              MB (B)
++	 *    [L] cond            [L] tsk
++	 */
++	smp_mb(); /* (B) */
++
++	task = rcu_dereference(w->task);
++	if (task)
++		ret = wake_up_process(task);
++	rcu_read_unlock();
++
++	return ret;
++}
++EXPORT_SYMBOL_GPL(rcuwait_wake_up);
++
+ /*
+  * Determine if a process group is "orphaned", according to the POSIX
+  * definition in 2.2.2.52.  Orphaned process groups are not to be affected
+diff --git a/kernel/rcu/update.c b/kernel/rcu/update.c
+index ee02e1e..c4ffd7e 100644
+--- a/kernel/rcu/update.c
++++ b/kernel/rcu/update.c
+@@ -49,6 +49,7 @@
+ #include <linux/moduleparam.h>
+ #include <linux/kthread.h>
+ #include <linux/tick.h>
++#include <linux/rcuwait.h>
+ 
+ #define CREATE_TRACE_POINTS
+ 
+@@ -372,6 +373,13 @@ void __wait_rcu_gp(bool checktiny, int n, call_rcu_func_t *crcu_array,
+ }
+ EXPORT_SYMBOL_GPL(__wait_rcu_gp);
+ 
++void finish_rcuwait(struct rcuwait *w)
++{
++	rcu_assign_pointer(w->task, NULL);
++	__set_current_state(TASK_RUNNING);
++}
++EXPORT_SYMBOL_GPL(finish_rcuwait);
++
+ #ifdef CONFIG_DEBUG_OBJECTS_RCU_HEAD
+ void init_rcu_head(struct rcu_head *head)
+ {
+-- 
+2.7.4
+

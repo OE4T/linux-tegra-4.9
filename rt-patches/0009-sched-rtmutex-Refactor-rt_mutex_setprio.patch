@@ -1,7 +1,7 @@
-From c048650270917ece2cbfacb236e15c5a2808f36e Mon Sep 17 00:00:00 2001
+From 0c85c6a8dbe6acff73c7253d77024a525498cf2b Mon Sep 17 00:00:00 2001
 From: Peter Zijlstra <peterz@infradead.org>
 Date: Thu, 23 Mar 2017 15:56:11 +0100
-Subject: [PATCH 009/352] sched/rtmutex: Refactor rt_mutex_setprio()
+Subject: [PATCH 009/364] sched/rtmutex: Refactor rt_mutex_setprio()
 
 Upstream commit acd58620e415aee4a43a808d7d2fd87259ee0001
 
@@ -18,7 +18,7 @@ priority didn't change, this could lead to a stale pointer.
 As for the XXX, I think its fine to use pi_task->prio, because if it
 differs from waiter->prio, a PI chain update is immenent.
 
-Change-Id: I084a4779012628235f4bcb58697b4d0fa8c24371
+Change-Id: Icae7d14da4e0012007a05fa059bb8e9c897bf013
 Signed-off-by: Peter Zijlstra (Intel) <peterz@infradead.org>
 Cc: juri.lelli@arm.com
 Cc: bigeasy@linutronix.de
@@ -270,10 +270,10 @@ index 8801d2b..155d6cd 100644
  
  	return true; /* call rt_mutex_postunlock() */
 diff --git a/kernel/sched/core.c b/kernel/sched/core.c
-index 0545760..ced7866 100644
+index b057aba..4db255a 100644
 --- a/kernel/sched/core.c
 +++ b/kernel/sched/core.c
-@@ -3754,10 +3754,25 @@ EXPORT_SYMBOL(default_wake_function);
+@@ -3747,10 +3747,25 @@ EXPORT_SYMBOL(default_wake_function);
  
  #ifdef CONFIG_RT_MUTEXES
  
@@ -301,7 +301,7 @@ index 0545760..ced7866 100644
   *
   * This function changes the 'effective' priority of a task. It does
   * not touch ->normal_prio like __setscheduler().
-@@ -3765,17 +3780,41 @@ EXPORT_SYMBOL(default_wake_function);
+@@ -3758,17 +3773,41 @@ EXPORT_SYMBOL(default_wake_function);
   * Used by the rt_mutex code to implement priority inheritance
   * logic. Call site only calls if the priority of the task changed.
   */
@@ -346,7 +346,7 @@ index 0545760..ced7866 100644
  
  	/*
  	 * Idle task boosting is a nono in general. There is one
-@@ -3795,9 +3834,7 @@ void rt_mutex_setprio(struct task_struct *p, int prio)
+@@ -3788,9 +3827,7 @@ void rt_mutex_setprio(struct task_struct *p, int prio)
  		goto out_unlock;
  	}
  
@@ -357,7 +357,7 @@ index 0545760..ced7866 100644
  	oldprio = p->prio;
  
  	if (oldprio == prio)
-@@ -3821,7 +3858,6 @@ void rt_mutex_setprio(struct task_struct *p, int prio)
+@@ -3814,7 +3851,6 @@ void rt_mutex_setprio(struct task_struct *p, int prio)
  	 *          running task
  	 */
  	if (dl_prio(prio)) {
@@ -365,7 +365,7 @@ index 0545760..ced7866 100644
  		if (!dl_prio(p->normal_prio) ||
  		    (pi_task && dl_prio(pi_task->prio) &&
  		     dl_entity_preempt(&pi_task->dl, &p->dl))) {
-@@ -3859,6 +3895,11 @@ void rt_mutex_setprio(struct task_struct *p, int prio)
+@@ -3852,6 +3888,11 @@ void rt_mutex_setprio(struct task_struct *p, int prio)
  	balance_callback(rq);
  	preempt_enable();
  }
@@ -377,7 +377,7 @@ index 0545760..ced7866 100644
  #endif
  
  void set_user_nice(struct task_struct *p, long nice)
-@@ -4106,10 +4147,9 @@ static void __setscheduler(struct rq *rq, struct task_struct *p,
+@@ -4099,10 +4140,9 @@ static void __setscheduler(struct rq *rq, struct task_struct *p,
  	 * Keep a potential priority boosting if called from
  	 * sched_setscheduler().
  	 */
@@ -390,7 +390,7 @@ index 0545760..ced7866 100644
  
  	if (dl_prio(p->prio))
  		p->sched_class = &dl_sched_class;
-@@ -4397,7 +4437,7 @@ static int __sched_setscheduler(struct task_struct *p,
+@@ -4390,7 +4430,7 @@ static int __sched_setscheduler(struct task_struct *p,
  		 * the runqueue. This will be done when the task deboost
  		 * itself.
  		 */

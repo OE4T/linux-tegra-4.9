@@ -1,0 +1,285 @@
+From 6e2c694564beca101b0a9cb54d135ea6d7fa6b34 Mon Sep 17 00:00:00 2001
+From: Chaitanya Namuduri <snamuduri@nvidia.com>
+Date: Sun, 27 Nov 2022 11:17:25 +0530
+Subject: [PATCH] WIP: miscellaneous issues with 4.9.333
+
+Fix miscellaneous issues with 4.9.333-rt197
+
+Change-Id: I280001e3f6ee89939d575fccf6842b19760c08b5
+Signed-off-by: Chaitanya Namuduri <snamuduri@nvidia.com>
+---
+ arch/arm64/include/asm/uaccess.h |  3 ---
+ arch/arm64/kernel/asm-offsets.c  | 14 ++++++++------
+ arch/arm64/kernel/entry.S        |  6 +++---
+ drivers/char/random.c            |  1 -
+ drivers/cpufreq/cpufreq_times.c  | 24 ++++++++++++------------
+ include/linux/pid.h              |  1 +
+ kernel/printk/printk.c           | 37 +++++++++++++++++++++++++++++++++----
+ kernel/sched/Makefile            |  3 ++-
+ 8 files changed, 59 insertions(+), 30 deletions(-)
+
+diff --git a/arch/arm64/include/asm/uaccess.h b/arch/arm64/include/asm/uaccess.h
+index 2163279..ed846af 100644
+--- a/arch/arm64/include/asm/uaccess.h
++++ b/arch/arm64/include/asm/uaccess.h
+@@ -72,9 +72,6 @@ static inline void set_fs(mm_segment_t fs)
+ {
+ 	current_thread_info()->addr_limit = fs;
+ 
+-	/* On user-mode return, check fs is correct */
+-	set_thread_flag(TIF_FSCHECK);
+-
+ 	/*
+ 	 * Prevent a mispredicted conditional call to set_fs from forwarding
+ 	 * the wrong address limit to access_ok under speculation.
+diff --git a/arch/arm64/kernel/asm-offsets.c b/arch/arm64/kernel/asm-offsets.c
+index f78facd..372d9b6 100644
+--- a/arch/arm64/kernel/asm-offsets.c
++++ b/arch/arm64/kernel/asm-offsets.c
+@@ -37,12 +37,14 @@ int main(void)
+ {
+   DEFINE(TSK_ACTIVE_MM,		offsetof(struct task_struct, active_mm));
+   BLANK();
+-  DEFINE(TI_FLAGS,		offsetof(struct thread_info, flags));
+-  DEFINE(TI_PREEMPT,		offsetof(struct thread_info, preempt_count));
+-  DEFINE(TI_PREEMPT_LAZY,	offsetof(struct thread_info, preempt_lazy_count));
+-  DEFINE(TI_ADDR_LIMIT,		offsetof(struct thread_info, addr_limit));
+-  DEFINE(TI_TASK,		offsetof(struct thread_info, task));
+-  DEFINE(TI_CPU,		offsetof(struct thread_info, cpu));
++  DEFINE(TSK_TI_FLAGS,      offsetof(struct task_struct, thread_info.flags));
++  DEFINE(TSK_TI_PREEMPT,    offsetof(struct task_struct, thread_info.preempt_count));
++  DEFINE(TSK_TI_PREEMPT_LAZY,   offsetof(struct task_struct, thread_info.preempt_lazy_count));
++  DEFINE(TSK_TI_ADDR_LIMIT, offsetof(struct task_struct, thread_info.addr_limit));
++#ifdef CONFIG_ARM64_SW_TTBR0_PAN
++  DEFINE(TSK_TI_TTBR0,      offsetof(struct task_struct, thread_info.ttbr0));
++#endif
++  DEFINE(TSK_STACK,     offsetof(struct task_struct, stack));
+   BLANK();
+   DEFINE(THREAD_CPU_CONTEXT,	offsetof(struct task_struct, thread.cpu_context));
+   BLANK();
+diff --git a/arch/arm64/kernel/entry.S b/arch/arm64/kernel/entry.S
+index 5aeaae1..5142647 100644
+--- a/arch/arm64/kernel/entry.S
++++ b/arch/arm64/kernel/entry.S
+@@ -574,12 +574,12 @@ el1_irq:
+ 	irq_handler
+ 
+ #ifdef CONFIG_PREEMPT
+-	ldr	w24, [tsk, #TI_PREEMPT]		// get preempt count
++	ldr	w24, [tsk, #TSK_TI_PREEMPT]		// get preempt count
+ 	cbnz	w24, 2f				// preempt count != 0
+-	ldr	x0, [tsk, #TI_FLAGS]		// get flags
++	ldr	x0, [tsk, #TSK_TI_FLAGS]		// get flags
+ 	tbnz	x0, #TIF_NEED_RESCHED, 1f	// needs rescheduling?
+ 
+-	ldr	w24, [tsk, #TI_PREEMPT_LAZY]	// get preempt lazy count
++	ldr	w24, [tsk, #TSK_TI_PREEMPT_LAZY]	// get preempt lazy count
+ 	cbnz	w24, 2f				// preempt lazy count != 0
+ 	tbz	x0, #TIF_NEED_RESCHED_LAZY, 2f	// needs rescheduling?
+ 1:
+diff --git a/drivers/char/random.c b/drivers/char/random.c
+index 909d8f7..41a1999 100644
+--- a/drivers/char/random.c
++++ b/drivers/char/random.c
+@@ -55,7 +55,6 @@
+ #include <linux/uio.h>
+ #include <crypto/chacha.h>
+ #include <linux/locallock.h>
+-#include <crypto/chacha20.h>
+ #include <crypto/blake2s.h>
+ #include <asm/processor.h>
+ #include <asm/uaccess.h>
+diff --git a/drivers/cpufreq/cpufreq_times.c b/drivers/cpufreq/cpufreq_times.c
+index 0776b5a2..51207c1 100644
+--- a/drivers/cpufreq/cpufreq_times.c
++++ b/drivers/cpufreq/cpufreq_times.c
+@@ -29,8 +29,8 @@
+ 
+ static DECLARE_HASHTABLE(uid_hash_table, UID_HASH_BITS);
+ 
+-static DEFINE_SPINLOCK(task_time_in_state_lock); /* task->time_in_state */
+-static DEFINE_SPINLOCK(uid_lock); /* uid_hash_table */
++static DEFINE_RAW_SPINLOCK(task_time_in_state_lock); /* task->time_in_state */
++static DEFINE_RAW_SPINLOCK(uid_lock); /* uid_hash_table */
+ 
+ struct concurrent_times {
+ 	atomic64_t active[NR_CPUS];
+@@ -311,9 +311,9 @@ void cpufreq_task_times_init(struct task_struct *p)
+ {
+ 	unsigned long flags;
+ 
+-	spin_lock_irqsave(&task_time_in_state_lock, flags);
++	raw_spin_lock_irqsave(&task_time_in_state_lock, flags);
+ 	p->time_in_state = NULL;
+-	spin_unlock_irqrestore(&task_time_in_state_lock, flags);
++	raw_spin_unlock_irqrestore(&task_time_in_state_lock, flags);
+ 	p->max_state = 0;
+ }
+ 
+@@ -328,9 +328,9 @@ void cpufreq_task_times_alloc(struct task_struct *p)
+ 	if (!temp)
+ 		return;
+ 
+-	spin_lock_irqsave(&task_time_in_state_lock, flags);
++	raw_spin_lock_irqsave(&task_time_in_state_lock, flags);
+ 	p->time_in_state = temp;
+-	spin_unlock_irqrestore(&task_time_in_state_lock, flags);
++	raw_spin_unlock_irqrestore(&task_time_in_state_lock, flags);
+ 	p->max_state = max_state;
+ }
+ 
+@@ -358,10 +358,10 @@ void cpufreq_task_times_exit(struct task_struct *p)
+ 	if (!p->time_in_state)
+ 		return;
+ 
+-	spin_lock_irqsave(&task_time_in_state_lock, flags);
++	raw_spin_lock_irqsave(&task_time_in_state_lock, flags);
+ 	temp = p->time_in_state;
+ 	p->time_in_state = NULL;
+-	spin_unlock_irqrestore(&task_time_in_state_lock, flags);
++	raw_spin_unlock_irqrestore(&task_time_in_state_lock, flags);
+ 	kfree(temp);
+ }
+ 
+@@ -374,7 +374,7 @@ int proc_time_in_state_show(struct seq_file *m, struct pid_namespace *ns,
+ 	struct cpu_freqs *freqs;
+ 	struct cpu_freqs *last_freqs = NULL;
+ 
+-	spin_lock_irqsave(&task_time_in_state_lock, flags);
++	raw_spin_lock_irqsave(&task_time_in_state_lock, flags);
+ 	for_each_possible_cpu(cpu) {
+ 		freqs = all_freqs[cpu];
+ 		if (!freqs || freqs == last_freqs)
+@@ -391,7 +391,7 @@ int proc_time_in_state_show(struct seq_file *m, struct pid_namespace *ns,
+ 				   (unsigned long)cputime_to_clock_t(cputime));
+ 		}
+ 	}
+-	spin_unlock_irqrestore(&task_time_in_state_lock, flags);
++	raw_spin_unlock_irqrestore(&task_time_in_state_lock, flags);
+ 	return 0;
+ }
+ 
+@@ -525,7 +525,7 @@ void cpufreq_task_times_remove_uids(uid_t uid_start, uid_t uid_end)
+ 	struct hlist_node *tmp;
+ 	unsigned long flags;
+ 
+-	spin_lock_irqsave(&uid_lock, flags);
++	raw_spin_lock_irqsave(&uid_lock, flags);
+ 
+ 	for (; uid_start <= uid_end; uid_start++) {
+ 		hash_for_each_possible_safe(uid_hash_table, uid_entry, tmp,
+@@ -537,7 +537,7 @@ void cpufreq_task_times_remove_uids(uid_t uid_start, uid_t uid_end)
+ 		}
+ 	}
+ 
+-	spin_unlock_irqrestore(&uid_lock, flags);
++	raw_spin_unlock_irqrestore(&uid_lock, flags);
+ }
+ 
+ void cpufreq_times_record_transition(struct cpufreq_policy *policy,
+diff --git a/include/linux/pid.h b/include/linux/pid.h
+index 049fb86..d90f3eb 100644
+--- a/include/linux/pid.h
++++ b/include/linux/pid.h
+@@ -3,6 +3,7 @@
+ 
+ #include <linux/rcupdate.h>
+ #include <linux/atomic.h>
++#include <linux/wait.h>
+ 
+ enum pid_type
+ {
+diff --git a/kernel/printk/printk.c b/kernel/printk/printk.c
+index edef8e3..3befe7f 100644
+--- a/kernel/printk/printk.c
++++ b/kernel/printk/printk.c
+@@ -127,10 +127,8 @@ static int __control_devkmsg(char *str)
+ 
+ static int __init control_devkmsg(char *str)
+ {
+-	if (__control_devkmsg(str) < 0) {
+-		pr_warn("printk.devkmsg: bad option string '%s'\n", str);
++	if (__control_devkmsg(str) < 0)
+ 		return 1;
+-	}
+ 
+ 	/*
+ 	 * Set sysctl string accordingly:
+@@ -152,7 +150,7 @@ static int __init control_devkmsg(char *str)
+ 	 */
+ 	devkmsg_log |= DEVKMSG_LOG_MASK_LOCK;
+ 
+-	return 1;
++	return 0;
+ }
+ __setup("printk.devkmsg=", control_devkmsg);
+ 
+@@ -377,6 +375,34 @@ __packed __aligned(4)
+  */
+ DEFINE_RAW_SPINLOCK(logbuf_lock);
+ 
++/*
++ * Helper macros to lock/unlock logbuf_lock and switch between
++ * printk-safe/unsafe modes.
++ */
++#define logbuf_lock_irq()              \
++    do {                        \
++        printk_safe_enter_irq();        \
++        raw_spin_lock(&logbuf_lock);        \
++    } while (0)
++
++#define logbuf_unlock_irq()                \
++    do {                        \
++        raw_spin_unlock(&logbuf_lock);      \
++        printk_safe_exit_irq();         \
++    } while (0)
++
++#define logbuf_lock_irqsave(flags)         \
++    do {                        \
++        printk_safe_enter_irqsave(flags);   \
++        raw_spin_lock(&logbuf_lock);        \
++    } while (0)
++
++#define logbuf_unlock_irqrestore(flags)        \
++    do {                        \
++        raw_spin_unlock(&logbuf_lock);      \
++        printk_safe_exit_irqrestore(flags); \
++    } while (0)
++
+ #ifdef CONFIG_EARLY_PRINTK
+ struct console *early_console;
+ 
+@@ -1493,6 +1519,7 @@ static int syslog_print_all(char __user *buf, int size, bool clear)
+ 		clear_seq = log_next_seq;
+ 		clear_idx = log_next_idx;
+ 	}
++	logbuf_unlock_irq();
+ out:
+ 	raw_spin_unlock_irq(&logbuf_lock);
+ 
+@@ -2460,6 +2487,8 @@ void console_unlock(void)
+ 		stop_critical_timings();	/* don't trace print latency */
+ 		call_console_drivers(level, ext_text, ext_len, text, len);
+ 		start_critical_timings();
++		printk_safe_exit_irqrestore(flags);
++
+ 		local_irq_restore(flags);
+ #endif
+ 		if (do_cond_resched)
+diff --git a/kernel/sched/Makefile b/kernel/sched/Makefile
+index 54239a4..8020221 100644
+--- a/kernel/sched/Makefile
++++ b/kernel/sched/Makefile
+@@ -20,7 +20,8 @@ endif
+ obj-y += core.o loadavg.o clock.o cputime.o
+ obj-y += idle_task.o fair.o rt.o deadline.o stop_task.o
+ obj-y += wait.o swait.o swork.o completion.o idle.o
+-obj-$(CONFIG_SMP) += cpupri.o cpudeadline.o
++obj-$(CONFIG_SMP) += cpupri.o cpudeadline.o energy.o
++obj-$(CONFIG_SCHED_WALT) += walt.o
+ obj-$(CONFIG_SCHED_AUTOGROUP) += auto_group.o
+ obj-$(CONFIG_SCHEDSTATS) += stats.o
+ obj-$(CONFIG_SCHED_DEBUG) += debug.o
+-- 
+2.7.4
+

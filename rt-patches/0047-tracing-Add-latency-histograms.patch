@@ -1,7 +1,7 @@
-From 02dea1ebd74c05a5107848ada7bb8119611b48e0 Mon Sep 17 00:00:00 2001
+From 54b68549a9548ea24d574c70d93868c4e6d0c57f Mon Sep 17 00:00:00 2001
 From: Carsten Emde <C.Emde@osadl.org>
 Date: Tue, 19 Jul 2011 14:03:41 +0100
-Subject: [PATCH 047/352] tracing: Add latency histograms
+Subject: [PATCH 047/364] tracing: Add latency histograms
 
 This patch provides a recording mechanism to store data of potential
 sources of system latencies. The recordings separately determine the
@@ -244,10 +244,10 @@ index 5ae70d2..8d129e9 100644
  #ifdef CONFIG_TIMER_STATS
  	int				start_pid;
 diff --git a/include/linux/sched.h b/include/linux/sched.h
-index 0a9d855..9feb7b8 100644
+index a001bfb..bd5f39b 100644
 --- a/include/linux/sched.h
 +++ b/include/linux/sched.h
-@@ -2101,6 +2101,12 @@ struct task_struct {
+@@ -2050,6 +2050,12 @@ struct task_struct {
  	/* bitmask and counter of trace recursion */
  	unsigned long trace_recursion;
  #endif /* CONFIG_TRACING */
@@ -429,10 +429,10 @@ index df7750e..8408189 100644
  			 * The immediate goal for using the softexpires is
  			 * minimizing wakeups, not running timers at the
 diff --git a/kernel/trace/Kconfig b/kernel/trace/Kconfig
-index 5771ce7..3e8de30 100644
+index 0d3f8a6..9b3ba7f 100644
 --- a/kernel/trace/Kconfig
 +++ b/kernel/trace/Kconfig
-@@ -196,6 +196,24 @@ config IRQSOFF_TRACER
+@@ -197,6 +197,24 @@ config IRQSOFF_TRACER
  	  enabled. This option and the preempt-off timing option can be
  	  used together or separately.)
  
@@ -457,7 +457,7 @@ index 5771ce7..3e8de30 100644
  config PREEMPT_TRACER
  	bool "Preemption-off Latency Tracer"
  	default n
-@@ -220,6 +238,24 @@ config PREEMPT_TRACER
+@@ -221,6 +239,24 @@ config PREEMPT_TRACER
  	  enabled. This option and the irqs-off timing option can be
  	  used together or separately.)
  
@@ -482,7 +482,7 @@ index 5771ce7..3e8de30 100644
  config SCHED_TRACER
  	bool "Scheduling Latency Tracer"
  	select GENERIC_TRACER
-@@ -265,6 +301,74 @@ config HWLAT_TRACER
+@@ -266,6 +302,74 @@ config HWLAT_TRACER
  	 file. Every time a latency is greater than tracing_thresh, it will
  	 be recorded into the ring buffer.
  

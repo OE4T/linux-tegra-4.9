@@ -1,7 +1,7 @@
-From d808633c643ae09d9ae024cf557068cc91b5d159 Mon Sep 17 00:00:00 2001
+From 35f1900e022dc52eb44747fcc6dbb70eb143088d Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Tue, 28 Jun 2011 10:59:58 +0200
-Subject: [PATCH 044/352] net-flip-lock-dep-thingy.patch
+Subject: [PATCH 044/364] net-flip-lock-dep-thingy.patch
 
 =======================================================
 [ INFO: possible circular locking dependency detected ]
@@ -93,7 +93,7 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  1 file changed, 1 insertion(+), 2 deletions(-)
 
 diff --git a/net/core/sock.c b/net/core/sock.c
-index 3f1da15..f241238 100644
+index 0410b74..876deb4 100644
 --- a/net/core/sock.c
 +++ b/net/core/sock.c
 @@ -2542,12 +2542,11 @@ void lock_sock_nested(struct sock *sk, int subclass)

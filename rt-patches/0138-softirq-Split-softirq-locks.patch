@@ -1,7 +1,7 @@
-From e8d5a2038d24a6e756a7ea39fe6a21a56c457e38 Mon Sep 17 00:00:00 2001
+From fd3a7a48fa35544ba8cd1b968ea921dffe7c9f20 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Thu, 4 Oct 2012 14:20:47 +0100
-Subject: [PATCH 138/352] softirq: Split softirq locks
+Subject: [PATCH 138/364] softirq: Split softirq locks
 
 The 3.x RT series removed the split softirq implementation in favour
 of pushing softirq processing into the context of the thread which
@@ -178,10 +178,10 @@ index 2eed4b5..0c734628 100644
  #define in_task()		(!(preempt_count() & \
  				   (NMI_MASK | HARDIRQ_MASK | SOFTIRQ_OFFSET)))
 diff --git a/include/linux/sched.h b/include/linux/sched.h
-index 85747da..1c87eb1 100644
+index c371487..15ab424 100644
 --- a/include/linux/sched.h
 +++ b/include/linux/sched.h
-@@ -2147,6 +2147,8 @@ struct task_struct {
+@@ -2096,6 +2096,8 @@ struct task_struct {
  #endif
  #ifdef CONFIG_PREEMPT_RT_BASE
  	struct rcu_head put_rcu;
@@ -190,7 +190,7 @@ index 85747da..1c87eb1 100644
  #endif
  #ifdef CONFIG_DEBUG_ATOMIC_SLEEP
  	unsigned long	task_state_change;
-@@ -2467,6 +2469,7 @@ extern void thread_group_cputime_adjusted(struct task_struct *p, cputime_t *ut,
+@@ -2416,6 +2418,7 @@ extern void thread_group_cputime_adjusted(struct task_struct *p, cputime_t *ut,
  /*
   * Per process flags
   */
@@ -199,10 +199,10 @@ index 85747da..1c87eb1 100644
  #define PF_VCPU		0x00000010	/* I'm a virtual CPU */
  #define PF_WQ_WORKER	0x00000020	/* I'm a workqueue worker */
 diff --git a/init/main.c b/init/main.c
-index f6fcf2a..be6c5a4 100644
+index d6ec907..38b1e6a 100644
 --- a/init/main.c
 +++ b/init/main.c
-@@ -509,6 +509,7 @@ asmlinkage __visible void __init start_kernel(void)
+@@ -504,6 +504,7 @@ asmlinkage __visible void __init start_kernel(void)
  	setup_command_line(command_line);
  	setup_nr_cpu_ids();
  	setup_per_cpu_areas();

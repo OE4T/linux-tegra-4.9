@@ -1,7 +1,7 @@
-From 86a9a0f40ed8590b61bc82521ff3413477a610e0 Mon Sep 17 00:00:00 2001
+From 599b99704e7d6c53111d5e5f104137d1ce6b0d13 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Wed, 15 Apr 2015 19:00:47 +0200
-Subject: [PATCH 093/352] slub: Disable SLUB_CPU_PARTIAL
+Subject: [PATCH 093/364] slub: Disable SLUB_CPU_PARTIAL
 
 |BUG: sleeping function called from invalid context at kernel/locking/rtmutex.c:915
 |in_atomic(): 1, irqs_disabled(): 0, pid: 87, name: rcuop/7
@@ -36,10 +36,10 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/init/Kconfig b/init/Kconfig
-index 76b6d71..3087605 100644
+index 9c9a720..24aec42 100644
 --- a/init/Kconfig
 +++ b/init/Kconfig
-@@ -1969,7 +1969,7 @@ config SLAB_FREELIST_RANDOM
+@@ -2008,7 +2008,7 @@ config SLAB_FREELIST_RANDOM
  
  config SLUB_CPU_PARTIAL
  	default y

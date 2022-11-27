@@ -1,7 +1,7 @@
-From 24b89e88d57cf5c144c596f49a01bc440988f31c Mon Sep 17 00:00:00 2001
+From 74ba4f0c4be57c3ad9c6f4030e5e3ffeb1436b01 Mon Sep 17 00:00:00 2001
 From: Oleg Nesterov <oleg@redhat.com>
 Date: Tue, 14 Jul 2015 14:26:34 +0200
-Subject: [PATCH 073/352] signal/x86: Delay calling signals in atomic
+Subject: [PATCH 073/364] signal/x86: Delay calling signals in atomic
 
 On x86_64 we must disable preemption before we enable interrupts
 for stack faults, int3 and debugging, because the current task is using
@@ -36,10 +36,10 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  4 files changed, 59 insertions(+), 2 deletions(-)
 
 diff --git a/arch/x86/entry/common.c b/arch/x86/entry/common.c
-index 8841d01..0b8da1cd 100644
+index ed319b0..38ce608 100644
 --- a/arch/x86/entry/common.c
 +++ b/arch/x86/entry/common.c
-@@ -150,6 +150,13 @@ static void exit_to_usermode_loop(struct pt_regs *regs, u32 cached_flags)
+@@ -151,6 +151,13 @@ static void exit_to_usermode_loop(struct pt_regs *regs, u32 cached_flags)
  		if (cached_flags & _TIF_NEED_RESCHED)
  			schedule();
  
@@ -78,10 +78,10 @@ index 8af22be..c370fba 100644
  typedef sigset_t compat_sigset_t;
  #endif
 diff --git a/include/linux/sched.h b/include/linux/sched.h
-index 691fa69..59d42a8 100644
+index 50a9206..9f0941d 100644
 --- a/include/linux/sched.h
 +++ b/include/linux/sched.h
-@@ -1875,6 +1875,10 @@ struct task_struct {
+@@ -1819,6 +1819,10 @@ struct task_struct {
  	sigset_t blocked, real_blocked;
  	sigset_t saved_sigmask;	/* restored if set_restore_sigmask() was used */
  	struct sigpending pending;
@@ -93,10 +93,10 @@ index 691fa69..59d42a8 100644
  	unsigned long sas_ss_sp;
  	size_t sas_ss_size;
 diff --git a/kernel/signal.c b/kernel/signal.c
-index fddff63..6f30a87 100644
+index 30bf037..174ea99 100644
 --- a/kernel/signal.c
 +++ b/kernel/signal.c
-@@ -1284,8 +1284,8 @@ int do_send_sig_info(int sig, struct siginfo *info, struct task_struct *p,
+@@ -1286,8 +1286,8 @@ int do_send_sig_info(int sig, struct siginfo *info, struct task_struct *p,
   * We don't want to have recursive SIGSEGV's etc, for example,
   * that is why we also clear SIGNAL_UNKILLABLE.
   */
@@ -107,7 +107,7 @@ index fddff63..6f30a87 100644
  {
  	unsigned long int flags;
  	int ret, blocked, ignored;
-@@ -1310,6 +1310,39 @@ force_sig_info(int sig, struct siginfo *info, struct task_struct *t)
+@@ -1312,6 +1312,39 @@ force_sig_info(int sig, struct siginfo *info, struct task_struct *t)
  	return ret;
  }
  

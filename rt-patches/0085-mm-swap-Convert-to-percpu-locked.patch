@@ -1,7 +1,7 @@
-From b96ca32038b86ee73aa9b564481d063acc324912 Mon Sep 17 00:00:00 2001
+From ca41107bee6abf17b2452b157bbe3ff5ff1e937f Mon Sep 17 00:00:00 2001
 From: Ingo Molnar <mingo@elte.hu>
 Date: Fri, 3 Jul 2009 08:29:51 -0500
-Subject: [PATCH 085/352] mm/swap: Convert to percpu locked
+Subject: [PATCH 085/364] mm/swap: Convert to percpu locked
 
 Replace global locks (get_cpu + local_irq_save) with "local_locks()".
 Currently there is one of for "rotate" and one for "swap".
@@ -28,10 +28,10 @@ index d4ecdf7..74dab80 100644
  extern void lru_cache_add_anon(struct page *page);
  extern void lru_cache_add_file(struct page *page);
 diff --git a/mm/compaction.c b/mm/compaction.c
-index af19210..8627c9c 100644
+index 2553dad..df4e66b 100644
 --- a/mm/compaction.c
 +++ b/mm/compaction.c
-@@ -1594,10 +1594,12 @@ static enum compact_result compact_zone(struct zone *zone, struct compact_contro
+@@ -1595,10 +1595,12 @@ static enum compact_result compact_zone(struct zone *zone, struct compact_contro
  				block_start_pfn(cc->migrate_pfn, cc->order);
  
  			if (cc->last_migrated_pfn < current_block_start) {
@@ -47,10 +47,10 @@ index af19210..8627c9c 100644
  				cc->last_migrated_pfn = 0;
  			}
 diff --git a/mm/page_alloc.c b/mm/page_alloc.c
-index 0d6d65b..62a80d7 100644
+index 4010ffc..adb00d9 100644
 --- a/mm/page_alloc.c
 +++ b/mm/page_alloc.c
-@@ -6634,7 +6634,9 @@ static int page_alloc_cpu_notify(struct notifier_block *self,
+@@ -6662,7 +6662,9 @@ static int page_alloc_cpu_notify(struct notifier_block *self,
  	int cpu = (unsigned long)hcpu;
  
  	if (action == CPU_DEAD || action == CPU_DEAD_FROZEN) {

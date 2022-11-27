@@ -1,7 +1,7 @@
-From 9c1f5d5a44377f6bfb55aa075cf46493dd571f75 Mon Sep 17 00:00:00 2001
+From ace845887605d968db9f366ac46fa5c2c2b15557 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Thu, 22 Jun 2017 17:53:34 +0200
-Subject: [PATCH 160/352] kernel/locking: use an exclusive wait_q for sleepers
+Subject: [PATCH 160/364] kernel/locking: use an exclusive wait_q for sleepers
 MIME-Version: 1.0
 Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
@@ -43,10 +43,10 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  4 files changed, 33 insertions(+), 7 deletions(-)
 
 diff --git a/include/linux/sched.h b/include/linux/sched.h
-index 10ad0b8..4228bce 100644
+index b4c941e..4fed398 100644
 --- a/include/linux/sched.h
 +++ b/include/linux/sched.h
-@@ -1047,8 +1047,20 @@ struct wake_q_head {
+@@ -987,8 +987,20 @@ struct wake_q_head {
  #define WAKE_Q(name)					\
  	struct wake_q_head name = { WAKE_Q_TAIL, &name.first }
  
@@ -69,7 +69,7 @@ index 10ad0b8..4228bce 100644
  extern void __wake_up_q(struct wake_q_head *head, bool sleeper);
  
  static inline void wake_up_q(struct wake_q_head *head)
-@@ -1922,6 +1934,7 @@ struct task_struct {
+@@ -1866,6 +1878,7 @@ struct task_struct {
  	raw_spinlock_t pi_lock;
  
  	struct wake_q_node wake_q;
@@ -78,10 +78,10 @@ index 10ad0b8..4228bce 100644
  #ifdef CONFIG_RT_MUTEXES
  	/* PI waiters blocked on a rt_mutex held by this task */
 diff --git a/kernel/fork.c b/kernel/fork.c
-index 1d7e7f9..1d340d1 100644
+index fe926b5..7c66e3c 100644
 --- a/kernel/fork.c
 +++ b/kernel/fork.c
-@@ -572,6 +572,7 @@ static struct task_struct *dup_task_struct(struct task_struct *orig, int node)
+@@ -574,6 +574,7 @@ static struct task_struct *dup_task_struct(struct task_struct *orig, int node)
  	tsk->splice_pipe = NULL;
  	tsk->task_frag.page = NULL;
  	tsk->wake_q.next = NULL;
@@ -103,10 +103,10 @@ index 287de39..4f29128 100644
  		wake_q_add(wake_q, waiter->task);
  	raw_spin_unlock(&current->pi_lock);
 diff --git a/kernel/sched/core.c b/kernel/sched/core.c
-index e52bda6..a371ab3 100644
+index a89d3b8..0bca65b 100644
 --- a/kernel/sched/core.c
 +++ b/kernel/sched/core.c
-@@ -445,9 +445,15 @@ static bool set_nr_if_polling(struct task_struct *p)
+@@ -432,9 +432,15 @@ static bool set_nr_if_polling(struct task_struct *p)
  #endif
  #endif
  
@@ -124,7 +124,7 @@ index e52bda6..a371ab3 100644
  
  	/*
  	 * Atomically grab the task, if ->wake_q is !nil already it means
-@@ -476,11 +482,17 @@ void __wake_up_q(struct wake_q_head *head, bool sleeper)
+@@ -463,11 +469,17 @@ void __wake_up_q(struct wake_q_head *head, bool sleeper)
  	while (node != WAKE_Q_TAIL) {
  		struct task_struct *task;
  

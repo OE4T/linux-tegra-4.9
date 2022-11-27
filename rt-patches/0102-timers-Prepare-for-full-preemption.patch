@@ -1,7 +1,7 @@
-From 1ddd414632159cf1028ce842e433dd579aa77267 Mon Sep 17 00:00:00 2001
+From 2294749478006c1dc360998da6dbe5e8c1f194f6 Mon Sep 17 00:00:00 2001
 From: Ingo Molnar <mingo@elte.hu>
 Date: Fri, 3 Jul 2009 08:29:34 -0500
-Subject: [PATCH 102/352] timers: Prepare for full preemption
+Subject: [PATCH 102/364] timers: Prepare for full preemption
 
 When softirqs can be preempted we need to make sure that cancelling
 the timer from the active thread can not deadlock vs. a running timer
@@ -29,10 +29,10 @@ index ec86e4e..8e5b680 100644
  #else
  # define del_timer_sync(t)		del_timer(t)
 diff --git a/kernel/sched/core.c b/kernel/sched/core.c
-index dd2a949..74e08bd 100644
+index 394a117..c2bbc78 100644
 --- a/kernel/sched/core.c
 +++ b/kernel/sched/core.c
-@@ -540,11 +540,14 @@ void resched_cpu(int cpu)
+@@ -527,11 +527,14 @@ void resched_cpu(int cpu)
   */
  int get_nohz_timer_target(void)
  {
@@ -49,7 +49,7 @@ index dd2a949..74e08bd 100644
  
  	rcu_read_lock();
  	for_each_domain(cpu, sd) {
-@@ -563,6 +566,8 @@ int get_nohz_timer_target(void)
+@@ -550,6 +553,8 @@ int get_nohz_timer_target(void)
  		cpu = housekeeping_any_cpu();
  unlock:
  	rcu_read_unlock();

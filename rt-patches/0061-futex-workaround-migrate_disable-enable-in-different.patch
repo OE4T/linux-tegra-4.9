@@ -1,7 +1,7 @@
-From e53d48ab4b9a2c652f9fb9128e4b46fbd242bb43 Mon Sep 17 00:00:00 2001
+From 2e2bada08de7dc927e44f13557ab6398d5201e37 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Wed, 8 Mar 2017 14:23:35 +0100
-Subject: [PATCH 061/352] futex: workaround migrate_disable/enable in different
+Subject: [PATCH 061/364] futex: workaround migrate_disable/enable in different
  context
 
 migrate_disable()/migrate_enable() takes a different path in atomic() vs

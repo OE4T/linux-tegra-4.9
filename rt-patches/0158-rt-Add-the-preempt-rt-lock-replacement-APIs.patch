@@ -1,7 +1,7 @@
-From 5d0849c9c3a6dac75bac1c7f829fc82041cbcb6f Mon Sep 17 00:00:00 2001
+From 93b1c49e904d96e44ea8ae4a579f41fdb1cb9f3a Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Sun, 26 Jul 2009 19:39:56 +0200
-Subject: [PATCH 158/352] rt: Add the preempt-rt lock replacement APIs
+Subject: [PATCH 158/364] rt: Add the preempt-rt lock replacement APIs
 
 Map spinlocks, rwlocks, rw_semaphores and semaphores to the rt_mutex
 based locking functions for preempt-rt.
@@ -43,7 +43,7 @@ Signed-off-by: Luis Claudio R. Goncalves <lgoncalv@redhat.com>
  create mode 100644 kernel/locking/rt.c
 
 diff --git a/include/linux/kernel.h b/include/linux/kernel.h
-index b15c8c5..a3df01f 100644
+index 1bf0ef3..2d5bc2e 100644
 --- a/include/linux/kernel.h
 +++ b/include/linux/kernel.h
 @@ -195,6 +195,9 @@ extern int _cond_resched(void);
@@ -629,10 +629,10 @@ index 0000000..e26bd95
 +#endif
 +#endif
 diff --git a/include/linux/sched.h b/include/linux/sched.h
-index 1c87eb1..10ad0b8 100644
+index 15ab424..b4c941e 100644
 --- a/include/linux/sched.h
 +++ b/include/linux/sched.h
-@@ -314,6 +314,11 @@ extern char ___assert_task_state[1 - 2*!!(
+@@ -286,6 +286,11 @@ extern char ___assert_task_state[1 - 2*!!(
  
  #endif
  
@@ -644,7 +644,7 @@ index 1c87eb1..10ad0b8 100644
  /* Task command name length */
  #define TASK_COMM_LEN 16
  
-@@ -1043,8 +1048,18 @@ struct wake_q_head {
+@@ -983,8 +988,18 @@ struct wake_q_head {
  	struct wake_q_head name = { WAKE_Q_TAIL, &name.first }
  
  extern void wake_q_add(struct wake_q_head *head,
@@ -2357,10 +2357,10 @@ index 03595c2..d63df28 100644
 +
 +#endif
 diff --git a/kernel/sched/core.c b/kernel/sched/core.c
-index 606b004..e52bda6 100644
+index 3b112dd..a89d3b8 100644
 --- a/kernel/sched/core.c
 +++ b/kernel/sched/core.c
-@@ -469,7 +469,7 @@ void wake_q_add(struct wake_q_head *head, struct task_struct *task)
+@@ -456,7 +456,7 @@ void wake_q_add(struct wake_q_head *head, struct task_struct *task)
  	head->lastp = &node->next;
  }
  
@@ -2369,7 +2369,7 @@ index 606b004..e52bda6 100644
  {
  	struct wake_q_node *node = head->first;
  
-@@ -486,7 +486,10 @@ void wake_up_q(struct wake_q_head *head)
+@@ -473,7 +473,10 @@ void wake_up_q(struct wake_q_head *head)
  		 * wake_up_process() implies a wmb() to pair with the queueing
  		 * in wake_q_add() so as not to miss wakeups.
  		 */

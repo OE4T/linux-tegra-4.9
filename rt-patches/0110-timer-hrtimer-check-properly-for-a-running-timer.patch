@@ -1,7 +1,7 @@
-From d7177209e57be47ac41b7a308ccacfccd0ff1b67 Mon Sep 17 00:00:00 2001
+From eca11bdf0559c2a9ad2884098725154a35832b8c Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Wed, 1 Mar 2017 16:30:49 +0100
-Subject: [PATCH 110/352] timer/hrtimer: check properly for a running timer
+Subject: [PATCH 110/364] timer/hrtimer: check properly for a running timer
 
 hrtimer_callback_running() checks only whether a timmer is running on a
 CPU in hardirq-context. This is okay for !RT. For RT environment we move

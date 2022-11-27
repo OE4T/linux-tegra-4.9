@@ -1,7 +1,7 @@
-From 84eea03903b4701e16eac97821dd28f7566601e0 Mon Sep 17 00:00:00 2001
+From be26cecb843dd51076f6fcc683a7dda3023a0578 Mon Sep 17 00:00:00 2001
 From: Ingo Molnar <mingo@elte.hu>
 Date: Fri, 3 Jul 2009 08:30:27 -0500
-Subject: [PATCH 126/352] stop_machine: convert stop_machine_run() to
+Subject: [PATCH 126/364] stop_machine: convert stop_machine_run() to
  PREEMPT_RT
 
 Instead of playing with non-preemption, introduce explicit

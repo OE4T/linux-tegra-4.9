@@ -1,7 +1,7 @@
-From 15217d480413e6338920bf69d068d8ef1b60c041 Mon Sep 17 00:00:00 2001
+From 7e2cea3e80763cfce5a190bf7d06f4f99682df2d Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Fri, 3 Jul 2009 08:44:34 -0500
-Subject: [PATCH 070/352] mm/scatterlist: Do not disable irqs on RT
+Subject: [PATCH 070/364] mm/scatterlist: Do not disable irqs on RT
 
 The local_irq_save() is not only used to get things done "fast" but
 also to ensure that in case of SG_MITER_ATOMIC we are in "atomic"
@@ -14,10 +14,10 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  1 file changed, 3 insertions(+), 3 deletions(-)
 
 diff --git a/lib/scatterlist.c b/lib/scatterlist.c
-index ef8c14a..fe638f9 100644
+index 00e02eb..4608b8e 100644
 --- a/lib/scatterlist.c
 +++ b/lib/scatterlist.c
-@@ -621,7 +621,7 @@ void sg_miter_stop(struct sg_mapping_iter *miter)
+@@ -630,7 +630,7 @@ void sg_miter_stop(struct sg_mapping_iter *miter)
  			flush_kernel_dcache_page(miter->page);
  
  		if (miter->__flags & SG_MITER_ATOMIC) {
@@ -26,7 +26,7 @@ index ef8c14a..fe638f9 100644
  			kunmap_atomic(miter->addr);
  		} else
  			kunmap(miter->page);
-@@ -665,7 +665,7 @@ size_t sg_copy_buffer(struct scatterlist *sgl, unsigned int nents, void *buf,
+@@ -674,7 +674,7 @@ size_t sg_copy_buffer(struct scatterlist *sgl, unsigned int nents, void *buf,
  	if (!sg_miter_skip(&miter, skip))
  		return false;
  
@@ -35,7 +35,7 @@ index ef8c14a..fe638f9 100644
  
  	while (sg_miter_next(&miter) && offset < buflen) {
  		unsigned int len;
-@@ -682,7 +682,7 @@ size_t sg_copy_buffer(struct scatterlist *sgl, unsigned int nents, void *buf,
+@@ -691,7 +691,7 @@ size_t sg_copy_buffer(struct scatterlist *sgl, unsigned int nents, void *buf,
  
  	sg_miter_stop(&miter);
  

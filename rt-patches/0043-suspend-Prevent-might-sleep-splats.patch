@@ -1,7 +1,7 @@
-From 592993aff7973f23b6fff6115b877b73b63f476b Mon Sep 17 00:00:00 2001
+From f43a63b6e21f36f19f1141174ac01d12e5d2b99f Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Thu, 15 Jul 2010 10:29:00 +0200
-Subject: [PATCH 043/352] suspend: Prevent might sleep splats
+Subject: [PATCH 043/364] suspend: Prevent might sleep splats
 
 timekeeping suspend/resume calls read_persistant_clock() which takes
 rtc_lock. That results in might sleep warnings because at that point
@@ -24,7 +24,7 @@ Signed-off-by: Thomas Gleixner <tglx@linutronix.de>
  3 files changed, 12 insertions(+)
 
 diff --git a/include/linux/kernel.h b/include/linux/kernel.h
-index 3cf6a1e..b15c8c5 100644
+index 21fce32..1bf0ef3 100644
 --- a/include/linux/kernel.h
 +++ b/include/linux/kernel.h
 @@ -490,6 +490,7 @@ extern enum system_states {
@@ -36,7 +36,7 @@ index 3cf6a1e..b15c8c5 100644
  
  #define TAINT_PROPRIETARY_MODULE	0
 diff --git a/kernel/power/hibernate.c b/kernel/power/hibernate.c
-index e938fd8..81611dd 100644
+index c17b953..55fd4cc 100644
 --- a/kernel/power/hibernate.c
 +++ b/kernel/power/hibernate.c
 @@ -291,6 +291,8 @@ static int create_image(int platform_mode)

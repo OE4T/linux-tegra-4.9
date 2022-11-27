@@ -1,7 +1,7 @@
-From da681e310652c4ac2273bc09e7511c9f515a3ad1 Mon Sep 17 00:00:00 2001
+From 32e9e6359f0913069fae1f73abb33fba48a55b58 Mon Sep 17 00:00:00 2001
 From: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 Date: Fri, 5 Feb 2016 12:17:14 +0100
-Subject: [PATCH 098/352] mm: backing-dev: don't disable IRQs in
+Subject: [PATCH 098/364] mm: backing-dev: don't disable IRQs in
  wb_congested_put()
 
 it triggers:
@@ -28,10 +28,10 @@ Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
  1 file changed, 2 insertions(+), 2 deletions(-)
 
 diff --git a/mm/backing-dev.c b/mm/backing-dev.c
-index 09f123b..de2f1f0 100644
+index 8a76f8f..5eaa4b1 100644
 --- a/mm/backing-dev.c
 +++ b/mm/backing-dev.c
-@@ -458,9 +458,9 @@ void wb_congested_put(struct bdi_writeback_congested *congested)
+@@ -459,9 +459,9 @@ void wb_congested_put(struct bdi_writeback_congested *congested)
  {
  	unsigned long flags;
  

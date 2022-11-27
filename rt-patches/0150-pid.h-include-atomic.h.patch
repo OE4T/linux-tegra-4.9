@@ -1,7 +1,7 @@
-From 693608f78a56c88d660ba778ee128ec84d6a30a0 Mon Sep 17 00:00:00 2001
+From a1d81eef0a5e93b76fac610dd47a89e449419557 Mon Sep 17 00:00:00 2001
 From: Grygorii Strashko <Grygorii.Strashko@linaro.org>
 Date: Tue, 21 Jul 2015 19:43:56 +0300
-Subject: [PATCH 150/352] pid.h: include atomic.h
+Subject: [PATCH 150/364] pid.h: include atomic.h
 
 This patch fixes build error:
   CC      kernel/pid_namespace.o
@@ -19,20 +19,22 @@ which happens when
 
 Vanilla gets this via spinlock.h.
 
+Change-Id: I112f9fb38ae4a7e6fe5cb18d65bd3345f17eafe8
 Signed-off-by: Grygorii Strashko <Grygorii.Strashko@linaro.org>
 Signed-off-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
 ---
- include/linux/pid.h | 1 +
- 1 file changed, 1 insertion(+)
+ include/linux/pid.h | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/include/linux/pid.h b/include/linux/pid.h
-index 97b745d..01a5460 100644
+index 1d847d3..049fb86 100644
 --- a/include/linux/pid.h
 +++ b/include/linux/pid.h
-@@ -2,6 +2,7 @@
+@@ -2,7 +2,7 @@
  #define _LINUX_PID_H
  
  #include <linux/rcupdate.h>
+-#include <linux/wait.h>
 +#include <linux/atomic.h>
  
  enum pid_type

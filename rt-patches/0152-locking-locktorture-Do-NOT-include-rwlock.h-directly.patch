@@ -1,7 +1,7 @@
-From 9b38ec6d8adc0a2ee004c3baeb7ec58dab8a7127 Mon Sep 17 00:00:00 2001
+From 690fe55fbaa73afbb990bccf676c838cdb487625 Mon Sep 17 00:00:00 2001
 From: "Wolfgang M. Reimer" <linuxball@gmail.com>
 Date: Tue, 21 Jul 2015 16:20:07 +0200
-Subject: [PATCH 152/352] locking: locktorture: Do NOT include rwlock.h
+Subject: [PATCH 152/364] locking: locktorture: Do NOT include rwlock.h
  directly
 
 Including rwlock.h directly will cause kernel builds to fail

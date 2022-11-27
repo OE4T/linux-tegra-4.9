@@ -1,7 +1,7 @@
-From e3e2b12740bec2f753efb7a7374ad9f7fc04c076 Mon Sep 17 00:00:00 2001
+From 1df53251086215909293183538908ff0f3889c5e Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Fri, 18 Mar 2011 09:18:52 +0100
-Subject: [PATCH 076/352] buffer_head: Replace bh_uptodate_lock for -rt
+Subject: [PATCH 076/364] buffer_head: Replace bh_uptodate_lock for -rt
 
 Wrap the bit_spin_lock calls into a separate inline and add the RT
 replacements with a real spinlock.
@@ -120,7 +120,7 @@ index fe251f1..8bb79f5 100644
  
  /**
 diff --git a/include/linux/buffer_head.h b/include/linux/buffer_head.h
-index 4431ea2..87c4ed3 100644
+index 110cfe6..1d3c75d 100644
 --- a/include/linux/buffer_head.h
 +++ b/include/linux/buffer_head.h
 @@ -75,8 +75,42 @@ struct buffer_head {

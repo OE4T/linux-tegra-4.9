@@ -1,7 +1,7 @@
-From 758f25970765653c8456ab7533ac72fcfc25f0d4 Mon Sep 17 00:00:00 2001
+From 2ebd8031afbd47dd1ba5565a19b826e040c7e6dc Mon Sep 17 00:00:00 2001
 From: Carsten Emde <C.Emde@osadl.org>
 Date: Tue, 5 Jan 2016 10:21:59 +0100
-Subject: [PATCH 049/352] trace/latency-hist: Consider new argument when
+Subject: [PATCH 049/364] trace/latency-hist: Consider new argument when
  probing the sched_switch tracer
 
 The sched_switch tracer has got a new argument. Fix the latency tracer

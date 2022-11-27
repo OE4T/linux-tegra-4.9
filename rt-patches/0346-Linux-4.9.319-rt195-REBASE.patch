@@ -1,0 +1,20 @@
+From c1ec7f1bc578236c614c999c8872826fd99c1849 Mon Sep 17 00:00:00 2001
+From: Mark Gross <markgross@kernel.org>
+Date: Wed, 29 Jun 2022 13:23:44 -0700
+Subject: [PATCH 346/364] Linux 4.9.319-rt195 REBASE
+
+Signed-off-by: Mark Gross <markgross@kernel.org>
+---
+ localversion-rt | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/localversion-rt b/localversion-rt
+index 58dccbc..d30c7d5 100644
+--- a/localversion-rt
++++ b/localversion-rt
+@@ -1 +1 @@
+--rt193
++-rt195
+-- 
+2.7.4
+

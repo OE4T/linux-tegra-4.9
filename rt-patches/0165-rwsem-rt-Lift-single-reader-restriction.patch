@@ -1,7 +1,7 @@
-From 6f59af5534b18d25369a1a349d713ff7e098be28 Mon Sep 17 00:00:00 2001
+From c4adaa6eb3490e5ab9220ec07a668dbe15f239c7 Mon Sep 17 00:00:00 2001
 From: Thomas Gleixner <tglx@linutronix.de>
 Date: Sat, 1 Apr 2017 12:51:02 +0200
-Subject: [PATCH 165/352] rwsem/rt: Lift single reader restriction
+Subject: [PATCH 165/364] rwsem/rt: Lift single reader restriction
 
 The RT specific R/W semaphore implementation restricts the number of readers
 to one because a writer cannot block on multiple readers and inherit its

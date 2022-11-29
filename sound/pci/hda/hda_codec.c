@@ -3154,9 +3154,9 @@ static int hda_codec_force_resume(struct device *dev)
 	 * device hasn't been used at suspend time.  This trick is needed to
 	 * update the jack state change during the sleep.
 	 */
-	pm_runtime_get_noresume(dev);
+	// pm_runtime_get_noresume(dev);
 	ret = pm_runtime_force_resume(dev);
-	pm_runtime_put(dev);
+	// pm_runtime_put(dev);
 	return ret;
 }
 

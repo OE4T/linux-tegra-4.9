@@ -1366,7 +1366,8 @@ static int usb_suspend_both(struct usb_device *udev, pm_message_t msg)
 	}
 
  done:
-	dev_info(&udev->dev, "%s: status %d\n", __func__, status);
+	if (status != -EBUSY)
+		dev_info(&udev->dev, "%s: status %d\n", __func__, status);
 	return status;
 }
 

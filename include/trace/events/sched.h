@@ -673,10 +673,10 @@ TRACE_EVENT(sched_load_avg_task,
 		  __entry->util_avg,
 		  __entry->util_fast_avg,
 		  __entry->util_avg_pelt,
-		  __entry->util_avg_walt,
-		  (u64)__entry->load_sum,
-		  (u32)__entry->util_sum,
-		  (u32)__entry->period_contrib)
+		  (unsigned long)__entry->util_avg_walt,
+		  (unsigned long long)__entry->load_sum,
+		  (unsigned int)__entry->util_sum,
+		  (unsigned int)__entry->period_contrib)
 );
 
 /*
@@ -716,7 +716,7 @@ TRACE_EVENT(sched_load_avg_cpu,
 			  "util_avg_pelt=%lu util_avg_walt=%lu",
 		  __entry->cpu, __entry->load_avg, __entry->util_avg,
 		  __entry->util_fast_avg,
-		  __entry->util_avg_pelt, __entry->util_avg_walt)
+		  __entry->util_avg_pelt, (unsigned long)__entry->util_avg_walt)
 );
 
 /*

@@ -550,11 +550,13 @@ int __mmc_switch(struct mmc_card *card, u8 set, u8 index, u8 value,
 
 	/* We have an unspecified cmd timeout, use the fallback value. */
 	if (!timeout_ms) {
+#if 0
 		pr_warn("%s: unspecified timeout for CMD6 - use generic\n",
 			mmc_hostname(host));
-		timeout_ms = card->ext_csd.generic_cmd6_time;
+#endif
+		timeout_ms = 10 * 60 * 1000;
+		/* instead of card->ext_csd.generic_cmd6_time; */
 	}
-
 	/* Must check status to be sure of no errors. */
 	timeout = jiffies + msecs_to_jiffies(timeout_ms) + 1;
 	do {
@@ -588,7 +590,6 @@ int __mmc_switch(struct mmc_card *card, u8 set, u8 index, u8 value,
 			mmc_delay(timeout_ms);
 			goto out;
 		}
-
 		/* Timeout if the device never leaves the program state. */
 		if (expired &&
 		    (R1_CURRENT_STATE(status) == R1_STATE_PRG || busy)) {

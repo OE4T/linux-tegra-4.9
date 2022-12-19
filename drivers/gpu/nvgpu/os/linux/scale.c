@@ -1,7 +1,7 @@
 /*
  * gk20a clock scaling profile
  *
- * Copyright (c) 2013-2020, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2013-2023, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -148,32 +148,24 @@ static int gk20a_scale_target(struct device *dev, unsigned long *freq,
 {
 	struct gk20a_platform *platform = dev_get_drvdata(dev);
 	struct gk20a *g = platform->g;
-	struct nvgpu_os_linux *l = nvgpu_os_linux_from_gk20a(g);
 	struct gk20a_scale_profile *profile = g->scale_profile;
-	struct devfreq *devfreq = l->devfreq;
 	unsigned long local_freq = *freq;
 	unsigned long rounded_rate;
+#ifdef CONFIG_GK20A_PM_QOS
 	unsigned long min_freq = 0, max_freq = 0;
+#endif
 
 	if (nvgpu_clk_arb_has_active_req(g))
 		return 0;
+
+#ifdef CONFIG_GK20A_PM_QOS
 	/*
-	 * Calculate floor and cap frequency values
-	 *
-	 * Policy :
-	 * We have two APIs to clip the frequency
-	 *  1. devfreq
-	 *  2. pm_qos
-	 *
-	 * To calculate floor (min) freq, we select MAX of floor frequencies
-	 * requested from both APIs
-	 * To get cap (max) freq, we select MIN of max frequencies
-	 *
-	 * In case we have conflict (min_freq > max_freq) after above
-	 * steps, we ensure that max_freq wins over min_freq
+	 * devfreq takes care of min/max freq clipping in update_devfreq() then
+	 * invoked devfreq->profile->target(), thus we only need to do freq
+	 * clipping based on pm_qos constraint
 	 */
-	min_freq = max_t(u32, devfreq->min_freq, profile->qos_min_freq);
-	max_freq = min_t(u32, devfreq->max_freq, profile->qos_max_freq);
+	min_freq = profile->qos_min_freq;
+	max_freq = profile->qos_max_freq;
 
 	if (min_freq > max_freq)
 		min_freq = max_freq;
@@ -184,6 +176,7 @@ static int gk20a_scale_target(struct device *dev, unsigned long *freq,
 
 	if (local_freq > max_freq)
 		local_freq = max_freq;
+#endif
 
 	/* set the final frequency */
 	rounded_rate = platform->clk_round_rate(dev, local_freq);

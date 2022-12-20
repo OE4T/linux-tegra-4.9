@@ -1,7 +1,7 @@
 /*
  * VI channel driver for T186/T194
  *
- * Copyright (c) 2017-2022 NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2017-2023 NVIDIA Corporation.  All rights reserved.
  *
  * Author: Sudhir Vyas <svyas@nvidia.com>
  *
@@ -127,11 +127,13 @@ fail:
 	return err;
 }
 
+
 static long vi_channel_ioctl(struct file *file, unsigned int cmd,
 				unsigned long arg)
 {
 	struct tegra_vi_channel *chan = file->private_data;
 	struct vi_capture *capture = chan->capture_data;
+	struct capture_descriptor *desc;
 	void __user *ptr = (void __user *)arg;
 	int err = -EFAULT;
 
@@ -265,6 +267,14 @@ static long vi_channel_ioctl(struct file *file, unsigned int cmd,
 			dev_err(chan->dev, "request must have non-zero relocs\n");
 			return -EINVAL;
 		}
+		/*
+		 * Schedule MFI listner if line timer is set
+		 */
+		//struct vi_capture *capture = chan->capture_data;
+		desc = (struct capture_descriptor *) (capture->requests.va +
+				req.buffer_index * capture->request_size);
+		if (desc->ch_cfg.line_timer_enable)
+			schedule_work(&chan->linetimer_work);
 
 		/* Don't let to speculate with invalid buffer_index value */
 		speculation_barrier();

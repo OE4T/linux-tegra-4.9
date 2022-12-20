@@ -1,7 +1,7 @@
 /*
  * VI5 driver for T194
  *
- * Copyright (c) 2017-2020, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2017-2023, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -231,6 +231,10 @@ int vi5_priv_late_probe(struct platform_device *pdev)
 		goto device_release;
 
 	err = vi_channel_drv_register(pdev, &vi5_channel_drv_ops);
+	if (err)
+		goto device_release;
+
+	err = tegra_vi_init_mfi(&vi5->vi_common.mfi_ctx, info->num_channels);
 	if (err)
 		goto device_release;
 

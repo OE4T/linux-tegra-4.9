@@ -1,7 +1,7 @@
 /*
  * Tegra Video Input 5 device common APIs
  *
- * Copyright (c) 2016-2022, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2023, NVIDIA CORPORATION.  All rights reserved.
  *
  * Author: Frank Chen <frank@nvidia.com>
  *
@@ -1026,6 +1026,22 @@ static void vi5_stride_align(unsigned int *bpl)
 			~((ATOMP_SURFACE_ALIGNMENT) - 1));
 }
 
+static int vi5_mfi_work(struct tegra_mc_vi *vi, int channel)
+{
+	int ret = 0;
+	struct tegra_channel *chan = NULL;
+
+	list_for_each_entry(chan, &vi->vi_chans, list) {
+		ret = v4l2_subdev_call(chan->subdev_on_csi, core,
+				sync, V4L2_SYNC_EVENT_FOCUS_POS);
+		if (ret < 0 && ret != -ENOIOCTLCMD) {
+			dev_err(vi->dev, "%s:channel failed\n", __func__);
+			return ret;
+		}
+	}
+	return ret;
+}
+
 struct tegra_vi_fops vi5_fops = {
 	.vi_power_on = vi5_power_on,
 	.vi_power_off = vi5_power_off,
@@ -1036,4 +1052,5 @@ struct tegra_vi_fops vi5_fops = {
 	.vi_add_ctrls = vi5_add_ctrls,
 	.vi_init_video_formats = vi5_init_video_formats,
 	.vi_stride_align = vi5_stride_align,
+	.vi_mfi_work = vi5_mfi_work,
 };

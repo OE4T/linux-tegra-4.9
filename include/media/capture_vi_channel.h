@@ -3,7 +3,7 @@
  *
  * VI channel driver header
  *
- * Copyright (c) 2017-2021 NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2017-2023 NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -48,6 +48,7 @@ struct tegra_vi_channel {
 	const struct vi_channel_drv_ops *ops;
 	struct device *rtcpu_dev;
 	bool is_stream_open;
+	struct work_struct linetimer_work;
 };
 
 int vi_channel_drv_register(struct platform_device *,

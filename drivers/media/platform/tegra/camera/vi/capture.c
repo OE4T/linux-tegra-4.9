@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host VI
  *
- * Copyright (c) 2017-2022, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2017-2023, NVIDIA CORPORATION.  All rights reserved.
  *
  * Author: David Wang <davidw@nvidia.com>
  *
@@ -21,6 +21,7 @@
 #include <linux/tegra-capture-ivc.h>
 #include <asm/arch_timer.h>
 #include <media/capture.h>
+#include <media/vi.h>
 #include <linux/tegra-camera-rtcpu.h>
 
 #define CAPTURE_CHANNEL_UNKNOWN_RESP 0xFFFFFFFF
@@ -28,6 +29,20 @@
 #define CAPTURE_CHANNEL_INVALID_MASK 0llu
 #define NVCSI_STREAM_INVALID_ID 0xFFFF
 #define NVCSI_TPG_INVALID_ID 0xFFFF
+
+struct host_vi5 {
+	struct platform_device *pdev;
+	struct platform_device *vi_thi;
+	struct vi vi_common;
+
+	/* RCE RM area */
+	struct sg_table rm_sgt;
+
+	/* Debugfs */
+	struct vi5_debug {
+		struct debugfs_regset32 ch0;
+	} debug;
+};
 
 static void vi_capture_ivc_control_callback(const void *ivc_resp,
 		const void *pcontext)
@@ -339,6 +354,7 @@ static int vi_capture_setup_syncpts(struct tegra_vi_channel *chan,
 	err = vi_capture_setup_syncpt(chan, "linetimer",
 				(flags & CAPTURE_CHANNEL_FLAG_LINETIMER) != 0,
 				&capture->linetimer_sp);
+
 	if (err < 0)
 		goto fail;
 
@@ -365,6 +381,39 @@ static void vi_capture_release_syncpts(struct tegra_vi_channel *chan)
 	vi_capture_release_syncpt(chan, &capture->progress_sp);
 	vi_capture_release_syncpt(chan, &capture->embdata_sp);
 	vi_capture_release_syncpt(chan, &capture->linetimer_sp);
+}
+
+static void linetimer_event_worker(struct work_struct *linetimer_work)
+{
+	struct tegra_vi_channel *chan;
+	struct vi_capture *capture;
+	struct nvhost_device_data *info;
+	struct host_vi5 *vi5;
+	u32 thresh;
+	int err = 0;
+
+	chan = container_of(linetimer_work,
+				struct tegra_vi_channel, linetimer_work);
+	// Increment and retrieve PXL_SOF syncpt max value.
+	capture = chan->capture_data;
+	info = platform_get_drvdata(chan->ndev);
+	vi5 = info->private_data;
+
+	thresh = nvhost_syncpt_incr_max_ext(chan->ndev,
+				capture->linetimer_sp.id, 1);
+
+	// Wait for the linetimer syncpt
+	err = nvhost_syncpt_wait_timeout_ext(chan->ndev,
+				capture->linetimer_sp.id, thresh,
+				msecs_to_jiffies(200), NULL, NULL);
+	if (unlikely(err)) {
+		dev_err(chan->dev,
+				"Linetimer syncpt timeout! err = %d\n", err);
+	} else {
+		// Signal the event to schedule to devices
+		err = tegra_vi_mfi_event_notify(vi5->vi_common.mfi_ctx,
+						capture->channel_id);
+	}
 }
 
 int vi_capture_setup(struct tegra_vi_channel *chan,
@@ -421,6 +470,8 @@ int vi_capture_setup(struct tegra_vi_channel *chan,
 		dev_err(chan->dev, "failed to setup syncpts\n");
 		goto syncpt_fail;
 	}
+
+	INIT_WORK(&chan->linetimer_work, linetimer_event_worker);
 
 	err = tegra_capture_ivc_register_control_cb(
 			&vi_capture_ivc_control_callback,

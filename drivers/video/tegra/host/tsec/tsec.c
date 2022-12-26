@@ -1,7 +1,7 @@
 /*
  * Tegra TSEC Module Support
  *
- * Copyright (c) 2012-2021, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2012-2023, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -379,13 +379,18 @@ void tsec_send_method(struct hdcp_context_t *hdcp_context,
 	struct nvhost_device_data *pdata = platform_get_drvdata(tsec);
 	int err;
 
+	err = pm_runtime_resume_and_get(&tsec->dev);
+	if (err < 0) {
+		nvhost_err(&tsec->dev, "failed to get runtime PM: %d\n", err);
+		return;
+	}
+
 	mutex_lock(&tegra_tsec_lock);
 	if (!channel) {
 		err = nvhost_channel_map(pdata, &channel, pdata);
 		if (err) {
 			nvhost_err(&tsec->dev, "Channel map failed\n");
-			mutex_unlock(&tegra_tsec_lock);
-			return;
+			goto exit;
 		}
 
 		if (!id) {
@@ -393,8 +398,7 @@ void tsec_send_method(struct hdcp_context_t *hdcp_context,
 			if (!id) {
 				nvhost_err(&tsec->dev, "failed to get sync point\n");
 				nvhost_putchannel(channel, 1);
-				mutex_unlock(&tegra_tsec_lock);
-				return;
+				goto exit;
 			}
 		}
 	}
@@ -404,8 +408,7 @@ void tsec_send_method(struct hdcp_context_t *hdcp_context,
 			__DMA_ATTR(attrs));
 	if (!cpuvaddr) {
 		nvhost_err(&tsec->dev, "Failed to allocate memory\n");
-		mutex_unlock(&tegra_tsec_lock);
-		return;
+		goto exit;
 	}
 
 	memset(cpuvaddr, 0x0, HDCP_MTHD_BUF_SIZE);
@@ -476,7 +479,9 @@ void tsec_send_method(struct hdcp_context_t *hdcp_context,
 	dma_free_attrs(tsec->dev.parent,
 		HDCP_MTHD_BUF_SIZE, cpuvaddr,
 		dma_handle, __DMA_ATTR(attrs));
+exit:
 	mutex_unlock(&tegra_tsec_lock);
+	pm_runtime_put(&tsec->dev);
 }
 
 

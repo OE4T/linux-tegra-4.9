@@ -1396,6 +1396,10 @@ static inline u32 gr_gpc0_gpccs_ctxsw_status_1_r(void)
 {
 	return 0x00502400U;
 }
+static inline u32 gr_gpc0_gpccs_ctxsw_mailbox__size_1_v(void)
+{
+	return 0x00000010U;
+}
 static inline u32 gr_fecs_ctxsw_idlestate_r(void)
 {
 	return 0x00409420U;

@@ -438,6 +438,7 @@ struct gr_gk20a {
 };
 
 void gk20a_fecs_dump_falcon_stats(struct gk20a *g);
+void gk20a_gpccs_dump_falcon_stats(struct gk20a *g);
 
 /* contexts associated with a TSG */
 struct nvgpu_gr_ctx {

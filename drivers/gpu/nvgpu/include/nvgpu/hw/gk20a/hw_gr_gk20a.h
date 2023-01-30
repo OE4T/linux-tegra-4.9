@@ -1380,6 +1380,10 @@ static inline u32 gr_gpc0_gpccs_ctxsw_status_1_r(void)
 {
 	return 0x00502400U;
 }
+static inline u32 gr_gpc0_gpccs_ctxsw_mailbox__size_1_v(void)
+{
+	return 0x00000010U;
+}
 static inline u32 gr_fecs_ctxsw_idlestate_r(void)
 {
 	return 0x00409420U;
@@ -3803,5 +3807,62 @@ static inline u32 gr_gpcs_tpcs_sm_dbgr_control0_run_trigger_v(u32 r)
 static inline u32 gr_gpcs_tpcs_sm_dbgr_control0_run_trigger_task_f(void)
 {
 	return 0x40000000U;
+}
+
+static inline u32 gr_gpc0_gpccs_falcon_irqstat_r(void)
+{
+	return 0x00502008U;
+}
+static inline u32 gr_gpc0_gpccs_falcon_irqmode_r(void)
+{
+	return 0x0050200cU;
+}
+static inline u32 gr_gpc0_gpccs_falcon_irqmask_r(void)
+{
+	return 0x00502018U;
+}
+static inline u32 gr_gpc0_gpccs_falcon_irqdest_r(void)
+{
+	return 0x0050201cU;
+}
+static inline u32 gr_gpc0_gpccs_falcon_debug1_r(void)
+{
+	return 0x00502090U;
+}
+static inline u32 gr_gpc0_gpccs_falcon_debuginfo_r(void)
+{
+	return 0x00502094U;
+}
+static inline u32 gr_gpc0_gpccs_falcon_engctl_r(void)
+{
+	return 0x005020a4U;
+}
+static inline u32 gr_gpc0_gpccs_falcon_curctx_r(void)
+{
+	return 0x00502050U;
+}
+static inline u32 gr_gpc0_gpccs_falcon_nxtctx_r(void)
+{
+	return 0x00502054U;
+}
+static inline u32 gr_gpc0_gpccs_ctxsw_mailbox_r(u32 i)
+{
+	return 0x00502800U + i*4U;
+}
+static inline u32 gr_gpc0_gpccs_falcon_icd_cmd_r(void)
+{
+	return 0x00502200U;
+}
+static inline u32 gr_gpc0_gpccs_falcon_icd_cmd_opc_rreg_f(void)
+{
+	return 0x8U;
+}
+static inline u32 gr_gpc0_gpccs_falcon_icd_cmd_idx_f(u32 v)
+{
+	return (v & 0x1fU) << 8U;
+}
+static inline u32 gr_gpc_gpccs_falcon_icd_rdata_r(void)
+{
+	return 0x0050220cU;
 }
 #endif

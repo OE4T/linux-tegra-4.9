@@ -1,13 +1,17 @@
-/*
- * NVIDIA Tegra Video Input Device
+/* 
+ * Copyright (c) 2023, NVIDIA CORPORATION.  All rights reserved.
  *
- * Copyright (c) 2015-2022, NVIDIA CORPORATION.  All rights reserved.
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms and conditions of the GNU General Public License,
+ * version 2, as published by the Free Software Foundation.
  *
- * Author: Bryan Wu <pengw@nvidia.com>
+ * This program is distributed in the hope it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include <linux/atomic.h>
@@ -1231,6 +1235,10 @@ int tegra_channel_s_ctrl(struct v4l2_ctrl *ctrl)
 
 	switch (ctrl->id) {
 	case TEGRA_CAMERA_CID_VI_BYPASS_MODE:
+	/* Prevent changing the bypass mode while the device is still streaming */
+		if (vb2_is_busy(&chan->queue))
+			return -EBUSY;
+
 		if (switch_ctrl_qmenu[ctrl->val] == SWITCH_ON)
 			chan->bypass = true;
 		else if (chan->vi->bypass) {

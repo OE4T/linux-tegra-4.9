@@ -1,7 +1,7 @@
 /*
  * GM20B GPC MMU
  *
- * Copyright (c) 2011-2020, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2023, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -275,16 +275,7 @@ void gr_gm20b_commit_global_pagepool(struct gk20a *g,
 
 void gr_gm20b_set_rd_coalesce(struct gk20a *g, u32 data)
 {
-	u32 val;
-
-	nvgpu_log_fn(g, " ");
-
-	val = gk20a_readl(g, gr_gpcs_tpcs_tex_m_dbg2_r());
-	val = set_field(val, gr_gpcs_tpcs_tex_m_dbg2_lg_rd_coalesce_en_m(),
-			     gr_gpcs_tpcs_tex_m_dbg2_lg_rd_coalesce_en_f(data));
-	gk20a_writel(g, gr_gpcs_tpcs_tex_m_dbg2_r(), val);
-
-	nvgpu_log_fn(g, "done");
+	nvgpu_log_info(g, "Not updating rd coalesce");
 }
 
 int gr_gm20b_handle_sw_method(struct gk20a *g, u32 addr,
@@ -1447,6 +1438,9 @@ void gm20a_gr_disable_rd_coalesce(struct gk20a *g)
 	dbg2_reg = set_field(dbg2_reg,
 			     gr_gpcs_tpcs_tex_m_dbg2_su_rd_coalesce_en_m(),
 			     gr_gpcs_tpcs_tex_m_dbg2_su_rd_coalesce_en_f(0));
+	dbg2_reg = set_field(dbg2_reg,
+			     gr_gpcs_tpcs_tex_m_dbg2_tex_rd_coalesce_en_m(),
+			     gr_gpcs_tpcs_tex_m_dbg2_tex_rd_coalesce_en_f(0));
 
 	gk20a_writel(g, gr_gpcs_tpcs_tex_m_dbg2_r(), dbg2_reg);
 }

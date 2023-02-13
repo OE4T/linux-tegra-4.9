@@ -1,7 +1,7 @@
 /*
  * GK20A Graphics
  *
- * Copyright (c) 2011-2021, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2023, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -1660,6 +1660,10 @@ static int gr_gk20a_init_golden_ctx_image(struct gk20a *g,
 	for (i = 0; i < sw_ctx_load->count; i++) {
 		gk20a_writel(g, sw_ctx_load->l[i].addr,
 			     sw_ctx_load->l[i].value);
+	}
+
+	if (g->ops.gr.disable_rd_coalesce) {
+		g->ops.gr.disable_rd_coalesce(g);
 	}
 
 	if (g->ops.gr.init_preemption_state) {
@@ -4704,14 +4708,14 @@ static int gk20a_init_gr_setup_hw(struct gk20a *g)
 		g->ops.fb.init_cbc(g, gr);
 	}
 
-	if (g->ops.gr.disable_rd_coalesce) {
-		g->ops.gr.disable_rd_coalesce(g);
-	}
-
 	/* load ctx init */
 	for (i = 0; i < sw_ctx_load->count; i++) {
 		gk20a_writel(g, sw_ctx_load->l[i].addr,
 			     sw_ctx_load->l[i].value);
+	}
+
+	if (g->ops.gr.disable_rd_coalesce) {
+		g->ops.gr.disable_rd_coalesce(g);
 	}
 
 	err = gr_gk20a_wait_idle(g, gk20a_get_gr_idle_timeout(g),

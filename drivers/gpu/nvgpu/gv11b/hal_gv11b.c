@@ -1,7 +1,7 @@
 /*
  * GV11B Tegra HAL interface
  *
- * Copyright (c) 2016-2022, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2023, NVIDIA CORPORATION.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -393,7 +393,7 @@ static const struct gpu_ops gv11b_ops = {
 		.clear_sm_hww = gv11b_gr_clear_sm_hww,
 		.init_ovr_sm_dsm_perf =  gv11b_gr_init_ovr_sm_dsm_perf,
 		.get_ovr_perf_regs = gv11b_gr_get_ovr_perf_regs,
-		.disable_rd_coalesce = gm20a_gr_disable_rd_coalesce,
+		.disable_rd_coalesce = NULL,
 		.set_boosted_ctx = gr_gp10b_set_boosted_ctx,
 		.set_preemption_mode = gr_gp10b_set_preemption_mode,
 		.set_czf_bypass = NULL,

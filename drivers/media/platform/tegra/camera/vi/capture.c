@@ -405,7 +405,7 @@ static void linetimer_event_worker(struct work_struct *linetimer_work)
 	// Wait for the linetimer syncpt
 	err = nvhost_syncpt_wait_timeout_ext(chan->ndev,
 				capture->linetimer_sp.id, thresh,
-				msecs_to_jiffies(200), NULL, NULL);
+				msecs_to_jiffies(700), NULL, NULL);
 	if (unlikely(err)) {
 		dev_err(chan->dev,
 				"Linetimer syncpt timeout! err = %d\n", err);

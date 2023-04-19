@@ -1890,17 +1890,15 @@ void tegra_dc_sor_attach(struct tegra_dc_sor_data *sor)
 		NV_SOR_SUPER_STATE1_ASY_HEAD_OP_SLEEP |
 		NV_SOR_SUPER_STATE1_ASY_ORMODE_NORMAL |
 		NV_SOR_SUPER_STATE1_ATTACHED_YES);
-	tegra_dc_sor_super_update(sor);
-
-	tegra_dc_sor_enable_dc(sor);
-
-	tegra_dc_sor_enable_sor(sor, true);
-
 	tegra_sor_writel(sor, NV_SOR_SUPER_STATE1,
 		NV_SOR_SUPER_STATE1_ASY_HEAD_OP_AWAKE |
 		NV_SOR_SUPER_STATE1_ASY_ORMODE_NORMAL |
 		NV_SOR_SUPER_STATE1_ATTACHED_YES);
 	tegra_dc_sor_super_update(sor);
+
+	tegra_dc_sor_enable_dc(sor);
+
+	tegra_dc_sor_enable_sor(sor, true);
 
 	tegra_dc_writel(dc, reg_val, DC_CMD_STATE_ACCESS);
 	tegra_dc_put(dc);

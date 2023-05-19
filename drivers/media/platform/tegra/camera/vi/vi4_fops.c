@@ -1,7 +1,7 @@
 /*
  * Tegra Video Input 4 device common APIs
  *
- * Copyright (c) 2016-2022, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2023, NVIDIA CORPORATION.  All rights reserved.
  *
  * Author: Frank Chen <frank@nvidia.com>
  *
@@ -1191,15 +1191,15 @@ static int vi4_mfi_work(struct tegra_mc_vi *vi, int channel)
 
 	/* for vi4, the input argument is the hw channel id*/
 	/* search the list and match the hw id */
+	/* FIXME: in dual focusors system with mfi, current design will*/
+	/* make both synced when getting into this function */
 	list_for_each_entry(it, &vi->vi_chans, list) {
-		if (channel == it->vnc_id[0]) {
-			ret = v4l2_subdev_call(it->subdev_on_csi, core,
-					sync, V4L2_SYNC_EVENT_FOCUS_POS);
-			if (ret < 0 && ret != -ENOIOCTLCMD) {
-				dev_err(vi->dev,
-					"%s:channel failed\n", __func__);
-				return ret;
-			}
+		ret = v4l2_subdev_call(it->subdev_on_csi, core,
+				sync, V4L2_SYNC_EVENT_FOCUS_POS);
+		if (ret < 0 && ret != -ENOIOCTLCMD) {
+			dev_err(vi->dev,
+				"%s:channel failed\n", __func__);
+			return ret;
 		}
 	}
 

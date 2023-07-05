@@ -553,20 +553,6 @@ static void __delete_and_unsubscribe_port(struct snd_seq_client *client,
 
 	if (!empty)
 		unsubscribe_port(client, port, grp, &subs->info, ack);
-	up_write(&grp->list_mutex);
-}
-
-static void delete_and_unsubscribe_port(struct snd_seq_client *client,
-					struct snd_seq_client_port *port,
-					struct snd_seq_subscribers *subs,
-					bool is_src, bool ack)
-{
-	struct snd_seq_port_subs_info *grp;
-
-	grp = is_src ? &port->c_src : &port->c_dest;
-	down_write(&grp->list_mutex);
-	__delete_and_unsubscribe_port(client, port, subs, is_src, ack);
-	up_write(&grp->list_mutex);
 }
 
 /* connect two ports */

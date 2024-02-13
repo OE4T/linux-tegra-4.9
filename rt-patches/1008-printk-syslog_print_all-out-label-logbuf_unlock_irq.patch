@@ -1,0 +1,27 @@
+From de16fad820b2023ab465c62d272572a8172b17bc Mon Sep 17 00:00:00 2001
+From: Levente Tamas <levente.tamas@offcode.fi>
+Date: Wed, 7 Feb 2024 15:20:25 +0200
+Subject: [PATCH] printk::syslog_print_all out label logbuf_unlock_irq
+
+---
+ kernel/printk/printk.c | 3 +--
+ 1 file changed, 1 insertion(+), 2 deletions(-)
+
+diff --git a/kernel/printk/printk.c b/kernel/printk/printk.c
+index 3befe7f56193..d732cd6a8c82 100644
+--- a/kernel/printk/printk.c
++++ b/kernel/printk/printk.c
+@@ -1519,9 +1519,8 @@ static int syslog_print_all(char __user *buf, int size, bool clear)
+ 		clear_seq = log_next_seq;
+ 		clear_idx = log_next_idx;
+ 	}
+-	logbuf_unlock_irq();
+ out:
+-	raw_spin_unlock_irq(&logbuf_lock);
++	logbuf_unlock_irq();
+ 
+ 	kfree(text);
+ 	return len;
+-- 
+2.43.0
+
